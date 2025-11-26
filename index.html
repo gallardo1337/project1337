@@ -2,20 +2,23 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <title>Meine Film-Bibliothek</title>
+  <title>1337 Film-Bibliothek</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="page">
     <header class="topbar">
-      <div class="logo">Film-Bibliothek</div>
+      <div class="logo-text">1337 Library</div>
     </header>
 
     <main>
-      <!-- Hero-Bereich mit Google-ähnlicher Suchleiste -->
+      <!-- Hero-Bereich mit Logo + Suchleiste -->
       <section class="hero">
-        <h1>Suche deine Filme</h1>
+        <div class="logo-container">
+          <!-- falls dein Logo anders heißt, hier den Dateinamen anpassen -->
+          <img src="logo.svg" alt="1337 Logo" class="logo-svg" />
+        </div>
         <div class="search-wrapper">
           <input
             id="globalSearch"
@@ -32,14 +35,14 @@
         <div id="actorGrid" class="actor-grid"></div>
       </section>
 
-      <!-- Film-Ansicht (Suche oder Darsteller-Auswahl) -->
+      <!-- Film-Ansicht (für Suche oder Darsteller-Auswahl) -->
       <section id="moviesSection" class="movies-section hidden">
         <div class="movies-header">
           <div>
             <h2 id="moviesTitle">Filme</h2>
             <p id="moviesSubtitle" class="movies-subtitle"></p>
           </div>
-          <button id="backToActors" class="back-btn">Zurück zu Darstellern</button>
+          <button id="backToActors" class="back-btn">Zurück zur Darsteller-Übersicht</button>
         </div>
         <div id="movieList" class="movie-grid"></div>
       </section>
