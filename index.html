@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>Meine Film-Bibliothek</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="topbar">
+      <div class="logo">Film-Bibliothek</div>
+    </header>
+
+    <main>
+      <!-- Hero-Bereich mit Google-ähnlicher Suchleiste -->
+      <section class="hero">
+        <h1>Suche deine Filme</h1>
+        <div class="search-wrapper">
+          <input
+            id="globalSearch"
+            type="search"
+            placeholder="Titel, Darsteller, Studio, Tags …"
+            autocomplete="off"
+          />
+        </div>
+      </section>
+
+      <!-- Darsteller-Übersicht (Infuse-Style) -->
+      <section id="actorSection" class="actor-section">
+        <h2>Darsteller</h2>
+        <div id="actorGrid" class="actor-grid"></div>
+      </section>
+
+      <!-- Film-Ansicht (Suche oder Darsteller-Auswahl) -->
+      <section id="moviesSection" class="movies-section hidden">
+        <div class="movies-header">
+          <div>
+            <h2 id="moviesTitle">Filme</h2>
+            <p id="moviesSubtitle" class="movies-subtitle"></p>
+          </div>
+          <button id="backToActors" class="back-btn">Zurück zu Darstellern</button>
+        </div>
+        <div id="movieList" class="movie-grid"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
