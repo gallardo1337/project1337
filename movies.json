@@ -1,0 +1,18 @@
+[
+  {
+    "title": "Heat",
+    "year": 1995,
+    "fileUrl": "http://192.168.1.20/Filme/Al Pacino/Heat.mkv",
+    "tags": ["Abend", "Favorit"],
+    "studio": "Warner Bros",
+    "actors": ["Al Pacino"]
+  },
+  {
+    "title": "Cast Away",
+    "year": 2000,
+    "fileUrl": "http://192.168.1.20/Filme/Tom Hanks/Cast Away.mkv",
+    "tags": ["Früh"],
+    "studio": "20th Century Fox",
+    "actors": ["Tom Hanks"]
+  }
+]
