@@ -41,6 +41,7 @@ function buildActors() {
 
 function renderActors() {
   els.actorGrid.innerHTML = "";
+
   allActors.forEach(actor => {
     const card = document.createElement("article");
     card.className = "actor-card";
@@ -52,9 +53,7 @@ function renderActors() {
     const countEl = document.createElement("div");
     countEl.className = "actor-count";
     countEl.textContent =
-      actor.movieCount === 1
-        ? "1 Film"
-        : `${actor.movieCount} Filme`;
+      actor.movieCount === 1 ? "1 Film" : `${actor.movieCount} Filme`;
 
     card.appendChild(nameEl);
     card.appendChild(countEl);
@@ -67,26 +66,25 @@ function renderActors() {
   });
 }
 
-// Filme für einen bestimmten Darsteller zeigen
+// Filme für einen bestimmten Darsteller
 function showMoviesForActor(actorName) {
   const movies = allMovies.filter(m =>
     (m.actors || []).includes(actorName)
   );
+
   els.moviesTitle.textContent = actorName;
   els.moviesSubtitle.textContent = `${movies.length} Film(e) mit diesem Darsteller`;
 
   renderMovieList(movies);
 
-  // Ansicht umschalten: Filme an, Darsteller ausblenden
   els.actorSection.classList.add("hidden");
   els.moviesSection.classList.remove("hidden");
 }
 
-// Filme anhand einer Suchanfrage zeigen
+// Filme anhand der Suche
 function showMoviesForSearch(query) {
-  const q = query.trim().toLowerCase();
+  const q = (query || "").trim().toLowerCase();
   if (!q) {
-    // Wenn Suche leer → zurück zur Darsteller-Übersicht
     els.moviesSection.classList.add("hidden");
     els.actorSection.classList.remove("hidden");
     return;
@@ -114,7 +112,7 @@ function showMoviesForSearch(query) {
   els.moviesSection.classList.remove("hidden");
 }
 
-// Liste von Filmen in Grid rendern
+// Film-Liste rendern
 function renderMovieList(movies) {
   els.movieList.innerHTML = "";
 
@@ -155,7 +153,7 @@ function renderMovieList(movies) {
         alert("Kein Dateipfad hinterlegt.");
         return;
       }
-      // Direkt auf den Film-Link navigieren – der Browser / Apple TV übernimmt die Wiedergabe
+      // Direkt auf den Film-Link gehen – Browser/Apple TV übernimmt
       window.location.href = m.fileUrl;
     });
     actions.appendChild(playBtn);
@@ -171,7 +169,6 @@ function renderMovieList(movies) {
 
 // Events
 
-// Große Suchleiste (ähnlich Google)
 let searchDebounce;
 els.globalSearch.addEventListener("input", () => {
   clearTimeout(searchDebounce);
@@ -180,11 +177,10 @@ els.globalSearch.addEventListener("input", () => {
   }, 200);
 });
 
-// Zurück zu allen Darstellern
 els.backToActors.addEventListener("click", () => {
   els.moviesSection.classList.add("hidden");
   els.actorSection.classList.remove("hidden");
-  // Suche optional löschen
+  // Suche optional leeren:
   // els.globalSearch.value = "";
 });
 
