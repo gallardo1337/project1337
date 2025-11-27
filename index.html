@@ -16,7 +16,7 @@
       <!-- Hero-Bereich mit Logo + Suchleiste -->
       <section class="hero">
         <div class="logo-container">
-          <!-- falls dein Logo anders heißt, hier den Dateinamen anpassen -->
+          <!-- Falls dein Logo anders heißt, hier Dateinamen anpassen -->
           <img src="logo.svg" alt="1337 Logo" class="logo-svg" />
         </div>
         <div class="search-wrapper">
@@ -42,13 +42,26 @@
             <h2 id="moviesTitle">Filme</h2>
             <p id="moviesSubtitle" class="movies-subtitle"></p>
           </div>
-          <button id="backToActors" class="back-btn">Zurück zur Darsteller-Übersicht</button>
+          <button id="backToActors" class="back-btn">
+            Zurück zur Darsteller-Übersicht
+          </button>
         </div>
         <div id="movieList" class="movie-grid"></div>
       </section>
     </main>
   </div>
 
-  <script src="app.js"></script>
+  <!-- Supabase ENV direkt im Browser verfügbar machen -->
+  <script>
+    window.env = {
+      // HIER DEINE URL & KEY EINTRAGEN (copy/paste aus Supabase)
+      NEXT_PUBLIC_SUPABASE_URL: "https://DEIN-PROJEKT.supabase.co",
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "DEIN_ANON_PUBLIC_KEY_HIER"
+    };
+  </script>
+
+  <!-- Modules laden -->
+  <script type="module" src="supabaseClient.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
