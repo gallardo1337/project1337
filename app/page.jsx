@@ -3,6 +3,182 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 
+// Zentrale Versions-Infos für die Hauptseite
+const CHANGELOG = [
+  {
+    version: "0.2.0",
+    date: "2025-11-27",
+    items: [
+      "HTTP-Streaming über NAS-Symlink /1337 eingebunden",
+      "Play-Button öffnet direkte Datei-URLs (NAS) im neuen Tab",
+      "Grundlage für Version-Hinweis & Changelog geschaffen"
+    ]
+  },
+  {
+    version: "0.1.0",
+    date: "2025-11-26",
+    items: [
+      "Erste Version der 1337 Library",
+      "Supabase-Anbindung für Filme, Darsteller, Tags"
+    ]
+  }
+];
+
+// Kleiner Version-Button + Changelog-Overlay
+function VersionHint() {
+  const [open, setOpen] = useState(false);
+  const current = CHANGELOG[0];
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        style={{
+          borderRadius: "999px",
+          border: "1px solid #4b5563",
+          background: "#020617",
+          color: "#e5e7eb",
+          fontSize: "0.8rem",
+          padding: "4px 10px",
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          cursor: "pointer"
+        }}
+      >
+        <span>{current.version}</span>
+        <span style={{ opacity: 0.7 }}>Changelog</span>
+      </button>
+
+      {open && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.65)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 50
+          }}
+          onClick={() => setOpen(false)}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 520,
+              maxHeight: "80vh",
+              overflowY: "auto",
+              background: "#020617",
+              borderRadius: 16,
+              border: "1px solid #4b5563",
+              padding: 20,
+              boxShadow: "0 20px 60px rgba(0,0,0,0.7)"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 12
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    fontSize: "0.8rem",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em",
+                    color: "#9ca3af"
+                  }}
+                >
+                  Version & Changelog
+                </div>
+                <div style={{ fontSize: "1rem", fontWeight: 600 }}>
+                  1337 Library
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                style={{
+                  borderRadius: "999px",
+                  border: "1px solid #4b5563",
+                  background: "#111827",
+                  color: "#e5e7eb",
+                  fontSize: "0.8rem",
+                  padding: "4px 10px",
+                  cursor: "pointer"
+                }}
+              >
+                Schließen
+              </button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {CHANGELOG.map((entry) => (
+                <div
+                  key={entry.version}
+                  style={{
+                    borderRadius: 12,
+                    border: "1px solid #374151",
+                    padding: 12,
+                    background: "#030712"
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "baseline",
+                      marginBottom: 4
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontWeight: 600,
+                        fontSize: "0.95rem",
+                        color: "#e5e7eb"
+                      }}
+                    >
+                      {entry.version}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "0.8rem",
+                        color: "#9ca3af"
+                      }}
+                    >
+                      {entry.date}
+                    </div>
+                  </div>
+                  <ul
+                    style={{
+                      margin: 0,
+                      paddingLeft: 18,
+                      fontSize: "0.85rem",
+                      color: "#d1d5db"
+                    }}
+                  >
+                    {entry.items.map((it, idx) => (
+                      <li key={idx} style={{ marginBottom: 3 }}>
+                        {it}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 export default function HomePage() {
   const [movies, setMovies] = useState([]);
   const [actors, setActors] = useState([]);
@@ -127,6 +303,9 @@ export default function HomePage() {
     <div className="page">
       <header className="topbar">
         <div className="logo-text">1337 Library</div>
+        <div style={{ marginLeft: "auto" }}>
+          <VersionHint />
+        </div>
       </header>
 
       <main>
@@ -249,8 +428,7 @@ export default function HomePage() {
                   ))}
                 </div>
               </section>
-            )}
-          </>
+            </>
         )}
       </main>
     </div>
