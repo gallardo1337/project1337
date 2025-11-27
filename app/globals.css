@@ -1,4 +1,263 @@
-/* ================== ADMIN PANEL ================== */
+/* =========================================
+   GLOBAL RESET & BASE STYLES
+========================================= */
+
+* {
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+  height: 100%;
+  width: 100%;
+  background-color: #050505;
+  color: #e5e5e5;
+  font-size: 16px;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  line-height: 1.5;
+}
+
+/* Global text smoothing */
+body {
+  text-rendering: optimizeLegibility;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+button:focus,
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+}
+
+
+/* =========================================
+   LAYOUT: HEADER / PAGE
+========================================= */
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  background: #0a0a0a;
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.logo-text {
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: 0.5px;
+  color: white;
+}
+
+
+/* =========================================
+   HERO SECTION (SUCHLEISTE + LOGO)
+========================================= */
+
+.hero {
+  margin-top: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  padding: 0 20px;
+}
+
+.logo-container {
+  width: 220px;
+  opacity: 0.92;
+}
+
+.logo-svg {
+  width: 100%;
+  height: auto;
+}
+
+.search-wrapper {
+  width: 100%;
+  max-width: 700px;
+}
+
+.search-wrapper input {
+  width: 100%;
+  border-radius: 50px;
+  padding: 14px 22px;
+  background: #0e0e0e;
+  color: white;
+  border: 1px solid #2a2a2a;
+  font-size: 1rem;
+}
+
+.search-wrapper input::placeholder {
+  color: #777;
+}
+
+
+/* =========================================
+   ACTOR GRID
+========================================= */
+
+.actor-section {
+  padding: 30px 20px;
+}
+
+.actor-section h2 {
+  font-size: 1.4rem;
+  margin-bottom: 14px;
+}
+
+.actor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 14px;
+}
+
+.actor-card {
+  background: #0d0d0d;
+  border: 1px solid #1d1d1d;
+  border-radius: 14px;
+  padding: 16px;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.actor-card:hover {
+  background: #1a1a1a;
+  transform: translateY(-2px);
+}
+
+.actor-name {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.actor-count {
+  margin-top: 6px;
+  font-size: 0.85rem;
+  color: #aaa;
+}
+
+
+/* =========================================
+   MOVIE GRID & DETAILS
+========================================= */
+
+.movies-section {
+  padding: 30px 20px;
+}
+
+.movies-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.movies-subtitle {
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+  color: #aaa;
+}
+
+.back-btn {
+  padding: 8px 14px;
+  border-radius: 50px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: white;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.back-btn:hover {
+  background: #333;
+}
+
+.movie-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 16px;
+}
+
+.movie-card {
+  background: #0d0d0d;
+  border: 1px solid #1c1c1c;
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.movie-title {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.movie-meta {
+  font-size: 0.85rem;
+  color: #aaa;
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag-pill {
+  background: #1c1c1c;
+  border: 1px solid #333;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  color: #ddd;
+}
+
+.play-btn {
+  padding: 10px 16px;
+  border-radius: 50px;
+  background: white;
+  color: black;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.play-btn:hover {
+  background: #e5e5e5;
+}
+
+
+/* =========================================
+   ADMIN PANEL
+========================================= */
 
 .admin-page {
   background: #050505;
@@ -9,11 +268,6 @@
   grid-template-columns: minmax(0, 3fr) minmax(0, 4fr);
   gap: 16px;
   padding: 16px;
-}
-
-.admin-left,
-.admin-right {
-  min-width: 0;
 }
 
 .admin-panel {
@@ -30,8 +284,6 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
 }
 
 .admin-panel-header h2 {
@@ -42,17 +294,17 @@
 .admin-form {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .admin-field {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 0.85rem;
 }
 
 .admin-field span {
+  font-size: 0.8rem;
   color: #9ca3af;
 }
 
@@ -62,15 +314,13 @@
   border: 1px solid #374151;
   background: #020617;
   color: #e5e7eb;
-  padding: 6px 10px;
+  padding: 8px 10px;
   font-size: 0.9rem;
 }
 
 .admin-field input:focus,
 .admin-field select:focus {
-  outline: none;
-  border-color: #ffffff55;
-  box-shadow: 0 0 0 1px #ffffff33;
+  border-color: #ffffff66;
 }
 
 .admin-inline-group {
@@ -84,9 +334,9 @@
   border: 1px solid #374151;
   background: #1f2937;
   color: #e5e7eb;
-  padding: 6px 10px;
-  font-size: 0.85rem;
+  padding: 6px 12px;
   cursor: pointer;
+  font-size: 0.85rem;
 }
 
 .admin-mini-btn:hover {
@@ -96,17 +346,16 @@
 .admin-multiselect {
   border-radius: 12px;
   border: 1px solid #2a2a2a;
-  padding: 10px;
+  padding: 12px;
+  background: #030712;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  background: #030712;
 }
 
 .admin-multiselect-header {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
   font-size: 0.85rem;
   color: #e5e7eb;
 }
@@ -127,8 +376,8 @@
   border: 1px solid #374151;
   background: #111827;
   color: #e5e7eb;
-  padding: 4px 10px;
-  font-size: 0.8rem;
+  padding: 4px 12px;
+  font-size: 0.78rem;
   cursor: pointer;
 }
 
@@ -140,11 +389,10 @@
 
 .admin-message {
   font-size: 0.8rem;
-  margin: 4px 0 0;
 }
 
 .admin-error {
-  color: #fecaca;
+  color: #fca5a5;
 }
 
 .admin-success {
@@ -154,8 +402,7 @@
 .admin-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-  margin-top: 6px;
+  gap: 10px;
 }
 
 .admin-primary-btn,
@@ -163,28 +410,28 @@
 .admin-danger-btn {
   border-radius: 999px;
   border: 1px solid transparent;
-  padding: 6px 14px;
+  padding: 8px 18px;
   font-size: 0.85rem;
   cursor: pointer;
 }
 
 .admin-primary-btn {
-  background: #ffffff;
-  color: #111827;
+  background: white;
+  color: black;
 }
 
 .admin-primary-btn:hover {
-  background: #e5e7eb;
+  background: #e5e5e5;
 }
 
 .admin-secondary-btn {
-  background: transparent;
+  background: #1f2937;
   color: #e5e7eb;
   border-color: #4b5563;
 }
 
 .admin-secondary-btn:hover {
-  background: #1f2937;
+  background: #374151;
 }
 
 .admin-danger-btn {
@@ -196,61 +443,57 @@
   background: #b91c1c;
 }
 
-/* Film-Liste rechts */
+
+/* =========================================
+   ADMIN RIGHT-SIDE MOVIE LIST
+========================================= */
 
 .admin-movie-list {
-  max-height: 70vh;
-  overflow: auto;
+  max-height: 75vh;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 }
 
 .admin-movie-row {
-  width: 100%;
-  text-align: left;
-  border-radius: 10px;
-  border: 1px solid #27272a;
   background: #020617;
-  padding: 8px 10px;
+  border: 1px solid #27272a;
+  border-radius: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  cursor: pointer;
+  gap: 4px;
+  transition: background 0.2s;
 }
 
-.admin-movie-row-active {
-  border-color: #ffffff;
+.admin-movie-row:hover {
   background: #111827;
 }
 
-.admin-movie-main {
-  display: flex;
-  justify-content: space-between;
-  gap: 6px;
+.admin-movie-row-active {
+  border-color: white;
+  background: #111827;
 }
 
 .admin-movie-title {
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 600;
 }
 
 .admin-movie-meta {
   font-size: 0.75rem;
-  color: #9ca3af;
+  color: #a7a7a7;
 }
 
-.admin-movie-tags {
-  font-size: 0.75rem;
-  color: #9ca3af;
-}
 
-.admin-movie-tagline {
-  opacity: 0.9;
-}
+/* =========================================
+   RESPONSIVE ADJUSTMENTS
+========================================= */
 
 @media (max-width: 900px) {
   .admin-main {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: 1fr;
   }
 }
