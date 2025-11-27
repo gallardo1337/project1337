@@ -14,7 +14,7 @@ const CHANGELOG = [
     items: [
       "HTTP-Streaming über NAS-Symlink (/1337) vorbereitet",
       "Play-Button öffnet direkte NAS-Links (fileUrl) im neuen Tab",
-      "Version-Hinweis & Changelog auf Startseite integriert"
+      "Version-Hinweis & Login-Leiste integriert"
     ]
   },
   {
@@ -196,7 +196,32 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
 
+  // Login-Status
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [loginUser, setLoginUser] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginErr, setLoginErr] = useState(null);
+  const [loginLoading, setLoginLoading] = useState(false);
+
+  // Beim Laden prüfen, ob wir schon "eingeloggt" sind (localStorage)
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    const flag = window.localStorage.getItem("auth_1337_flag");
+    if (flag === "1") {
+      setLoggedIn(true);
+    }
+  }, []);
+
+  // Filme nur laden, wenn eingeloggt
+  useEffect(() => {
+    if (!loggedIn) {
+      setMovies([]);
+      setActors([]);
+      setVisibleMovies([]);
+      setLoading(false);
+      return;
+    }
+
     const load = async () => {
       try {
         setLoading(true);
@@ -248,7 +273,7 @@ export default function HomePage() {
     };
 
     void load();
-  }, []);
+  }, [loggedIn]);
 
   const buildActorList = (allMovies) => {
     const map = new Map();
@@ -310,135 +335,306 @@ export default function HomePage() {
     setMoviesSubtitle("");
   };
 
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoginErr(null);
+    setLoginLoading(true);
+
+    try {
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: loginPassword })
+      });
+
+      if (!res.ok) {
+        if (res.status === 401) {
+          setLoginErr("User oder Passwort falsch.");
+        } else {
+          setLoginErr("Login fehlgeschlagen.");
+        }
+        return;
+      }
+
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("auth_1337_flag", "1");
+      }
+      setLoggedIn(true);
+      setLoginErr(null);
+    } catch (error) {
+      console.error(error);
+      setLoginErr("Netzwerkfehler beim Login.");
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/logout", { method: "POST" });
+    } catch {
+      // ignorieren, lokal reicht
+    }
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem("auth_1337_flag");
+    }
+    setLoggedIn(false);
+    setSearch("");
+    setViewMode("actors");
+    setVisibleMovies([]);
+    setMoviesTitle("Filme");
+    setMoviesSubtitle("");
+  };
+
   return (
     <div className="page">
       <header className="topbar">
         <div className="logo-text">1337 Library</div>
-        <div style={{ marginLeft: "auto" }}>
+
+        <div
+          style={{
+            marginLeft: "auto",
+            display: "flex",
+            alignItems: "center",
+            gap: 12
+          }}
+        >
           <VersionHint />
+
+          {!loggedIn ? (
+            <form
+              onSubmit={handleLogin}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6
+              }}
+            >
+              <input
+                type="text"
+                placeholder="User"
+                value={loginUser}
+                onChange={(e) => setLoginUser(e.target.value)}
+                style={{
+                  borderRadius: 999,
+                  border: "1px solid #374151",
+                  background: "#020617",
+                  color: "#e5e7eb",
+                  fontSize: "0.8rem",
+                  padding: "4px 8px",
+                  width: 110
+                }}
+              />
+              <input
+                type="password"
+                placeholder="Passwort"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                style={{
+                  borderRadius: 999,
+                  border: "1px solid #374151",
+                  background: "#020617",
+                  color: "#e5e7eb",
+                  fontSize: "0.8rem",
+                  padding: "4px 8px",
+                  width: 120
+                }}
+              />
+              <button
+                type="submit"
+                disabled={loginLoading || !loginPassword}
+                style={{
+                  borderRadius: 999,
+                  border: "none",
+                  background: "#f97316",
+                  color: "#111827",
+                  fontSize: "0.8rem",
+                  padding: "4px 10px",
+                  fontWeight: 600,
+                  cursor:
+                    loginLoading || !loginPassword ? "default" : "pointer",
+                  opacity: loginLoading || !loginPassword ? 0.7 : 1
+                }}
+              >
+                {loginLoading ? "…" : "Login"}
+              </button>
+            </form>
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                fontSize: "0.8rem",
+                color: "#9ca3af"
+              }}
+            >
+              <span style={{ color: "#4ade80" }}>Eingeloggt</span>
+              <a
+                href="/admin"
+                style={{
+                  textDecoration: "none",
+                  borderRadius: 999,
+                  border: "1px solid #4b5563",
+                  padding: "3px 8px",
+                  color: "#e5e7eb"
+                }}
+              >
+                Dashboard
+              </a>
+              <button
+                type="button"
+                onClick={handleLogout}
+                style={{
+                  borderRadius: 999,
+                  border: "1px solid #4b5563",
+                  background: "transparent",
+                  color: "#e5e7eb",
+                  fontSize: "0.8rem",
+                  padding: "3px 8px",
+                  cursor: "pointer"
+                }}
+              >
+                Logout
+              </button>
+            </div>
+          )}
         </div>
       </header>
 
       <main>
-        <section className="hero">
-          <div className="logo-container">
-            <img src="/logo.svg" alt="1337 Logo" className="logo-svg" />
-          </div>
-          <div className="search-wrapper">
-            <input
-              id="globalSearch"
-              type="search"
-              placeholder="Titel, Darsteller, Studio, Tags …"
-              autoComplete="off"
-              value={search}
-              onChange={(e) => handleSearchChange(e.target.value)}
-            />
-          </div>
-        </section>
-
-        {loading && (
+        {!loggedIn ? (
           <section className="actor-section">
-            <p>Lade Filme …</p>
+            <p>Bitte oben einloggen, um die Bibliothek zu sehen.</p>
+            {loginErr && (
+              <p style={{ color: "#f97373", fontSize: "0.85rem" }}>
+                {loginErr}
+              </p>
+            )}
           </section>
-        )}
-
-        {err && !loading && (
-          <section className="actor-section">
-            <p>{err}</p>
-          </section>
-        )}
-
-        {!loading && !err && (
+        ) : (
           <>
-            {viewMode === "actors" && (
-              <section id="actorSection" className="actor-section">
-                <h2>Darsteller</h2>
-                <div id="actorGrid" className="actor-grid">
-                  {actors.length === 0 && (
-                    <p>Noch keine Filme in der Datenbank.</p>
-                  )}
-                  {actors.map((actor) => (
-                    <article
-                      key={actor.name}
-                      className="actor-card"
-                      onClick={() => handleShowMoviesForActor(actor.name)}
-                    >
-                      <div className="actor-name">{actor.name}</div>
-                      <div className="actor-count">
-                        {actor.movieCount} Film
-                        {actor.movieCount !== 1 ? "e" : ""}
-                      </div>
-                    </article>
-                  ))}
-                </div>
+            <section className="hero">
+              <div className="logo-container">
+                <img src="/logo.svg" alt="1337 Logo" className="logo-svg" />
+              </div>
+              <div className="search-wrapper">
+                <input
+                  id="globalSearch"
+                  type="search"
+                  placeholder="Titel, Darsteller, Studio, Tags …"
+                  autoComplete="off"
+                  value={search}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                />
+              </div>
+            </section>
+
+            {loading && (
+              <section className="actor-section">
+                <p>Lade Filme …</p>
               </section>
             )}
 
-            {viewMode === "movies" && (
-              <section id="moviesSection" className="movies-section">
-                <div className="movies-header">
-                  <div>
-                    <h2 id="moviesTitle">{moviesTitle}</h2>
-                    <p id="moviesSubtitle" className="movies-subtitle">
-                      {moviesSubtitle}
-                    </p>
-                  </div>
-                  <button
-                    id="backToActors"
-                    className="back-btn"
-                    onClick={handleBackToActors}
-                  >
-                    Zurück zur Darsteller-Übersicht
-                  </button>
-                </div>
-                <div id="movieList" className="movie-grid">
-                  {visibleMovies.length === 0 && (
-                    <p>Keine Filme für diese Auswahl gefunden.</p>
-                  )}
-                  {visibleMovies.map((m) => (
-                    <article key={m.id} className="movie-card">
-                      <div className="movie-title">{m.title}</div>
-                      <div className="movie-meta">
-                        {m.year && <span>{m.year}</span>}
-                        {m.studio && (
-                          <span>
-                            {m.year ? " • " : ""}
-                            {m.studio}
-                          </span>
-                        )}
-                        {m.actors.length > 0 && (
-                          <span>
-                            {(m.year || m.studio) ? " • " : ""}
-                            {m.actors.join(", ")}
-                          </span>
-                        )}
-                      </div>
-                      <div className="tag-list">
-                        {m.tags.map((t) => (
-                          <span key={t} className="tag-pill">
-                            {t}
-                          </span>
-                        ))}
-                      </div>
-                      <div className="movie-actions">
-                        <a
-                          href={m.fileUrl}
-                          className="play-btn"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            textDecoration: "none",
-                            display: "inline-block",
-                            textAlign: "center"
-                          }}
-                        >
-                          Abspielen
-                        </a>
-                      </div>
-                    </article>
-                  ))}
-                </div>
+            {err && !loading && (
+              <section className="actor-section">
+                <p>{err}</p>
               </section>
+            )}
+
+            {!loading && !err && (
+              <>
+                {viewMode === "actors" && (
+                  <section id="actorSection" className="actor-section">
+                    <h2>Darsteller</h2>
+                    <div id="actorGrid" className="actor-grid">
+                      {actors.length === 0 && (
+                        <p>Noch keine Filme in der Datenbank.</p>
+                      )}
+                      {actors.map((actor) => (
+                        <article
+                          key={actor.name}
+                          className="actor-card"
+                          onClick={() => handleShowMoviesForActor(actor.name)}
+                        >
+                          <div className="actor-name">{actor.name}</div>
+                          <div className="actor-count">
+                            {actor.movieCount} Film
+                            {actor.movieCount !== 1 ? "e" : ""}
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {viewMode === "movies" && (
+                  <section id="moviesSection" className="movies-section">
+                    <div className="movies-header">
+                      <div>
+                        <h2 id="moviesTitle">{moviesTitle}</h2>
+                        <p id="moviesSubtitle" className="movies-subtitle">
+                          {moviesSubtitle}
+                        </p>
+                      </div>
+                      <button
+                        id="backToActors"
+                        className="back-btn"
+                        onClick={handleBackToActors}
+                      >
+                        Zurück zur Darsteller-Übersicht
+                      </button>
+                    </div>
+                    <div id="movieList" className="movie-grid">
+                      {visibleMovies.length === 0 && (
+                        <p>Keine Filme für diese Auswahl gefunden.</p>
+                      )}
+                      {visibleMovies.map((m) => (
+                        <article key={m.id} className="movie-card">
+                          <div className="movie-title">{m.title}</div>
+                          <div className="movie-meta">
+                            {m.year && <span>{m.year}</span>}
+                            {m.studio && (
+                              <span>
+                                {m.year ? " • " : ""}
+                                {m.studio}
+                              </span>
+                            )}
+                            {m.actors.length > 0 && (
+                              <span>
+                                {(m.year || m.studio) ? " • " : ""}
+                                {m.actors.join(", ")}
+                              </span>
+                            )}
+                          </div>
+                          <div className="tag-list">
+                            {m.tags.map((t) => (
+                              <span key={t} className="tag-pill">
+                                {t}
+                              </span>
+                            ))}
+                          </div>
+                          <div className="movie-actions">
+                            <a
+                              href={m.fileUrl}
+                              className="play-btn"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                textDecoration: "none",
+                                display: "inline-block",
+                                textAlign: "center"
+                              }}
+                            >
+                              Abspielen
+                            </a>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  </section>
+                )}
+              </>
             )}
           </>
         )}
