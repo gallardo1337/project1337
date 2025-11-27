@@ -40,15 +40,18 @@ export default function HomePage() {
           return;
         }
 
-        const mapped = (data || []).map((m) => ({
-          id: m.id,
-          title: m.title,
-          fileUrl: m.file_url,
-          year: m.year,
-          studio: m.studios ? m.studios.name : null,
-          actors: m.movie_actors?.map((a) => a.actors?.name).filter(Boolean) || [],
-          tags: m.movie_tags?.map((t) => t.tags?.name).filter(Boolean) || []
-        }));
+        const mapped =
+          data?.map((m) => ({
+            id: m.id,
+            title: m.title,
+            fileUrl: m.file_url,
+            year: m.year,
+            studio: m.studios ? m.studios.name : null,
+            actors:
+              m.movie_actors?.map((a) => a.actors?.name).filter(Boolean) || [],
+            tags:
+              m.movie_tags?.map((t) => t.tags?.name).filter(Boolean) || []
+          })) || [];
 
         setMovies(mapped);
         setActors(buildActorList(mapped));
@@ -118,7 +121,6 @@ export default function HomePage() {
     setVisibleMovies([]);
     setMoviesTitle("Filme");
     setMoviesSubtitle("");
-    // Suche kannst du leeren oder behalten – hier lassen wir drin
   };
 
   return (
@@ -216,7 +218,8 @@ export default function HomePage() {
                         )}
                         {m.actors.length > 0 && (
                           <span>
-                            {(m.year || m.studio) ? " • " : ""}{m.actors.join(", ")}
+                            {(m.year || m.studio) ? " • " : ""}
+                            {m.actors.join(", ")}
                           </span>
                         )}
                       </div>
@@ -228,18 +231,19 @@ export default function HomePage() {
                         ))}
                       </div>
                       <div className="movie-actions">
-                        <button
+                        <a
+                          href={m.fileUrl}
                           className="play-btn"
-                          onClick={() => {
-                            if (!m.fileUrl) {
-                              alert("Kein Dateipfad hinterlegt.");
-                              return;
-                            }
-                            window.location.href = m.fileUrl;
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            textDecoration: "none",
+                            display: "inline-block",
+                            textAlign: "center"
                           }}
                         >
                           Abspielen
-                        </button>
+                        </a>
                       </div>
                     </article>
                   ))}
