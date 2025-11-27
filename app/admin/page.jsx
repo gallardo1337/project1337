@@ -3,97 +3,301 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 
-const emptyForm = {
-  id: null,
-  title: "",
-  year: "",
-  fileUrl: "",
-  studioId: "",
-  actorIds: [],
-  tagIds: []
-};
+// -------------------------------
+// Version / Changelog
+// -------------------------------
+
+const CHANGELOG = [
+  {
+    version: "0.2.0",
+    date: "2025-11-27",
+    items: [
+      "HTTP-Streaming über NAS-Symlink (/1337) vorbereitet",
+      "Play-URLs im Frontend auf direkte NAS-Links umgestellt",
+      "Version-Hinweis mit Changelog auf Haupt- und Admin-Seite integriert"
+    ]
+  },
+  {
+    version: "0.1.0",
+    date: "2025-11-26",
+    items: [
+      "Erstes Admin-Panel für Filme, inkl. Studio, Darsteller & Tags",
+      "Supabase-Anbindung (movies, studios, actors, tags, movie_actors, movie_tags)"
+    ]
+  }
+];
+
+function VersionHint() {
+  const [open, setOpen] = useState(false);
+  const current = CHANGELOG[0];
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        style={{
+          borderRadius: "999px",
+          border: "1px solid #4b5563",
+          background: "#020617",
+          color: "#e5e7eb",
+          fontSize: "0.8rem",
+          padding: "4px 10px",
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          cursor: "pointer"
+        }}
+      >
+        <span>{current.version}</span>
+        <span style={{ opacity: 0.7 }}>Changelog</span>
+      </button>
+
+      {open && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.65)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 80
+          }}
+          onClick={() => setOpen(false)}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 520,
+              maxHeight: "80vh",
+              overflowY: "auto",
+              background: "#020617",
+              borderRadius: 16,
+              border: "1px solid #4b5563",
+              padding: 20,
+              boxShadow: "0 20px 60px rgba(0,0,0,0.7)"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 12
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    fontSize: "0.8rem",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em",
+                    color: "#9ca3af"
+                  }}
+                >
+                  Admin – Version & Changelog
+                </div>
+                <div style={{ fontSize: "1rem", fontWeight: 600 }}>
+                  1337 Library Admin
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                style={{
+                  borderRadius: "999px",
+                  border: "1px solid #4b5563",
+                  background: "#111827",
+                  color: "#e5e7eb",
+                  fontSize: "0.8rem",
+                  padding: "4px 10px",
+                  cursor: "pointer"
+                }}
+              >
+                Schließen
+              </button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {CHANGELOG.map((entry) => (
+                <div
+                  key={entry.version}
+                  style={{
+                    borderRadius: 12,
+                    border: "1px solid #374151",
+                    padding: 12,
+                    background: "#030712"
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "baseline",
+                      marginBottom: 4
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontWeight: 600,
+                        fontSize: "0.95rem",
+                        color: "#e5e7eb"
+                      }}
+                    >
+                      {entry.version}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "0.8rem",
+                        color: "#9ca3af"
+                      }}
+                    >
+                      {entry.date}
+                    </div>
+                  </div>
+                  <ul
+                    style={{
+                      margin: 0,
+                      paddingLeft: 18,
+                      fontSize: "0.85rem",
+                      color: "#d1d5db"
+                    }}
+                  >
+                    {entry.items.map((it, idx) => (
+                      <li key={idx} style={{ marginBottom: 3 }}>
+                        {it}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// -------------------------------
+// Admin-Page
+// -------------------------------
 
 export default function AdminPage() {
   const [movies, setMovies] = useState([]);
+  const [studios, setStudios] = useState([]);
   const [actors, setActors] = useState([]);
   const [tags, setTags] = useState([]);
-  const [studios, setStudios] = useState([]);
-  const [form, setForm] = useState(emptyForm);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState("");
-  const [err, setErr] = useState("");
+  const [err, setErr] = useState(null);
+  const [info, setInfo] = useState(null);
 
-  // Felder für "neuen Actor / Tag / Studio" direkt im Panel
-  const [newActorName, setNewActorName] = useState("");
-  const [newTagName, setNewTagName] = useState("");
-  const [newStudioName, setNewStudioName] = useState("");
+  const [form, setForm] = useState({
+    id: null,
+    title: "",
+    year: "",
+    fileUrl: "",
+    studioId: "",
+    actorIds: [],
+    tagIds: []
+  });
 
   useEffect(() => {
-    void loadAll();
-  }, []);
+    const load = async () => {
+      try {
+        setLoading(true);
+        setErr(null);
 
-  async function loadAll() {
-    try {
-      setLoading(true);
-      setErr("");
-      setMsg("");
-
-      const [moviesRes, actorsRes, tagsRes, studiosRes] = await Promise.all([
-        supabase
+        // Filme inkl. Relationen laden
+        const { data: moviesData, error: moviesErr } = await supabase
           .from("movies")
           .select(
             `
-          id,
-          title,
-          file_url,
-          year,
-          studio_id,
-          studios ( name ),
-          movie_actors ( actor_id ),
-          movie_tags ( tag_id )
-        `
+            id,
+            title,
+            file_url,
+            year,
+            studio_id,
+            studios ( id, name ),
+            movie_actors (
+              actor_id,
+              actors ( id, name )
+            ),
+            movie_tags (
+              tag_id,
+              tags ( id, name )
+            )
+          `
           )
-          .order("title", { ascending: true }),
-        supabase.from("actors").select("id,name").order("name", { ascending: true }),
-        supabase.from("tags").select("id,name").order("name", { ascending: true }),
-        supabase.from("studios").select("id,name").order("name", { ascending: true })
-      ]);
+          .order("title", { ascending: true });
 
-      if (moviesRes.error || actorsRes.error || tagsRes.error || studiosRes.error) {
-        console.error(moviesRes.error || actorsRes.error || tagsRes.error || studiosRes.error);
-        setErr("Fehler beim Laden der Daten aus Supabase.");
-        return;
+        if (moviesErr) throw moviesErr;
+
+        const mappedMovies =
+          moviesData?.map((m) => ({
+            id: m.id,
+            title: m.title,
+            year: m.year || "",
+            fileUrl: m.file_url || "",
+            studioId: m.studio_id || "",
+            studioName: m.studios?.name || "",
+            actorIds:
+              m.movie_actors
+                ?.map((ma) => ma.actors?.id)
+                .filter(Boolean) || [],
+            actorNames:
+              m.movie_actors
+                ?.map((ma) => ma.actors?.name)
+                .filter(Boolean) || [],
+            tagIds:
+              m.movie_tags?.map((mt) => mt.tags?.id).filter(Boolean) || [],
+            tagNames:
+              m.movie_tags?.map((mt) => mt.tags?.name).filter(Boolean) || []
+          })) || [];
+
+        setMovies(mappedMovies);
+
+        // Stammdaten
+        const [{ data: studiosData }, { data: actorsData }, { data: tagsData }] =
+          await Promise.all([
+            supabase.from("studios").select("id, name").order("name"),
+            supabase.from("actors").select("id, name").order("name"),
+            supabase.from("tags").select("id, name").order("name")
+          ]);
+
+        setStudios(studiosData || []);
+        setActors(actorsData || []);
+        setTags(tagsData || []);
+      } catch (e) {
+        console.error(e);
+        setErr("Fehler beim Laden der Admin-Daten.");
+      } finally {
+        setLoading(false);
       }
+    };
 
-      const mappedMovies =
-        moviesRes.data?.map((m) => ({
-          id: m.id,
-          title: m.title,
-          fileUrl: m.file_url,
-          year: m.year ?? "",
-          studioId: m.studio_id ?? "",
-          studioName: m.studios?.name ?? "",
-          actorIds: m.movie_actors?.map((ma) => ma.actor_id) || [],
-          tagIds: m.movie_tags?.map((mt) => mt.tag_id) || []
-        })) || [];
+    void load();
+  }, []);
 
-      setMovies(mappedMovies);
-      setActors(actorsRes.data || []);
-      setTags(tagsRes.data || []);
-      setStudios(studiosRes.data || []);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const resetForm = () => {
+    setForm({
+      id: null,
+      title: "",
+      year: "",
+      fileUrl: "",
+      studioId: "",
+      actorIds: [],
+      tagIds: []
+    });
+    setInfo(null);
+    setErr(null);
+  };
 
-  function startNewMovie() {
-    setForm(emptyForm);
-    setMsg("");
-    setErr("");
-  }
-
-  function startEditMovie(m) {
+  const selectMovie = (m) => {
     setForm({
       id: m.id,
       title: m.title || "",
@@ -103,440 +307,622 @@ export default function AdminPage() {
       actorIds: m.actorIds || [],
       tagIds: m.tagIds || []
     });
-    setMsg("");
-    setErr("");
-  }
+    setInfo(null);
+    setErr(null);
+  };
 
-  function updateFormField(field, value) {
+  const toggleIdInArray = (list, id) =>
+    list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
+
+  const handleInputChange = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
-  }
+  };
 
-  function toggleIdInArray(field, id) {
-    setForm((prev) => {
-      const arr = new Set(prev[field] || []);
-      if (arr.has(id)) arr.delete(id);
-      else arr.add(id);
-      return { ...prev, [field]: Array.from(arr) };
-    });
-  }
+  const handleToggleActor = (id) => {
+    setForm((prev) => ({
+      ...prev,
+      actorIds: toggleIdInArray(prev.actorIds, id)
+    }));
+  };
 
-  async function handleSave(e) {
-    e.preventDefault();
-    setSaving(true);
-    setMsg("");
-    setErr("");
+  const handleToggleTag = (id) => {
+    setForm((prev) => ({
+      ...prev,
+      tagIds: toggleIdInArray(prev.tagIds, id)
+    }));
+  };
+
+  const handleSave = async () => {
+    if (!form.title.trim()) {
+      setErr("Titel darf nicht leer sein.");
+      return;
+    }
+    if (!form.fileUrl.trim()) {
+      setErr("fileUrl (NAS-Link) darf nicht leer sein.");
+      return;
+    }
 
     try {
-      if (!form.title.trim() || !form.fileUrl.trim()) {
-        setErr("Titel und Dateipfad (fileUrl) sind Pflicht.");
-        return;
-      }
+      setSaving(true);
+      setErr(null);
+      setInfo(null);
 
-      // Jahr in Zahl wandeln oder null
-      const yearValue = form.year ? Number(form.year) : null;
+      const payload = {
+        title: form.title.trim(),
+        file_url: form.fileUrl.trim(),
+        year: form.year ? Number(form.year) : null,
+        studio_id: form.studioId || null
+      };
 
       let movieId = form.id;
 
-      if (!movieId) {
-        // INSERT
+      if (movieId) {
+        // Update
         const { data, error } = await supabase
           .from("movies")
-          .insert([
-            {
-              title: form.title.trim(),
-              file_url: form.fileUrl.trim(),
-              year: yearValue,
-              studio_id: form.studioId || null
-            }
-          ])
+          .update(payload)
+          .eq("id", movieId)
           .select()
           .single();
 
-        if (error) {
-          console.error(error);
-          setErr("Fehler beim Anlegen des Films.");
-          return;
-        }
+        if (error) throw error;
         movieId = data.id;
       } else {
-        // UPDATE
-        const { error } = await supabase
+        // Insert
+        const { data, error } = await supabase
           .from("movies")
-          .update({
-            title: form.title.trim(),
-            file_url: form.fileUrl.trim(),
-            year: yearValue,
-            studio_id: form.studioId || null
-          })
-          .eq("id", movieId);
+          .insert(payload)
+          .select()
+          .single();
 
-        if (error) {
-          console.error(error);
-          setErr("Fehler beim Aktualisieren des Films.");
-          return;
-        }
+        if (error) throw error;
+        movieId = data.id;
       }
 
-      // Verknüpfungen neu setzen (Actors/Tags)
-      // Erst alte Einträge löschen
+      // Relationen updaten
       await supabase.from("movie_actors").delete().eq("movie_id", movieId);
       await supabase.from("movie_tags").delete().eq("movie_id", movieId);
 
-      if (form.actorIds?.length) {
-        const rows = form.actorIds.map((actorId) => ({
-          movie_id: movieId,
-          actor_id: actorId
-        }));
-        const { error } = await supabase.from("movie_actors").insert(rows);
-        if (error) {
-          console.error(error);
-          setErr("Film gespeichert, aber Fehler beim Speichern der Darsteller.");
-          return;
-        }
+      if (form.actorIds.length > 0) {
+        await supabase
+          .from("movie_actors")
+          .insert(
+            form.actorIds.map((actorId) => ({
+              movie_id: movieId,
+              actor_id: actorId
+            }))
+          );
       }
 
-      if (form.tagIds?.length) {
-        const rows = form.tagIds.map((tagId) => ({
-          movie_id: movieId,
-          tag_id: tagId
-        }));
-        const { error } = await supabase.from("movie_tags").insert(rows);
-        if (error) {
-          console.error(error);
-          setErr("Film gespeichert, aber Fehler beim Speichern der Tags.");
-          return;
-        }
+      if (form.tagIds.length > 0) {
+        await supabase
+          .from("movie_tags")
+          .insert(
+            form.tagIds.map((tagId) => ({
+              movie_id: movieId,
+              tag_id: tagId
+            }))
+          );
       }
 
-      setMsg("Film gespeichert.");
-      setForm((prev) => ({ ...prev, id: movieId }));
-      await loadAll(); // Liste neu laden
+      setInfo("Film gespeichert.");
+
+      // Liste neu laden
+      const { data: moviesData, error: moviesErr } = await supabase
+        .from("movies")
+        .select(
+          `
+          id,
+          title,
+          file_url,
+          year,
+          studio_id,
+          studios ( id, name ),
+          movie_actors (
+            actor_id,
+            actors ( id, name )
+          ),
+          movie_tags (
+            tag_id,
+            tags ( id, name )
+          )
+        `
+        )
+        .order("title", { ascending: true });
+
+      if (moviesErr) throw moviesErr;
+
+      const mappedMovies =
+        moviesData?.map((m) => ({
+          id: m.id,
+          title: m.title,
+          year: m.year || "",
+          fileUrl: m.file_url || "",
+          studioId: m.studio_id || "",
+          studioName: m.studios?.name || "",
+          actorIds:
+            m.movie_actors?.map((ma) => ma.actors?.id).filter(Boolean) || [],
+          actorNames:
+            m.movie_actors?.map((ma) => ma.actors?.name).filter(Boolean) || [],
+          tagIds:
+            m.movie_tags?.map((mt) => mt.tags?.id).filter(Boolean) || [],
+          tagNames:
+            m.movie_tags?.map((mt) => mt.tags?.name).filter(Boolean) || []
+        })) || [];
+
+      setMovies(mappedMovies);
+
+      // Form auf aktuellen Datensatz setzen
+      const updated = mappedMovies.find((x) => x.id === movieId);
+      if (updated) selectMovie(updated);
+    } catch (e) {
+      console.error(e);
+      setErr("Fehler beim Speichern des Films.");
     } finally {
       setSaving(false);
     }
-  }
+  };
 
-  async function handleDeleteMovie(id) {
-    if (!id) return;
-    if (!window.confirm("Diesen Film wirklich löschen?")) return;
-
-    setSaving(true);
-    setMsg("");
-    setErr("");
+  const handleDelete = async () => {
+    if (!form.id) return;
+    const confirm = window.confirm(
+      `Film "${form.title}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`
+    );
+    if (!confirm) return;
 
     try {
-      // durch foreign keys mit on delete cascade werden movie_actors/movie_tags mit gelöscht
-      const { error } = await supabase.from("movies").delete().eq("id", id);
-      if (error) {
-        console.error(error);
-        setErr("Fehler beim Löschen.");
-        return;
-      }
-      setMsg("Film gelöscht.");
-      if (form.id === id) setForm(emptyForm);
-      await loadAll();
+      setSaving(true);
+      setErr(null);
+      setInfo(null);
+
+      await supabase.from("movie_actors").delete().eq("movie_id", form.id);
+      await supabase.from("movie_tags").delete().eq("movie_id", form.id);
+      await supabase.from("movies").delete().eq("id", form.id);
+
+      setMovies((prev) => prev.filter((m) => m.id !== form.id));
+      resetForm();
+      setInfo("Film gelöscht.");
+    } catch (e) {
+      console.error(e);
+      setErr("Fehler beim Löschen des Films.");
     } finally {
       setSaving(false);
     }
-  }
-
-  async function handleCreateActor(e) {
-    e.preventDefault();
-    const name = newActorName.trim();
-    if (!name) return;
-    const { data, error } = await supabase
-      .from("actors")
-      .insert([{ name }])
-      .select()
-      .single();
-    if (error) {
-      console.error(error);
-      setErr("Fehler beim Anlegen des Darstellers.");
-      return;
-    }
-    setActors((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
-    setNewActorName("");
-  }
-
-  async function handleCreateTag(e) {
-    e.preventDefault();
-    const name = newTagName.trim();
-    if (!name) return;
-    const { data, error } = await supabase
-      .from("tags")
-      .insert([{ name }])
-      .select()
-      .single();
-    if (error) {
-      console.error(error);
-      setErr("Fehler beim Anlegen des Tags.");
-      return;
-    }
-    setTags((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
-    setNewTagName("");
-  }
-
-  async function handleCreateStudio(e) {
-    e.preventDefault();
-    const name = newStudioName.trim();
-    if (!name) return;
-    const { data, error } = await supabase
-      .from("studios")
-      .insert([{ name }])
-      .select()
-      .single();
-    if (error) {
-      console.error(error);
-      setErr("Fehler beim Anlegen des Studios.");
-      return;
-    }
-    setStudios((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
-    setNewStudioName("");
-  }
+  };
 
   return (
     <div className="page admin-page">
       <header className="topbar">
-        <div className="logo-text">1337 Library · Admin</div>
+        <div className="logo-text">1337 Library – Admin</div>
+        <div style={{ marginLeft: "auto" }}>
+          <VersionHint />
+        </div>
       </header>
 
-      <main className="admin-main">
-        <section className="admin-left">
-          <div className="admin-panel">
-            <div className="admin-panel-header">
-              <h2>{form.id ? "Film bearbeiten" : "Neuer Film"}</h2>
-              {form.id && (
-                <button
-                  type="button"
-                  className="admin-secondary-btn"
-                  onClick={startNewMovie}
-                >
-                  Neu anlegen
-                </button>
-              )}
-            </div>
-
-            <form className="admin-form" onSubmit={handleSave}>
-              <label className="admin-field">
-                <span>Titel</span>
-                <input
-                  type="text"
-                  value={form.title}
-                  onChange={(e) => updateFormField("title", e.target.value)}
-                  required
-                />
-              </label>
-
-              <label className="admin-field">
-                <span>Jahr</span>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  value={form.year}
-                  onChange={(e) => updateFormField("year", e.target.value)}
-                />
-              </label>
-
-              <label className="admin-field">
-                <span>Dateipfad / URL (NAS)</span>
-                <input
-                  type="text"
-                  value={form.fileUrl}
-                  onChange={(e) => updateFormField("fileUrl", e.target.value)}
-                  placeholder="z. B. http://nas/Filme/Darsteller/Film.mkv"
-                  required
-                />
-              </label>
-
-              <label className="admin-field">
-                <span>Studio</span>
-                <select
-                  value={form.studioId || ""}
-                  onChange={(e) => updateFormField("studioId", e.target.value)}
-                >
-                  <option value="">– kein Studio –</option>
-                  {studios.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <div className="admin-inline-group">
-                <label className="admin-field">
-                  <span>Neues Studio</span>
-                  <input
-                    type="text"
-                    value={newStudioName}
-                    onChange={(e) => setNewStudioName(e.target.value)}
-                  />
-                </label>
-                <button
-                  className="admin-mini-btn"
-                  type="button"
-                  onClick={handleCreateStudio}
-                >
-                  +
-                </button>
-              </div>
-
-              <div className="admin-multiselect">
-                <div className="admin-multiselect-header">
-                  <span>Darsteller</span>
-                  <span className="admin-count">
-                    {form.actorIds.length} ausgewählt
-                  </span>
-                </div>
-                <div className="admin-multiselect-grid">
-                  {actors.map((a) => {
-                    const active = form.actorIds.includes(a.id);
-                    return (
-                      <button
-                        key={a.id}
-                        type="button"
-                        className={
-                          "admin-pill-btn" + (active ? " admin-pill-btn-active" : "")
-                        }
-                        onClick={() => toggleIdInArray("actorIds", a.id)}
-                      >
-                        {a.name}
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="admin-inline-group">
-                  <label className="admin-field">
-                    <span>Neuer Darsteller</span>
-                    <input
-                      type="text"
-                      value={newActorName}
-                      onChange={(e) => setNewActorName(e.target.value)}
-                    />
-                  </label>
-                  <button
-                    className="admin-mini-btn"
-                    type="button"
-                    onClick={handleCreateActor}
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-
-              <div className="admin-multiselect">
-                <div className="admin-multiselect-header">
-                  <span>Tags</span>
-                  <span className="admin-count">
-                    {form.tagIds.length} ausgewählt
-                  </span>
-                </div>
-                <div className="admin-multiselect-grid">
-                  {tags.map((t) => {
-                    const active = form.tagIds.includes(t.id);
-                    return (
-                      <button
-                        key={t.id}
-                        type="button"
-                        className={
-                          "admin-pill-btn" + (active ? " admin-pill-btn-active" : "")
-                        }
-                        onClick={() => toggleIdInArray("tagIds", t.id)}
-                      >
-                        {t.name}
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="admin-inline-group">
-                  <label className="admin-field">
-                    <span>Neuer Tag</span>
-                    <input
-                      type="text"
-                      value={newTagName}
-                      onChange={(e) => setNewTagName(e.target.value)}
-                    />
-                  </label>
-                  <button
-                    className="admin-mini-btn"
-                    type="button"
-                    onClick={handleCreateTag}
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-
-              {err && <p className="admin-message admin-error">{err}</p>}
-              {msg && <p className="admin-message admin-success">{msg}</p>}
-
-              <div className="admin-actions">
-                {form.id && (
-                  <button
-                    type="button"
-                    className="admin-danger-btn"
-                    onClick={() => handleDeleteMovie(form.id)}
-                    disabled={saving}
-                  >
-                    Löschen
-                  </button>
-                )}
-                <button type="submit" className="admin-primary-btn" disabled={saving}>
-                  {saving ? "Speichere …" : "Speichern"}
-                </button>
-              </div>
-            </form>
+      <main
+        className="admin-main"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "minmax(0, 1.3fr) minmax(0, 2fr)",
+          gap: "1.5rem",
+          padding: "1.5rem",
+          maxWidth: 1400,
+          margin: "0 auto"
+        }}
+      >
+        {/* Linke Seite: Liste */}
+        <section
+          className="admin-panel"
+          style={{
+            background: "#020617",
+            borderRadius: 16,
+            border: "1px solid #1f2937",
+            padding: "1rem",
+            minHeight: 0,
+            display: "flex",
+            flexDirection: "column"
+          }}
+        >
+          <div
+            className="admin-panel-header"
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "0.75rem"
+            }}
+          >
+            <h2
+              style={{
+                fontSize: "1rem",
+                margin: 0,
+                color: "#e5e7eb"
+              }}
+            >
+              Filme
+            </h2>
+            <button
+              type="button"
+              onClick={resetForm}
+              style={{
+                borderRadius: 999,
+                border: "1px solid #4b5563",
+                background: "transparent",
+                color: "#e5e7eb",
+                fontSize: "0.8rem",
+                padding: "4px 10px",
+                cursor: "pointer"
+              }}
+            >
+              + Neuer Film
+            </button>
           </div>
-        </section>
 
-        <section className="admin-right">
-          <div className="admin-panel">
-            <div className="admin-panel-header">
-              <h2>Filme ({movies.length})</h2>
-              <button
-                type="button"
-                className="admin-secondary-btn"
-                onClick={startNewMovie}
-              >
-                Neuer Film
-              </button>
-            </div>
+          {loading && <p style={{ fontSize: "0.85rem" }}>Lade Filme …</p>}
+          {err && (
+            <p
+              style={{
+                fontSize: "0.85rem",
+                color: "#f97373",
+                marginBottom: "0.5rem"
+              }}
+            >
+              {err}
+            </p>
+          )}
+          {!loading && movies.length === 0 && (
+            <p style={{ fontSize: "0.85rem" }}>Noch keine Filme angelegt.</p>
+          )}
 
-            {loading ? (
-              <p>Lade Filme …</p>
-            ) : movies.length === 0 ? (
-              <p>Noch keine Filme angelegt.</p>
-            ) : (
-              <div className="admin-movie-list">
-                {movies.map((m) => (
+          {!loading && movies.length > 0 && (
+            <div
+              className="admin-movie-list"
+              style={{
+                marginTop: "0.5rem",
+                display: "flex",
+                flexDirection: "column",
+                gap: 4,
+                overflowY: "auto"
+              }}
+            >
+              {movies.map((m) => {
+                const active = form.id === m.id;
+                return (
                   <button
                     key={m.id}
                     type="button"
-                    className={
-                      "admin-movie-row" + (form.id === m.id ? " admin-movie-row-active" : "")
-                    }
-                    onClick={() => startEditMovie(m)}
+                    onClick={() => selectMovie(m)}
+                    style={{
+                      textAlign: "left",
+                      borderRadius: 12,
+                      border: active
+                        ? "1px solid #f97316"
+                        : "1px solid #111827",
+                      background: active ? "#111827" : "#020617",
+                      padding: "6px 10px",
+                      cursor: "pointer"
+                    }}
                   >
-                    <div className="admin-movie-main">
-                      <span className="admin-movie-title">{m.title}</span>
-                      <span className="admin-movie-meta">
-                        {m.year && <span>{m.year}</span>}
-                        {m.studioName && (
-                          <span>{m.year ? " • " : ""}{m.studioName}</span>
-                        )}
-                      </span>
+                    <div
+                      style={{
+                        fontSize: "0.9rem",
+                        color: "#e5e7eb",
+                        fontWeight: 500
+                      }}
+                    >
+                      {m.title}
                     </div>
-                    <div className="admin-movie-tags">
-                      {m.tags?.length > 0 && (
-                        <span className="admin-movie-tagline">
-                          {m.tags.join(", ")}
+                    <div
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "#9ca3af"
+                      }}
+                    >
+                      {m.year && <span>{m.year}</span>}
+                      {m.studioName && (
+                        <span>
+                          {m.year ? " • " : ""}
+                          {m.studioName}
+                        </span>
+                      )}
+                      {m.actorNames?.length > 0 && (
+                        <span>
+                          {(m.year || m.studioName) ? " • " : ""}
+                          {m.actorNames.join(", ")}
                         </span>
                       )}
                     </div>
                   </button>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* Rechte Seite: Formular */}
+        <section
+          className="admin-panel"
+          style={{
+            background: "#020617",
+            borderRadius: 16,
+            border: "1px solid #1f2937",
+            padding: "1rem",
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.75rem"
+          }}
+        >
+          <h2
+            style={{
+              fontSize: "1rem",
+              margin: 0,
+              color: "#e5e7eb"
+            }}
+          >
+            {form.id ? "Film bearbeiten" : "Neuen Film anlegen"}
+          </h2>
+
+          {info && (
+            <p
+              style={{
+                fontSize: "0.8rem",
+                color: "#4ade80",
+                margin: 0
+              }}
+            >
+              {info}
+            </p>
+          )}
+          {err && (
+            <p
+              style={{
+                fontSize: "0.8rem",
+                color: "#f97373",
+                margin: 0
+              }}
+            >
+              {err}
+            </p>
+          )}
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr",
+              gap: "0.5rem",
+              marginTop: "0.5rem"
+            }}
+          >
+            <div>
+              <label
+                style={{ fontSize: "0.8rem", color: "#9ca3af", display: "block" }}
+              >
+                Titel
+              </label>
+              <input
+                type="text"
+                value={form.title}
+                onChange={(e) => handleInputChange("title", e.target.value)}
+                style={{
+                  width: "100%",
+                  borderRadius: 8,
+                  border: "1px solid #374151",
+                  background: "#020617",
+                  color: "#e5e7eb",
+                  fontSize: "0.9rem",
+                  padding: "6px 8px",
+                  marginTop: 2
+                }}
+              />
+            </div>
+
+            <div>
+              <label
+                style={{ fontSize: "0.8rem", color: "#9ca3af", display: "block" }}
+              >
+                Jahr
+              </label>
+              <input
+                type="number"
+                value={form.year}
+                onChange={(e) => handleInputChange("year", e.target.value)}
+                style={{
+                  width: "100%",
+                  borderRadius: 8,
+                  border: "1px solid #374151",
+                  background: "#020617",
+                  color: "#e5e7eb",
+                  fontSize: "0.9rem",
+                  padding: "6px 8px",
+                  marginTop: 2
+                }}
+              />
+            </div>
+
+            <div>
+              <label
+                style={{ fontSize: "0.8rem", color: "#9ca3af", display: "block" }}
+              >
+                fileUrl (NAS-Link)
+              </label>
+              <input
+                type="text"
+                placeholder="z. B. http://192.168.178.72/1337/Ordner/Film.mkv"
+                value={form.fileUrl}
+                onChange={(e) => handleInputChange("fileUrl", e.target.value)}
+                style={{
+                  width: "100%",
+                  borderRadius: 8,
+                  border: "1px solid #374151",
+                  background: "#020617",
+                  color: "#e5e7eb",
+                  fontSize: "0.9rem",
+                  padding: "6px 8px",
+                  marginTop: 2
+                }}
+              />
+            </div>
+
+            <div>
+              <label
+                style={{ fontSize: "0.8rem", color: "#9ca3af", display: "block" }}
+              >
+                Studio
+              </label>
+              <select
+                value={form.studioId || ""}
+                onChange={(e) => handleInputChange("studioId", e.target.value)}
+                style={{
+                  width: "100%",
+                  borderRadius: 8,
+                  border: "1px solid #374151",
+                  background: "#020617",
+                  color: "#e5e7eb",
+                  fontSize: "0.9rem",
+                  padding: "6px 8px",
+                  marginTop: 2
+                }}
+              >
+                <option value="">– kein Studio –</option>
+                {studios.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
                 ))}
+              </select>
+            </div>
+
+            <div>
+              <label
+                style={{ fontSize: "0.8rem", color: "#9ca3af", display: "block" }}
+              >
+                Darsteller
+              </label>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 6,
+                  marginTop: 4,
+                  maxHeight: 140,
+                  overflowY: "auto"
+                }}
+              >
+                {actors.map((a) => {
+                  const active = form.actorIds.includes(a.id);
+                  return (
+                    <button
+                      key={a.id}
+                      type="button"
+                      onClick={() => handleToggleActor(a.id)}
+                      style={{
+                        borderRadius: 999,
+                        border: active
+                          ? "1px solid #f97316"
+                          : "1px solid #374151",
+                        background: active ? "#111827" : "#020617",
+                        color: "#e5e7eb",
+                        fontSize: "0.75rem",
+                        padding: "3px 8px",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap"
+                      }}
+                    >
+                      {a.name}
+                    </button>
+                  );
+                })}
               </div>
+            </div>
+
+            <div>
+              <label
+                style={{ fontSize: "0.8rem", color: "#9ca3af", display: "block" }}
+              >
+                Tags
+              </label>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 6,
+                  marginTop: 4,
+                  maxHeight: 140,
+                  overflowY: "auto"
+                }}
+              >
+                {tags.map((t) => {
+                  const active = form.tagIds.includes(t.id);
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => handleToggleTag(t.id)}
+                      style={{
+                        borderRadius: 999,
+                        border: active
+                          ? "1px solid #22c55e"
+                          : "1px solid #374151",
+                        background: active ? "#064e3b" : "#020617",
+                        color: "#e5e7eb",
+                        fontSize: "0.75rem",
+                        padding: "3px 8px",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap"
+                      }}
+                    >
+                      {t.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              gap: 8,
+              marginTop: "0.75rem",
+              justifyContent: "flex-end"
+            }}
+          >
+            {form.id && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={saving}
+                style={{
+                  borderRadius: 999,
+                  border: "1px solid #b91c1c",
+                  background: "#7f1d1d",
+                  color: "#fee2e2",
+                  fontSize: "0.85rem",
+                  padding: "6px 12px",
+                  cursor: "pointer"
+                }}
+              >
+                Löschen
+              </button>
             )}
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              style={{
+                borderRadius: 999,
+                border: "none",
+                background: "#f97316",
+                color: "#111827",
+                fontSize: "0.85rem",
+                padding: "6px 14px",
+                fontWeight: 600,
+                cursor: "pointer",
+                opacity: saving ? 0.7 : 1
+              }}
+            >
+              {saving ? "Speichere …" : "Speichern"}
+            </button>
           </div>
         </section>
       </main>
