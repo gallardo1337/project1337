@@ -1,7 +1,9 @@
+import { supabase } from "./supabaseClient.js";
+
 let allMovies = [];
 let allActors = [];
 
-// DOM-Elemente
+// DOM Elemente
 const els = {
   globalSearch: document.getElementById("globalSearch"),
   actorSection: document.getElementById("actorSection"),
@@ -13,9 +15,40 @@ const els = {
   backToActors: document.getElementById("backToActors")
 };
 
-async function loadMovies() {
-  const resp = await fetch("movies.json");
-  allMovies = await resp.json();
+// Hauptroutine
+async function loadEverything() {
+  const { data: movies, error } = await supabase
+    .from("movies")
+    .select(`
+      id,
+      title,
+      file_url,
+      year,
+      studios ( name ),
+      movie_actors (
+        actors ( name )
+      ),
+      movie_tags (
+        tags ( name )
+      )
+    `);
+
+  if (error) {
+    console.error("Supabase Fehler:", error);
+    return;
+  }
+
+  // Umwandeln in saubere JS-Struktur
+  allMovies = movies.map(m => ({
+    id: m.id,
+    title: m.title,
+    fileUrl: m.file_url,
+    year: m.year,
+    studio: m.studios ? m.studios.name : null,
+    actors: m.movie_actors?.map(a => a.actors.name) || [],
+    tags: m.movie_tags?.map(t => t.tags.name) || []
+  }));
+
   buildActors();
   renderActors();
 }
@@ -24,19 +57,15 @@ function buildActors() {
   const map = new Map();
 
   allMovies.forEach(m => {
-    const actors = m.actors || [];
-    actors.forEach(name => {
-      if (!name) return;
-      if (!map.has(name)) {
-        map.set(name, { name, movieCount: 0 });
-      }
-      map.get(name).movieCount += 1;
+    m.actors.forEach(actor => {
+      if (!map.has(actor)) map.set(actor, 0);
+      map.set(actor, map.get(actor) + 1);
     });
   });
 
-  allActors = Array.from(map.values()).sort((a, b) =>
-    a.name.localeCompare(b.name)
-  );
+  allActors = Array.from(map.entries())
+    .map(([name, count]) => ({ name, movieCount: count }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function renderActors() {
@@ -46,17 +75,10 @@ function renderActors() {
     const card = document.createElement("article");
     card.className = "actor-card";
 
-    const nameEl = document.createElement("div");
-    nameEl.className = "actor-name";
-    nameEl.textContent = actor.name;
-
-    const countEl = document.createElement("div");
-    countEl.className = "actor-count";
-    countEl.textContent =
-      actor.movieCount === 1 ? "1 Film" : `${actor.movieCount} Filme`;
-
-    card.appendChild(nameEl);
-    card.appendChild(countEl);
+    card.innerHTML = `
+      <div class="actor-name">${actor.name}</div>
+      <div class="actor-count">${actor.movieCount} Film(e)</div>
+    `;
 
     card.addEventListener("click", () => {
       showMoviesForActor(actor.name);
@@ -66,37 +88,28 @@ function renderActors() {
   });
 }
 
-// Filme für einen bestimmten Darsteller
 function showMoviesForActor(actorName) {
-  const movies = allMovies.filter(m =>
-    (m.actors || []).includes(actorName)
-  );
+  const movies = allMovies.filter(m => m.actors.includes(actorName));
 
   els.moviesTitle.textContent = actorName;
-  els.moviesSubtitle.textContent = `${movies.length} Film(e) mit diesem Darsteller`;
-
+  els.moviesSubtitle.textContent = `${movies.length} Film(e)`;
   renderMovieList(movies);
 
   els.actorSection.classList.add("hidden");
   els.moviesSection.classList.remove("hidden");
 }
 
-// Filme anhand der Suche
 function showMoviesForSearch(query) {
-  const q = (query || "").trim().toLowerCase();
-  if (!q) {
-    els.moviesSection.classList.add("hidden");
-    els.actorSection.classList.remove("hidden");
-    return;
-  }
+  const q = query.toLowerCase();
 
   const movies = allMovies.filter(m => {
     const haystack = [
-      m.title || "",
-      m.studio || "",
-      (m.actors || []).join(" "),
-      (m.tags || []).join(" ")
+      m.title,
+      m.studio,
+      m.actors.join(" "),
+      m.tags.join(" ")
     ]
+      .filter(Boolean)
       .join(" ")
       .toLowerCase();
 
@@ -105,14 +118,12 @@ function showMoviesForSearch(query) {
 
   els.moviesTitle.textContent = `Suchergebnis für "${query}"`;
   els.moviesSubtitle.textContent = `${movies.length} Treffer`;
-
   renderMovieList(movies);
 
   els.actorSection.classList.add("hidden");
   els.moviesSection.classList.remove("hidden");
 }
 
-// Film-Liste rendern
 function renderMovieList(movies) {
   els.movieList.innerHTML = "";
 
@@ -120,71 +131,52 @@ function renderMovieList(movies) {
     const card = document.createElement("article");
     card.className = "movie-card";
 
-    const titleEl = document.createElement("div");
-    titleEl.className = "movie-title";
-    titleEl.textContent = m.title || "Ohne Titel";
+    card.innerHTML = `
+      <div class="movie-title">${m.title}</div>
+      <div class="movie-meta">
+        ${m.year ? m.year : ""}
+        ${m.studio ? " • " + m.studio : ""}
+        ${m.actors.length > 0 ? " • " + m.actors.join(", ") : ""}
+      </div>
+      <div class="tag-list">
+        ${m.tags.map(t => `<span class="tag-pill">${t}</span>`).join("")}
+      </div>
+      <div class="movie-actions">
+        <button class="play-btn">Abspielen</button>
+      </div>
+    `;
 
-    const metaEl = document.createElement("div");
-    metaEl.className = "movie-meta";
-    const parts = [];
-    if (m.year) parts.push(m.year);
-    if (m.studio) parts.push(m.studio);
-    if (m.actors && m.actors.length > 0) {
-      parts.push(m.actors.join(", "));
-    }
-    metaEl.textContent = parts.join(" • ");
-
-    const tagList = document.createElement("div");
-    tagList.className = "tag-list";
-    (m.tags || []).forEach(t => {
-      const span = document.createElement("span");
-      span.className = "tag-pill";
-      span.textContent = t;
-      tagList.appendChild(span);
-    });
-
-    const actions = document.createElement("div");
-    actions.className = "movie-actions";
-    const playBtn = document.createElement("button");
-    playBtn.className = "play-btn";
-    playBtn.textContent = "Abspielen";
-    playBtn.addEventListener("click", () => {
+    card.querySelector(".play-btn").addEventListener("click", () => {
       if (!m.fileUrl) {
-        alert("Kein Dateipfad hinterlegt.");
+        alert("Keine Dateipfad-URL vorhanden.");
         return;
       }
-      // Direkt auf den Film-Link gehen – Browser/Apple TV übernimmt
       window.location.href = m.fileUrl;
     });
-    actions.appendChild(playBtn);
-
-    card.appendChild(titleEl);
-    card.appendChild(metaEl);
-    card.appendChild(tagList);
-    card.appendChild(actions);
 
     els.movieList.appendChild(card);
   });
 }
 
 // Events
-
 let searchDebounce;
 els.globalSearch.addEventListener("input", () => {
   clearTimeout(searchDebounce);
   searchDebounce = setTimeout(() => {
-    showMoviesForSearch(els.globalSearch.value);
+    const q = els.globalSearch.value.trim();
+    if (q.length === 0) {
+      els.actorSection.classList.remove("hidden");
+      els.moviesSection.classList.add("hidden");
+      return;
+    }
+    showMoviesForSearch(q);
   }, 200);
 });
 
 els.backToActors.addEventListener("click", () => {
   els.moviesSection.classList.add("hidden");
   els.actorSection.classList.remove("hidden");
-  // Suche optional leeren:
-  // els.globalSearch.value = "";
 });
 
-loadMovies().catch(err => {
-  console.error("Fehler beim Laden von movies.json", err);
-  els.movieList.textContent = "Fehler beim Laden der Filmliste.";
-});
+// Start
+loadEverything();
