@@ -3,28 +3,30 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 
-// Zentrale Versions-Infos für die Hauptseite
+// -------------------------------
+// Version / Changelog
+// -------------------------------
+
 const CHANGELOG = [
   {
     version: "0.2.0",
     date: "2025-11-27",
     items: [
-      "HTTP-Streaming über NAS-Symlink /1337 eingebunden",
-      "Play-Button öffnet direkte Datei-URLs (NAS) im neuen Tab",
-      "Grundlage für Version-Hinweis & Changelog geschaffen"
+      "HTTP-Streaming über NAS-Symlink (/1337) vorbereitet",
+      "Play-Button öffnet direkte NAS-Links (fileUrl) im neuen Tab",
+      "Version-Hinweis & Changelog auf Startseite integriert"
     ]
   },
   {
     version: "0.1.0",
     date: "2025-11-26",
     items: [
-      "Erste Version der 1337 Library",
-      "Supabase-Anbindung für Filme, Darsteller, Tags"
+      "Erste Version der 1337 Library mit Darsteller-/Film-Ansicht",
+      "Supabase-Anbindung (movies, studios, actors, tags, movie_actors, movie_tags)"
     ]
   }
 ];
 
-// Kleiner Version-Button + Changelog-Overlay
 function VersionHint() {
   const [open, setOpen] = useState(false);
   const current = CHANGELOG[0];
@@ -60,7 +62,7 @@ function VersionHint() {
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
-            zIndex: 50
+            zIndex: 70
           }}
           onClick={() => setOpen(false)}
         >
@@ -179,6 +181,10 @@ function VersionHint() {
   );
 }
 
+// -------------------------------
+// Startseite
+// -------------------------------
+
 export default function HomePage() {
   const [movies, setMovies] = useState([]);
   const [actors, setActors] = useState([]);
@@ -194,6 +200,8 @@ export default function HomePage() {
     const load = async () => {
       try {
         setLoading(true);
+        setErr(null);
+
         const { data, error } = await supabase
           .from("movies")
           .select(`
@@ -231,6 +239,9 @@ export default function HomePage() {
 
         setMovies(mapped);
         setActors(buildActorList(mapped));
+      } catch (e) {
+        console.error(e);
+        setErr("Fehler beim Laden der Daten.");
       } finally {
         setLoading(false);
       }
@@ -428,7 +439,8 @@ export default function HomePage() {
                   ))}
                 </div>
               </section>
-            </>
+            )}
+          </>
         )}
       </main>
     </div>
