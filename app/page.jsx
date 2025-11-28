@@ -188,6 +188,23 @@ function VersionHint() {
   );
 }
 
+// Hilfsfunktion für Profilbilder (Hauptdarsteller)
+function normalizeProfileImage(actorRow) {
+  const raw =
+    actorRow.profile_image ||
+    actorRow.profileImage ||
+    actorRow.image_url ||
+    null;
+
+  if (!raw) return null;
+
+  // Kleine Hilfe: falls du mal ein Leerzeichen im Pfad einträgst,
+  // ersetzen wir es durch %20, damit NAS-HTTP-Links nicht brechen.
+  const cleaned = raw.replace(/ /g, "%20");
+
+  return cleaned;
+}
+
 // -------------------------------
 // Startseite
 // -------------------------------
@@ -270,7 +287,7 @@ export default function HomePage() {
         );
         const tagMap = Object.fromEntries(tags.map((t) => [t.id, t.name]));
 
-        // Filme mappen: inkl. mainActorIds / supportActorIds, Actor-Namen & Tag-Namen
+        // Filme mappen
         const mappedMovies =
           moviesData.map((m) => {
             const mainActorIds = Array.isArray(m.main_actor_ids)
@@ -308,7 +325,7 @@ export default function HomePage() {
 
         setMovies(mappedMovies);
 
-        // Hauptdarsteller-Galerie: basierend auf main_actor_ids
+        // Hauptdarsteller-Galerie (nur Actors, die mindestens 1 Film als Hauptdarsteller haben)
         const movieCountByActorId = new Map();
         moviesData.forEach((m) => {
           const arr = Array.isArray(m.main_actor_ids) ? m.main_actor_ids : [];
@@ -325,7 +342,7 @@ export default function HomePage() {
           .map((a) => ({
             id: a.id,
             name: a.name,
-            profileImage: a.profile_image || null,
+            profileImage: normalizeProfileImage(a),
             movieCount: movieCountByActorId.get(a.id) || 0
           }))
           .filter((a) => a.movieCount > 0)
@@ -611,7 +628,7 @@ export default function HomePage() {
 
             {!loading && !err && (
               <>
-                {/* Standard: Hauptdarsteller-Galerie (unter der Suche) */}
+                {/* Hauptdarsteller-Galerie */}
                 {viewMode === "actors" && (
                   <section id="actorSection" className="actor-section">
                     <h2>Hauptdarsteller</h2>
@@ -679,7 +696,7 @@ export default function HomePage() {
                   </section>
                 )}
 
-                {/* Filme-Ansicht nach Klick auf Darsteller oder Suche */}
+                {/* Filme-Ansicht (nach Klick oder Suche) */}
                 {viewMode === "movies" && (
                   <section id="moviesSection" className="movies-section">
                     <div className="movies-header">
