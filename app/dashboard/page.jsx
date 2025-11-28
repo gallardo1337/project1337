@@ -1208,14 +1208,6 @@ export default function DashboardPage() {
                               setNewActorName(e.target.value)
                             }
                           />
-                          <input
-                            className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1"
-                            placeholder="Bild-URL (optional)"
-                            value={newActorImage}
-                            onChange={(e) =>
-                              setNewActorImage(e.target.value)
-                            }
-                          />
 
                           {/* Upload + Crop für Hauptdarsteller */}
                           <ActorImageUploader
@@ -1272,14 +1264,6 @@ export default function DashboardPage() {
                             value={newSupportName}
                             onChange={(e) =>
                               setNewSupportName(e.target.value)
-                            }
-                          />
-                          <input
-                            className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1"
-                            placeholder="Bild-URL (optional)"
-                            value={newSupportImage}
-                            onChange={(e) =>
-                              setNewSupportImage(e.target.value)
                             }
                           />
 
