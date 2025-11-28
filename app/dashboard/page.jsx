@@ -46,626 +46,25 @@ function VersionHint() {
   const [open, setOpen] = useState(false);
   const current = CHANGELOG[0];
 
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1 rounded-full border border-neutral-600/70 bg-neutral-900/80 px-4 py-1.5 text-sm text-neutral-100 shadow-sm shadow-black/40 hover:border-neutral-400 hover:bg-neutral-800 transition-colors"
-      >
-        <span className="font-mono">{current.version}</span>
-        <span className="opacity-70">Changelog</span>
-      </button>
-
-      {open && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
-          onClick={() => setOpen(false)}
-        >
-          <div
-            className="w-full max-w-xl max-h-[80vh] overflow-y-auto rounded-2xl border border-neutral-700/80 bg-neutral-950/95 p-6 shadow-2xl shadow-black/80"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mb-4 flex items-center justify-between gap-4">
-              <div>
-                <div className="text-xs uppercase tracking-[0.18em] text-neutral-400">
-                  Version &amp; Changelog
-                </div>
-                <div className="text-lg font-semibold text-neutral-50">
-                  1337 Library
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="rounded-full border border-neutral-600 bg-neutral-900 px-4 py-1.5 text-sm text-neutral-100 hover:bg-neutral-800 transition-colors"
-              >
-                Schließen
-              </button>
-            </div>
-
-            <div className="flex flex-col gap-4">
-              {CHANGELOG.map((entry) => (
-                <div
-                  key={entry.version}
-                  className="rounded-xl border border-neutral-700/80 bg-neutral-900/70 p-4"
-                >
-                  <div className="mb-2 flex items-baseline justify-between">
-                    <div className="font-semibold text-base text-neutral-50">
-                      {entry.version}
-                    </div>
-                    <div className="text-sm text-neutral-400">
-                      {entry.date}
-                    </div>
-                  </div>
-                  <ul className="m-0 list-disc pl-5 text-sm text-neutral-200 space-y-1.5">
-                    {entry.items.map((it, idx) => (
-                      <li key={idx}>{it}</li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
-
-// Helper für Chips – jetzt mit Rot als Akzent
-const chipClass = (active) =>
-  "px-3 py-1 rounded-full border text-sm " +
-  (active
-    ? "bg-red-500 border-red-600 text-black"
-    : "bg-neutral-900/90 border-neutral-700 text-neutral-100 hover:border-neutral-400 transition-colors");
-
-// -------------------------------
-// Dashboard
-// -------------------------------
-
-export default function DashboardPage() {
-  // Login-Status (wie Startseite)
-  const [loggedIn, setLoggedIn] = useState(false);
-  const [loginUser, setLoginUser] = useState("gallardo1337");
-  const [loginPassword, setLoginPassword] = useState("");
-  const [loginErr, setLoginErr] = useState(null);
-  const [loginLoading, setLoginLoading] = useState(false);
-
-  // Tabs: Filmestatistik / Neuer Film / Stammdaten
-  const [activeFilmSection, setActiveFilmSection] = useState("stats"); // "stats" | "new" | "meta"
-
-  // Daten
-  const [hauptdarsteller, setHauptdarsteller] = useState([]);
-  const [nebendarsteller, setNebendarsteller] = useState([]);
-  const [studios, setStudios] = useState([]);
-  const [tags, setTags] = useState([]);
-  const [filme, setFilme] = useState([]);
-
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  // Stammdaten Inputs
-  const [newActorName, setNewActorName] = useState("");
-  const [newActorImage, setNewActorImage] = useState("");
-
-  const [newSupportName, setNewSupportName] = useState("");
-  const [newSupportImage, setNewSupportImage] = useState("");
-
-  const [newStudioName, setNewStudioName] = useState("");
-  const [newStudioImage, setNewStudioImage] = useState("");
-
-  const [newTagName, setNewTagName] = useState("");
-
-  // Film Inputs
-  const [filmTitel, setFilmTitel] = useState("");
-  const [filmJahr, setFilmJahr] = useState("");
-  const [filmStudioId, setFilmStudioId] = useState("");
-  const [filmFileUrl, setFilmFileUrl] = useState("");
-  const [selectedMainActorIds, setSelectedMainActorIds] = useState([]);
-  const [selectedSupportActorIds, setSelectedSupportActorIds] = useState([]);
-  const [selectedTagIds, setSelectedTagIds] = useState([]);
-
-  const [editingFilmId, setEditingFilmId] = useState(null);
-
-  // Login-Status aus localStorage laden
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const flag = window.localStorage.getItem("auth_1337_flag");
-    const user = window.localStorage.getItem("auth_1337_user");
-    if (flag === "1" && user) {
-      setLoggedIn(true);
-      setLoginUser(user);
-    } else {
-      setLoggedIn(false);
-    }
-  }, []);
-
-  // Daten laden, wenn eingeloggt
-  useEffect(() => {
-    const loadAll = async () => {
-      if (!loggedIn) {
-        setHauptdarsteller([]);
-        setNebendarsteller([]);
-        setStudios([]);
-        setTags([]);
-        setFilme([]);
-        setLoading(false);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        setError(null);
-
-        const [actorsRes, actors2Res, studiosRes, tagsRes, moviesRes] =
-          await Promise.all([
-            supabase.from("actors").select("*").order("name"),
-            supabase.from("actors2").select("*").order("name"),
-            supabase.from("studios").select("*").order("name"),
-            supabase.from("tags").select("*").order("name"),
-            supabase
-              .from("movies")
-              .select("*")
-              .order("created_at", { ascending: false })
-          ]);
-
-        if (actorsRes.error) throw actorsRes.error;
-        if (actors2Res.error) throw actors2Res.error;
-        if (studiosRes.error) throw studiosRes.error;
-        if (tagsRes.error) throw tagsRes.error;
-        if (moviesRes.error) throw moviesRes.error;
-
-        setHauptdarsteller(actorsRes.data || []);
-        setNebendarsteller(actors2Res.data || []);
-        setStudios(studiosRes.data || []);
-        setTags(tagsRes.data || []);
-        setFilme(moviesRes.data || []);
-      } catch (err) {
-        console.error(err);
-        setError(err.message || "Fehler beim Laden der Daten.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadAll();
-  }, [loggedIn]);
-
-  const actorMap = Object.fromEntries(hauptdarsteller.map((a) => [a.id, a]));
-  const supportMap = Object.fromEntries(nebendarsteller.map((a) => [a.id, a]));
-  const studioMap = Object.fromEntries(studios.map((s) => [s.id, s]));
-  const tagMap = Object.fromEntries(tags.map((t) => [t.id, t]));
-
-  const toggleId = (id, arr, setter) => {
-    if (arr.includes(id)) {
-      setter(arr.filter((x) => x !== id));
-    } else {
-      setter([...arr, id]);
-    }
-  };
-
-  // ---------------- Login / Logout ----------------
-
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoginErr(null);
-    setLoginLoading(true);
-
-    try {
-      const res = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: loginUser,
-          password: loginPassword
-        })
-      });
-
-      if (!res.ok) {
-        if (res.status === 401) {
-          setLoginErr("User oder Passwort falsch.");
-        } else {
-          setLoginErr("Login fehlgeschlagen.");
-        }
-        return;
-      }
-
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem("auth_1337_flag", "1");
-        window.localStorage.setItem("auth_1337_user", loginUser);
-      }
-      setLoggedIn(true);
-      setLoginErr(null);
-      setLoginPassword("");
-    } catch (error) {
-      console.error(error);
-      setLoginErr("Netzwerkfehler beim Login.");
-    } finally {
-      setLoginLoading(false);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await fetch("/api/logout", { method: "POST" });
-    } catch {
-      // ignorieren
-    }
-    if (typeof window !== "undefined") {
-      window.localStorage.removeItem("auth_1337_flag");
-      window.localStorage.removeItem("auth_1337_user");
-    }
-    setLoggedIn(false);
-    setLoginPassword("");
-    setEditingFilmId(null);
-  };
-
-  // ---------------- Stammdaten anlegen ----------------
-
-  const handleAddActor = async (e) => {
-    e.preventDefault();
-    const name = newActorName.trim();
-    if (!name) return;
-
-    const { data, error: insertError } = await supabase
-      .from("actors")
-      .insert({
-        name,
-        profile_image: newActorImage.trim() || null
-      })
-      .select("*")
-      .single();
-
-    if (insertError) {
-      console.error(insertError);
-      setError(insertError.message);
-      return;
-    }
-
-    setHauptdarsteller((prev) => [...prev, data]);
-    setNewActorName("");
-    setNewActorImage("");
-  };
-
-  const handleAddSupportActor = async (e) => {
-    e.preventDefault();
-    const name = newSupportName.trim();
-    if (!name) return;
-
-    const { data, error: insertError } = await supabase
-      .from("actors2")
-      .insert({
-        name,
-        profile_image: newSupportImage.trim() || null
-      })
-      .select("*")
-      .single();
-
-    if (insertError) {
-      console.error(insertError);
-      setError(insertError.message);
-      return;
-    }
-
-    setNebendarsteller((prev) => [...prev, data]);
-    setNewSupportName("");
-    setNewSupportImage("");
-  };
-
-  const handleAddStudio = async (e) => {
-    e.preventDefault();
-    const name = newStudioName.trim();
-    if (!name) return;
-
-    const { data, error: insertError } = await supabase
-      .from("studios")
-      .insert({
-        name,
-        image_url: newStudioImage.trim() || null
-      })
-      .select("*")
-      .single();
-
-    if (insertError) {
-      console.error(insertError);
-      setError(insertError.message);
-      return;
-    }
-
-    setStudios((prev) => [...prev, data]);
-    setNewStudioName("");
-    setNewStudioImage("");
-  };
-
-  const handleAddTag = async (e) => {
-    e.preventDefault();
-    const name = newTagName.trim();
-    if (!name) return;
-
-    const { data, error: insertError } = await supabase
-      .from("tags")
-      .insert({ name })
-      .select("*")
-      .single();
-
-    if (insertError) {
-      console.error(insertError);
-      setError(insertError.message);
-      return;
-    }
-
-    setTags((prev) => [...prev, data]);
-    setNewTagName("");
-  };
-
-  // --------- Darsteller & Tag bearbeiten/löschen ---------
-
-  const handleEditActor = async (actor) => {
-    const newName = window.prompt(
-      "Neuer Name für Hauptdarsteller:",
-      actor.name || ""
-    );
-    if (newName === null) return;
-    const trimmedName = newName.trim();
-    if (!trimmedName) return;
-
-    const newImg = window.prompt(
-      "Neue Bild-URL (leer lassen für unverändert, nur ein Leerzeichen für löschen):",
-      actor.profile_image || ""
-    );
-    let profile_image = actor.profile_image;
-    if (newImg !== null) {
-      const t = newImg.trim();
-      profile_image = t === "" ? null : t;
-    }
-
-    const { data, error: updateError } = await supabase
-      .from("actors")
-      .update({ name: trimmedName, profile_image })
-      .eq("id", actor.id)
-      .select("*")
-      .single();
-
-    if (updateError) {
-      console.error(updateError);
-      setError(updateError.message);
-      return;
-    }
-
-    setHauptdarsteller((prev) =>
-      prev.map((a) => (a.id === actor.id ? data : a))
-    );
-  };
-
-  const handleDeleteActor = async (actorId) => {
-    const ok = window.confirm("Diesen Hauptdarsteller wirklich löschen?");
-    if (!ok) return;
-
-    const { error: deleteError } = await supabase
-      .from("actors")
-      .delete()
-      .eq("id", actorId);
-
-    if (deleteError) {
-      console.error(deleteError);
-      setError(deleteError.message);
-      return;
-    }
-
-    setHauptdarsteller((prev) => prev.filter((a) => a.id !== actorId));
-    setSelectedMainActorIds((prev) => prev.filter((id) => id !== actorId));
-  };
-
-  const handleEditSupportActor = async (actor) => {
-    const newName = window.prompt(
-      "Neuer Name für Nebendarsteller:",
-      actor.name || ""
-    );
-    if (newName === null) return;
-    const trimmedName = newName.trim();
-    if (!trimmedName) return;
-
-    const newImg = window.prompt(
-      "Neue Bild-URL (leer lassen für unverändert, nur ein Leerzeichen für löschen):",
-      actor.profile_image || ""
-    );
-    let profile_image = actor.profile_image;
-    if (newImg !== null) {
-      const t = newImg.trim();
-      profile_image = t === "" ? null : t;
-    }
-
-    const { data, error: updateError } = await supabase
-      .from("actors2")
-      .update({ name: trimmedName, profile_image })
-      .eq("id", actor.id)
-      .select("*")
-      .single();
-
-    if (updateError) {
-      console.error(updateError);
-      setError(updateError.message);
-      return;
-    }
-
-    setNebendarsteller((prev) =>
-      prev.map((a) => (a.id === actor.id ? data : a))
-    );
-  };
-
-  const handleDeleteSupportActor = async (actorId) => {
-    const ok = window.confirm("Diesen Nebendarsteller wirklich löschen?");
-    if (!ok) return;
-
-    const { error: deleteError } = await supabase
-      .from("actors2")
-      .delete()
-      .eq("id", actorId);
-
-    if (deleteError) {
-      console.error(deleteError);
-      setError(deleteError.message);
-      return;
-    }
-
-    setNebendarsteller((prev) => prev.filter((a) => a.id !== actorId));
-    setSelectedSupportActorIds((prev) => prev.filter((id) => id !== actorId));
-  };
-
-  const handleDeleteTagGlobal = async (tagId) => {
-    const ok = window.confirm("Diesen Tag wirklich komplett löschen?");
-    if (!ok) return;
-
-    const { error: deleteError } = await supabase
-      .from("tags")
-      .delete()
-      .eq("id", tagId);
-
-    if (deleteError) {
-      console.error(deleteError);
-      setError(deleteError.message);
-      return;
-    }
-
-    setTags((prev) => prev.filter((t) => t.id !== tagId));
-    setSelectedTagIds((prev) => prev.filter((id) => id !== tagId));
-  };
-
-  // ---------------- Filme anlegen / bearbeiten / löschen ----------------
-
-  const resetFilmForm = () => {
-    setFilmTitel("");
-    setFilmJahr("");
-    setFilmStudioId("");
-    setFilmFileUrl("");
-    setSelectedMainActorIds([]);
-    setSelectedSupportActorIds([]);
-    setSelectedTagIds([]);
-    setEditingFilmId(null);
-  };
-
-  const handleAddOrUpdateFilm = async (e) => {
-    e.preventDefault();
-    setError(null);
-
-    const title = filmTitel.trim();
-    if (!title) {
-      setError("Bitte Filmname eingeben.");
-      return;
-    }
-
-    let year = null;
-    if (filmJahr.trim()) {
-      const parsed = parseInt(filmJahr.trim(), 10);
-      if (Number.isNaN(parsed)) {
-        setError("Erscheinungsjahr ist keine gültige Zahl.");
-        return;
-      }
-      year = parsed;
-    }
-
-    const payload = {
-      title,
-      year,
-      studio_id: filmStudioId || null,
-      file_url: filmFileUrl.trim() || null,
-      main_actor_ids:
-        selectedMainActorIds.length > 0 ? selectedMainActorIds : null,
-      supporting_actor_ids:
-        selectedSupportActorIds.length > 0 ? selectedSupportActorIds : null,
-      tag_ids: selectedTagIds.length > 0 ? selectedTagIds : null
-    };
-
-    if (editingFilmId) {
-      const { data, error: updateError } = await supabase
-        .from("movies")
-        .update(payload)
-        .eq("id", editingFilmId)
-        .select("*")
-        .single();
-
-      if (updateError) {
-        console.error(updateError);
-        setError(updateError.message);
-        return;
-      }
-
-      setFilme((prev) =>
-        prev.map((f) => (f.id === editingFilmId ? data : f))
-      );
-      resetFilmForm();
-    } else {
-      const { data, error: insertError } = await supabase
-        .from("movies")
-        .insert(payload)
-        .select("*")
-        .single();
-
-      if (insertError) {
-        console.error(insertError);
-        setError(insertError.message);
-        return;
-      }
-
-      setFilme((prev) => [data, ...prev]);
-      resetFilmForm();
-    }
-  };
-
-  const handleEditFilm = (film) => {
-    setEditingFilmId(film.id);
-    setFilmTitel(film.title || "");
-    setFilmJahr(film.year ? String(film.year) : "");
-    setFilmStudioId(film.studio_id || "");
-    setFilmFileUrl(film.file_url || "");
-    setSelectedMainActorIds(
-      Array.isArray(film.main_actor_ids) ? film.main_actor_ids : []
-    );
-    setSelectedSupportActorIds(
-      Array.isArray(film.supporting_actor_ids)
-        ? film.supporting_actor_ids
-        : []
-    );
-    setSelectedTagIds(Array.isArray(film.tag_ids) ? film.tag_ids : []);
-
-    setActiveFilmSection("new");
-  };
-
-  const handleCancelEdit = () => {
-    resetFilmForm();
-  };
-
-  const handleDeleteFilm = async (filmId) => {
-    const ok = window.confirm("Diesen Film wirklich löschen?");
-    if (!ok) return;
-
-    const { error: deleteError } = await supabase
-      .from("movies")
-      .delete()
-      .eq("id", filmId);
-
-    if (deleteError) {
-      console.error(deleteError);
-      setError(deleteError.message);
-      return;
-    }
-
-    setFilme((prev) => prev.filter((f) => f.id !== filmId));
-    if (editingFilmId === filmId) {
-      resetFilmForm();
-    }
-  };
-
   // ---------------- Render ----------------
 
   return (
-    <div className="page min-h-screen bg-gradient-to-b from-neutral-950 via-neutral-950 to-black text-neutral-100 text-[15px]">
+    <div className="page min-h-screen bg-gradient-to-br from-neutral-950 via-black to-neutral-900 text-neutral-100 text-[15px]">
       {/* Header */}
-      <header className="topbar sticky top-0 z-40 border-b border-neutral-800/70 bg-neutral-950/95 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center gap-4 px-4 py-4 md:px-6">
-          <div className="logo-text text-xl font-semibold tracking-tight text-neutral-50">
-            1337 Library
+      <header className="topbar sticky top-0 z-40 border-b border-neutral-800/70 bg-black/80 backdrop-blur-lg">
+        <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-4 md:px-6">
+          <div className="flex items-center gap-2">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-600 text-sm font-semibold tracking-tight shadow-lg shadow-red-900/60">
+              1337
+            </div>
+            <div className="flex flex-col leading-tight">
+              <span className="text-lg font-semibold text-neutral-50">
+                Library Dashboard
+              </span>
+              <span className="text-xs text-neutral-400">
+                Manage Movies, Cast &amp; Tags
+              </span>
+            </div>
           </div>
 
           <div className="ml-auto flex items-center gap-4">
@@ -674,7 +73,7 @@ export default function DashboardPage() {
             {!loggedIn ? (
               <form
                 onSubmit={handleLogin}
-                className="flex items-center gap-3 rounded-full border border-neutral-700 bg-neutral-950/80 px-3 py-2 text-sm shadow-sm shadow-black/40"
+                className="flex items-center gap-3 rounded-full border border-neutral-700 bg-neutral-950/90 px-4 py-2 text-sm shadow-sm shadow-black/60"
               >
                 <input
                   type="text"
@@ -694,10 +93,10 @@ export default function DashboardPage() {
                   type="submit"
                   disabled={loginLoading || !loginPassword}
                   className={
-                    "rounded-full px-4 py-1.5 text-sm font-semibold transition-colors " +
+                    "rounded-full px-4 py-1.5 text-sm font-semibold transition-all " +
                     (loginLoading || !loginPassword
-                      ? "bg-red-500/60 text-black/80 cursor-default"
-                      : "bg-red-500 text-black hover:bg-red-400")
+                      ? "bg-red-500/50 text-black/80 cursor-default"
+                      : "bg-red-500 text-black hover:bg-red-400 hover:shadow-md hover:shadow-red-900/60")
                   }
                 >
                   {loginLoading ? "…" : "Login"}
@@ -705,19 +104,20 @@ export default function DashboardPage() {
               </form>
             ) : (
               <div className="flex items-center gap-3 text-sm text-neutral-300">
-                <span className="rounded-full bg-red-500/15 px-3 py-1 text-red-300 border border-red-600/60">
-                  Willkommen, {loginUser}
+                <span className="flex items-center gap-1 rounded-full bg-red-500/10 px-3 py-1 text-red-300 border border-red-600/60">
+                  <span className="inline-block h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                  {loginUser}
                 </span>
                 <a
                   href="/"
-                  className="rounded-full border border-neutral-600 bg-neutral-900/80 px-4 py-1.5 text-sm text-neutral-100 hover:bg-neutral-800 transition-colors"
+                  className="rounded-full border border-neutral-600 bg-neutral-900/80 px-4 py-1.5 text-sm text-neutral-100 hover:bg-neutral-800 hover:border-neutral-400 transition-all"
                 >
                   Hauptseite
                 </a>
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="rounded-full border border-neutral-600 bg-transparent px-4 py-1.5 text-sm text-neutral-200 hover:bg-neutral-900 transition-colors"
+                  className="rounded-full border border-neutral-600 bg-transparent px-4 py-1.5 text-sm text-neutral-200 hover:bg-neutral-900 hover:border-neutral-400 transition-all"
                 >
                   Logout
                 </button>
@@ -729,78 +129,145 @@ export default function DashboardPage() {
 
       <main className="px-4 pb-10 pt-6 md:px-6">
         {!loggedIn ? (
-          <section className="mx-auto mt-12 max-w-md rounded-2xl border border-neutral-800/80 bg-neutral-950/85 p-7 text-center shadow-xl shadow-black/60">
+          <section className="mx-auto mt-16 max-w-md rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950 to-black/90 p-8 text-center shadow-2xl shadow-black/70">
             <p className="mb-3 text-base text-neutral-200">
               Bitte oben einloggen, um das Dashboard zu nutzen.
             </p>
+            <p className="text-sm text-neutral-500">
+              Zugang ist nur für den Admin vorgesehen.
+            </p>
             {loginErr && (
-              <p className="text-sm text-red-400">{loginErr}</p>
+              <p className="mt-4 text-sm text-red-400">{loginErr}</p>
             )}
           </section>
         ) : (
-          <section className="mx-auto max-w-5xl space-y-6">
+          <section className="mx-auto max-w-6xl space-y-5">
             {error && (
-              <div className="rounded-xl border border-red-700/80 bg-red-950/70 px-4 py-3 text-base text-red-200 shadow shadow-red-900/70">
+              <div className="rounded-xl border border-red-700/80 bg-red-950/80 px-4 py-3 text-base text-red-100 shadow shadow-red-900/70">
                 Fehler: {error}
               </div>
             )}
 
             {loading ? (
-              <p className="text-base text-neutral-200">Lade Daten…</p>
+              <div className="mt-10 flex items-center justify-center gap-3 text-base text-neutral-200">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-neutral-500 border-t-transparent" />
+                <span>Lade Daten…</span>
+              </div>
             ) : (
-              <>
-                {/* Tabs */}
-                <section className="space-y-5">
-                  <div className="flex justify-center">
-                    <div className="inline-flex rounded-full border border-neutral-700 bg-neutral-950/90 p-1.5 text-sm shadow shadow-black/60">
+              <div className="flex flex-col gap-6 lg:flex-row">
+                {/* Sidebar / Navigation */}
+                <aside className="w-full lg:w-64 space-y-4">
+                  <div className="rounded-3xl border border-neutral-800 bg-gradient-to-b from-neutral-950/90 to-black/90 px-5 py-5 shadow-2xl shadow-black/70">
+                    <h2 className="mb-1 text-base font-semibold text-neutral-50">
+                      Bereiche
+                    </h2>
+                    <p className="mb-4 text-xs text-neutral-500">
+                      Wähle aus, was du bearbeiten möchtest.
+                    </p>
+
+                    <div className="flex flex-row gap-2 lg:flex-col">
                       <button
                         type="button"
                         onClick={() => setActiveFilmSection("stats")}
                         className={
-                          "px-4 py-2 rounded-full transition-colors " +
+                          "flex flex-1 items-center justify-between gap-2 rounded-2xl px-4 py-2.5 text-sm transition-all " +
                           (activeFilmSection === "stats"
-                            ? "bg-red-500 text-black shadow-sm shadow-red-900"
-                            : "text-neutral-200 hover:text-neutral-50")
+                            ? "bg-red-600 text-black shadow-lg shadow-red-900/60"
+                            : "bg-neutral-900/80 text-neutral-200 hover:bg-neutral-800 hover:text-neutral-50")
                         }
                       >
-                        Filmestatistik
+                        <span>Filmestatistik</span>
+                        <span className="text-xs opacity-80">
+                          {filme.length}
+                        </span>
                       </button>
+
                       <button
                         type="button"
                         onClick={() => setActiveFilmSection("new")}
                         className={
-                          "px-4 py-2 rounded-full transition-colors " +
+                          "flex flex-1 items-center justify-between gap-2 rounded-2xl px-4 py-2.5 text-sm transition-all " +
                           (activeFilmSection === "new"
-                            ? "bg-red-500 text-black shadow-sm shadow-red-900"
-                            : "text-neutral-200 hover:text-neutral-50")
+                            ? "bg-red-600 text-black shadow-lg shadow-red-900/60"
+                            : "bg-neutral-900/80 text-neutral-200 hover:bg-neutral-800 hover:text-neutral-50")
                         }
                       >
-                        Neuen Film hinzufügen
+                        <span>Neuer Film</span>
+                        <span className="text-xs opacity-80">+1</span>
                       </button>
+
                       <button
                         type="button"
                         onClick={() => setActiveFilmSection("meta")}
                         className={
-                          "px-4 py-2 rounded-full transition-colors " +
+                          "flex flex-1 items-center justify-between gap-2 rounded-2xl px-4 py-2.5 text-sm transition-all " +
                           (activeFilmSection === "meta"
-                            ? "bg-red-500 text-black shadow-sm shadow-red-900"
-                            : "text-neutral-200 hover:text-neutral-50")
+                            ? "bg-red-600 text-black shadow-lg shadow-red-900/60"
+                            : "bg-neutral-900/80 text-neutral-200 hover:bg-neutral-800 hover:text-neutral-50")
                         }
                       >
-                        Stammdaten
+                        <span>Stammdaten</span>
+                        <span className="text-xs opacity-80">
+                          {tags.length} Tags
+                        </span>
                       </button>
                     </div>
                   </div>
 
+                  {/* Kleine Stats-Kachel */}
+                  <div className="rounded-3xl border border-neutral-800 bg-neutral-950/90 px-5 py-4 text-sm shadow-xl shadow-black/70">
+                    <div className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">
+                      Überblick
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-neutral-300">Filme</span>
+                        <span className="font-semibold text-neutral-50">
+                          {filme.length}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-neutral-300">
+                          Hauptdarsteller
+                        </span>
+                        <span className="font-semibold text-neutral-50">
+                          {hauptdarsteller.length}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-neutral-300">
+                          Nebendarsteller
+                        </span>
+                        <span className="font-semibold text-neutral-50">
+                          {nebendarsteller.length}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-neutral-300">Studios</span>
+                        <span className="font-semibold text-neutral-50">
+                          {studios.length}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </aside>
+
+                {/* Main Content */}
+                <section className="flex-1 space-y-5">
                   {/* Tab: Neuer Film */}
                   {activeFilmSection === "new" && (
-                    <div className="rounded-2xl border border-neutral-800/80 bg-neutral-950/95 p-6 shadow-xl shadow-black/70 space-y-4">
-                      <div className="flex items-center justify-between gap-2">
-                        <h2 className="text-xl font-semibold text-neutral-50">
-                          {editingFilmId
-                            ? "Film bearbeiten"
-                            : "Neuen Film hinzufügen"}
-                        </h2>
+                    <div className="group rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950/95 to-black/95 p-6 shadow-2xl shadow-black/70 transition-transform duration-200">
+                      <div className="mb-4 flex items-center justify-between gap-2">
+                        <div>
+                          <h2 className="text-xl font-semibold text-neutral-50">
+                            {editingFilmId
+                              ? "Film bearbeiten"
+                              : "Neuen Film hinzufügen"}
+                          </h2>
+                          <p className="text-sm text-neutral-500">
+                            Titel, Jahr, Studio, Cast und Tags festlegen.
+                          </p>
+                        </div>
                         {editingFilmId && (
                           <button
                             type="button"
@@ -823,7 +290,7 @@ export default function DashboardPage() {
                               Filmname
                             </label>
                             <input
-                              className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-base text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                              className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
                               value={filmTitel}
                               onChange={(e) => setFilmTitel(e.target.value)}
                               placeholder="z. B. Interstellar"
@@ -834,7 +301,7 @@ export default function DashboardPage() {
                               Erscheinungsjahr
                             </label>
                             <input
-                              className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-base text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                              className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
                               value={filmJahr}
                               onChange={(e) => setFilmJahr(e.target.value)}
                               placeholder="2014"
@@ -850,7 +317,7 @@ export default function DashboardPage() {
                               Studio
                             </label>
                             <select
-                              className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-base text-neutral-50 focus:border-red-500 focus:outline-none"
+                              className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 focus:border-red-500 focus:outline-none"
                               value={filmStudioId}
                               onChange={(e) =>
                                 setFilmStudioId(e.target.value)
@@ -870,7 +337,7 @@ export default function DashboardPage() {
                               File-URL / NAS-Pfad
                             </label>
                             <input
-                              className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-base text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                              className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
                               value={filmFileUrl}
                               onChange={(e) =>
                                 setFilmFileUrl(e.target.value)
@@ -987,7 +454,7 @@ export default function DashboardPage() {
                         <div className="flex gap-3 pt-1">
                           <button
                             type="submit"
-                            className="rounded-lg bg-red-500 px-5 py-2.5 text-sm font-semibold text-black shadow shadow-red-900/70 hover:bg-red-400 disabled:opacity-60"
+                            className="rounded-xl bg-red-500 px-5 py-2.5 text-sm font-semibold text-black shadow shadow-red-900/70 hover:bg-red-400 hover:shadow-lg hover:shadow-red-900/70 disabled:opacity-60"
                             disabled={!filmTitel.trim()}
                           >
                             {editingFilmId
@@ -998,7 +465,7 @@ export default function DashboardPage() {
                             <button
                               type="button"
                               onClick={handleCancelEdit}
-                              className="rounded-lg border border-neutral-600 px-4 py-2.5 text-sm text-neutral-200 hover:bg-neutral-800"
+                              className="rounded-xl border border-neutral-600 px-4 py-2.5 text-sm text-neutral-200 hover:bg-neutral-800"
                             >
                               Abbrechen
                             </button>
@@ -1010,17 +477,17 @@ export default function DashboardPage() {
 
                   {/* Tab: Filmestatistik */}
                   {activeFilmSection === "stats" && (
-                    <div className="rounded-2xl border border-neutral-800/80 bg-neutral-950/95 p-6 shadow-xl shadow-black/70 space-y-4">
+                    <div className="rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950 to-black/95 p-6 shadow-2xl shadow-black/70 space-y-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <h2 className="text-lg font-semibold text-neutral-50">
+                          <h2 className="text-xl font-semibold text-neutral-50">
                             Filmestatistik
                           </h2>
-                          <p className="mt-1 text-sm text-neutral-400">
+                          <p className="mt-1 text-sm text-neutral-500">
                             Insgesamt{" "}
-                            <strong className="text-neutral-100">
+                            <span className="font-semibold text-neutral-100">
                               {filme.length}
-                            </strong>{" "}
+                            </span>{" "}
                             Filme in der Bibliothek.
                           </p>
                         </div>
@@ -1031,11 +498,11 @@ export default function DashboardPage() {
                           Noch keine Filme angelegt.
                         </p>
                       ) : (
-                        <div className="max-h-[420px] space-y-3 overflow-y-auto text-sm pr-1">
+                        <div className="max-h-[460px] space-y-3 overflow-y-auto text-sm pr-1">
                           {filme.map((f) => (
                             <div
                               key={f.id}
-                              className="space-y-1.5 rounded-xl border border-neutral-800 bg-neutral-950/95 p-4 shadow-sm shadow-black/60"
+                              className="group space-y-1.5 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4 shadow-sm shadow-black/60 transition-all hover:-translate-y-0.5 hover:border-red-500/70 hover:shadow-lg hover:shadow-black/70"
                             >
                               <div className="flex items-start justify-between gap-3">
                                 <div className="space-y-1.5">
@@ -1112,14 +579,14 @@ export default function DashboardPage() {
                                   <button
                                     type="button"
                                     onClick={() => handleEditFilm(f)}
-                                    className="rounded-md border border-neutral-600 px-3 py-1.5 text-xs text-neutral-100 hover:bg-neutral-800"
+                                    className="rounded-lg border border-neutral-600 px-3 py-1.5 text-xs text-neutral-100 hover:bg-neutral-800"
                                   >
                                     Bearbeiten
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => handleDeleteFilm(f.id)}
-                                    className="rounded-md border border-red-600 px-3 py-1.5 text-xs text-red-200 hover:bg-red-700/80"
+                                    className="rounded-lg border border-red-600 px-3 py-1.5 text-xs text-red-200 hover:bg-red-700/80"
                                   >
                                     Löschen
                                   </button>
@@ -1134,19 +601,26 @@ export default function DashboardPage() {
 
                   {/* Tab: Stammdaten */}
                   {activeFilmSection === "meta" && (
-                    <section className="rounded-2xl border border-neutral-800/80 bg-neutral-950/95 p-6 text-sm text-neutral-100 shadow-xl shadow-black/70 space-y-5">
-                      <h2 className="text-lg font-semibold text-neutral-50">
-                        Stammdaten
-                      </h2>
+                    <section className="rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950 to-black/95 p-6 text-sm text-neutral-100 shadow-2xl shadow-black/70 space-y-5">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h2 className="text-xl font-semibold text-neutral-50">
+                            Stammdaten
+                          </h2>
+                          <p className="mt-1 text-sm text-neutral-500">
+                            Darsteller, Studios und Tags verwalten.
+                          </p>
+                        </div>
+                      </div>
 
-                      <div className="grid gap-5 sm:grid-cols-2">
+                      <div className="grid gap-5 md:grid-cols-2">
                         {/* Hauptdarsteller */}
-                        <div className="space-y-3">
+                        <div className="space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4">
                           <form
                             onSubmit={handleAddActor}
                             className="space-y-2"
                           >
-                            <div className="font-medium text-neutral-100 text-base">
+                            <div className="font-medium text-neutral-50 text-base">
                               Hauptdarsteller
                             </div>
                             <input
@@ -1171,7 +645,7 @@ export default function DashboardPage() {
                             </button>
                           </form>
 
-                          <div className="mt-1 max-h-40 space-y-1.5 overflow-y-auto">
+                          <div className="mt-2 max-h-44 space-y-1.5 overflow-y-auto">
                             {hauptdarsteller.map((a) => (
                               <div
                                 key={a.id}
@@ -1200,12 +674,12 @@ export default function DashboardPage() {
                         </div>
 
                         {/* Nebendarsteller */}
-                        <div className="space-y-3">
+                        <div className="space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4">
                           <form
                             onSubmit={handleAddSupportActor}
                             className="space-y-2"
                           >
-                            <div className="font-medium text-neutral-100 text-base">
+                            <div className="font-medium text-neutral-50 text-base">
                               Nebendarsteller
                             </div>
                             <input
@@ -1232,7 +706,7 @@ export default function DashboardPage() {
                             </button>
                           </form>
 
-                          <div className="mt-1 max-h-40 space-y-1.5 overflow-y-auto">
+                          <div className="mt-2 max-h-44 space-y-1.5 overflow-y-auto">
                             {nebendarsteller.map((a) => (
                               <div
                                 key={a.id}
@@ -1265,12 +739,12 @@ export default function DashboardPage() {
                         </div>
 
                         {/* Studios */}
-                        <div className="space-y-3">
+                        <div className="space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4">
                           <form
                             onSubmit={handleAddStudio}
                             className="space-y-2"
                           >
-                            <div className="font-medium text-neutral-100 text-base">
+                            <div className="font-medium text-neutral-50 text-base">
                               Studios
                             </div>
                             <input
@@ -1298,7 +772,7 @@ export default function DashboardPage() {
                             </button>
                           </form>
 
-                          <div className="mt-1 max-h-40 space-y-1.5 overflow-y-auto">
+                          <div className="mt-2 max-h-44 space-y-1.5 overflow-y-auto">
                             {studios.map((s) => (
                               <div
                                 key={s.id}
@@ -1311,12 +785,12 @@ export default function DashboardPage() {
                         </div>
 
                         {/* Tags */}
-                        <div className="space-y-3">
+                        <div className="space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4">
                           <form
                             onSubmit={handleAddTag}
                             className="space-y-2"
                           >
-                            <div className="font-medium text-neutral-100 text-base">
+                            <div className="font-medium text-neutral-50 text-base">
                               Tags
                             </div>
                             <input
@@ -1339,7 +813,7 @@ export default function DashboardPage() {
                             </div>
                           </form>
 
-                          <div className="mt-1 max-h-40 space-y-1.5 overflow-y-auto">
+                          <div className="mt-2 max-h-44 space-y-1.5 overflow-y-auto">
                             {tags.map((t) => (
                               <div
                                 key={t.id}
@@ -1363,7 +837,7 @@ export default function DashboardPage() {
                     </section>
                   )}
                 </section>
-              </>
+              </div>
             )}
           </section>
         )}
