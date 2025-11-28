@@ -2,7 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
-import ActorImageUploader from "./ActorImageUploader";
+import dynamic from "next/dynamic";
+
+// ActorImageUploader nur im Client laden (wegen react-easy-crop / Canvas)
+const ActorImageUploader = dynamic(
+  () => import("./ActorImageUploader.jsx"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="text-xs text-neutral-500">Lade Bild-Uploader…</div>
+    ),
+  }
+);
 
 // -------------------------------
 // Version / Changelog
@@ -16,11 +27,10 @@ const CHANGELOG = [
       "Dashboard neu strukturiert: Tabs für Filmestatistik, Neuen Film hinzufügen und Stammdaten",
       "Stammdaten-Bereich aus Filmformular ausgelagert (Übersicht + Bearbeiten/Löschen jeder Kategorie)",
       "Hauptdarsteller- und Nebendarsteller-Formulare mit integriertem Upload & Crop (ActorImageUploader) statt manueller Bild-URL",
-      "Bild-Upload via Hostinger (upload.php) final integriert",
-      "Nur noch eine Kategorie gleichzeitig sichtbar – deutlich übersichtlicheres UI",
-      "Automatische Umschaltung auf 'Neuen Film hinzufügen' beim Bearbeiten eines Films",
-      "Pflege von Hauptdarstellern/Nebendarstellern/Studios/Tags komplett überarbeitet und vereinfacht",
-      "Backend-Aufräumung und Code-Optimierung im Dashboard"
+      "Bild-Upload via Hostinger (upload.php) integriert",
+      "Nur noch eine Kategorie gleichzeitig sichtbar – übersichtlicheres UI",
+      "Dynamic Import für ActorImageUploader (kein SSR-Fehler mehr)",
+      "UI-Redesign mit dunklem Layout und roten Akzenten"
     ]
   },
   {
@@ -45,6 +55,617 @@ const CHANGELOG = [
 function VersionHint() {
   const [open, setOpen] = useState(false);
   const current = CHANGELOG[0];
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="inline-flex items-center gap-1 rounded-full border border-neutral-600/70 bg-neutral-900/80 px-4 py-1.5 text-sm text-neutral-100 shadow-sm shadow-black/40 hover:border-neutral-400 hover:bg-neutral-800 transition-colors"
+      >
+        <span className="font-mono">{current.version}</span>
+        <span className="opacity-70">Changelog</span>
+      </button>
+
+      {open && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+          onClick={() => setOpen(false)}
+        >
+          <div
+            className="w-full max-w-xl max-height-[80vh] max-h-[80vh] overflow-y-auto rounded-2xl border border-neutral-700/80 bg-neutral-950/95 p-6 shadow-2xl shadow-black/80"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <div>
+                <div className="text-xs uppercase tracking-[0.18em] text-neutral-400">
+                  Version &amp; Changelog
+                </div>
+                <div className="text-lg font-semibold text-neutral-50">
+                  1337 Library
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="rounded-full border border-neutral-600 bg-neutral-900 px-4 py-1.5 text-sm text-neutral-100 hover:bg-neutral-800 transition-colors"
+              >
+                Schließen
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-4">
+              {CHANGELOG.map((entry) => (
+                <div
+                  key={entry.version}
+                  className="rounded-xl border border-neutral-700/80 bg-neutral-900/70 p-4"
+                >
+                  <div className="mb-2 flex items-baseline justify-between">
+                    <div className="font-semibold text-base text-neutral-50">
+                      {entry.version}
+                    </div>
+                    <div className="text-sm text-neutral-400">
+                      {entry.date}
+                    </div>
+                  </div>
+                  <ul className="m-0 list-disc pl-5 text-sm text-neutral-200 space-y-1.5">
+                    {entry.items.map((it, idx) => (
+                      <li key={idx}>{it}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// Helper für Chips – Rot als Akzent
+const chipClass = (active) =>
+  "px-3 py-1 rounded-full border text-sm " +
+  (active
+    ? "bg-red-500 border-red-600 text-black"
+    : "bg-neutral-900/90 border-neutral-700 text-neutral-100 hover:border-neutral-400 transition-colors");
+
+// -------------------------------
+// Dashboard
+// -------------------------------
+
+export default function DashboardPage() {
+  // Login-Status
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [loginUser, setLoginUser] = useState("gallardo1337");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginErr, setLoginErr] = useState(null);
+  const [loginLoading, setLoginLoading] = useState(false);
+
+  // Tabs: Filmestatistik / Neuer Film / Stammdaten
+  const [activeFilmSection, setActiveFilmSection] = useState("stats"); // "stats" | "new" | "meta"
+
+  // Daten
+  const [hauptdarsteller, setHauptdarsteller] = useState([]);
+  const [nebendarsteller, setNebendarsteller] = useState([]);
+  const [studios, setStudios] = useState([]);
+  const [tags, setTags] = useState([]);
+  const [filme, setFilme] = useState([]);
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Stammdaten Inputs
+  const [newActorName, setNewActorName] = useState("");
+  const [newActorImage, setNewActorImage] = useState("");
+
+  const [newSupportName, setNewSupportName] = useState("");
+  const [newSupportImage, setNewSupportImage] = useState("");
+
+  const [newStudioName, setNewStudioName] = useState("");
+  const [newStudioImage, setNewStudioImage] = useState("");
+
+  const [newTagName, setNewTagName] = useState("");
+
+  // Film Inputs
+  const [filmTitel, setFilmTitel] = useState("");
+  const [filmJahr, setFilmJahr] = useState("");
+  const [filmStudioId, setFilmStudioId] = useState("");
+  const [filmFileUrl, setFilmFileUrl] = useState("");
+  const [selectedMainActorIds, setSelectedMainActorIds] = useState([]);
+  const [selectedSupportActorIds, setSelectedSupportActorIds] = useState([]);
+  const [selectedTagIds, setSelectedTagIds] = useState([]);
+
+  const [editingFilmId, setEditingFilmId] = useState(null);
+
+  // Login-Status aus localStorage laden
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const flag = window.localStorage.getItem("auth_1337_flag");
+    const user = window.localStorage.getItem("auth_1337_user");
+    if (flag === "1" && user) {
+      setLoggedIn(true);
+      setLoginUser(user);
+    } else {
+      setLoggedIn(false);
+    }
+  }, []);
+
+  // Daten laden, wenn eingeloggt
+  useEffect(() => {
+    const loadAll = async () => {
+      if (!loggedIn) {
+        setHauptdarsteller([]);
+        setNebendarsteller([]);
+        setStudios([]);
+        setTags([]);
+        setFilme([]);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        const [actorsRes, actors2Res, studiosRes, tagsRes, moviesRes] =
+          await Promise.all([
+            supabase.from("actors").select("*").order("name"),
+            supabase.from("actors2").select("*").order("name"),
+            supabase.from("studios").select("*").order("name"),
+            supabase.from("tags").select("*").order("name"),
+            supabase
+              .from("movies")
+              .select("*")
+              .order("created_at", { ascending: false })
+          ]);
+
+        if (actorsRes.error) throw actorsRes.error;
+        if (actors2Res.error) throw actors2Res.error;
+        if (studiosRes.error) throw studiosRes.error;
+        if (tagsRes.error) throw tagsRes.error;
+        if (moviesRes.error) throw moviesRes.error;
+
+        setHauptdarsteller(actorsRes.data || []);
+        setNebendarsteller(actors2Res.data || []);
+        setStudios(studiosRes.data || []);
+        setTags(tagsRes.data || []);
+        setFilme(moviesRes.data || []);
+      } catch (err) {
+        console.error(err);
+        setError(err.message || "Fehler beim Laden der Daten.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadAll();
+  }, [loggedIn]);
+
+  const actorMap = Object.fromEntries(hauptdarsteller.map((a) => [a.id, a]));
+  const supportMap = Object.fromEntries(nebendarsteller.map((a) => [a.id, a]));
+  const studioMap = Object.fromEntries(studios.map((s) => [s.id, s]));
+  const tagMap = Object.fromEntries(tags.map((t) => [t.id, t]));
+
+  const toggleId = (id, arr, setter) => {
+    if (arr.includes(id)) {
+      setter(arr.filter((x) => x !== id));
+    } else {
+      setter([...arr, id]);
+    }
+  };
+
+  // ---------------- Login / Logout ----------------
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoginErr(null);
+    setLoginLoading(true);
+
+    try {
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: loginUser,
+          password: loginPassword
+        })
+      });
+
+      if (!res.ok) {
+        if (res.status === 401) {
+          setLoginErr("User oder Passwort falsch.");
+        } else {
+          setLoginErr("Login fehlgeschlagen.");
+        }
+        return;
+      }
+
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("auth_1337_flag", "1");
+        window.localStorage.setItem("auth_1337_user", loginUser);
+      }
+      setLoggedIn(true);
+      setLoginErr(null);
+      setLoginPassword("");
+    } catch (error) {
+      console.error(error);
+      setLoginErr("Netzwerkfehler beim Login.");
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/logout", { method: "POST" });
+    } catch {
+      // ignorieren
+    }
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem("auth_1337_flag");
+      window.localStorage.removeItem("auth_1337_user");
+    }
+    setLoggedIn(false);
+    setLoginPassword("");
+    setEditingFilmId(null);
+  };
+
+  // ---------------- Stammdaten anlegen ----------------
+
+  const handleAddActor = async (e) => {
+    e.preventDefault();
+    const name = newActorName.trim();
+    if (!name) return;
+
+    const { data, error: insertError } = await supabase
+      .from("actors")
+      .insert({
+        name,
+        profile_image: newActorImage.trim() || null
+      })
+      .select("*")
+      .single();
+
+    if (insertError) {
+      console.error(insertError);
+      setError(insertError.message);
+      return;
+    }
+
+    setHauptdarsteller((prev) => [...prev, data]);
+    setNewActorName("");
+    setNewActorImage("");
+  };
+
+  const handleAddSupportActor = async (e) => {
+    e.preventDefault();
+    const name = newSupportName.trim();
+    if (!name) return;
+
+    const { data, error: insertError } = await supabase
+      .from("actors2")
+      .insert({
+        name,
+        profile_image: newSupportImage.trim() || null
+      })
+      .select("*")
+      .single();
+
+    if (insertError) {
+      console.error(insertError);
+      setError(insertError.message);
+      return;
+    }
+
+    setNebendarsteller((prev) => [...prev, data]);
+    setNewSupportName("");
+    setNewSupportImage("");
+  };
+
+  const handleAddStudio = async (e) => {
+    e.preventDefault();
+    const name = newStudioName.trim();
+    if (!name) return;
+
+    const { data, error: insertError } = await supabase
+      .from("studios")
+      .insert({
+        name,
+        image_url: newStudioImage.trim() || null
+      })
+      .select("*")
+      .single();
+
+    if (insertError) {
+      console.error(insertError);
+      setError(insertError.message);
+      return;
+    }
+
+    setStudios((prev) => [...prev, data]);
+    setNewStudioName("");
+    setNewStudioImage("");
+  };
+
+  const handleAddTag = async (e) => {
+    e.preventDefault();
+    const name = newTagName.trim();
+    if (!name) return;
+
+    const { data, error: insertError } = await supabase
+      .from("tags")
+      .insert({ name })
+      .select("*")
+      .single();
+
+    if (insertError) {
+      console.error(insertError);
+      setError(insertError.message);
+      return;
+    }
+
+    setTags((prev) => [...prev, data]);
+    setNewTagName("");
+  };
+
+  // --------- Darsteller & Tag bearbeiten/löschen ---------
+
+  const handleEditActor = async (actor) => {
+    const newName = window.prompt(
+      "Neuer Name für Hauptdarsteller:",
+      actor.name || ""
+    );
+    if (newName === null) return;
+    const trimmedName = newName.trim();
+    if (!trimmedName) return;
+
+    const newImg = window.prompt(
+      "Neue Bild-URL (leer lassen für unverändert, nur ein Leerzeichen für löschen):",
+      actor.profile_image || ""
+    );
+    let profile_image = actor.profile_image;
+    if (newImg !== null) {
+      const t = newImg.trim();
+      profile_image = t === "" ? null : t;
+    }
+
+    const { data, error: updateError } = await supabase
+      .from("actors")
+      .update({ name: trimmedName, profile_image })
+      .eq("id", actor.id)
+      .select("*")
+      .single();
+
+    if (updateError) {
+      console.error(updateError);
+      setError(updateError.message);
+      return;
+    }
+
+    setHauptdarsteller((prev) =>
+      prev.map((a) => (a.id === actor.id ? data : a))
+    );
+  };
+
+  const handleDeleteActor = async (actorId) => {
+    const ok = window.confirm("Diesen Hauptdarsteller wirklich löschen?");
+    if (!ok) return;
+
+    const { error: deleteError } = await supabase
+      .from("actors")
+      .delete()
+      .eq("id", actorId);
+
+    if (deleteError) {
+      console.error(deleteError);
+      setError(deleteError.message);
+      return;
+    }
+
+    setHauptdarsteller((prev) => prev.filter((a) => a.id !== actorId));
+    setSelectedMainActorIds((prev) => prev.filter((id) => id !== actorId));
+  };
+
+  const handleEditSupportActor = async (actor) => {
+    const newName = window.prompt(
+      "Neuer Name für Nebendarsteller:",
+      actor.name || ""
+    );
+    if (newName === null) return;
+    const trimmedName = newName.trim();
+    if (!trimmedName) return;
+
+    const newImg = window.prompt(
+      "Neue Bild-URL (leer lassen für unverändert, nur ein Leerzeichen für löschen):",
+      actor.profile_image || ""
+    );
+    let profile_image = actor.profile_image;
+    if (newImg !== null) {
+      const t = newImg.trim();
+      profile_image = t === "" ? null : t;
+    }
+
+    const { data, error: updateError } = await supabase
+      .from("actors2")
+      .update({ name: trimmedName, profile_image })
+      .eq("id", actor.id)
+      .select("*")
+      .single();
+
+    if (updateError) {
+      console.error(updateError);
+      setError(updateError.message);
+      return;
+    }
+
+    setNebendarsteller((prev) =>
+      prev.map((a) => (a.id === actor.id ? data : a))
+    );
+  };
+
+  const handleDeleteSupportActor = async (actorId) => {
+    const ok = window.confirm("Diesen Nebendarsteller wirklich löschen?");
+    if (!ok) return;
+
+    const { error: deleteError } = await supabase
+      .from("actors2")
+      .delete()
+      .eq("id", actorId);
+
+    if (deleteError) {
+      console.error(deleteError);
+      setError(deleteError.message);
+      return;
+    }
+
+    setNebendarsteller((prev) => prev.filter((a) => a.id !== actorId));
+    setSelectedSupportActorIds((prev) => prev.filter((id) => id !== actorId));
+  };
+
+  const handleDeleteTagGlobal = async (tagId) => {
+    const ok = window.confirm("Diesen Tag wirklich komplett löschen?");
+    if (!ok) return;
+
+    const { error: deleteError } = await supabase
+      .from("tags")
+      .delete()
+      .eq("id", tagId);
+
+    if (deleteError) {
+      console.error(deleteError);
+      setError(deleteError.message);
+      return;
+    }
+
+    setTags((prev) => prev.filter((t) => t.id !== tagId));
+    setSelectedTagIds((prev) => prev.filter((id) => id !== tagId));
+  };
+
+  // ---------------- Filme anlegen / bearbeiten / löschen ----------------
+
+  const resetFilmForm = () => {
+    setFilmTitel("");
+    setFilmJahr("");
+    setFilmStudioId("");
+    setFilmFileUrl("");
+    setSelectedMainActorIds([]);
+    setSelectedSupportActorIds([]);
+    setSelectedTagIds([]);
+    setEditingFilmId(null);
+  };
+
+  const handleAddOrUpdateFilm = async (e) => {
+    e.preventDefault();
+    setError(null);
+
+    const title = filmTitel.trim();
+    if (!title) {
+      setError("Bitte Filmname eingeben.");
+      return;
+    }
+
+    let year = null;
+    if (filmJahr.trim()) {
+      const parsed = parseInt(filmJahr.trim(), 10);
+      if (Number.isNaN(parsed)) {
+        setError("Erscheinungsjahr ist keine gültige Zahl.");
+        return;
+      }
+      year = parsed;
+    }
+
+    const payload = {
+      title,
+      year,
+      studio_id: filmStudioId || null,
+      file_url: filmFileUrl.trim() || null,
+      main_actor_ids:
+        selectedMainActorIds.length > 0 ? selectedMainActorIds : null,
+      supporting_actor_ids:
+        selectedSupportActorIds.length > 0 ? selectedSupportActorIds : null,
+      tag_ids: selectedTagIds.length > 0 ? selectedTagIds : null
+    };
+
+    if (editingFilmId) {
+      const { data, error: updateError } = await supabase
+        .from("movies")
+        .update(payload)
+        .eq("id", editingFilmId)
+        .select("*")
+        .single();
+
+      if (updateError) {
+        console.error(updateError);
+        setError(updateError.message);
+        return;
+      }
+
+      setFilme((prev) =>
+        prev.map((f) => (f.id === editingFilmId ? data : f))
+      );
+      resetFilmForm();
+    } else {
+      const { data, error: insertError } = await supabase
+        .from("movies")
+        .insert(payload)
+        .select("*")
+        .single();
+
+      if (insertError) {
+        console.error(insertError);
+        setError(insertError.message);
+        return;
+      }
+
+      setFilme((prev) => [data, ...prev]);
+      resetFilmForm();
+    }
+  };
+
+  const handleEditFilm = (film) => {
+    setEditingFilmId(film.id);
+    setFilmTitel(film.title || "");
+    setFilmJahr(film.year ? String(film.year) : "");
+    setFilmStudioId(film.studio_id || "");
+    setFilmFileUrl(film.file_url || "");
+    setSelectedMainActorIds(
+      Array.isArray(film.main_actor_ids) ? film.main_actor_ids : []
+    );
+    setSelectedSupportActorIds(
+      Array.isArray(film.supporting_actor_ids)
+        ? film.supporting_actor_ids
+        : []
+    );
+    setSelectedTagIds(Array.isArray(film.tag_ids) ? film.tag_ids : []);
+
+    setActiveFilmSection("new");
+  };
+
+  const handleCancelEdit = () => {
+    resetFilmForm();
+  };
+
+  const handleDeleteFilm = async (filmId) => {
+    const ok = window.confirm("Diesen Film wirklich löschen?");
+    if (!ok) return;
+
+    const { error: deleteError } = await supabase
+      .from("movies")
+      .delete()
+      .eq("id", filmId);
+
+    if (deleteError) {
+      console.error(deleteError);
+      setError(deleteError.message);
+      return;
+    }
+
+    setFilme((prev) => prev.filter((f) => f.id !== filmId));
+    if (editingFilmId === filmId) {
+      resetFilmForm();
+    }
+  };
 
   // ---------------- Render ----------------
 
@@ -155,7 +776,7 @@ function VersionHint() {
               </div>
             ) : (
               <div className="flex flex-col gap-6 lg:flex-row">
-                {/* Sidebar / Navigation */}
+                {/* Sidebar */}
                 <aside className="w-full lg:w-64 space-y-4">
                   <div className="rounded-3xl border border-neutral-800 bg-gradient-to-b from-neutral-950/90 to-black/90 px-5 py-5 shadow-2xl shadow-black/70">
                     <h2 className="mb-1 text-base font-semibold text-neutral-50">
