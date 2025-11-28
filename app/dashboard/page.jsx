@@ -194,7 +194,7 @@ export default function DashboardPage() {
   // Login-Status (wie Startseite)
   const [loggedIn, setLoggedIn] = useState(false);
   const [loginUser, setLoginUser] = useState("gallardo1337");
-  the [loginPassword, setLoginPassword] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
   const [loginErr, setLoginErr] = useState(null);
   const [loginLoading, setLoginLoading] = useState(false);
 
