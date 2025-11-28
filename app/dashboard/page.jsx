@@ -42,7 +42,6 @@ const CHANGELOG = [
   }
 ];
 
-
 function VersionHint() {
   const [open, setOpen] = useState(false);
   const current = CHANGELOG[0];
@@ -52,136 +51,56 @@ function VersionHint() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        style={{
-          borderRadius: "999px",
-          border: "1px solid #4b5563",
-          background: "#020617",
-          color: "#e5e7eb",
-          fontSize: "0.8rem",
-          padding: "4px 10px",
-          display: "flex",
-          alignItems: "center",
-          gap: "6px",
-          cursor: "pointer"
-        }}
+        className="inline-flex items-center gap-1 rounded-full border border-slate-600/70 bg-slate-900/80 px-3 py-1 text-[11px] text-slate-100 shadow-sm shadow-black/40 hover:border-slate-400 hover:bg-slate-800 transition-colors"
       >
-        <span>{current.version}</span>
-        <span style={{ opacity: 0.7 }}>Changelog</span>
+        <span className="font-mono">{current.version}</span>
+        <span className="opacity-70">Changelog</span>
       </button>
 
       {open && (
         <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.65)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 70
-          }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
           onClick={() => setOpen(false)}
         >
           <div
-            style={{
-              width: "100%",
-              maxWidth: 520,
-              maxHeight: "80vh",
-              overflowY: "auto",
-              background: "#020617",
-              borderRadius: 16,
-              border: "1px solid #4b5563",
-              padding: 20,
-              boxShadow: "0 20px 60px rgba(0,0,0,0.7)"
-            }}
+            className="w-full max-w-xl max-h-[80vh] overflow-y-auto rounded-2xl border border-slate-700/80 bg-slate-950/95 p-5 shadow-2xl shadow-black/80"
             onClick={(e) => e.stopPropagation()}
           >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 12
-              }}
-            >
+            <div className="mb-4 flex items-center justify-between gap-4">
               <div>
-                <div
-                  style={{
-                    fontSize: "0.8rem",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                    color: "#9ca3af"
-                  }}
-                >
-                  Version & Changelog
+                <div className="text-[10px] uppercase tracking-[0.18em] text-slate-400">
+                  Version &amp; Changelog
                 </div>
-                <div style={{ fontSize: "1rem", fontWeight: 600 }}>
+                <div className="text-base font-semibold text-slate-50">
                   1337 Library
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                style={{
-                  borderRadius: "999px",
-                  border: "1px solid #4b5563",
-                  background: "#111827",
-                  color: "#e5e7eb",
-                  fontSize: "0.8rem",
-                  padding: "4px 10px",
-                  cursor: "pointer"
-                }}
+                className="rounded-full border border-slate-600 bg-slate-900 px-3 py-1 text-[11px] text-slate-100 hover:bg-slate-800 transition-colors"
               >
                 Schließen
               </button>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div className="flex flex-col gap-3">
               {CHANGELOG.map((entry) => (
                 <div
                   key={entry.version}
-                  style={{
-                    borderRadius: 12,
-                    border: "1px solid #374151",
-                    padding: 12,
-                    background: "#030712"
-                  }}
+                  className="rounded-xl border border-slate-700/80 bg-slate-900/70 p-3"
                 >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "baseline",
-                      marginBottom: 4
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontWeight: 600,
-                        fontSize: "0.95rem",
-                        color: "#e5e7eb"
-                      }}
-                    >
+                  <div className="mb-1 flex items-baseline justify-between">
+                    <div className="font-semibold text-sm text-slate-50">
                       {entry.version}
                     </div>
-                    <div
-                      style={{ fontSize: "0.8rem", color: "#9ca3af" }}
-                    >
+                    <div className="text-[11px] text-slate-400">
                       {entry.date}
                     </div>
                   </div>
-                  <ul
-                    style={{
-                      margin: 0,
-                      paddingLeft: 18,
-                      fontSize: "0.85rem",
-                      color: "#d1d5db"
-                    }}
-                  >
+                  <ul className="m-0 list-disc pl-5 text-[12px] text-slate-200 space-y-1">
                     {entry.items.map((it, idx) => (
-                      <li key={idx} style={{ marginBottom: 3 }}>
-                        {it}
-                      </li>
+                      <li key={idx}>{it}</li>
                     ))}
                   </ul>
                 </div>
@@ -199,7 +118,7 @@ const chipClass = (active) =>
   "px-2 py-[3px] rounded-full border text-[11px] " +
   (active
     ? "bg-orange-500 border-orange-600 text-black"
-    : "bg-slate-900 border-slate-600 text-slate-200");
+    : "bg-slate-900/90 border-slate-700 text-slate-200 hover:border-slate-400 transition-colors");
 
 // -------------------------------
 // Dashboard
@@ -742,161 +661,107 @@ export default function DashboardPage() {
   // ---------------- Render ----------------
 
   return (
-    <div className="page">
+    <div className="page min-h-screen bg-gradient-to-b from-slate-950 via-slate-950 to-black text-slate-100">
       {/* Header wie auf Hauptseite, aber mit Link zurück zur Hauptseite */}
-      <header className="topbar">
-        <div className="logo-text">1337 Library</div>
+      <header className="topbar sticky top-0 z-40 border-b border-slate-800/70 bg-slate-950/90 backdrop-blur">
+        <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-3 md:px-6">
+          <div className="logo-text text-lg font-semibold tracking-tight text-slate-50">
+            1337 Library
+          </div>
 
-        <div
-          style={{
-            marginLeft: "auto",
-            display: "flex",
-            alignItems: "center",
-            gap: 12
-          }}
-        >
-          <VersionHint />
+          <div className="ml-auto flex items-center gap-3">
+            <VersionHint />
 
-          {!loggedIn ? (
-            <form
-              onSubmit={handleLogin}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6
-              }}
-            >
-              <input
-                type="text"
-                placeholder="User"
-                value={loginUser}
-                onChange={(e) => setLoginUser(e.target.value)}
-                style={{
-                  borderRadius: 999,
-                  border: "1px solid #374151",
-                  background: "#020617",
-                  color: "#e5e7eb",
-                  fontSize: "0.8rem",
-                  padding: "4px 8px",
-                  width: 130
-                }}
-              />
-              <input
-                type="password"
-                placeholder="Passwort"
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                style={{
-                  borderRadius: 999,
-                  border: "1px solid #374151",
-                  background: "#020617",
-                  color: "#e5e7eb",
-                  fontSize: "0.8rem",
-                  padding: "4px 8px",
-                  width: 120
-                }}
-              />
-              <button
-                type="submit"
-                disabled={loginLoading || !loginPassword}
-                style={{
-                  borderRadius: 999,
-                  border: "none",
-                  background: "#f97316",
-                  color: "#111827",
-                  fontSize: "0.8rem",
-                  padding: "4px 10px",
-                  fontWeight: 600,
-                  cursor:
-                    loginLoading || !loginPassword ? "default" : "pointer",
-                  opacity: loginLoading || !loginPassword ? 0.7 : 1
-                }}
+            {!loggedIn ? (
+              <form
+                onSubmit={handleLogin}
+                className="flex items-center gap-2 rounded-full border border-slate-700 bg-slate-950/60 px-2 py-1 text-[11px] shadow-sm shadow-black/40"
               >
-                {loginLoading ? "…" : "Login"}
-              </button>
-            </form>
-          ) : (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                fontSize: "0.8rem",
-                color: "#9ca3af"
-              }}
-            >
-              <span style={{ color: "#4ade80" }}>
-                Willkommen, {loginUser}
-              </span>
-              <a
-                href="/"
-                style={{
-                  textDecoration: "none",
-                  borderRadius: 999,
-                  border: "1px solid #4b5563",
-                  padding: "3px 8px",
-                  color: "#e5e7eb"
-                }}
-              >
-                Hauptseite
-              </a>
-              <button
-                type="button"
-                onClick={handleLogout}
-                style={{
-                  borderRadius: 999,
-                  border: "1px solid #4b5563",
-                  background: "transparent",
-                  color: "#e5e7eb",
-                  fontSize: "0.8rem",
-                  padding: "3px 8px",
-                  cursor: "pointer"
-                }}
-              >
-                Logout
-              </button>
-            </div>
-          )}
+                <input
+                  type="text"
+                  placeholder="User"
+                  value={loginUser}
+                  onChange={(e) => setLoginUser(e.target.value)}
+                  className="w-[120px] rounded-full border border-transparent bg-transparent px-2 py-1 text-[11px] text-slate-100 placeholder:text-slate-500 focus:border-slate-500 focus:outline-none"
+                />
+                <input
+                  type="password"
+                  placeholder="Passwort"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  className="w-[110px] rounded-full border border-transparent bg-transparent px-2 py-1 text-[11px] text-slate-100 placeholder:text-slate-500 focus:border-slate-500 focus:outline-none"
+                />
+                <button
+                  type="submit"
+                  disabled={loginLoading || !loginPassword}
+                  className={
+                    "rounded-full px-3 py-1 text-[11px] font-semibold transition-colors " +
+                    (loginLoading || !loginPassword
+                      ? "bg-orange-500/60 text-black/80 cursor-default"
+                      : "bg-orange-500 text-black hover:bg-orange-400")
+                  }
+                >
+                  {loginLoading ? "…" : "Login"}
+                </button>
+              </form>
+            ) : (
+              <div className="flex items-center gap-2 text-[11px] text-slate-300">
+                <span className="rounded-full bg-emerald-500/15 px-2 py-1 text-emerald-300 border border-emerald-600/60">
+                  Willkommen, {loginUser}
+                </span>
+                <a
+                  href="/"
+                  className="rounded-full border border-slate-600 bg-slate-900/70 px-3 py-1 text-[11px] text-slate-100 hover:bg-slate-800 transition-colors"
+                >
+                  Hauptseite
+                </a>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="rounded-full border border-slate-600 bg-transparent px-3 py-1 text-[11px] text-slate-200 hover:bg-slate-900 transition-colors"
+                >
+                  Logout
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
-      <main>
+      <main className="px-4 pb-10 pt-5 md:px-6">
         {!loggedIn ? (
-          <section className="actor-section">
-            <p>Bitte oben einloggen, um das Dashboard zu nutzen.</p>
+          <section className="mx-auto mt-10 max-w-md rounded-2xl border border-slate-800/80 bg-slate-950/80 p-6 text-center shadow-xl shadow-black/60">
+            <p className="text-sm text-slate-200 mb-2">
+              Bitte oben einloggen, um das Dashboard zu nutzen.
+            </p>
             {loginErr && (
-              <p style={{ color: "#f97373", fontSize: "0.85rem" }}>
-                {loginErr}
-              </p>
+              <p className="text-[12px] text-red-400">{loginErr}</p>
             )}
           </section>
         ) : (
-          <section style={{ padding: "20px" }}>
-            <div className="mx-auto max-w-5xl space-y-6">
-              {error && (
-                <div
-                  className="text-red-400 text-sm rounded border border-red-600 bg-red-950/40 px-3 py-2"
-                  style={{ marginBottom: "8px" }}
-                >
-                  Fehler: {error}
-                </div>
-              )}
+          <section className="mx-auto max-w-5xl space-y-6">
+            {error && (
+              <div className="rounded-xl border border-red-700/80 bg-red-950/70 px-3 py-2 text-sm text-red-200 shadow shadow-red-900/70">
+                Fehler: {error}
+              </div>
+            )}
 
-              {loading ? (
-                <p className="text-slate-300 text-sm">Lade Daten…</p>
-              ) : (
-                <>
-                  {/* Tabs: Filmestatistik / Neuer Film / Stammdaten */}
-                  <section className="space-y-4">
-                    <div className="inline-flex rounded-full border border-slate-700 bg-slate-900/60 p-1 text-xs">
+            {loading ? (
+              <p className="text-sm text-slate-200">Lade Daten…</p>
+            ) : (
+              <>
+                {/* Tabs: Filmestatistik / Neuer Film / Stammdaten */}
+                <section className="space-y-4">
+                  <div className="flex justify-center">
+                    <div className="inline-flex rounded-full border border-slate-700 bg-slate-950/80 p-1 text-xs shadow shadow-black/60">
                       <button
                         type="button"
                         onClick={() => setActiveFilmSection("stats")}
                         className={
-                          "px-3 py-1 rounded-full transition-colors " +
+                          "px-3 py-1.5 rounded-full transition-colors " +
                           (activeFilmSection === "stats"
-                            ? "bg-orange-500 text-black"
-                            : "text-slate-200")
+                            ? "bg-orange-500 text-black shadow-sm shadow-orange-900"
+                            : "text-slate-200 hover:text-slate-50")
                         }
                       >
                         Filmestatistik
@@ -905,10 +770,10 @@ export default function DashboardPage() {
                         type="button"
                         onClick={() => setActiveFilmSection("new")}
                         className={
-                          "px-3 py-1 rounded-full transition-colors " +
+                          "px-3 py-1.5 rounded-full transition-colors " +
                           (activeFilmSection === "new"
-                            ? "bg-orange-500 text-black"
-                            : "text-slate-200")
+                            ? "bg-orange-500 text-black shadow-sm shadow-orange-900"
+                            : "text-slate-200 hover:text-slate-50")
                         }
                       >
                         Neuen Film hinzufügen
@@ -917,585 +782,592 @@ export default function DashboardPage() {
                         type="button"
                         onClick={() => setActiveFilmSection("meta")}
                         className={
-                          "px-3 py-1 rounded-full transition-colors " +
+                          "px-3 py-1.5 rounded-full transition-colors " +
                           (activeFilmSection === "meta"
-                            ? "bg-orange-500 text-black"
-                            : "text-slate-200")
+                            ? "bg-orange-500 text-black shadow-sm shadow-orange-900"
+                            : "text-slate-200 hover:text-slate-50")
                         }
                       >
                         Stammdaten
                       </button>
                     </div>
+                  </div>
 
-                    {/* Tab: Neuer Film */}
-                    {activeFilmSection === "new" && (
-                      <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 space-y-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <h2 className="text-lg font-semibold">
+                  {/* Tab: Neuer Film */}
+                  {activeFilmSection === "new" && (
+                    <div className="rounded-2xl border border-slate-800/80 bg-slate-950/90 p-5 shadow-xl shadow-black/70 space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <h2 className="text-lg font-semibold text-slate-50">
+                          {editingFilmId
+                            ? "Film bearbeiten"
+                            : "Neuen Film hinzufügen"}
+                        </h2>
+                        {editingFilmId && (
+                          <button
+                            type="button"
+                            onClick={handleCancelEdit}
+                            className="text-xs text-slate-300 underline underline-offset-4 hover:text-slate-100"
+                          >
+                            Bearbeitung abbrechen
+                          </button>
+                        )}
+                      </div>
+
+                      <form
+                        onSubmit={handleAddOrUpdateFilm}
+                        className="space-y-4 text-sm"
+                      >
+                        {/* Titel + Jahr */}
+                        <div className="grid grid-cols-[2fr,1fr] gap-3 max-sm:grid-cols-1">
+                          <div>
+                            <label className="text-[11px] text-slate-300">
+                              Filmname
+                            </label>
+                            <input
+                              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-50 placeholder:text-slate-500 focus:border-orange-500 focus:outline-none"
+                              value={filmTitel}
+                              onChange={(e) => setFilmTitel(e.target.value)}
+                              placeholder="z. B. Interstellar"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] text-slate-300">
+                              Erscheinungsjahr
+                            </label>
+                            <input
+                              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-50 placeholder:text-slate-500 focus:border-orange-500 focus:outline-none"
+                              value={filmJahr}
+                              onChange={(e) => setFilmJahr(e.target.value)}
+                              placeholder="2014"
+                              type="number"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Studio + File URL */}
+                        <div className="grid grid-cols-1 gap-3">
+                          <div>
+                            <label className="text-[11px] text-slate-300">
+                              Studio
+                            </label>
+                            <select
+                              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-50 focus:border-orange-500 focus:outline-none"
+                              value={filmStudioId}
+                              onChange={(e) =>
+                                setFilmStudioId(e.target.value)
+                              }
+                            >
+                              <option value="">(kein Studio)</option>
+                              {studios.map((s) => (
+                                <option key={s.id} value={s.id}>
+                                  {s.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="text-[11px] text-slate-300">
+                              File-URL / NAS-Pfad
+                            </label>
+                            <input
+                              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-50 placeholder:text-slate-500 focus:border-orange-500 focus:outline-none"
+                              value={filmFileUrl}
+                              onChange={(e) =>
+                                setFilmFileUrl(e.target.value)
+                              }
+                              placeholder="z. B. smb://nas/Filme/Interstellar.mkv"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Hauptdarsteller Chips */}
+                        <div>
+                          <label className="text-[11px] text-slate-300">
+                            Hauptdarsteller (klick zum Auswählen / Entfernen)
+                          </label>
+                          <div className="mt-1 flex flex-wrap gap-1.5">
+                            {hauptdarsteller.length === 0 ? (
+                              <span className="text-[11px] text-slate-500">
+                                Noch keine Hauptdarsteller angelegt.
+                              </span>
+                            ) : (
+                              hauptdarsteller.map((a) => {
+                                const active =
+                                  selectedMainActorIds.includes(a.id);
+                                return (
+                                  <button
+                                    key={a.id}
+                                    type="button"
+                                    onClick={() =>
+                                      toggleId(
+                                        a.id,
+                                        selectedMainActorIds,
+                                        setSelectedMainActorIds
+                                      )
+                                    }
+                                    className={chipClass(active)}
+                                  >
+                                    {a.name}
+                                  </button>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Nebendarsteller Chips */}
+                        <div>
+                          <label className="text-[11px] text-slate-300">
+                            Nebendarsteller (klick zum Auswählen / Entfernen)
+                          </label>
+                          <div className="mt-1 flex flex-wrap gap-1.5">
+                            {nebendarsteller.length === 0 ? (
+                              <span className="text-[11px] text-slate-500">
+                                Noch keine Nebendarsteller angelegt.
+                              </span>
+                            ) : (
+                              nebendarsteller.map((a) => {
+                                const active =
+                                  selectedSupportActorIds.includes(a.id);
+                                return (
+                                  <button
+                                    key={a.id}
+                                    type="button"
+                                    onClick={() =>
+                                      toggleId(
+                                        a.id,
+                                        selectedSupportActorIds,
+                                        setSelectedSupportActorIds
+                                      )
+                                    }
+                                    className={chipClass(active)}
+                                  >
+                                    {a.name}
+                                  </button>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Tags Chips */}
+                        <div>
+                          <label className="text-[11px] text-slate-300">
+                            Tags (klick zum Auswählen / Entfernen)
+                          </label>
+                          <div className="mt-1 flex flex-wrap gap-1.5">
+                            {tags.length === 0 ? (
+                              <span className="text-[11px] text-slate-500">
+                                Noch keine Tags angelegt.
+                              </span>
+                            ) : (
+                              tags.map((t) => {
+                                const active = selectedTagIds.includes(t.id);
+                                return (
+                                  <button
+                                    key={t.id}
+                                    type="button"
+                                    onClick={() =>
+                                      toggleId(
+                                        t.id,
+                                        selectedTagIds,
+                                        setSelectedTagIds
+                                      )
+                                    }
+                                    className={chipClass(active)}
+                                  >
+                                    {t.name}
+                                  </button>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2 pt-2">
+                          <button
+                            type="submit"
+                            className="rounded-lg bg-orange-500 px-4 py-2 text-xs font-semibold text-black shadow shadow-orange-900/70 hover:bg-orange-400 disabled:opacity-60"
+                            disabled={!filmTitel.trim()}
+                          >
                             {editingFilmId
-                              ? "Film bearbeiten"
-                              : "Neuen Film hinzufügen"}
-                          </h2>
+                              ? "Film aktualisieren"
+                              : "Film speichern"}
+                          </button>
                           {editingFilmId && (
                             <button
                               type="button"
                               onClick={handleCancelEdit}
-                              className="text-xs text-slate-300 underline underline-offset-4"
+                              className="rounded-lg border border-slate-600 px-3 py-2 text-xs text-slate-200 hover:bg-slate-800"
                             >
-                              Bearbeitung abbrechen
+                              Abbrechen
                             </button>
                           )}
                         </div>
+                      </form>
+                    </div>
+                  )}
 
-                        <form
-                          onSubmit={handleAddOrUpdateFilm}
-                          className="space-y-3 text-sm"
-                        >
-                          {/* Titel + Jahr */}
-                          <div className="grid grid-cols-[2fr,1fr] gap-3 max-sm:grid-cols-1">
-                            <div>
-                              <label className="text-[11px] text-slate-300">
-                                Filmname
-                              </label>
-                              <input
-                                className="mt-1 w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-sm"
-                                value={filmTitel}
-                                onChange={(e) => setFilmTitel(e.target.value)}
-                                placeholder="z. B. Interstellar"
-                              />
-                            </div>
-                            <div>
-                              <label className="text-[11px] text-slate-300">
-                                Erscheinungsjahr
-                              </label>
-                              <input
-                                className="mt-1 w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-sm"
-                                value={filmJahr}
-                                onChange={(e) => setFilmJahr(e.target.value)}
-                                placeholder="2014"
-                                type="number"
-                              />
-                            </div>
-                          </div>
-
-                          {/* Studio + File URL */}
-                          <div className="grid grid-cols-1 gap-3">
-                            <div>
-                              <label className="text-[11px] text-slate-300">
-                                Studio
-                              </label>
-                              <select
-                                className="mt-1 w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-sm"
-                                value={filmStudioId}
-                                onChange={(e) =>
-                                  setFilmStudioId(e.target.value)
-                                }
-                              >
-                                <option value="">(kein Studio)</option>
-                                {studios.map((s) => (
-                                  <option key={s.id} value={s.id}>
-                                    {s.name}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-
-                            <div>
-                              <label className="text-[11px] text-slate-300">
-                                File-URL / NAS-Pfad
-                              </label>
-                              <input
-                                className="mt-1 w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-sm"
-                                value={filmFileUrl}
-                                onChange={(e) =>
-                                  setFilmFileUrl(e.target.value)
-                                }
-                                placeholder="z. B. smb://nas/Filme/Interstellar.mkv"
-                              />
-                            </div>
-                          </div>
-
-                          {/* Hauptdarsteller Chips */}
-                          <div>
-                            <label className="text-[11px] text-slate-300">
-                              Hauptdarsteller (klick zum Auswählen / Entfernen)
-                            </label>
-                            <div className="mt-1 flex flex-wrap gap-1">
-                              {hauptdarsteller.length === 0 ? (
-                                <span className="text-[11px] text-slate-500">
-                                  Noch keine Hauptdarsteller angelegt.
-                                </span>
-                              ) : (
-                                hauptdarsteller.map((a) => {
-                                  const active =
-                                    selectedMainActorIds.includes(a.id);
-                                  return (
-                                    <button
-                                      key={a.id}
-                                      type="button"
-                                      onClick={() =>
-                                        toggleId(
-                                          a.id,
-                                          selectedMainActorIds,
-                                          setSelectedMainActorIds
-                                        )
-                                      }
-                                      className={chipClass(active)}
-                                    >
-                                      {a.name}
-                                    </button>
-                                  );
-                                })
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Nebendarsteller Chips */}
-                          <div>
-                            <label className="text-[11px] text-slate-300">
-                              Nebendarsteller (klick zum Auswählen / Entfernen)
-                            </label>
-                            <div className="mt-1 flex flex-wrap gap-1">
-                              {nebendarsteller.length === 0 ? (
-                                <span className="text-[11px] text-slate-500">
-                                  Noch keine Nebendarsteller angelegt.
-                                </span>
-                              ) : (
-                                nebendarsteller.map((a) => {
-                                  const active =
-                                    selectedSupportActorIds.includes(a.id);
-                                  return (
-                                    <button
-                                      key={a.id}
-                                      type="button"
-                                      onClick={() =>
-                                        toggleId(
-                                          a.id,
-                                          selectedSupportActorIds,
-                                          setSelectedSupportActorIds
-                                        )
-                                      }
-                                      className={chipClass(active)}
-                                    >
-                                      {a.name}
-                                    </button>
-                                  );
-                                })
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Tags Chips */}
-                          <div>
-                            <label className="text-[11px] text-slate-300">
-                              Tags (klick zum Auswählen / Entfernen)
-                            </label>
-                            <div className="mt-1 flex flex-wrap gap-1">
-                              {tags.length === 0 ? (
-                                <span className="text-[11px] text-slate-500">
-                                  Noch keine Tags angelegt.
-                                </span>
-                              ) : (
-                                tags.map((t) => {
-                                  const active = selectedTagIds.includes(t.id);
-                                  return (
-                                    <button
-                                      key={t.id}
-                                      type="button"
-                                      onClick={() =>
-                                        toggleId(
-                                          t.id,
-                                          selectedTagIds,
-                                          setSelectedTagIds
-                                        )
-                                      }
-                                      className={chipClass(active)}
-                                    >
-                                      {t.name}
-                                    </button>
-                                  );
-                                })
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="flex gap-2 pt-2">
-                            <button
-                              type="submit"
-                              className="bg-orange-500 px-4 py-2 rounded text-xs font-medium disabled:opacity-60 text-black"
-                              disabled={!filmTitel.trim()}
-                            >
-                              {editingFilmId
-                                ? "Film aktualisieren"
-                                : "Film speichern"}
-                            </button>
-                            {editingFilmId && (
-                              <button
-                                type="button"
-                                onClick={handleCancelEdit}
-                                className="border border-slate-600 px-3 py-2 rounded text-xs text-slate-200"
-                              >
-                                Abbrechen
-                              </button>
-                            )}
-                          </div>
-                        </form>
-                      </div>
-                    )}
-
-                    {/* Tab: Filmestatistik */}
-                    {activeFilmSection === "stats" && (
-                      <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h2 className="text-sm font-semibold">
-                              Filmestatistik
-                            </h2>
-                            <p className="text-[11px] text-slate-400 mt-1">
-                              Insgesamt <strong>{filme.length}</strong> Filme
-                              in der Bibliothek.
-                            </p>
-                          </div>
-                        </div>
-
-                        {filme.length === 0 ? (
-                          <p className="text-slate-500 text-xs">
-                            Noch keine Filme angelegt.
+                  {/* Tab: Filmestatistik */}
+                  {activeFilmSection === "stats" && (
+                    <div className="rounded-2xl border border-slate-800/80 bg-slate-950/90 p-5 shadow-xl shadow-black/70 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h2 className="text-sm font-semibold text-slate-50">
+                            Filmestatistik
+                          </h2>
+                          <p className="mt-1 text-[11px] text-slate-400">
+                            Insgesamt{" "}
+                            <strong className="text-slate-100">
+                              {filme.length}
+                            </strong>{" "}
+                            Filme in der Bibliothek.
                           </p>
-                        ) : (
-                          <div className="space-y-2 max-h-[360px] overflow-y-auto text-xs">
-                            {filme.map((f) => (
-                              <div
-                                key={f.id}
-                                className="p-3 border border-slate-800 rounded bg-slate-950/60 space-y-1"
-                              >
-                                <div className="flex justify-between gap-2 items-start">
-                                  <div className="space-y-1">
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-medium text-sm">
-                                        {f.title}
+                        </div>
+                      </div>
+
+                      {filme.length === 0 ? (
+                        <p className="text-xs text-slate-500">
+                          Noch keine Filme angelegt.
+                        </p>
+                      ) : (
+                        <div className="max-h-[360px] space-y-2 overflow-y-auto text-xs pr-1">
+                          {filme.map((f) => (
+                            <div
+                              key={f.id}
+                              className="space-y-1 rounded-xl border border-slate-800 bg-slate-950/90 p-3 shadow-sm shadow-black/60"
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm font-medium text-slate-50">
+                                      {f.title}
+                                    </span>
+                                    {f.year && (
+                                      <span className="text-[10px] text-slate-400">
+                                        {f.year}
                                       </span>
-                                      {f.year && (
-                                        <span className="text-slate-400 text-[10px]">
-                                          {f.year}
-                                        </span>
-                                      )}
-                                    </div>
-                                    {f.studio_id &&
-                                      studioMap[f.studio_id] && (
-                                        <div className="text-slate-400 text-[11px]">
-                                          Studio:{" "}
-                                          {studioMap[f.studio_id].name}
-                                        </div>
-                                      )}
-
-                                    {Array.isArray(f.main_actor_ids) &&
-                                      f.main_actor_ids.length > 0 && (
-                                        <div className="text-[11px] text-slate-300">
-                                          Hauptdarsteller:{" "}
-                                          {f.main_actor_ids
-                                            .map(
-                                              (id) => actorMap[id]?.name
-                                            )
-                                            .filter(Boolean)
-                                            .join(", ")}
-                                        </div>
-                                      )}
-
-                                    {Array.isArray(f.supporting_actor_ids) &&
-                                      f.supporting_actor_ids.length > 0 && (
-                                        <div className="text-[11px] text-slate-300">
-                                          Nebendarsteller:{" "}
-                                          {f.supporting_actor_ids
-                                            .map(
-                                              (id) => supportMap[id]?.name
-                                            )
-                                            .filter(Boolean)
-                                            .join(", ")}
-                                        </div>
-                                      )}
-
-                                    {Array.isArray(f.tag_ids) &&
-                                      f.tag_ids.length > 0 && (
-                                        <div className="flex flex-wrap gap-1 mt-1">
-                                          {f.tag_ids.map((id) => {
-                                            const t = tagMap[id];
-                                            if (!t) return null;
-                                            return (
-                                              <span
-                                                key={id}
-                                                className={chipClass(true)}
-                                              >
-                                                {t.name}
-                                              </span>
-                                            );
-                                          })}
-                                        </div>
-                                      )}
-
-                                    {f.file_url && (
-                                      <div className="text-orange-400 text-[11px] break-all mt-1">
-                                        File: {f.file_url}
-                                      </div>
                                     )}
                                   </div>
+                                  {f.studio_id &&
+                                    studioMap[f.studio_id] && (
+                                      <div className="text-[11px] text-slate-400">
+                                        Studio:{" "}
+                                        {studioMap[f.studio_id].name}
+                                      </div>
+                                    )}
 
-                                  <div className="flex flex-col gap-1">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleEditFilm(f)}
-                                      className="text-[10px] px-2 py-1 rounded border border-slate-600 text-slate-100 hover:bg-slate-700"
-                                    >
-                                      Bearbeiten
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDeleteFilm(f.id)}
-                                      className="text-[10px] px-2 py-1 rounded border border-red-600 text-red-200 hover:bg-red-700/70"
-                                    >
-                                      Löschen
-                                    </button>
-                                  </div>
+                                  {Array.isArray(f.main_actor_ids) &&
+                                    f.main_actor_ids.length > 0 && (
+                                      <div className="text-[11px] text-slate-300">
+                                        Hauptdarsteller:{" "}
+                                        {f.main_actor_ids
+                                          .map(
+                                            (id) => actorMap[id]?.name
+                                          )
+                                          .filter(Boolean)
+                                          .join(", ")}
+                                      </div>
+                                    )}
+
+                                  {Array.isArray(f.supporting_actor_ids) &&
+                                    f.supporting_actor_ids.length > 0 && (
+                                      <div className="text-[11px] text-slate-300">
+                                        Nebendarsteller:{" "}
+                                        {f.supporting_actor_ids
+                                          .map(
+                                            (id) => supportMap[id]?.name
+                                          )
+                                          .filter(Boolean)
+                                          .join(", ")}
+                                      </div>
+                                    )}
+
+                                  {Array.isArray(f.tag_ids) &&
+                                    f.tag_ids.length > 0 && (
+                                      <div className="mt-1 flex flex-wrap gap-1">
+                                        {f.tag_ids.map((id) => {
+                                          const t = tagMap[id];
+                                          if (!t) return null;
+                                          return (
+                                            <span
+                                              key={id}
+                                              className={chipClass(true)}
+                                            >
+                                              {t.name}
+                                            </span>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+
+                                  {f.file_url && (
+                                    <div className="mt-1 break-all text-[11px] text-orange-400">
+                                      File: {f.file_url}
+                                    </div>
+                                  )}
                                 </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
 
-                    {/* Tab: Stammdaten */}
-                    {activeFilmSection === "meta" && (
-                      <section className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 space-y-4 text-xs">
-                        <h2 className="text-sm font-semibold">Stammdaten</h2>
-
-                        <div className="grid gap-4 sm:grid-cols-2">
-                          {/* Hauptdarsteller */}
-                          <div className="space-y-2">
-                            <form
-                              onSubmit={handleAddActor}
-                              className="space-y-1"
-                            >
-                              <div className="font-medium">
-                                Hauptdarsteller
-                              </div>
-                              <input
-                                className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1"
-                                placeholder="Name"
-                                value={newActorName}
-                                onChange={(e) =>
-                                  setNewActorName(e.target.value)
-                                }
-                              />
-
-                              {/* Upload + Crop für Hauptdarsteller */}
-                              <ActorImageUploader
-                                onUploaded={(url) => setNewActorImage(url)}
-                              />
-
-                              <button
-                                type="submit"
-                                className="mt-1 bg-orange-500 px-2 py-1 rounded text-[10px] text-black disabled:opacity-60"
-                                disabled={!newActorName.trim()}
-                              >
-                                + Haupt
-                              </button>
-                            </form>
-
-                            <div className="max-h-32 overflow-y-auto space-y-1 mt-1">
-                              {hauptdarsteller.map((a) => (
-                                <div
-                                  key={a.id}
-                                  className="flex items-center justify-between gap-2 border border-slate-800 rounded px-2 py-1 bg-slate-950"
-                                >
-                                  <span>{a.name}</span>
-                                  <div className="flex gap-1">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleEditActor(a)}
-                                      className="text-[10px] px-2 py-[2px] rounded border border-slate-600 text-slate-100 hover:bg-slate-700"
-                                    >
-                                      Edit
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        handleDeleteActor(a.id)
-                                      }
-                                      className="text-[10px] px-2 py-[2px] rounded border border-red-600 text-red-200 hover:bg-red-700/70"
-                                    >
-                                      X
-                                    </button>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Nebendarsteller */}
-                          <div className="space-y-2">
-                            <form
-                              onSubmit={handleAddSupportActor}
-                              className="space-y-1"
-                            >
-                              <div className="font-medium">
-                                Nebendarsteller
-                              </div>
-                              <input
-                                className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1"
-                                placeholder="Name"
-                                value={newSupportName}
-                                onChange={(e) =>
-                                  setNewSupportName(e.target.value)
-                                }
-                              />
-
-                              {/* Upload + Crop für Nebendarsteller */}
-                              <ActorImageUploader
-                                onUploaded={(url) =>
-                                  setNewSupportImage(url)
-                                }
-                              />
-
-                              <button
-                                type="submit"
-                                className="mt-1 bg-orange-500 px-2 py-1 rounded text-[10px] text-black disabled:opacity-60"
-                                disabled={!newSupportName.trim()}
-                              >
-                                + Neben
-                              </button>
-                            </form>
-
-                            <div className="max-h-32 overflow-y-auto space-y-1 mt-1">
-                              {nebendarsteller.map((a) => (
-                                <div
-                                  key={a.id}
-                                  className="flex items-center justify-between gap-2 border border-slate-800 rounded px-2 py-1 bg-slate-950"
-                                >
-                                  <span>{a.name}</span>
-                                  <div className="flex gap-1">
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        handleEditSupportActor(a)
-                                      }
-                                      className="text-[10px] px-2 py-[2px] rounded border border-slate-600 text-slate-100 hover:bg-slate-700"
-                                    >
-                                      Edit
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        handleDeleteSupportActor(a.id)
-                                      }
-                                      className="text-[10px] px-2 py-[2px] rounded border border-red-600 text-red-200 hover:bg-red-700/70"
-                                    >
-                                      X
-                                    </button>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Studios */}
-                          <div className="space-y-2">
-                            <form
-                              onSubmit={handleAddStudio}
-                              className="space-y-1"
-                            >
-                              <div className="font-medium">Studios</div>
-                              <input
-                                className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1"
-                                placeholder="Studio"
-                                value={newStudioName}
-                                onChange={(e) =>
-                                  setNewStudioName(e.target.value)
-                                }
-                              />
-                              <input
-                                className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1"
-                                placeholder="Bild-URL (optional)"
-                                value={newStudioImage}
-                                onChange={(e) =>
-                                  setNewStudioImage(e.target.value)
-                                }
-                              />
-                              <button
-                                type="submit"
-                                className="mt-1 bg-orange-500 px-2 py-1 rounded text-[10px] text-black disabled:opacity-60"
-                                disabled={!newStudioName.trim()}
-                              >
-                                + Studio
-                              </button>
-                            </form>
-
-                            <div className="max-h-32 overflow-y-auto space-y-1 mt-1">
-                              {studios.map((s) => (
-                                <div
-                                  key={s.id}
-                                  className="flex items-center justify-between gap-2 border border-slate-800 rounded px-2 py-1 bg-slate-950"
-                                >
-                                  <span>{s.name}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Tags */}
-                          <div className="space-y-2">
-                            <form
-                              onSubmit={handleAddTag}
-                              className="space-y-1"
-                            >
-                              <div className="font-medium">Tags</div>
-                              <input
-                                className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1"
-                                placeholder="Tag-Name"
-                                value={newTagName}
-                                onChange={(e) =>
-                                  setNewTagName(e.target.value)
-                                }
-                              />
-                              <button
-                                type="submit"
-                                className="mt-1 bg-orange-500 px-2 py-1 rounded text-[10px] text-black disabled:opacity-60"
-                                disabled={!newTagName.trim()}
-                              >
-                                + Tag
-                              </button>
-                              <div className="text-[10px] text-slate-500 mt-1">
-                                Vorhanden: {tags.length}
-                              </div>
-                            </form>
-
-                            <div className="max-h-32 overflow-y-auto space-y-1 mt-1">
-                              {tags.map((t) => (
-                                <div
-                                  key={t.id}
-                                  className="flex items-center justify-between gap-2 border border-slate-800 rounded px-2 py-1 bg-slate-950"
-                                >
-                                  <span>{t.name}</span>
+                                <div className="flex flex-col gap-1">
                                   <button
                                     type="button"
-                                    onClick={() =>
-                                      handleDeleteTagGlobal(t.id)
-                                    }
-                                    className="text-[10px] px-2 py-[2px] rounded border border-red-600 text-red-200 hover:bg-red-700/70"
+                                    onClick={() => handleEditFilm(f)}
+                                    className="rounded-md border border-slate-600 px-2 py-1 text-[10px] text-slate-100 hover:bg-slate-800"
+                                  >
+                                    Bearbeiten
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteFilm(f.id)}
+                                    className="rounded-md border border-red-600 px-2 py-1 text-[10px] text-red-200 hover:bg-red-700/80"
+                                  >
+                                    Löschen
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Tab: Stammdaten */}
+                  {activeFilmSection === "meta" && (
+                    <section className="rounded-2xl border border-slate-800/80 bg-slate-950/90 p-5 text-xs text-slate-100 shadow-xl shadow-black/70 space-y-4">
+                      <h2 className="text-sm font-semibold text-slate-50">
+                        Stammdaten
+                      </h2>
+
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        {/* Hauptdarsteller */}
+                        <div className="space-y-2">
+                          <form
+                            onSubmit={handleAddActor}
+                            className="space-y-1"
+                          >
+                            <div className="font-medium text-slate-100">
+                              Hauptdarsteller
+                            </div>
+                            <input
+                              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-50 placeholder:text-slate-500 focus:border-orange-500 focus:outline-none"
+                              placeholder="Name"
+                              value={newActorName}
+                              onChange={(e) =>
+                                setNewActorName(e.target.value)
+                              }
+                            />
+
+                            {/* Upload + Crop für Hauptdarsteller */}
+                            <ActorImageUploader
+                              onUploaded={(url) => setNewActorImage(url)}
+                            />
+
+                            <button
+                              type="submit"
+                              className="mt-1 rounded-lg bg-orange-500 px-2 py-1 text-[10px] font-semibold text-black shadow shadow-orange-900/70 disabled:opacity-60"
+                              disabled={!newActorName.trim()}
+                            >
+                              + Haupt
+                            </button>
+                          </form>
+
+                          <div className="mt-1 max-h-32 space-y-1 overflow-y-auto">
+                            {hauptdarsteller.map((a) => (
+                              <div
+                                key={a.id}
+                                className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-950 px-2 py-1"
+                              >
+                                <span>{a.name}</span>
+                                <div className="flex gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleEditActor(a)}
+                                    className="rounded border border-slate-600 px-2 py-[2px] text-[10px] text-slate-100 hover:bg-slate-800"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteActor(a.id)}
+                                    className="rounded border border-red-600 px-2 py-[2px] text-[10px] text-red-200 hover:bg-red-700/80"
                                   >
                                     X
                                   </button>
                                 </div>
-                              ))}
-                            </div>
+                              </div>
+                            ))}
                           </div>
                         </div>
-                      </section>
-                    )}
-                  </section>
-                </>
-              )}
-            </div>
+
+                        {/* Nebendarsteller */}
+                        <div className="space-y-2">
+                          <form
+                            onSubmit={handleAddSupportActor}
+                            className="space-y-1"
+                          >
+                            <div className="font-medium text-slate-100">
+                              Nebendarsteller
+                            </div>
+                            <input
+                              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-50 placeholder:text-slate-500 focus:border-orange-500 focus:outline-none"
+                              placeholder="Name"
+                              value={newSupportName}
+                              onChange={(e) =>
+                                setNewSupportName(e.target.value)
+                              }
+                            />
+
+                            {/* Upload + Crop für Nebendarsteller */}
+                            <ActorImageUploader
+                              onUploaded={(url) =>
+                                setNewSupportImage(url)
+                              }
+                            />
+
+                            <button
+                              type="submit"
+                              className="mt-1 rounded-lg bg-orange-500 px-2 py-1 text-[10px] font-semibold text-black shadow shadow-orange-900/70 disabled:opacity-60"
+                              disabled={!newSupportName.trim()}
+                            >
+                              + Neben
+                            </button>
+                          </form>
+
+                          <div className="mt-1 max-h-32 space-y-1 overflow-y-auto">
+                            {nebendarsteller.map((a) => (
+                              <div
+                                key={a.id}
+                                className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-950 px-2 py-1"
+                              >
+                                <span>{a.name}</span>
+                                <div className="flex gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleEditSupportActor(a)
+                                    }
+                                    className="rounded border border-slate-600 px-2 py-[2px] text-[10px] text-slate-100 hover:bg-slate-800"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleDeleteSupportActor(a.id)
+                                    }
+                                    className="rounded border border-red-600 px-2 py-[2px] text-[10px] text-red-200 hover:bg-red-700/80"
+                                  >
+                                    X
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Studios */}
+                        <div className="space-y-2">
+                          <form
+                            onSubmit={handleAddStudio}
+                            className="space-y-1"
+                          >
+                            <div className="font-medium text-slate-100">
+                              Studios
+                            </div>
+                            <input
+                              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-50 placeholder:text-slate-500 focus:border-orange-500 focus:outline-none"
+                              placeholder="Studio"
+                              value={newStudioName}
+                              onChange={(e) =>
+                                setNewStudioName(e.target.value)
+                              }
+                            />
+                            <input
+                              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-50 placeholder:text-slate-500 focus:border-orange-500 focus:outline-none"
+                              placeholder="Bild-URL (optional)"
+                              value={newStudioImage}
+                              onChange={(e) =>
+                                setNewStudioImage(e.target.value)
+                              }
+                            />
+                            <button
+                              type="submit"
+                              className="mt-1 rounded-lg bg-orange-500 px-2 py-1 text-[10px] font-semibold text-black shadow shadow-orange-900/70 disabled:opacity-60"
+                              disabled={!newStudioName.trim()}
+                            >
+                              + Studio
+                            </button>
+                          </form>
+
+                          <div className="mt-1 max-h-32 space-y-1 overflow-y-auto">
+                            {studios.map((s) => (
+                              <div
+                                key={s.id}
+                                className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-950 px-2 py-1"
+                              >
+                                <span>{s.name}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Tags */}
+                        <div className="space-y-2">
+                          <form
+                            onSubmit={handleAddTag}
+                            className="space-y-1"
+                          >
+                            <div className="font-medium text-slate-100">
+                              Tags
+                            </div>
+                            <input
+                              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-50 placeholder:text-slate-500 focus:border-orange-500 focus:outline-none"
+                              placeholder="Tag-Name"
+                              value={newTagName}
+                              onChange={(e) =>
+                                setNewTagName(e.target.value)
+                              }
+                            />
+                            <button
+                              type="submit"
+                              className="mt-1 rounded-lg bg-orange-500 px-2 py-1 text-[10px] font-semibold text-black shadow shadow-orange-900/70 disabled:opacity-60"
+                              disabled={!newTagName.trim()}
+                            >
+                              + Tag
+                            </button>
+                            <div className="mt-1 text-[10px] text-slate-500">
+                              Vorhanden: {tags.length}
+                            </div>
+                          </form>
+
+                          <div className="mt-1 max-h-32 space-y-1 overflow-y-auto">
+                            {tags.map((t) => (
+                              <div
+                                key={t.id}
+                                className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-950 px-2 py-1"
+                              >
+                                <span>{t.name}</span>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleDeleteTagGlobal(t.id)
+                                  }
+                                  className="rounded border border-red-600 px-2 py-[2px] text-[10px] text-red-200 hover:bg-red-700/80"
+                                >
+                                  X
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+                  )}
+                </section>
+              </>
+            )}
           </section>
         )}
       </main>
