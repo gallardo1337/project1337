@@ -1,1159 +1,339 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { supabase } from "../../lib/supabaseClient";
+import { useEffect, useState, FormEvent } from "react";
+import Image from "next/image";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
-// -------------------------------
-// Version / Changelog
-// -------------------------------
+type Actor = {
+  id: string;
+  created_at: string | null;
+  name: string;
+  profile_image: string | null;
+};
 
-const CHANGELOG = [
-  {
-    version: "0.2.0",
-    date: "2025-11-27",
-    items: [
-      "Login-Status und Begrüßung im Dashboard",
-      "Button zurück zur Hauptseite",
-      "Logout-Funktion"
-    ]
-  },
-  {
-    version: "0.1.0",
-    date: "2025-11-26",
-    items: [
-      "Grundlegendes Dashboard für Filme, inkl. Studio, Darsteller & Tags",
-      "Supabase-Anbindung (movies, studios, actors, tags, movie_actors, movie_tags)"
-    ]
+let supabase: SupabaseClient | null = null;
+
+function getSupabaseClient() {
+  if (!supabase) {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    supabase = createClient(url, anonKey);
   }
-];
-
-function VersionHint() {
-  const [open, setOpen] = useState(false);
-  const current = CHANGELOG[0];
-
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        style={{
-          borderRadius: "999px",
-          border: "1px solid #4b5563",
-          background: "#020617",
-          color: "#e5e7eb",
-          fontSize: "0.8rem",
-          padding: "4px 10px",
-          display: "flex",
-          alignItems: "center",
-          gap: "6px",
-          cursor: "pointer"
-        }}
-      >
-        <span>{current.version}</span>
-        <span style={{ opacity: 0.7 }}>Changelog</span>
-      </button>
-
-      {open && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.65)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 80
-          }}
-          onClick={() => setOpen(false)}
-        >
-          <div
-            style={{
-              width: "100%",
-              maxWidth: 520,
-              maxHeight: "80vh",
-              overflowY: "auto",
-              background: "#020617",
-              borderRadius: 16,
-              border: "1px solid #4b5563",
-              padding: 20,
-              boxShadow: "0 20px 60px rgba(0,0,0,0.7)"
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 12
-              }}
-            >
-              <div>
-                <div
-                  style={{
-                    fontSize: "0.8rem",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                    color: "#9ca3af"
-                  }}
-                >
-                  Dashboard – Version & Changelog
-                </div>
-                <div style={{ fontSize: "1rem", fontWeight: 600 }}>
-                  1337 Library Dashboard
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                style={{
-                  borderRadius: "999px",
-                  border: "1px solid #4b5563",
-                  background: "#111827",
-                  color: "#e5e7eb",
-                  fontSize: "0.8rem",
-                  padding: "4px 10px",
-                  cursor: "pointer"
-                }}
-              >
-                Schließen
-              </button>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {CHANGELOG.map((entry) => (
-                <div
-                  key={entry.version}
-                  style={{
-                    borderRadius: 12,
-                    border: "1px solid #374151",
-                    padding: 12,
-                    background: "#030712"
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "baseline",
-                      marginBottom: 4
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontWeight: 600,
-                        fontSize: "0.95rem",
-                        color: "#e5e7eb"
-                      }}
-                    >
-                      {entry.version}
-                    </div>
-                    <div
-                      style={{ fontSize: "0.8rem", color: "#9ca3af" }}
-                    >
-                      {entry.date}
-                    </div>
-                  </div>
-                  <ul
-                    style={{
-                      margin: 0,
-                      paddingLeft: 18,
-                      fontSize: "0.85rem",
-                      color: "#d1d5db"
-                    }}
-                  >
-                    {entry.items.map((it, idx) => (
-                      <li key={idx} style={{ marginBottom: 3 }}>
-                        {it}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  );
+  return supabase;
 }
 
 export default function DashboardPage() {
-  // Login-Status
-  const [loggedIn, setLoggedIn] = useState(false);
-  const [loginUser, setLoginUser] = useState("gallardo1337");
-  const [loginPassword, setLoginPassword] = useState("");
-  const [loginErr, setLoginErr] = useState(null);
-  const [loginLoading, setLoginLoading] = useState(false);
+  const [actors, setActors] = useState<Actor[]>([]);
+  const [supportingActors, setSupportingActors] = useState<Actor[]>([]); // actors2
 
-  // Admin-Daten
-  const [movies, setMovies] = useState([]);
-  const [studios, setStudios] = useState([]);
-  const [actors, setActors] = useState([]);
-  const [tags, setTags] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [err, setErr] = useState(null);
-  const [info, setInfo] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const [form, setForm] = useState({
-    id: null,
-    title: "",
-    year: "",
-    fileUrl: "",
-    studioId: "",
-    actorIds: [],
-    tagIds: []
-  });
+  // Form-States: Hauptdarsteller
+  const [actorName, setActorName] = useState("");
+  const [actorImageUrl, setActorImageUrl] = useState("");
+
+  // Form-States: Nebendarsteller
+  const [supportName, setSupportName] = useState("");
+  const [supportImageUrl, setSupportImageUrl] = useState("");
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const flag = window.localStorage.getItem("auth_1337_flag");
-    const user = window.localStorage.getItem("auth_1337_user");
-    if (flag === "1" && user) {
-      setLoggedIn(true);
-      setLoginUser(user);
-    } else {
-      setLoggedIn(false);
-    }
-  }, []);
+    const client = getSupabaseClient();
 
-  // Daten nur laden, wenn eingeloggt
-  useEffect(() => {
-    if (!loggedIn) {
-      setLoading(false);
-      return;
-    }
-
-    const load = async () => {
+    const loadData = async () => {
       try {
         setLoading(true);
-        setErr(null);
+        setError(null);
 
-        const { data: moviesData, error: moviesErr } = await supabase
-          .from("movies")
-          .select(
-            `
-            id,
-            title,
-            file_url,
-            year,
-            studio_id,
-            studios ( id, name ),
-            movie_actors (
-              actor_id,
-              actors ( id, name )
-            ),
-            movie_tags (
-              tag_id,
-              tags ( id, name )
-            )
-          `
-          )
-          .order("title", { ascending: true });
+        const [actorsRes, actors2Res] = await Promise.all([
+          client.from("actors").select("id, created_at, name, profile_image").order("created_at", { ascending: true }),
+          client.from("actors2").select("id, created_at, name, profile_image").order("created_at", { ascending: true }),
+        ]);
 
-        if (moviesErr) throw moviesErr;
+        if (actorsRes.error) throw actorsRes.error;
+        if (actors2Res.error) throw actors2Res.error;
 
-        const mappedMovies =
-          moviesData?.map((m) => ({
-            id: m.id,
-            title: m.title,
-            year: m.year || "",
-            fileUrl: m.file_url || "",
-            studioId: m.studio_id || "",
-            studioName: m.studios?.name || "",
-            actorIds:
-              m.movie_actors
-                ?.map((ma) => ma.actors?.id)
-                .filter(Boolean) || [],
-            actorNames:
-              m.movie_actors
-                ?.map((ma) => ma.actors?.name)
-                .filter(Boolean) || [],
-            tagIds:
-              m.movie_tags?.map((mt) => mt.tags?.id).filter(Boolean) || [],
-            tagNames:
-              m.movie_tags?.map((mt) => mt.tags?.name).filter(Boolean) || []
-          })) || [];
-
-        setMovies(mappedMovies);
-
-        const [{ data: studiosData }, { data: actorsData }, { data: tagsData }] =
-          await Promise.all([
-            supabase.from("studios").select("id, name").order("name"),
-            supabase.from("actors").select("id, name").order("name"),
-            supabase.from("tags").select("id, name").order("name")
-          ]);
-
-        setStudios(studiosData || []);
-        setActors(actorsData || []);
-        setTags(tagsData || []);
-      } catch (e) {
-        console.error(e);
-        setErr("Fehler beim Laden der Dashboard-Daten.");
+        setActors((actorsRes.data || []) as Actor[]);
+        setSupportingActors((actors2Res.data || []) as Actor[]);
+      } catch (err: any) {
+        console.error(err);
+        setError(err.message ?? "Fehler beim Laden der Daten.");
       } finally {
         setLoading(false);
       }
     };
 
-    void load();
-  }, [loggedIn]);
+    loadData();
+  }, []);
 
-  const resetForm = () => {
-    setForm({
-      id: null,
-      title: "",
-      year: "",
-      fileUrl: "",
-      studioId: "",
-      actorIds: [],
-      tagIds: []
-    });
-    setInfo(null);
-    setErr(null);
-  };
-
-  const selectMovie = (m) => {
-    setForm({
-      id: m.id,
-      title: m.title || "",
-      year: m.year || "",
-      fileUrl: m.fileUrl || "",
-      studioId: m.studioId || "",
-      actorIds: m.actorIds || [],
-      tagIds: m.tagIds || []
-    });
-    setInfo(null);
-    setErr(null);
-  };
-
-  const toggleIdInArray = (list, id) =>
-    list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
-
-  const handleInputChange = (field, value) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleToggleActor = (id) => {
-    setForm((prev) => ({
-      ...prev,
-      actorIds: toggleIdInArray(prev.actorIds, id)
-    }));
-  };
-
-  const handleToggleTag = (id) => {
-    setForm((prev) => ({
-      ...prev,
-      tagIds: toggleIdInArray(prev.tagIds, id)
-    }));
-  };
-
-  const handleSave = async () => {
-    if (!form.title.trim()) {
-      setErr("Titel darf nicht leer sein.");
-      return;
-    }
-    if (!form.fileUrl.trim()) {
-      setErr("fileUrl (NAS-Link) darf nicht leer sein.");
-      return;
-    }
-
-    try {
-      setSaving(true);
-      setErr(null);
-      setInfo(null);
-
-      const payload = {
-        title: form.title.trim(),
-        file_url: form.fileUrl.trim(),
-        year: form.year ? Number(form.year) : null,
-        studio_id: form.studioId || null
-      };
-
-      let movieId = form.id;
-
-      if (movieId) {
-        const { data, error } = await supabase
-          .from("movies")
-          .update(payload)
-          .eq("id", movieId)
-          .select()
-          .single();
-
-        if (error) throw error;
-        movieId = data.id;
-      } else {
-        const { data, error } = await supabase
-          .from("movies")
-          .insert(payload)
-          .select()
-          .single();
-
-        if (error) throw error;
-        movieId = data.id;
-      }
-
-      await supabase.from("movie_actors").delete().eq("movie_id", movieId);
-      await supabase.from("movie_tags").delete().eq("movie_id", movieId);
-
-      if (form.actorIds.length > 0) {
-        await supabase
-          .from("movie_actors")
-          .insert(
-            form.actorIds.map((actorId) => ({
-              movie_id: movieId,
-              actor_id: actorId
-            }))
-          );
-      }
-
-      if (form.tagIds.length > 0) {
-        await supabase
-          .from("movie_tags")
-          .insert(
-            form.tagIds.map((tagId) => ({
-              movie_id: movieId,
-              tag_id: tagId
-            }))
-          );
-      }
-
-      setInfo("Film gespeichert.");
-
-      const { data: moviesData, error: moviesErr } = await supabase
-        .from("movies")
-        .select(
-          `
-          id,
-          title,
-          file_url,
-          year,
-          studio_id,
-          studios ( id, name ),
-          movie_actors (
-            actor_id,
-            actors ( id, name )
-          ),
-          movie_tags (
-            tag_id,
-            tags ( id, name )
-          )
-        `
-        )
-        .order("title", { ascending: true });
-
-      if (moviesErr) throw moviesErr;
-
-      const mappedMovies =
-        moviesData?.map((m) => ({
-          id: m.id,
-          title: m.title,
-          year: m.year || "",
-          fileUrl: m.file_url || "",
-          studioId: m.studio_id || "",
-          studioName: m.studios?.name || "",
-          actorIds:
-            m.movie_actors?.map((ma) => ma.actors?.id).filter(Boolean) || [],
-          actorNames:
-            m.movie_actors?.map((ma) => ma.actors?.name).filter(Boolean) || [],
-          tagIds:
-            m.movie_tags?.map((mt) => mt.tags?.id).filter(Boolean) || [],
-          tagNames:
-            m.movie_tags?.map((mt) => mt.tags?.name).filter(Boolean) || []
-        })) || [];
-
-      setMovies(mappedMovies);
-
-      const updated = mappedMovies.find((x) => x.id === movieId);
-      if (updated) selectMovie(updated);
-    } catch (e) {
-      console.error(e);
-      setErr("Fehler beim Speichern des Films.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!form.id) return;
-    const confirmDelete = window.confirm(
-      `Film "${form.title}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`
-    );
-    if (!confirmDelete) return;
-
-    try {
-      setSaving(true);
-      setErr(null);
-      setInfo(null);
-
-      await supabase.from("movie_actors").delete().eq("movie_id", form.id);
-      await supabase.from("movie_tags").delete().eq("movie_id", form.id);
-      await supabase.from("movies").delete().eq("id", form.id);
-
-      setMovies((prev) => prev.filter((m) => m.id !== form.id));
-      resetForm();
-      setInfo("Film gelöscht.");
-    } catch (e) {
-      console.error(e);
-      setErr("Fehler beim Löschen des Films.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleLogin = async (e) => {
+  const handleAddActor = async (e: FormEvent) => {
     e.preventDefault();
-    setLoginErr(null);
-    setLoginLoading(true);
+    const name = actorName.trim();
+    const img = actorImageUrl.trim();
 
-    try {
-      const res = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: loginUser,
-          password: loginPassword
-        })
-      });
+    if (!name) return;
 
-      if (!res.ok) {
-        if (res.status === 401) {
-          setLoginErr("User oder Passwort falsch.");
-        } else {
-          setLoginErr("Login fehlgeschlagen.");
-        }
-        return;
-      }
+    const client = getSupabaseClient();
 
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem("auth_1337_flag", "1");
-        window.localStorage.setItem("auth_1337_user", loginUser);
-      }
-      setLoggedIn(true);
-      setLoginErr(null);
-      setLoginPassword("");
-    } catch (error) {
+    const { data, error } = await client
+      .from("actors")
+      .insert({
+        name,
+        profile_image: img !== "" ? img : null,
+      })
+      .select("id, created_at, name, profile_image")
+      .single();
+
+    if (error) {
       console.error(error);
-      setLoginErr("Netzwerkfehler beim Login.");
-    } finally {
-      setLoginLoading(false);
+      setError(error.message);
+      return;
+    }
+
+    if (data) {
+      setActors((prev) => [...prev, data as Actor]);
+      setActorName("");
+      setActorImageUrl("");
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await fetch("/api/logout", { method: "POST" });
-    } catch {
-      // ignorieren
+  const handleAddSupportingActor = async (e: FormEvent) => {
+    e.preventDefault();
+    const name = supportName.trim();
+    const img = supportImageUrl.trim();
+
+    if (!name) return;
+
+    const client = getSupabaseClient();
+
+    const { data, error } = await client
+      .from("actors2")
+      .insert({
+        name,
+        profile_image: img !== "" ? img : null,
+      })
+      .select("id, created_at, name, profile_image")
+      .single();
+
+    if (error) {
+      console.error(error);
+      setError(error.message);
+      return;
     }
-    if (typeof window !== "undefined") {
-      window.localStorage.removeItem("auth_1337_flag");
-      window.localStorage.removeItem("auth_1337_user");
+
+    if (data) {
+      setSupportingActors((prev) => [...prev, data as Actor]);
+      setSupportName("");
+      setSupportImageUrl("");
     }
-    setLoggedIn(false);
   };
 
   return (
-    <div className="page dashboard-page">
-      <header className="topbar">
-        <div className="logo-text">1337 Library – Dashboard</div>
-        <div
-          style={{
-            marginLeft: "auto",
-            display: "flex",
-            alignItems: "center",
-            gap: 12
-          }}
-        >
-          <VersionHint />
+    <main className="min-h-screen bg-slate-950 text-slate-50 px-4 py-8">
+      <div className="mx-auto w-full max-w-5xl space-y-8">
+        {/* Kopfbereich – kannst du an dein Login/Header anpassen */}
+        <header className="flex flex-col gap-2 border-b border-slate-800 pb-4 mb-4">
+          <h1 className="text-3xl font-semibold tracking-tight">
+            Film-Dashboard – Darstellerverwaltung
+          </h1>
+          <p className="text-sm text-slate-400">
+            Hier kannst du Hauptdarsteller (<code>actors</code>) und
+            Nebendarsteller (<code>actors2</code>) verwalten. Für beide gibt es
+            optional ein Profilbild.
+          </p>
+        </header>
 
-          {!loggedIn ? (
-            <form
-              onSubmit={handleLogin}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6
-              }}
-            >
-              <input
-                type="text"
-                placeholder="User"
-                value={loginUser}
-                onChange={(e) => setLoginUser(e.target.value)}
-                style={{
-                  borderRadius: 999,
-                  border: "1px solid #374151",
-                  background: "#020617",
-                  color: "#e5e7eb",
-                  fontSize: "0.8rem",
-                  padding: "4px 8px",
-                  width: 130
-                }}
-              />
-              <input
-                type="password"
-                placeholder="Passwort"
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                style={{
-                  borderRadius: 999,
-                  border: "1px solid #374151",
-                  background: "#020617",
-                  color: "#e5e7eb",
-                  fontSize: "0.8rem",
-                  padding: "4px 8px",
-                  width: 120
-                }}
-              />
-              <button
-                type="submit"
-                disabled={loginLoading || !loginPassword}
-                style={{
-                  borderRadius: 999,
-                  border: "none",
-                  background: "#f97316",
-                  color: "#111827",
-                  fontSize: "0.8rem",
-                  padding: "4px 10px",
-                  fontWeight: 600,
-                  cursor:
-                    loginLoading || !loginPassword ? "default" : "pointer",
-                  opacity: loginLoading || !loginPassword ? 0.7 : 1
-                }}
-              >
-                {loginLoading ? "…" : "Login"}
-              </button>
-            </form>
-          ) : (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                fontSize: "0.8rem",
-                color: "#9ca3af"
-              }}
-            >
-              <span style={{ color: "#4ade80" }}>
-                Willkommen, {loginUser}
-              </span>
-              <a
-                href="/"
-                style={{
-                  textDecoration: "none",
-                  borderRadius: 999,
-                  border: "1px solid #4b5563",
-                  padding: "3px 8px",
-                  color: "#e5e7eb"
-                }}
-              >
-                Zurück zur Hauptseite
-              </a>
-              <button
-                type="button"
-                onClick={handleLogout}
-                style={{
-                  borderRadius: 999,
-                  border: "1px solid #4b5563",
-                  background: "transparent",
-                  color: "#e5e7eb",
-                  fontSize: "0.8rem",
-                  padding: "3px 8px",
-                  cursor: "pointer"
-                }}
-              >
-                Logout
-              </button>
-            </div>
-          )}
-        </div>
-      </header>
-
-      <main
-        className="admin-main"
-        style={{
-          display: "grid",
-          gridTemplateColumns: "minmax(0, 1.3fr) minmax(0, 2fr)",
-          gap: "1.5rem",
-          padding: "1.5rem",
-          maxWidth: 1400,
-          margin: "0 auto"
-        }}
-      >
-        {!loggedIn ? (
-          <section
-            style={{
-              gridColumn: "1 / -1",
-              background: "#020617",
-              borderRadius: 16,
-              border: "1px solid #1f2937",
-              padding: "1rem"
-            }}
-          >
-            <p>Kein Zugriff. Bitte oben einloggen.</p>
-            {loginErr && (
-              <p style={{ color: "#f97373", fontSize: "0.85rem" }}>
-                {loginErr}
-              </p>
-            )}
-          </section>
-        ) : (
-          <>
-            {/* Linke Seite: Liste */}
-            <section
-              className="admin-panel"
-              style={{
-                background: "#020617",
-                borderRadius: 16,
-                border: "1px solid #1f2937",
-                padding: "1rem",
-                minHeight: 0,
-                display: "flex",
-                flexDirection: "column"
-              }}
-            >
-              <div
-                className="admin-panel-header"
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: "0.75rem"
-                }}
-              >
-                <h2
-                  style={{
-                    fontSize: "1rem",
-                    margin: 0,
-                    color: "#e5e7eb"
-                  }}
-                >
-                  Filme
-                </h2>
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  style={{
-                    borderRadius: 999,
-                    border: "1px solid #4b5563",
-                    background: "transparent",
-                    color: "#e5e7eb",
-                    fontSize: "0.8rem",
-                    padding: "4px 10px",
-                    cursor: "pointer"
-                  }}
-                >
-                  + Neuer Film
-                </button>
-              </div>
-
-              {loading && (
-                <p style={{ fontSize: "0.85rem" }}>Lade Filme …</p>
-              )}
-              {err && (
-                <p
-                  style={{
-                    fontSize: "0.85rem",
-                    color: "#f97373",
-                    marginBottom: "0.5rem"
-                  }}
-                >
-                  {err}
-                </p>
-              )}
-              {!loading && movies.length === 0 && !err && (
-                <p style={{ fontSize: "0.85rem" }}>
-                  Noch keine Filme angelegt.
-                </p>
-              )}
-
-              {!loading && movies.length > 0 && (
-                <div
-                  className="admin-movie-list"
-                  style={{
-                    marginTop: "0.5rem",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 4,
-                    overflowY: "auto"
-                  }}
-                >
-                  {movies.map((m) => {
-                    const active = form.id === m.id;
-                    return (
-                      <button
-                        key={m.id}
-                        type="button"
-                        onClick={() => selectMovie(m)}
-                        style={{
-                          textAlign: "left",
-                          borderRadius: 12,
-                          border: active
-                            ? "1px solid #f97316"
-                            : "1px solid #111827",
-                          background: active ? "#111827" : "#020617",
-                          padding: "6px 10px",
-                          cursor: "pointer"
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: "0.9rem",
-                            color: "#e5e7eb",
-                            fontWeight: 500
-                          }}
-                        >
-                          {m.title}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: "0.75rem",
-                            color: "#9ca3af"
-                          }}
-                        >
-                          {m.year && <span>{m.year}</span>}
-                          {m.studioName && (
-                            <span>
-                              {m.year ? " • " : ""}
-                              {m.studioName}
-                            </span>
-                          )}
-                          {m.actorNames?.length > 0 && (
-                            <span>
-                              {(m.year || m.studioName) ? " • " : ""}
-                              {m.actorNames.join(", ")}
-                            </span>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </section>
-
-            {/* Rechte Seite: Formular */}
-            <section
-              className="admin-panel"
-              style={{
-                background: "#020617",
-                borderRadius: 16,
-                border: "1px solid #1f2937",
-                padding: "1rem",
-                display: "flex",
-                flexDirection: "column",
-                gap: "0.75rem"
-              }}
-            >
-              <h2
-                style={{
-                  fontSize: "1rem",
-                  margin: 0,
-                  color: "#e5e7eb"
-                }}
-              >
-                {form.id ? "Film bearbeiten" : "Neuen Film anlegen"}
-              </h2>
-
-              {info && (
-                <p
-                  style={{
-                    fontSize: "0.8rem",
-                    color: "#4ade80",
-                    margin: 0
-                  }}
-                >
-                  {info}
-                </p>
-              )}
-              {err && (
-                <p
-                  style={{
-                    fontSize: "0.8rem",
-                    color: "#f97373",
-                    margin: 0
-                  }}
-                >
-                  {err}
-                </p>
-              )}
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr",
-                  gap: "0.5rem",
-                  marginTop: "0.5rem"
-                }}
-              >
-                <div>
-                  <label
-                    style={{
-                      fontSize: "0.8rem",
-                      color: "#9ca3af",
-                      display: "block"
-                    }}
-                  >
-                    Titel
-                  </label>
-                  <input
-                    type="text"
-                    value={form.title}
-                    onChange={(e) =>
-                      handleInputChange("title", e.target.value)
-                    }
-                    style={{
-                      width: "100%",
-                      borderRadius: 8,
-                      border: "1px solid #374151",
-                      background: "#020617",
-                      color: "#e5e7eb",
-                      fontSize: "0.9rem",
-                      padding: "6px 8px",
-                      marginTop: 2
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <label
-                    style={{
-                      fontSize: "0.8rem",
-                      color: "#9ca3af",
-                      display: "block"
-                    }}
-                  >
-                    Jahr
-                  </label>
-                  <input
-                    type="number"
-                    value={form.year}
-                    onChange={(e) =>
-                      handleInputChange("year", e.target.value)
-                    }
-                    style={{
-                      width: "100%",
-                      borderRadius: 8,
-                      border: "1px solid #374151",
-                      background: "#020617",
-                      color: "#e5e7eb",
-                      fontSize: "0.9rem",
-                      padding: "6px 8px",
-                      marginTop: 2
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <label
-                    style={{
-                      fontSize: "0.8rem",
-                      color: "#9ca3af",
-                      display: "block"
-                    }}
-                  >
-                    fileUrl (NAS-Link)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="z. B. http://192.168.178.72/1337/Ordner/Film.mkv"
-                    value={form.fileUrl}
-                    onChange={(e) =>
-                      handleInputChange("fileUrl", e.target.value)
-                    }
-                    style={{
-                      width: "100%",
-                      borderRadius: 8,
-                      border: "1px solid #374151",
-                      background: "#020617",
-                      color: "#e5e7eb",
-                      fontSize: "0.9rem",
-                      padding: "6px 8px",
-                      marginTop: 2
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <label
-                    style={{
-                      fontSize: "0.8rem",
-                      color: "#9ca3af",
-                      display: "block"
-                    }}
-                  >
-                    Studio
-                  </label>
-                  <select
-                    value={form.studioId || ""}
-                    onChange={(e) =>
-                      handleInputChange("studioId", e.target.value)
-                    }
-                    style={{
-                      width: "100%",
-                      borderRadius: 8,
-                      border: "1px solid #374151",
-                      background: "#020617",
-                      color: "#e5e7eb",
-                      fontSize: "0.9rem",
-                      padding: "6px 8px",
-                      marginTop: 2
-                    }}
-                  >
-                    <option value="">– kein Studio –</option>
-                    {studios.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label
-                    style={{
-                      fontSize: "0.8rem",
-                      color: "#9ca3af",
-                      display: "block"
-                    }}
-                  >
-                    Darsteller
-                  </label>
-                  <div
-                    style={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: 6,
-                      marginTop: 4,
-                      maxHeight: 140,
-                      overflowY: "auto"
-                    }}
-                  >
-                    {actors.map((a) => {
-                      const active = form.actorIds.includes(a.id);
-                      return (
-                        <button
-                          key={a.id}
-                          type="button"
-                          onClick={() => handleToggleActor(a.id)}
-                          style={{
-                            borderRadius: 999,
-                            border: active
-                              ? "1px solid #f97316"
-                              : "1px solid #374151",
-                            background: active ? "#111827" : "#020617",
-                            color: "#e5e7eb",
-                            fontSize: "0.75rem",
-                            padding: "3px 8px",
-                            cursor: "pointer",
-                            whiteSpace: "nowrap"
-                          }}
-                        >
-                          {a.name}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div>
-                  <label
-                    style={{
-                      fontSize: "0.8rem",
-                      color: "#9ca3af",
-                      display: "block"
-                    }}
-                  >
-                    Tags
-                  </label>
-                  <div
-                    style={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: 6,
-                      marginTop: 4,
-                      maxHeight: 140,
-                      overflowY: "auto"
-                    }}
-                  >
-                    {tags.map((t) => {
-                      const active = form.tagIds.includes(t.id);
-                      return (
-                        <button
-                          key={t.id}
-                          type="button"
-                          onClick={() => handleToggleTag(t.id)}
-                          style={{
-                            borderRadius: 999,
-                            border: active
-                              ? "1px solid #22c55e"
-                              : "1px solid #374151",
-                            background: active ? "#064e3b" : "#020617",
-                            color: "#e5e7eb",
-                            fontSize: "0.75rem",
-                            padding: "3px 8px",
-                            cursor: "pointer",
-                            whiteSpace: "nowrap"
-                          }}
-                        >
-                          {t.name}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  gap: 8,
-                  marginTop: "0.75rem",
-                  justifyContent: "flex-end"
-                }}
-              >
-                {form.id && (
-                  <button
-                    type="button"
-                    onClick={handleDelete}
-                    disabled={saving}
-                    style={{
-                      borderRadius: 999,
-                      border: "1px solid #b91c1c",
-                      background: "#7f1d1d",
-                      color: "#fee2e2",
-                      fontSize: "0.85rem",
-                      padding: "6px 12px",
-                      cursor: "pointer"
-                    }}
-                  >
-                    Löschen
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={saving}
-                  style={{
-                    borderRadius: 999,
-                    border: "none",
-                    background: "#f97316",
-                    color: "#111827",
-                    fontSize: "0.85rem",
-                    padding: "6px 14px",
-                    fontWeight: 600,
-                    cursor: saving ? "default" : "pointer",
-                    opacity: saving ? 0.7 : 1
-                  }}
-                >
-                  {saving ? "Speichere …" : "Speichern"}
-                </button>
-              </div>
-            </section>
-          </>
+        {error && (
+          <div className="rounded-lg border border-red-500 bg-red-950/40 px-4 py-3 text-sm text-red-100">
+            Fehler: {error}
+          </div>
         )}
-      </main>
-    </div>
+
+        {loading ? (
+          <div className="text-sm text-slate-300">Lade Daten…</div>
+        ) : (
+          <div className="grid gap-8 md:grid-cols-2">
+            {/* Hauptdarsteller */}
+            <section className="rounded-2xl border border-slate-800 bg-slate-900/40 p-4 md:p-5 space-y-4">
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-xl font-semibold">Hauptdarsteller (actors)</h2>
+                <span className="text-xs text-slate-400">
+                  Gesamt: {actors.length}
+                </span>
+              </div>
+
+              <form onSubmit={handleAddActor} className="space-y-3 border-b border-slate-800 pb-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-300">
+                    Name
+                  </label>
+                  <input
+                    type="text"
+                    value={actorName}
+                    onChange={(e) => setActorName(e.target.value)}
+                    className="w-full rounded-md bg-slate-900 border border-slate-700 px-2 py-1.5 text-sm outline-none focus:border-sky-500"
+                    placeholder="Name des Darstellers"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-300">
+                    Profilbild-URL (optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={actorImageUrl}
+                    onChange={(e) => setActorImageUrl(e.target.value)}
+                    className="w-full rounded-md bg-slate-900 border border-slate-700 px-2 py-1.5 text-sm outline-none focus:border-sky-500"
+                    placeholder="https://…"
+                  />
+                  <p className="text-[10px] text-slate-500">
+                    Du kannst hier direkt eine public URL aus Supabase Storage oder
+                    extern eintragen. Leer lassen, wenn kein Bild.
+                  </p>
+                </div>
+
+                <button
+                  type="submit"
+                  className="inline-flex items-center justify-center rounded-md bg-sky-600 px-3 py-1.5 text-xs font-medium hover:bg-sky-500 disabled:opacity-50"
+                  disabled={!actorName.trim()}
+                >
+                  Hauptdarsteller hinzufügen
+                </button>
+              </form>
+
+              <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+                {actors.length === 0 ? (
+                  <p className="text-xs text-slate-500">
+                    Noch keine Hauptdarsteller eingetragen.
+                  </p>
+                ) : (
+                  actors.map((a) => (
+                    <div
+                      key={a.id}
+                      className="flex items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2"
+                    >
+                      {a.profile_image ? (
+                        <div className="relative h-10 w-10 overflow-hidden rounded-full border border-slate-700">
+                          <Image
+                            src={a.profile_image}
+                            alt={a.name}
+                            fill
+                            sizes="40px"
+                            className="object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-700 bg-slate-900 text-xs text-slate-400">
+                          N/A
+                        </div>
+                      )}
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">{a.name}</span>
+                        <span className="text-[10px] text-slate-500">
+                          {a.created_at
+                            ? new Date(a.created_at).toLocaleString()
+                            : "—"}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
+
+            {/* Nebendarsteller */}
+            <section className="rounded-2xl border border-slate-800 bg-slate-900/40 p-4 md:p-5 space-y-4">
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-xl font-semibold">Nebendarsteller (actors2)</h2>
+                <span className="text-xs text-slate-400">
+                  Gesamt: {supportingActors.length}
+                </span>
+              </div>
+
+              <form onSubmit={handleAddSupportingActor} className="space-y-3 border-b border-slate-800 pb-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-300">
+                    Name
+                  </label>
+                  <input
+                    type="text"
+                    value={supportName}
+                    onChange={(e) => setSupportName(e.target.value)}
+                    className="w-full rounded-md bg-slate-900 border border-slate-700 px-2 py-1.5 text-sm outline-none focus:border-sky-500"
+                    placeholder="Name des Nebendarstellers"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-300">
+                    Profilbild-URL (optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={supportImageUrl}
+                    onChange={(e) => setSupportImageUrl(e.target.value)}
+                    className="w-full rounded-md bg-slate-900 border border-slate-700 px-2 py-1.5 text-sm outline-none focus:border-sky-500"
+                    placeholder="https://…"
+                  />
+                  <p className="text-[10px] text-slate-500">
+                    Wird nur für Nebendarsteller genutzt. Leer lassen, wenn kein Bild.
+                  </p>
+                </div>
+
+                <button
+                  type="submit"
+                  className="inline-flex items-center justify-center rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium hover:bg-emerald-500 disabled:opacity-50"
+                  disabled={!supportName.trim()}
+                >
+                  Nebendarsteller hinzufügen
+                </button>
+              </form>
+
+              <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+                {supportingActors.length === 0 ? (
+                  <p className="text-xs text-slate-500">
+                    Noch keine Nebendarsteller eingetragen.
+                  </p>
+                ) : (
+                  supportingActors.map((a) => (
+                    <div
+                      key={a.id}
+                      className="flex items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2"
+                    >
+                      {a.profile_image ? (
+                        <div className="relative h-10 w-10 overflow-hidden rounded-full border border-slate-700">
+                          <Image
+                            src={a.profile_image}
+                            alt={a.name}
+                            fill
+                            sizes="40px"
+                            className="object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-700 bg-slate-900 text-xs text-slate-400">
+                          N/A
+                        </div>
+                      )}
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">{a.name}</span>
+                        <span className="text-[10px] text-slate-500">
+                          {a.created_at
+                            ? new Date(a.created_at).toLocaleString()
+                            : "—"}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
+          </div>
+        )}
+      </div>
+    </main>
   );
 }
