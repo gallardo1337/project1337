@@ -12,9 +12,10 @@ const CHANGELOG = [
     version: "0.3.0",
     date: "2025-11-28",
     items: [
-      "Darsteller-Grid zeigt jetzt Bilder (profile_image) mit sauberem Cropping",
-      "Actor-Übersicht sortiert nach Namen, inkl. Filmanzahl"
-    ],
+      "Startseite nutzt jetzt die neue Struktur (movies mit main_actor_ids/supporting_actor_ids, actors/actors2/tags/studios)",
+      "Darsteller-Grid mit Profilbildern (profile_image) und Cropping via object-fit: cover",
+      "Hauptdarsteller-Übersicht sortiert, Klick zeigt alle Filme dieses Darstellers"
+    ]
   },
   {
     version: "0.2.0",
@@ -22,17 +23,17 @@ const CHANGELOG = [
     items: [
       "HTTP-Streaming über NAS-Symlink (/1337) vorbereitet",
       "Play-Button öffnet direkte NAS-Links (fileUrl) im neuen Tab",
-      "Version-Hinweis & Login-Leiste integriert",
-    ],
+      "Version-Hinweis & Login-Leiste integriert"
+    ]
   },
   {
     version: "0.1.0",
     date: "2025-11-26",
     items: [
       "Erste Version der 1337 Library mit Darsteller-/Film-Ansicht",
-      "Supabase-Anbindung (movies, studios, actors, tags, movie_actors, movie_tags)",
-    ],
-  },
+      "Supabase-Anbindung (erste Tabellen-Version)"
+    ]
+  }
 ];
 
 function VersionHint() {
@@ -54,7 +55,7 @@ function VersionHint() {
           display: "flex",
           alignItems: "center",
           gap: "6px",
-          cursor: "pointer",
+          cursor: "pointer"
         }}
       >
         <span>{current.version}</span>
@@ -70,7 +71,7 @@ function VersionHint() {
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
-            zIndex: 70,
+            zIndex: 70
           }}
           onClick={() => setOpen(false)}
         >
@@ -84,7 +85,7 @@ function VersionHint() {
               borderRadius: 16,
               border: "1px solid #4b5563",
               padding: 20,
-              boxShadow: "0 20px 60px rgba(0,0,0,0.7)",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.7)"
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -93,7 +94,7 @@ function VersionHint() {
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-                marginBottom: 12,
+                marginBottom: 12
               }}
             >
               <div>
@@ -102,7 +103,7 @@ function VersionHint() {
                     fontSize: "0.8rem",
                     textTransform: "uppercase",
                     letterSpacing: "0.08em",
-                    color: "#9ca3af",
+                    color: "#9ca3af"
                   }}
                 >
                   Version & Changelog
@@ -121,7 +122,7 @@ function VersionHint() {
                   color: "#e5e7eb",
                   fontSize: "0.8rem",
                   padding: "4px 10px",
-                  cursor: "pointer",
+                  cursor: "pointer"
                 }}
               >
                 Schließen
@@ -136,7 +137,7 @@ function VersionHint() {
                     borderRadius: 12,
                     border: "1px solid #374151",
                     padding: 12,
-                    background: "#030712",
+                    background: "#030712"
                   }}
                 >
                   <div
@@ -144,21 +145,19 @@ function VersionHint() {
                       display: "flex",
                       justifyContent: "space-between",
                       alignItems: "baseline",
-                      marginBottom: 4,
+                      marginBottom: 4
                     }}
                   >
                     <div
                       style={{
                         fontWeight: 600,
                         fontSize: "0.95rem",
-                        color: "#e5e7eb",
+                        color: "#e5e7eb"
                       }}
                     >
                       {entry.version}
                     </div>
-                    <div
-                      style={{ fontSize: "0.8rem", color: "#9ca3af" }}
-                    >
+                    <div style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
                       {entry.date}
                     </div>
                   </div>
@@ -167,7 +166,7 @@ function VersionHint() {
                       margin: 0,
                       paddingLeft: 18,
                       fontSize: "0.85rem",
-                      color: "#d1d5db",
+                      color: "#d1d5db"
                     }}
                   >
                     {entry.items.map((it, idx) => (
@@ -192,7 +191,7 @@ function VersionHint() {
 
 export default function HomePage() {
   const [movies, setMovies] = useState([]);
-  const [actors, setActors] = useState([]);
+  const [actors, setActors] = useState([]); // Hauptdarsteller-Liste
   const [viewMode, setViewMode] = useState("actors"); // "actors" | "movies"
   const [visibleMovies, setVisibleMovies] = useState([]);
   const [moviesTitle, setMoviesTitle] = useState("Filme");
@@ -208,7 +207,7 @@ export default function HomePage() {
   const [loginErr, setLoginErr] = useState(null);
   const [loginLoading, setLoginLoading] = useState(false);
 
-  // Beim Laden prüfen, ob Session existiert
+  // Session check
   useEffect(() => {
     if (typeof window === "undefined") return;
     const flag = window.localStorage.getItem("auth_1337_flag");
@@ -221,7 +220,7 @@ export default function HomePage() {
     }
   }, []);
 
-  // Filme + Darsteller nur laden, wenn eingeloggt
+  // Daten laden: movies + actors + actors2 + studios + tags
   useEffect(() => {
     if (!loggedIn) {
       setMovies([]);
@@ -236,77 +235,102 @@ export default function HomePage() {
         setLoading(true);
         setErr(null);
 
-        // movies + movie_actors + actors (inkl. profile_image)
-        const { data, error } = await supabase
-          .from("movies")
-          .select(`
-            id,
-            title,
-            file_url,
-            year,
-            studios ( name ),
-            movie_actors (
-              actor_id,
-              actors (
-                id,
-                name,
-                profile_image
-              )
-            ),
-            movie_tags (
-              tags ( name )
-            )
-          `);
+        const [moviesRes, actorsRes, actors2Res, studiosRes, tagsRes] =
+          await Promise.all([
+            supabase.from("movies").select("*"),
+            supabase.from("actors").select("*"),
+            supabase.from("actors2").select("*"),
+            supabase.from("studios").select("*"),
+            supabase.from("tags").select("*")
+          ]);
 
-        if (error) {
-          console.error(error);
-          setErr("Fehler beim Laden der Daten.");
-          return;
-        }
+        if (moviesRes.error) throw moviesRes.error;
+        if (actorsRes.error) throw actorsRes.error;
+        if (actors2Res.error) throw actors2Res.error;
+        if (studiosRes.error) throw studiosRes.error;
+        if (tagsRes.error) throw tagsRes.error;
 
-        const actorMap = new Map();
+        const moviesData = moviesRes.data || [];
+        const mainActors = actorsRes.data || [];
+        const supportActors = actors2Res.data || [];
+        const studios = studiosRes.data || [];
+        const tags = tagsRes.data || [];
 
-        const mapped =
-          data?.map((m) => {
-            const actorObjs =
-              m.movie_actors
-                ?.map((ma) => ma.actors)
-                .filter(Boolean) || [];
+        const mainActorById = Object.fromEntries(
+          mainActors.map((a) => [a.id, a])
+        );
+        const supportActorById = Object.fromEntries(
+          supportActors.map((a) => [a.id, a])
+        );
+        const studioMap = Object.fromEntries(
+          studios.map((s) => [s.id, s.name])
+        );
+        const tagMap = Object.fromEntries(tags.map((t) => [t.id, t.name]));
 
-            // Actor-Map für die Übersicht füllen
-            actorObjs.forEach((a) => {
-              if (!a) return;
-              const key = a.id;
-              if (!actorMap.has(key)) {
-                actorMap.set(key, {
-                  id: a.id,
-                  name: a.name,
-                  profileImage: a.profile_image || null,
-                  movieCount: 0,
-                });
-              }
-              const entry = actorMap.get(key);
-              entry.movieCount += 1;
-            });
+        // Filme mappen
+        const mappedMovies =
+          moviesData.map((m) => {
+            const mainIds = Array.isArray(m.main_actor_ids)
+              ? m.main_actor_ids
+              : [];
+            const supportIds = Array.isArray(m.supporting_actor_ids)
+              ? m.supporting_actor_ids
+              : [];
+
+            const mainNames = mainIds
+              .map((id) => mainActorById[id]?.name)
+              .filter(Boolean);
+            const supportNames = supportIds
+              .map((id) => supportActorById[id]?.name)
+              .filter(Boolean);
+
+            const allActors = [...mainNames, ...supportNames];
+
+            const tagNames = Array.isArray(m.tag_ids)
+              ? m.tag_ids.map((id) => tagMap[id]).filter(Boolean)
+              : [];
 
             return {
               id: m.id,
               title: m.title,
-              fileUrl: m.file_url,
               year: m.year,
-              studio: m.studios ? m.studios.name : null,
-              actors: actorObjs.map((a) => a.name),
-              tags:
-                m.movie_tags?.map((t) => t.tags?.name).filter(Boolean) || [],
+              fileUrl: m.file_url,
+              studio: m.studio_id ? studioMap[m.studio_id] || null : null,
+              actors: allActors,
+              tags: tagNames,
+              mainActorIds: mainIds
             };
           }) || [];
 
-        // Actor-Liste sortieren (alphabetisch)
-        const actorList = Array.from(actorMap.values()).sort((a, b) =>
-          a.name.localeCompare(b.name, "de", { sensitivity: "base" })
-        );
+        setMovies(mappedMovies);
 
-        setMovies(mapped);
+        // Hauptdarsteller-Liste mit movieCount + profilbild
+        const movieCountByActorId = new Map();
+        moviesData.forEach((m) => {
+          const arr = Array.isArray(m.main_actor_ids)
+            ? m.main_actor_ids
+            : [];
+          arr.forEach((id) => {
+            if (!movieCountByActorId.has(id)) movieCountByActorId.set(id, 0);
+            movieCountByActorId.set(
+              id,
+              movieCountByActorId.get(id) + 1
+            );
+          });
+        });
+
+        const actorList = mainActors
+          .map((a) => ({
+            id: a.id,
+            name: a.name,
+            profileImage: a.profile_image || null,
+            movieCount: movieCountByActorId.get(a.id) || 0
+          }))
+          .filter((a) => a.movieCount > 0)
+          .sort((a, b) =>
+            a.name.localeCompare(b.name, "de", { sensitivity: "base" })
+          );
+
         setActors(actorList);
       } catch (e) {
         console.error(e);
@@ -319,8 +343,12 @@ export default function HomePage() {
     void load();
   }, [loggedIn]);
 
-  const handleShowMoviesForActor = (actorName) => {
-    const m = movies.filter((movie) => movie.actors.includes(actorName));
+  const handleShowMoviesForActor = (actorId, actorName) => {
+    const m = movies.filter(
+      (movie) =>
+        Array.isArray(movie.mainActorIds) &&
+        movie.mainActorIds.includes(actorId)
+    );
     setMoviesTitle(actorName);
     setMoviesSubtitle(`${m.length} Film(e)`);
     setVisibleMovies(m);
@@ -344,7 +372,7 @@ export default function HomePage() {
         movie.title || "",
         movie.studio || "",
         movie.actors.join(" "),
-        movie.tags.join(" "),
+        movie.tags.join(" ")
       ]
         .join(" ")
         .toLowerCase();
@@ -375,8 +403,8 @@ export default function HomePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           username: loginUser,
-          password: loginPassword,
-        }),
+          password: loginPassword
+        })
       });
 
       if (!res.ok) {
@@ -407,7 +435,7 @@ export default function HomePage() {
     try {
       await fetch("/api/logout", { method: "POST" });
     } catch {
-      // ignorieren, localStorage reicht
+      // ignorieren
     }
     if (typeof window !== "undefined") {
       window.localStorage.removeItem("auth_1337_flag");
@@ -431,7 +459,7 @@ export default function HomePage() {
             marginLeft: "auto",
             display: "flex",
             alignItems: "center",
-            gap: 12,
+            gap: 12
           }}
         >
           <VersionHint />
@@ -442,7 +470,7 @@ export default function HomePage() {
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 6,
+                gap: 6
               }}
             >
               <input
@@ -457,7 +485,7 @@ export default function HomePage() {
                   color: "#e5e7eb",
                   fontSize: "0.8rem",
                   padding: "4px 8px",
-                  width: 130,
+                  width: 130
                 }}
               />
               <input
@@ -472,7 +500,7 @@ export default function HomePage() {
                   color: "#e5e7eb",
                   fontSize: "0.8rem",
                   padding: "4px 8px",
-                  width: 120,
+                  width: 120
                 }}
               />
               <button
@@ -488,7 +516,7 @@ export default function HomePage() {
                   fontWeight: 600,
                   cursor:
                     loginLoading || !loginPassword ? "default" : "pointer",
-                  opacity: loginLoading || !loginPassword ? 0.7 : 1,
+                  opacity: loginLoading || !loginPassword ? 0.7 : 1
                 }}
               >
                 {loginLoading ? "…" : "Login"}
@@ -501,7 +529,7 @@ export default function HomePage() {
                 alignItems: "center",
                 gap: 8,
                 fontSize: "0.8rem",
-                color: "#9ca3af",
+                color: "#9ca3af"
               }}
             >
               <span style={{ color: "#4ade80" }}>
@@ -514,7 +542,7 @@ export default function HomePage() {
                   borderRadius: 999,
                   border: "1px solid #4b5563",
                   padding: "3px 8px",
-                  color: "#e5e7eb",
+                  color: "#e5e7eb"
                 }}
               >
                 Dashboard
@@ -529,7 +557,7 @@ export default function HomePage() {
                   color: "#e5e7eb",
                   fontSize: "0.8rem",
                   padding: "3px 8px",
-                  cursor: "pointer",
+                  cursor: "pointer"
                 }}
               >
                 Logout
@@ -592,7 +620,9 @@ export default function HomePage() {
                         <article
                           key={actor.id}
                           className="actor-card"
-                          onClick={() => handleShowMoviesForActor(actor.name)}
+                          onClick={() =>
+                            handleShowMoviesForActor(actor.id, actor.name)
+                          }
                         >
                           <div className="actor-avatar-wrapper">
                             {actor.profileImage ? (
@@ -609,11 +639,11 @@ export default function HomePage() {
                                   display: "flex",
                                   alignItems: "center",
                                   justifyContent: "center",
-                                  fontSize: "0.8rem",
-                                  color: "#6b7280",
+                                  fontSize: "0.9rem",
+                                  color: "#6b7280"
                                 }}
                               >
-                                Kein Bild
+                                {actor.name?.[0]?.toUpperCase() || "?"}
                               </div>
                             )}
                           </div>
@@ -683,7 +713,7 @@ export default function HomePage() {
                               style={{
                                 textDecoration: "none",
                                 display: "inline-block",
-                                textAlign: "center",
+                                textAlign: "center"
                               }}
                             >
                               Abspielen
