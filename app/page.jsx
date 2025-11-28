@@ -9,6 +9,15 @@ import { supabase } from "../lib/supabaseClient";
 
 const CHANGELOG = [
   {
+    version: "0.3.0",
+    date: "2025-11-28",
+    items: [
+      "Dashboard mit Film-Verwaltung (Haupt-/Nebendarsteller, Tags, Studios) integriert",
+      "Einheitliches Chip-Farbschema (aktiv = orange, inaktiv = grau)",
+      "Startseite an neue movies-Struktur (IDs statt Join-Tabellen) angepasst"
+    ]
+  },
+  {
     version: "0.2.0",
     date: "2025-11-27",
     items: [
@@ -213,7 +222,7 @@ export default function HomePage() {
     }
   }, []);
 
-  // Filme nur laden, wenn eingeloggt
+  // Filme + Stammdaten nur laden, wenn eingeloggt
   useEffect(() => {
     if (!loggedIn) {
       setMovies([]);
@@ -228,43 +237,71 @@ export default function HomePage() {
         setLoading(true);
         setErr(null);
 
-        const { data, error } = await supabase
-          .from("movies")
-          .select(`
-            id,
-            title,
-            file_url,
-            year,
-            studios ( name ),
-            movie_actors (
-              actors ( name )
-            ),
-            movie_tags (
-              tags ( name )
-            )
-          `);
+        // Neue Struktur: movies mit IDs + Stammdaten
+        const [moviesRes, actorsRes, actors2Res, studiosRes, tagsRes] =
+          await Promise.all([
+            supabase.from("movies").select("*"),
+            supabase.from("actors").select("*"),
+            supabase.from("actors2").select("*"),
+            supabase.from("studios").select("*"),
+            supabase.from("tags").select("*")
+          ]);
 
-        if (error) {
-          console.error(error);
-          setErr("Fehler beim Laden der Daten.");
-          return;
-        }
+        if (moviesRes.error) throw moviesRes.error;
+        if (actorsRes.error) throw actorsRes.error;
+        if (actors2Res.error) throw actors2Res.error;
+        if (studiosRes.error) throw studiosRes.error;
+        if (tagsRes.error) throw tagsRes.error;
 
+        const moviesData = moviesRes.data || [];
+        const mainActors = actorsRes.data || [];
+        const supportActors = actors2Res.data || [];
+        const studios = studiosRes.data || [];
+        const tags = tagsRes.data || [];
+
+        const actorMap = Object.fromEntries(
+          mainActors.map((a) => [a.id, a.name])
+        );
+        const supportMap = Object.fromEntries(
+          supportActors.map((a) => [a.id, a.name])
+        );
+        const studioMap = Object.fromEntries(
+          studios.map((s) => [s.id, s.name])
+        );
+        const tagMap = Object.fromEntries(tags.map((t) => [t.id, t.name]));
+
+        // movies in Anzeige-Format mappen
         const mapped =
-          data?.map((m) => ({
-            id: m.id,
-            title: m.title,
-            fileUrl: m.file_url,
-            year: m.year,
-            studio: m.studios ? m.studios.name : null,
-            actors:
-              m.movie_actors?.map((a) => a.actors?.name).filter(Boolean) || [],
-            tags:
-              m.movie_tags?.map((t) => t.tags?.name).filter(Boolean) || []
-          })) || [];
+          moviesData.map((m) => {
+            const mainNames = Array.isArray(m.main_actor_ids)
+              ? m.main_actor_ids
+                  .map((id) => actorMap[id])
+                  .filter(Boolean)
+              : [];
+            const supportNames = Array.isArray(m.supporting_actor_ids)
+              ? m.supporting_actor_ids
+                  .map((id) => supportMap[id])
+                  .filter(Boolean)
+              : [];
+            const allActors = [...mainNames, ...supportNames];
+
+            const tagNames = Array.isArray(m.tag_ids)
+              ? m.tag_ids.map((id) => tagMap[id]).filter(Boolean)
+              : [];
+
+            return {
+              id: m.id,
+              title: m.title,
+              fileUrl: m.file_url,
+              year: m.year,
+              studio: m.studio_id ? studioMap[m.studio_id] || null : null,
+              actors: allActors,
+              tags: tagNames
+            };
+          }) || [];
 
         setMovies(mapped);
-        setActors(buildActorList(mapped));
+        setActors(buildActorList(mapped)); // Darsteller-Liste
       } catch (e) {
         console.error(e);
         setErr("Fehler beim Laden der Daten.");
@@ -564,7 +601,9 @@ export default function HomePage() {
                         <article
                           key={actor.name}
                           className="actor-card"
-                          onClick={() => handleShowMoviesForActor(actor.name)}
+                          onClick={() =>
+                            handleShowMoviesForActor(actor.name)
+                          }
                         >
                           <div className="actor-name">{actor.name}</div>
                           <div className="actor-count">
