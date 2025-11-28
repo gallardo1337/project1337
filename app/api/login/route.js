@@ -3,31 +3,33 @@ import { NextResponse } from "next/server";
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { password } = body || {};
+    const { username, password } = body || {};
 
-    const expected = process.env.AUTH_PASSWORD;
-    if (!expected) {
-      console.error("AUTH_PASSWORD ist nicht gesetzt.");
+    const expectedUser = process.env.AUTH_USER;
+    const expectedPass = process.env.AUTH_PASSWORD;
+
+    if (!expectedUser || !expectedPass) {
+      console.error("AUTH_USER oder AUTH_PASSWORD ist nicht gesetzt.");
       return NextResponse.json(
         { ok: false, error: "Server-Konfiguration fehlt." },
         { status: 500 }
       );
     }
 
-    if (!password || password !== expected) {
+    if (username !== expectedUser || password !== expectedPass) {
       return NextResponse.json(
         { ok: false, error: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    const res = NextResponse.json({ ok: true });
+    const res = NextResponse.json({ ok: true, user: expectedUser });
 
-    // Einfaches Login-Cookie setzen
+    // Cookie setzen (optional, falls du später doch Middleware willst)
     res.cookies.set("auth_1337", "ok", {
       httpOnly: true,
       sameSite: "strict",
-      secure: true, // auf Vercel immer HTTPS
+      secure: true,
       path: "/",
       maxAge: 60 * 60 * 24 * 7, // 7 Tage
     });
