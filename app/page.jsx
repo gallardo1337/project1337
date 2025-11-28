@@ -14,6 +14,7 @@ const CHANGELOG = [
     items: [
       "Dashboard mit Film-Verwaltung (Haupt-/Nebendarsteller, Tags, Studios) integriert",
       "Einheitliches Chip-Farbschema (aktiv = orange, inaktiv = grau)",
+      "Startseite zeigt nun eine alphabetische Hauptdarsteller-Galerie mit Fotos; Klick zeigt alle Filme dieses Darstellers",
       "Startseite an neue movies-Struktur (IDs statt Join-Tabellen) angepasst"
     ]
   },
@@ -193,7 +194,7 @@ function VersionHint() {
 
 export default function HomePage() {
   const [movies, setMovies] = useState([]);
-  const [actors, setActors] = useState([]);
+  const [actors, setActors] = useState([]); // Hauptdarsteller-Galerie
   const [viewMode, setViewMode] = useState("actors"); // "actors" | "movies"
   const [visibleMovies, setVisibleMovies] = useState([]);
   const [moviesTitle, setMoviesTitle] = useState("Filme");
@@ -237,7 +238,6 @@ export default function HomePage() {
         setLoading(true);
         setErr(null);
 
-        // Neue Struktur: movies mit IDs + Stammdaten
         const [moviesRes, actorsRes, actors2Res, studiosRes, tagsRes] =
           await Promise.all([
             supabase.from("movies").select("*"),
@@ -259,10 +259,10 @@ export default function HomePage() {
         const studios = studiosRes.data || [];
         const tags = tagsRes.data || [];
 
-        const actorMap = Object.fromEntries(
+        const actorNameMap = Object.fromEntries(
           mainActors.map((a) => [a.id, a.name])
         );
-        const supportMap = Object.fromEntries(
+        const supportNameMap = Object.fromEntries(
           supportActors.map((a) => [a.id, a.name])
         );
         const studioMap = Object.fromEntries(
@@ -270,19 +270,23 @@ export default function HomePage() {
         );
         const tagMap = Object.fromEntries(tags.map((t) => [t.id, t.name]));
 
-        // movies in Anzeige-Format mappen
-        const mapped =
+        // Filme mappen: inkl. mainActorIds / supportActorIds, Actor-Namen & Tag-Namen
+        const mappedMovies =
           moviesData.map((m) => {
-            const mainNames = Array.isArray(m.main_actor_ids)
+            const mainActorIds = Array.isArray(m.main_actor_ids)
               ? m.main_actor_ids
-                  .map((id) => actorMap[id])
-                  .filter(Boolean)
               : [];
-            const supportNames = Array.isArray(m.supporting_actor_ids)
+            const supportActorIds = Array.isArray(m.supporting_actor_ids)
               ? m.supporting_actor_ids
-                  .map((id) => supportMap[id])
-                  .filter(Boolean)
               : [];
+
+            const mainNames = mainActorIds
+              .map((id) => actorNameMap[id])
+              .filter(Boolean);
+            const supportNames = supportActorIds
+              .map((id) => supportNameMap[id])
+              .filter(Boolean);
+
             const allActors = [...mainNames, ...supportNames];
 
             const tagNames = Array.isArray(m.tag_ids)
@@ -296,12 +300,38 @@ export default function HomePage() {
               year: m.year,
               studio: m.studio_id ? studioMap[m.studio_id] || null : null,
               actors: allActors,
-              tags: tagNames
+              tags: tagNames,
+              mainActorIds,
+              supportActorIds
             };
           }) || [];
 
-        setMovies(mapped);
-        setActors(buildActorList(mapped)); // Darsteller-Liste
+        setMovies(mappedMovies);
+
+        // Hauptdarsteller-Galerie: basierend auf main_actor_ids
+        const movieCountByActorId = new Map();
+        moviesData.forEach((m) => {
+          const arr = Array.isArray(m.main_actor_ids) ? m.main_actor_ids : [];
+          arr.forEach((id) => {
+            if (!movieCountByActorId.has(id)) movieCountByActorId.set(id, 0);
+            movieCountByActorId.set(
+              id,
+              movieCountByActorId.get(id) + 1
+            );
+          });
+        });
+
+        const mainActorList = mainActors
+          .map((a) => ({
+            id: a.id,
+            name: a.name,
+            profileImage: a.profile_image || null,
+            movieCount: movieCountByActorId.get(a.id) || 0
+          }))
+          .filter((a) => a.movieCount > 0)
+          .sort((a, b) => a.name.localeCompare(b.name));
+
+        setActors(mainActorList);
       } catch (e) {
         console.error(e);
         setErr("Fehler beim Laden der Daten.");
@@ -313,24 +343,13 @@ export default function HomePage() {
     void load();
   }, [loggedIn]);
 
-  const buildActorList = (allMovies) => {
-    const map = new Map();
-    allMovies.forEach((m) => {
-      m.actors.forEach((name) => {
-        if (!name) return;
-        if (!map.has(name)) map.set(name, 0);
-        map.set(name, map.get(name) + 1);
-      });
-    });
-
-    return Array.from(map.entries())
-      .map(([name, movieCount]) => ({ name, movieCount }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  };
-
-  const handleShowMoviesForActor = (actorName) => {
-    const m = movies.filter((movie) => movie.actors.includes(actorName));
-    setMoviesTitle(actorName);
+  const handleShowMoviesForActor = (actor) => {
+    const m = movies.filter(
+      (movie) =>
+        Array.isArray(movie.mainActorIds) &&
+        movie.mainActorIds.includes(actor.id)
+    );
+    setMoviesTitle(actor.name);
     setMoviesSubtitle(`${m.length} Film(e)`);
     setVisibleMovies(m);
     setViewMode("movies");
@@ -560,6 +579,7 @@ export default function HomePage() {
           </section>
         ) : (
           <>
+            {/* Hero + Suche */}
             <section className="hero">
               <div className="logo-container">
                 <img src="/logo.svg" alt="1337 Logo" className="logo-svg" />
@@ -576,6 +596,7 @@ export default function HomePage() {
               </div>
             </section>
 
+            {/* Lade-/Fehlerzustände */}
             {loading && (
               <section className="actor-section">
                 <p>Lade Filme …</p>
@@ -590,21 +611,63 @@ export default function HomePage() {
 
             {!loading && !err && (
               <>
+                {/* Standard: Hauptdarsteller-Galerie (unter der Suche) */}
                 {viewMode === "actors" && (
                   <section id="actorSection" className="actor-section">
-                    <h2>Darsteller</h2>
+                    <h2>Hauptdarsteller</h2>
                     <div id="actorGrid" className="actor-grid">
                       {actors.length === 0 && (
-                        <p>Noch keine Filme in der Datenbank.</p>
+                        <p>Noch keine Hauptdarsteller mit Filmen vorhanden.</p>
                       )}
                       {actors.map((actor) => (
                         <article
-                          key={actor.name}
+                          key={actor.id}
                           className="actor-card"
-                          onClick={() =>
-                            handleShowMoviesForActor(actor.name)
-                          }
+                          onClick={() => handleShowMoviesForActor(actor)}
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            gap: 8,
+                            textAlign: "center"
+                          }}
                         >
+                          <div
+                            style={{
+                              width: 80,
+                              height: 80,
+                              borderRadius: "999px",
+                              overflow: "hidden",
+                              background: "#111827",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              marginBottom: 4,
+                              border: "1px solid #1f2937"
+                            }}
+                          >
+                            {actor.profileImage ? (
+                              <img
+                                src={actor.profileImage}
+                                alt={actor.name}
+                                style={{
+                                  width: "100%",
+                                  height: "100%",
+                                  objectFit: "cover"
+                                }}
+                              />
+                            ) : (
+                              <span
+                                style={{
+                                  fontSize: "1.6rem",
+                                  fontWeight: 600,
+                                  color: "#e5e7eb"
+                                }}
+                              >
+                                {actor.name?.[0]?.toUpperCase() || "?"}
+                              </span>
+                            )}
+                          </div>
                           <div className="actor-name">{actor.name}</div>
                           <div className="actor-count">
                             {actor.movieCount} Film
@@ -616,6 +679,7 @@ export default function HomePage() {
                   </section>
                 )}
 
+                {/* Filme-Ansicht nach Klick auf Darsteller oder Suche */}
                 {viewMode === "movies" && (
                   <section id="moviesSection" className="movies-section">
                     <div className="movies-header">
@@ -630,7 +694,7 @@ export default function HomePage() {
                         className="back-btn"
                         onClick={handleBackToActors}
                       >
-                        Zurück zur Darsteller-Übersicht
+                        Zurück zur Hauptdarsteller-Übersicht
                       </button>
                     </div>
                     <div id="movieList" className="movie-grid">
