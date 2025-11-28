@@ -480,7 +480,7 @@ export default function HomePage() {
                 Willkommen, {loginUser}
               </span>
               <a
-                href="/admin"
+                href="/dashboard"
                 style={{
                   textDecoration: "none",
                   borderRadius: 999,
