@@ -10,6 +10,20 @@ import ActorImageUploader from "./ActorImageUploader";
 
 const CHANGELOG = [
   {
+    version: "0.3.0",
+    date: "2025-11-28",
+    items: [
+      "Dashboard neu strukturiert: Tabs für Filmestatistik, Neuen Film hinzufügen und Stammdaten",
+      "Stammdaten-Bereich aus Filmformular ausgelagert (Übersicht + Bearbeiten/Löschen jeder Kategorie)",
+      "Hauptdarsteller- und Nebendarsteller-Formulare mit integriertem Upload & Crop (ActorImageUploader) statt manueller Bild-URL",
+      "Bild-Upload via Hostinger (upload.php) final integriert",
+      "Nur noch eine Kategorie gleichzeitig sichtbar – deutlich übersichtlicheres UI",
+      "Automatische Umschaltung auf 'Neuen Film hinzufügen' beim Bearbeiten eines Films",
+      "Pflege von Hauptdarstellern/Nebendarstellern/Studios/Tags komplett überarbeitet und vereinfacht",
+      "Backend-Aufräumung und Code-Optimierung im Dashboard"
+    ]
+  },
+  {
     version: "0.2.0",
     date: "2025-11-27",
     items: [
@@ -27,6 +41,7 @@ const CHANGELOG = [
     ]
   }
 ];
+
 
 function VersionHint() {
   const [open, setOpen] = useState(false);
