@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import ActorImageUploader from "./ActorImageUploader";
 
 // -------------------------------
 // Version / Changelog (wie Startseite)
@@ -193,7 +194,7 @@ export default function DashboardPage() {
   // Login-Status (wie Startseite)
   const [loggedIn, setLoggedIn] = useState(false);
   const [loginUser, setLoginUser] = useState("gallardo1337");
-  const [loginPassword, setLoginPassword] = useState("");
+  the [loginPassword, setLoginPassword] = useState("");
   const [loginErr, setLoginErr] = useState(null);
   const [loginLoading, setLoginLoading] = useState(false);
 
@@ -225,7 +226,8 @@ export default function DashboardPage() {
   const [filmStudioId, setFilmStudioId] = useState("");
   const [filmFileUrl, setFilmFileUrl] = useState("");
   const [selectedMainActorIds, setSelectedMainActorIds] = useState([]);
-  const [selectedSupportActorIds, setSelectedSupportActorIds] = useState([]);
+  const [selectedSupportActorIds, setSelectedSupportActorIds] =
+    useState([]);
   const [selectedTagIds, setSelectedTagIds] = useState([]);
 
   const [editingFilmId, setEditingFilmId] = useState(null);
@@ -1214,6 +1216,12 @@ export default function DashboardPage() {
                               setNewActorImage(e.target.value)
                             }
                           />
+
+                          {/* Upload + Crop für Hauptdarsteller */}
+                          <ActorImageUploader
+                            onUploaded={(url) => setNewActorImage(url)}
+                          />
+
                           <button
                             type="submit"
                             className="mt-1 bg-orange-500 px-2 py-1 rounded text-[10px] text-black disabled:opacity-60"
@@ -1274,6 +1282,12 @@ export default function DashboardPage() {
                               setNewSupportImage(e.target.value)
                             }
                           />
+
+                          {/* Upload + Crop für Nebendarsteller */}
+                          <ActorImageUploader
+                            onUploaded={(url) => setNewSupportImage(url)}
+                          />
+
                           <button
                             type="submit"
                             className="mt-1 bg-orange-500 px-2 py-1 rounded text-[10px] text-black disabled:opacity-60"
