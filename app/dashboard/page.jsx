@@ -198,6 +198,9 @@ export default function DashboardPage() {
   const [loginErr, setLoginErr] = useState(null);
   const [loginLoading, setLoginLoading] = useState(false);
 
+  // Film-Ansicht: Tabs
+  const [activeFilmSection, setActiveFilmSection] = useState("stats"); // "stats" | "new"
+
   // Daten
   const [hauptdarsteller, setHauptdarsteller] = useState([]);
   const [nebendarsteller, setNebendarsteller] = useState([]);
@@ -692,6 +695,9 @@ export default function DashboardPage() {
         : []
     );
     setSelectedTagIds(Array.isArray(film.tag_ids) ? film.tag_ids : []);
+
+    // Beim Bearbeiten automatisch auf "Neuen Film hinzufügen" umschalten
+    setActiveFilmSection("new");
   };
 
   const handleCancelEdit = () => {
@@ -866,329 +872,369 @@ export default function DashboardPage() {
                 <p className="text-slate-300 text-sm">Lade Daten…</p>
               ) : (
                 <>
-                  {/* Film-Form + Liste */}
-                  <section className="space-y-6">
-                    {/* Film-Formular */}
-                    <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 space-y-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <h2 className="text-lg font-semibold">
-                          {editingFilmId
-                            ? "Film bearbeiten"
-                            : "Neuen Film anlegen"}
-                        </h2>
-                        {editingFilmId && (
-                          <button
-                            type="button"
-                            onClick={handleCancelEdit}
-                            className="text-xs text-slate-300 underline underline-offset-4"
-                          >
-                            Bearbeitung abbrechen
-                          </button>
-                        )}
-                      </div>
-
-                      <form
-                        onSubmit={handleAddOrUpdateFilm}
-                        className="space-y-3 text-sm"
+                  {/* Film-Tab-Bereich: Filmestatistik / Neuen Film hinzufügen */}
+                  <section className="space-y-4">
+                    <div className="inline-flex rounded-full border border-slate-700 bg-slate-900/60 p-1 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setActiveFilmSection("stats")}
+                        className={
+                          "px-3 py-1 rounded-full transition-colors " +
+                          (activeFilmSection === "stats"
+                            ? "bg-orange-500 text-black"
+                            : "text-slate-200")
+                        }
                       >
-                        {/* Titel + Jahr */}
-                        <div className="grid grid-cols-[2fr,1fr] gap-3 max-sm:grid-cols-1">
-                          <div>
-                            <label className="text-[11px] text-slate-300">
-                              Filmname
-                            </label>
-                            <input
-                              className="mt-1 w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-sm"
-                              value={filmTitel}
-                              onChange={(e) => setFilmTitel(e.target.value)}
-                              placeholder="z. B. Interstellar"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[11px] text-slate-300">
-                              Erscheinungsjahr
-                            </label>
-                            <input
-                              className="mt-1 w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-sm"
-                              value={filmJahr}
-                              onChange={(e) => setFilmJahr(e.target.value)}
-                              placeholder="2014"
-                              type="number"
-                            />
-                          </div>
-                        </div>
+                        Filmestatistik
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveFilmSection("new")}
+                        className={
+                          "px-3 py-1 rounded-full transition-colors " +
+                          (activeFilmSection === "new"
+                            ? "bg-orange-500 text-black"
+                            : "text-slate-200")
+                        }
+                      >
+                        Neuen Film hinzufügen
+                      </button>
+                    </div>
 
-                        {/* Studio + File URL */}
-                        <div className="grid grid-cols-1 gap-3">
-                          <div>
-                            <label className="text-[11px] text-slate-300">
-                              Studio
-                            </label>
-                            <select
-                              className="mt-1 w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-sm"
-                              value={filmStudioId}
-                              onChange={(e) =>
-                                setFilmStudioId(e.target.value)
-                              }
-                            >
-                              <option value="">(kein Studio)</option>
-                              {studios.map((s) => (
-                                <option key={s.id} value={s.id}>
-                                  {s.name}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-
-                          <div>
-                            <label className="text-[11px] text-slate-300">
-                              File-URL / NAS-Pfad
-                            </label>
-                            <input
-                              className="mt-1 w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-sm"
-                              value={filmFileUrl}
-                              onChange={(e) =>
-                                setFilmFileUrl(e.target.value)
-                              }
-                              placeholder="z. B. smb://nas/Filme/Interstellar.mkv"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Hauptdarsteller Chips */}
-                        <div>
-                          <label className="text-[11px] text-slate-300">
-                            Hauptdarsteller (klick zum Auswählen / Entfernen)
-                          </label>
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            {hauptdarsteller.length === 0 ? (
-                              <span className="text-[11px] text-slate-500">
-                                Noch keine Hauptdarsteller angelegt.
-                              </span>
-                            ) : (
-                              hauptdarsteller.map((a) => {
-                                const active =
-                                  selectedMainActorIds.includes(a.id);
-                                return (
-                                  <button
-                                    key={a.id}
-                                    type="button"
-                                    onClick={() =>
-                                      toggleId(
-                                        a.id,
-                                        selectedMainActorIds,
-                                        setSelectedMainActorIds
-                                      )
-                                    }
-                                    className={chipClass(active)}
-                                  >
-                                    {a.name}
-                                  </button>
-                                );
-                              })
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Nebendarsteller Chips */}
-                        <div>
-                          <label className="text-[11px] text-slate-300">
-                            Nebendarsteller (klick zum Auswählen / Entfernen)
-                          </label>
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            {nebendarsteller.length === 0 ? (
-                              <span className="text-[11px] text-slate-500">
-                                Noch keine Nebendarsteller angelegt.
-                              </span>
-                            ) : (
-                              nebendarsteller.map((a) => {
-                                const active =
-                                  selectedSupportActorIds.includes(a.id);
-                                return (
-                                  <button
-                                    key={a.id}
-                                    type="button"
-                                    onClick={() =>
-                                      toggleId(
-                                        a.id,
-                                        selectedSupportActorIds,
-                                        setSelectedSupportActorIds
-                                      )
-                                    }
-                                    className={chipClass(active)}
-                                  >
-                                    {a.name}
-                                  </button>
-                                );
-                              })
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Tags Chips */}
-                        <div>
-                          <label className="text-[11px] text-slate-300">
-                            Tags (klick zum Auswählen / Entfernen)
-                          </label>
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            {tags.length === 0 ? (
-                              <span className="text-[11px] text-slate-500">
-                                Noch keine Tags angelegt.
-                              </span>
-                            ) : (
-                              tags.map((t) => {
-                                const active = selectedTagIds.includes(t.id);
-                                return (
-                                  <button
-                                    key={t.id}
-                                    type="button"
-                                    onClick={() =>
-                                      toggleId(
-                                        t.id,
-                                        selectedTagIds,
-                                        setSelectedTagIds
-                                      )
-                                    }
-                                    className={chipClass(active)}
-                                  >
-                                    {t.name}
-                                  </button>
-                                );
-                              })
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="flex gap-2 pt-2">
-                          <button
-                            type="submit"
-                            className="bg-orange-500 px-4 py-2 rounded text-xs font-medium disabled:opacity-60 text-black"
-                            disabled={!filmTitel.trim()}
-                          >
+                    {activeFilmSection === "new" && (
+                      <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 space-y-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <h2 className="text-lg font-semibold">
                             {editingFilmId
-                              ? "Film aktualisieren"
-                              : "Film speichern"}
-                          </button>
+                              ? "Film bearbeiten"
+                              : "Neuen Film hinzufügen"}
+                          </h2>
                           {editingFilmId && (
                             <button
                               type="button"
                               onClick={handleCancelEdit}
-                              className="border border-slate-600 px-3 py-2 rounded text-xs text-slate-200"
+                              className="text-xs text-slate-300 underline underline-offset-4"
                             >
-                              Abbrechen
+                              Bearbeitung abbrechen
                             </button>
                           )}
                         </div>
-                      </form>
-                    </div>
 
-                    {/* Filmliste */}
-                    <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h2 className="text-sm font-semibold">
-                          Filme ({filme.length})
-                        </h2>
-                      </div>
+                        <form
+                          onSubmit={handleAddOrUpdateFilm}
+                          className="space-y-3 text-sm"
+                        >
+                          {/* Titel + Jahr */}
+                          <div className="grid grid-cols-[2fr,1fr] gap-3 max-sm:grid-cols-1">
+                            <div>
+                              <label className="text-[11px] text-slate-300">
+                                Filmname
+                              </label>
+                              <input
+                                className="mt-1 w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-sm"
+                                value={filmTitel}
+                                onChange={(e) => setFilmTitel(e.target.value)}
+                                placeholder="z. B. Interstellar"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[11px] text-slate-300">
+                                Erscheinungsjahr
+                              </label>
+                              <input
+                                className="mt-1 w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-sm"
+                                value={filmJahr}
+                                onChange={(e) => setFilmJahr(e.target.value)}
+                                placeholder="2014"
+                                type="number"
+                              />
+                            </div>
+                          </div>
 
-                      {filme.length === 0 ? (
-                        <p className="text-slate-500 text-xs">
-                          Noch keine Filme angelegt.
-                        </p>
-                      ) : (
-                        <div className="space-y-2 max-h-[360px] overflow-y-auto text-xs">
-                          {filme.map((f) => (
-                            <div
-                              key={f.id}
-                              className="p-3 border border-slate-800 rounded bg-slate-950/60 space-y-1"
+                          {/* Studio + File URL */}
+                          <div className="grid grid-cols-1 gap-3">
+                            <div>
+                              <label className="text-[11px] text-slate-300">
+                                Studio
+                              </label>
+                              <select
+                                className="mt-1 w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-sm"
+                                value={filmStudioId}
+                                onChange={(e) =>
+                                  setFilmStudioId(e.target.value)
+                                }
+                              >
+                                <option value="">(kein Studio)</option>
+                                {studios.map((s) => (
+                                  <option key={s.id} value={s.id}>
+                                    {s.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="text-[11px] text-slate-300">
+                                File-URL / NAS-Pfad
+                              </label>
+                              <input
+                                className="mt-1 w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-sm"
+                                value={filmFileUrl}
+                                onChange={(e) =>
+                                  setFilmFileUrl(e.target.value)
+                                }
+                                placeholder="z. B. smb://nas/Filme/Interstellar.mkv"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Hauptdarsteller Chips */}
+                          <div>
+                            <label className="text-[11px] text-slate-300">
+                              Hauptdarsteller (klick zum Auswählen / Entfernen)
+                            </label>
+                            <div className="mt-1 flex flex-wrap gap-1">
+                              {hauptdarsteller.length === 0 ? (
+                                <span className="text-[11px] text-slate-500">
+                                  Noch keine Hauptdarsteller angelegt.
+                                </span>
+                              ) : (
+                                hauptdarsteller.map((a) => {
+                                  const active =
+                                    selectedMainActorIds.includes(a.id);
+                                  return (
+                                    <button
+                                      key={a.id}
+                                      type="button"
+                                      onClick={() =>
+                                        toggleId(
+                                          a.id,
+                                          selectedMainActorIds,
+                                          setSelectedMainActorIds
+                                        )
+                                      }
+                                      className={chipClass(active)}
+                                    >
+                                      {a.name}
+                                    </button>
+                                  );
+                                })
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Nebendarsteller Chips */}
+                          <div>
+                            <label className="text-[11px] text-slate-300">
+                              Nebendarsteller (klick zum Auswählen / Entfernen)
+                            </label>
+                            <div className="mt-1 flex flex-wrap gap-1">
+                              {nebendarsteller.length === 0 ? (
+                                <span className="text-[11px] text-slate-500">
+                                  Noch keine Nebendarsteller angelegt.
+                                </span>
+                              ) : (
+                                nebendarsteller.map((a) => {
+                                  const active =
+                                    selectedSupportActorIds.includes(a.id);
+                                  return (
+                                    <button
+                                      key={a.id}
+                                      type="button"
+                                      onClick={() =>
+                                        toggleId(
+                                          a.id,
+                                          selectedSupportActorIds,
+                                          setSelectedSupportActorIds
+                                        )
+                                      }
+                                      className={chipClass(active)}
+                                    >
+                                      {a.name}
+                                    </button>
+                                  );
+                                })
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Tags Chips */}
+                          <div>
+                            <label className="text-[11px] text-slate-300">
+                              Tags (klick zum Auswählen / Entfernen)
+                            </label>
+                            <div className="mt-1 flex flex-wrap gap-1">
+                              {tags.length === 0 ? (
+                                <span className="text-[11px] text-slate-500">
+                                  Noch keine Tags angelegt.
+                                </span>
+                              ) : (
+                                tags.map((t) => {
+                                  const active = selectedTagIds.includes(t.id);
+                                  return (
+                                    <button
+                                      key={t.id}
+                                      type="button"
+                                      onClick={() =>
+                                        toggleId(
+                                          t.id,
+                                          selectedTagIds,
+                                          setSelectedTagIds
+                                        )
+                                      }
+                                      className={chipClass(active)}
+                                    >
+                                      {t.name}
+                                    </button>
+                                  );
+                                })
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex gap-2 pt-2">
+                            <button
+                              type="submit"
+                              className="bg-orange-500 px-4 py-2 rounded text-xs font-medium disabled:opacity-60 text-black"
+                              disabled={!filmTitel.trim()}
                             >
-                              <div className="flex justify-between gap-2 items-start">
-                                <div className="space-y-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium text-sm">
-                                      {f.title}
-                                    </span>
-                                    {f.year && (
-                                      <span className="text-slate-400 text-[10px]">
-                                        {f.year}
+                              {editingFilmId
+                                ? "Film aktualisieren"
+                                : "Film speichern"}
+                            </button>
+                            {editingFilmId && (
+                              <button
+                                type="button"
+                                onClick={handleCancelEdit}
+                                className="border border-slate-600 px-3 py-2 rounded text-xs text-slate-200"
+                              >
+                                Abbrechen
+                              </button>
+                            )}
+                          </div>
+                        </form>
+                      </div>
+                    )}
+
+                    {activeFilmSection === "stats" && (
+                      <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h2 className="text-sm font-semibold">
+                              Filmestatistik
+                            </h2>
+                            <p className="text-[11px] text-slate-400 mt-1">
+                              Insgesamt <strong>{filme.length}</strong> Filme
+                              in der Bibliothek.
+                            </p>
+                          </div>
+                        </div>
+
+                        {filme.length === 0 ? (
+                          <p className="text-slate-500 text-xs">
+                            Noch keine Filme angelegt.
+                          </p>
+                        ) : (
+                          <div className="space-y-2 max-h-[360px] overflow-y-auto text-xs">
+                            {filme.map((f) => (
+                              <div
+                                key={f.id}
+                                className="p-3 border border-slate-800 rounded bg-slate-950/60 space-y-1"
+                              >
+                                <div className="flex justify-between gap-2 items-start">
+                                  <div className="space-y-1">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium text-sm">
+                                        {f.title}
                                       </span>
+                                      {f.year && (
+                                        <span className="text-slate-400 text-[10px]">
+                                          {f.year}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {f.studio_id &&
+                                      studioMap[f.studio_id] && (
+                                        <div className="text-slate-400 text-[11px]">
+                                          Studio:{" "}
+                                          {studioMap[f.studio_id].name}
+                                        </div>
+                                      )}
+
+                                    {Array.isArray(f.main_actor_ids) &&
+                                      f.main_actor_ids.length > 0 && (
+                                        <div className="text-[11px] text-slate-300">
+                                          Hauptdarsteller:{" "}
+                                          {f.main_actor_ids
+                                            .map(
+                                              (id) => actorMap[id]?.name
+                                            )
+                                            .filter(Boolean)
+                                            .join(", ")}
+                                        </div>
+                                      )}
+
+                                    {Array.isArray(f.supporting_actor_ids) &&
+                                      f.supporting_actor_ids.length > 0 && (
+                                        <div className="text-[11px] text-slate-300">
+                                          Nebendarsteller:{" "}
+                                          {f.supporting_actor_ids
+                                            .map(
+                                              (id) => supportMap[id]?.name
+                                            )
+                                            .filter(Boolean)
+                                            .join(", ")}
+                                        </div>
+                                      )}
+
+                                    {Array.isArray(f.tag_ids) &&
+                                      f.tag_ids.length > 0 && (
+                                        <div className="flex flex-wrap gap-1 mt-1">
+                                          {f.tag_ids.map((id) => {
+                                            const t = tagMap[id];
+                                            if (!t) return null;
+                                            return (
+                                              <span
+                                                key={id}
+                                                className={chipClass(true)}
+                                              >
+                                                {t.name}
+                                              </span>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
+
+                                    {f.file_url && (
+                                      <div className="text-orange-400 text-[11px] break-all mt-1">
+                                        File: {f.file_url}
+                                      </div>
                                     )}
                                   </div>
-                                  {f.studio_id &&
-                                    studioMap[f.studio_id] && (
-                                      <div className="text-slate-400 text-[11px]">
-                                        Studio: {studioMap[f.studio_id].name}
-                                      </div>
-                                    )}
 
-                                  {Array.isArray(f.main_actor_ids) &&
-                                    f.main_actor_ids.length > 0 && (
-                                      <div className="text-[11px] text-slate-300">
-                                        Hauptdarsteller:{" "}
-                                        {f.main_actor_ids
-                                          .map((id) => actorMap[id]?.name)
-                                          .filter(Boolean)
-                                          .join(", ")}
-                                      </div>
-                                    )}
-
-                                  {Array.isArray(f.supporting_actor_ids) &&
-                                    f.supporting_actor_ids.length > 0 && (
-                                      <div className="text-[11px] text-slate-300">
-                                        Nebendarsteller:{" "}
-                                        {f.supporting_actor_ids
-                                          .map((id) => supportMap[id]?.name)
-                                          .filter(Boolean)
-                                          .join(", ")}
-                                      </div>
-                                    )}
-
-                                  {Array.isArray(f.tag_ids) &&
-                                    f.tag_ids.length > 0 && (
-                                      <div className="flex flex-wrap gap-1 mt-1">
-                                        {f.tag_ids.map((id) => {
-                                          const t = tagMap[id];
-                                          if (!t) return null;
-                                          return (
-                                            <span
-                                              key={id}
-                                              className={chipClass(true)}
-                                            >
-                                              {t.name}
-                                            </span>
-                                          );
-                                        })}
-                                      </div>
-                                    )}
-
-                                  {f.file_url && (
-                                    <div className="text-orange-400 text-[11px] break-all mt-1">
-                                      File: {f.file_url}
-                                    </div>
-                                  )}
-                                </div>
-
-                                <div className="flex flex-col gap-1">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleEditFilm(f)}
-                                    className="text-[10px] px-2 py-1 rounded border border-slate-600 text-slate-100 hover:bg-slate-700"
-                                  >
-                                    Bearbeiten
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteFilm(f.id)}
-                                    className="text-[10px] px-2 py-1 rounded border border-red-600 text-red-200 hover:bg-red-700/70"
-                                  >
-                                    Löschen
-                                  </button>
+                                  <div className="flex flex-col gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleEditFilm(f)}
+                                      className="text-[10px] px-2 py-1 rounded border border-slate-600 text-slate-100 hover:bg-slate-700"
+                                    >
+                                      Bearbeiten
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteFilm(f.id)}
+                                      className="text-[10px] px-2 py-1 rounded border border-red-600 text-red-200 hover:bg-red-700/70"
+                                    >
+                                      Löschen
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </section>
 
                   {/* Stammdaten-Kurzbereich */}
