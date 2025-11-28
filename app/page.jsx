@@ -12,11 +12,9 @@ const CHANGELOG = [
     version: "0.3.0",
     date: "2025-11-28",
     items: [
-      "Dashboard mit Film-Verwaltung (Haupt-/Nebendarsteller, Tags, Studios) integriert",
-      "Einheitliches Chip-Farbschema (aktiv = orange, inaktiv = grau)",
-      "Startseite zeigt nun eine alphabetische Hauptdarsteller-Galerie mit Fotos; Klick zeigt alle Filme dieses Darstellers",
-      "Startseite an neue movies-Struktur (IDs statt Join-Tabellen) angepasst"
-    ]
+      "Darsteller-Grid zeigt jetzt Bilder (profile_image) mit sauberem Cropping",
+      "Actor-Übersicht sortiert nach Namen, inkl. Filmanzahl"
+    ],
   },
   {
     version: "0.2.0",
@@ -24,17 +22,17 @@ const CHANGELOG = [
     items: [
       "HTTP-Streaming über NAS-Symlink (/1337) vorbereitet",
       "Play-Button öffnet direkte NAS-Links (fileUrl) im neuen Tab",
-      "Version-Hinweis & Login-Leiste integriert"
-    ]
+      "Version-Hinweis & Login-Leiste integriert",
+    ],
   },
   {
     version: "0.1.0",
     date: "2025-11-26",
     items: [
       "Erste Version der 1337 Library mit Darsteller-/Film-Ansicht",
-      "Supabase-Anbindung (movies, studios, actors, tags, movie_actors, movie_tags)"
-    ]
-  }
+      "Supabase-Anbindung (movies, studios, actors, tags, movie_actors, movie_tags)",
+    ],
+  },
 ];
 
 function VersionHint() {
@@ -56,7 +54,7 @@ function VersionHint() {
           display: "flex",
           alignItems: "center",
           gap: "6px",
-          cursor: "pointer"
+          cursor: "pointer",
         }}
       >
         <span>{current.version}</span>
@@ -72,7 +70,7 @@ function VersionHint() {
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
-            zIndex: 70
+            zIndex: 70,
           }}
           onClick={() => setOpen(false)}
         >
@@ -86,7 +84,7 @@ function VersionHint() {
               borderRadius: 16,
               border: "1px solid #4b5563",
               padding: 20,
-              boxShadow: "0 20px 60px rgba(0,0,0,0.7)"
+              boxShadow: "0 20px 60px rgba(0,0,0,0.7)",
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -95,7 +93,7 @@ function VersionHint() {
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-                marginBottom: 12
+                marginBottom: 12,
               }}
             >
               <div>
@@ -104,7 +102,7 @@ function VersionHint() {
                     fontSize: "0.8rem",
                     textTransform: "uppercase",
                     letterSpacing: "0.08em",
-                    color: "#9ca3af"
+                    color: "#9ca3af",
                   }}
                 >
                   Version & Changelog
@@ -123,7 +121,7 @@ function VersionHint() {
                   color: "#e5e7eb",
                   fontSize: "0.8rem",
                   padding: "4px 10px",
-                  cursor: "pointer"
+                  cursor: "pointer",
                 }}
               >
                 Schließen
@@ -138,7 +136,7 @@ function VersionHint() {
                     borderRadius: 12,
                     border: "1px solid #374151",
                     padding: 12,
-                    background: "#030712"
+                    background: "#030712",
                   }}
                 >
                   <div
@@ -146,14 +144,14 @@ function VersionHint() {
                       display: "flex",
                       justifyContent: "space-between",
                       alignItems: "baseline",
-                      marginBottom: 4
+                      marginBottom: 4,
                     }}
                   >
                     <div
                       style={{
                         fontWeight: 600,
                         fontSize: "0.95rem",
-                        color: "#e5e7eb"
+                        color: "#e5e7eb",
                       }}
                     >
                       {entry.version}
@@ -169,7 +167,7 @@ function VersionHint() {
                       margin: 0,
                       paddingLeft: 18,
                       fontSize: "0.85rem",
-                      color: "#d1d5db"
+                      color: "#d1d5db",
                     }}
                   >
                     {entry.items.map((it, idx) => (
@@ -188,30 +186,13 @@ function VersionHint() {
   );
 }
 
-// Hilfsfunktion für Profilbilder (Hauptdarsteller)
-function normalizeProfileImage(actorRow) {
-  const raw =
-    actorRow.profile_image ||
-    actorRow.profileImage ||
-    actorRow.image_url ||
-    null;
-
-  if (!raw) return null;
-
-  // Kleine Hilfe: falls du mal ein Leerzeichen im Pfad einträgst,
-  // ersetzen wir es durch %20, damit NAS-HTTP-Links nicht brechen.
-  const cleaned = raw.replace(/ /g, "%20");
-
-  return cleaned;
-}
-
 // -------------------------------
 // Startseite
 // -------------------------------
 
 export default function HomePage() {
   const [movies, setMovies] = useState([]);
-  const [actors, setActors] = useState([]); // Hauptdarsteller-Galerie
+  const [actors, setActors] = useState([]);
   const [viewMode, setViewMode] = useState("actors"); // "actors" | "movies"
   const [visibleMovies, setVisibleMovies] = useState([]);
   const [moviesTitle, setMoviesTitle] = useState("Filme");
@@ -240,7 +221,7 @@ export default function HomePage() {
     }
   }, []);
 
-  // Filme + Stammdaten nur laden, wenn eingeloggt
+  // Filme + Darsteller nur laden, wenn eingeloggt
   useEffect(() => {
     if (!loggedIn) {
       setMovies([]);
@@ -255,100 +236,78 @@ export default function HomePage() {
         setLoading(true);
         setErr(null);
 
-        const [moviesRes, actorsRes, actors2Res, studiosRes, tagsRes] =
-          await Promise.all([
-            supabase.from("movies").select("*"),
-            supabase.from("actors").select("*"),
-            supabase.from("actors2").select("*"),
-            supabase.from("studios").select("*"),
-            supabase.from("tags").select("*")
-          ]);
+        // movies + movie_actors + actors (inkl. profile_image)
+        const { data, error } = await supabase
+          .from("movies")
+          .select(`
+            id,
+            title,
+            file_url,
+            year,
+            studios ( name ),
+            movie_actors (
+              actor_id,
+              actors (
+                id,
+                name,
+                profile_image
+              )
+            ),
+            movie_tags (
+              tags ( name )
+            )
+          `);
 
-        if (moviesRes.error) throw moviesRes.error;
-        if (actorsRes.error) throw actorsRes.error;
-        if (actors2Res.error) throw actors2Res.error;
-        if (studiosRes.error) throw studiosRes.error;
-        if (tagsRes.error) throw tagsRes.error;
+        if (error) {
+          console.error(error);
+          setErr("Fehler beim Laden der Daten.");
+          return;
+        }
 
-        const moviesData = moviesRes.data || [];
-        const mainActors = actorsRes.data || [];
-        const supportActors = actors2Res.data || [];
-        const studios = studiosRes.data || [];
-        const tags = tagsRes.data || [];
+        const actorMap = new Map();
 
-        const actorNameMap = Object.fromEntries(
-          mainActors.map((a) => [a.id, a.name])
-        );
-        const supportNameMap = Object.fromEntries(
-          supportActors.map((a) => [a.id, a.name])
-        );
-        const studioMap = Object.fromEntries(
-          studios.map((s) => [s.id, s.name])
-        );
-        const tagMap = Object.fromEntries(tags.map((t) => [t.id, t.name]));
+        const mapped =
+          data?.map((m) => {
+            const actorObjs =
+              m.movie_actors
+                ?.map((ma) => ma.actors)
+                .filter(Boolean) || [];
 
-        // Filme mappen
-        const mappedMovies =
-          moviesData.map((m) => {
-            const mainActorIds = Array.isArray(m.main_actor_ids)
-              ? m.main_actor_ids
-              : [];
-            const supportActorIds = Array.isArray(m.supporting_actor_ids)
-              ? m.supporting_actor_ids
-              : [];
-
-            const mainNames = mainActorIds
-              .map((id) => actorNameMap[id])
-              .filter(Boolean);
-            const supportNames = supportActorIds
-              .map((id) => supportNameMap[id])
-              .filter(Boolean);
-
-            const allActors = [...mainNames, ...supportNames];
-
-            const tagNames = Array.isArray(m.tag_ids)
-              ? m.tag_ids.map((id) => tagMap[id]).filter(Boolean)
-              : [];
+            // Actor-Map für die Übersicht füllen
+            actorObjs.forEach((a) => {
+              if (!a) return;
+              const key = a.id;
+              if (!actorMap.has(key)) {
+                actorMap.set(key, {
+                  id: a.id,
+                  name: a.name,
+                  profileImage: a.profile_image || null,
+                  movieCount: 0,
+                });
+              }
+              const entry = actorMap.get(key);
+              entry.movieCount += 1;
+            });
 
             return {
               id: m.id,
               title: m.title,
               fileUrl: m.file_url,
               year: m.year,
-              studio: m.studio_id ? studioMap[m.studio_id] || null : null,
-              actors: allActors,
-              tags: tagNames,
-              mainActorIds,
-              supportActorIds
+              studio: m.studios ? m.studios.name : null,
+              actors: actorObjs.map((a) => a.name),
+              tags:
+                m.movie_tags?.map((t) => t.tags?.name).filter(Boolean) || [],
             };
           }) || [];
 
-        setMovies(mappedMovies);
+        // Actor-Liste sortieren (alphabetisch)
+        const actorList = Array.from(actorMap.values()).sort((a, b) =>
+          a.name.localeCompare(b.name, "de", { sensitivity: "base" })
+        );
 
-        // Hauptdarsteller-Galerie (nur Actors, die mindestens 1 Film als Hauptdarsteller haben)
-        const movieCountByActorId = new Map();
-        moviesData.forEach((m) => {
-          const arr = Array.isArray(m.main_actor_ids) ? m.main_actor_ids : [];
-          arr.forEach((id) => {
-            if (!movieCountByActorId.has(id)) movieCountByActorId.set(id, 0);
-            movieCountByActorId.set(
-              id,
-              movieCountByActorId.get(id) + 1
-            );
-          });
-        });
-
-        const mainActorList = mainActors
-          .map((a) => ({
-            id: a.id,
-            name: a.name,
-            profileImage: normalizeProfileImage(a),
-            movieCount: movieCountByActorId.get(a.id) || 0
-          }))
-          .filter((a) => a.movieCount > 0)
-          .sort((a, b) => a.name.localeCompare(b.name));
-
-        setActors(mainActorList);
+        setMovies(mapped);
+        setActors(actorList);
       } catch (e) {
         console.error(e);
         setErr("Fehler beim Laden der Daten.");
@@ -360,13 +319,9 @@ export default function HomePage() {
     void load();
   }, [loggedIn]);
 
-  const handleShowMoviesForActor = (actor) => {
-    const m = movies.filter(
-      (movie) =>
-        Array.isArray(movie.mainActorIds) &&
-        movie.mainActorIds.includes(actor.id)
-    );
-    setMoviesTitle(actor.name);
+  const handleShowMoviesForActor = (actorName) => {
+    const m = movies.filter((movie) => movie.actors.includes(actorName));
+    setMoviesTitle(actorName);
     setMoviesSubtitle(`${m.length} Film(e)`);
     setVisibleMovies(m);
     setViewMode("movies");
@@ -389,7 +344,7 @@ export default function HomePage() {
         movie.title || "",
         movie.studio || "",
         movie.actors.join(" "),
-        movie.tags.join(" ")
+        movie.tags.join(" "),
       ]
         .join(" ")
         .toLowerCase();
@@ -420,8 +375,8 @@ export default function HomePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           username: loginUser,
-          password: loginPassword
-        })
+          password: loginPassword,
+        }),
       });
 
       if (!res.ok) {
@@ -476,7 +431,7 @@ export default function HomePage() {
             marginLeft: "auto",
             display: "flex",
             alignItems: "center",
-            gap: 12
+            gap: 12,
           }}
         >
           <VersionHint />
@@ -487,7 +442,7 @@ export default function HomePage() {
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 6
+                gap: 6,
               }}
             >
               <input
@@ -502,7 +457,7 @@ export default function HomePage() {
                   color: "#e5e7eb",
                   fontSize: "0.8rem",
                   padding: "4px 8px",
-                  width: 130
+                  width: 130,
                 }}
               />
               <input
@@ -517,7 +472,7 @@ export default function HomePage() {
                   color: "#e5e7eb",
                   fontSize: "0.8rem",
                   padding: "4px 8px",
-                  width: 120
+                  width: 120,
                 }}
               />
               <button
@@ -533,7 +488,7 @@ export default function HomePage() {
                   fontWeight: 600,
                   cursor:
                     loginLoading || !loginPassword ? "default" : "pointer",
-                  opacity: loginLoading || !loginPassword ? 0.7 : 1
+                  opacity: loginLoading || !loginPassword ? 0.7 : 1,
                 }}
               >
                 {loginLoading ? "…" : "Login"}
@@ -546,7 +501,7 @@ export default function HomePage() {
                 alignItems: "center",
                 gap: 8,
                 fontSize: "0.8rem",
-                color: "#9ca3af"
+                color: "#9ca3af",
               }}
             >
               <span style={{ color: "#4ade80" }}>
@@ -559,7 +514,7 @@ export default function HomePage() {
                   borderRadius: 999,
                   border: "1px solid #4b5563",
                   padding: "3px 8px",
-                  color: "#e5e7eb"
+                  color: "#e5e7eb",
                 }}
               >
                 Dashboard
@@ -574,7 +529,7 @@ export default function HomePage() {
                   color: "#e5e7eb",
                   fontSize: "0.8rem",
                   padding: "3px 8px",
-                  cursor: "pointer"
+                  cursor: "pointer",
                 }}
               >
                 Logout
@@ -596,7 +551,6 @@ export default function HomePage() {
           </section>
         ) : (
           <>
-            {/* Hero + Suche */}
             <section className="hero">
               <div className="logo-container">
                 <img src="/logo.svg" alt="1337 Logo" className="logo-svg" />
@@ -613,7 +567,6 @@ export default function HomePage() {
               </div>
             </section>
 
-            {/* Lade-/Fehlerzustände */}
             {loading && (
               <section className="actor-section">
                 <p>Lade Filme …</p>
@@ -628,61 +581,40 @@ export default function HomePage() {
 
             {!loading && !err && (
               <>
-                {/* Hauptdarsteller-Galerie */}
                 {viewMode === "actors" && (
                   <section id="actorSection" className="actor-section">
-                    <h2>Hauptdarsteller</h2>
+                    <h2>Darsteller</h2>
                     <div id="actorGrid" className="actor-grid">
                       {actors.length === 0 && (
-                        <p>Noch keine Hauptdarsteller mit Filmen vorhanden.</p>
+                        <p>Noch keine Filme in der Datenbank.</p>
                       )}
                       {actors.map((actor) => (
                         <article
                           key={actor.id}
                           className="actor-card"
-                          onClick={() => handleShowMoviesForActor(actor)}
-                          style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
-                            gap: 8,
-                            textAlign: "center"
-                          }}
+                          onClick={() => handleShowMoviesForActor(actor.name)}
                         >
-                          <div
-                            style={{
-                              width: 80,
-                              height: 80,
-                              borderRadius: "999px",
-                              overflow: "hidden",
-                              background: "#111827",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              marginBottom: 4,
-                              border: "1px solid #1f2937"
-                            }}
-                          >
+                          <div className="actor-avatar-wrapper">
                             {actor.profileImage ? (
                               <img
                                 src={actor.profileImage}
                                 alt={actor.name}
+                                className="actor-avatar"
+                              />
+                            ) : (
+                              <div
                                 style={{
                                   width: "100%",
                                   height: "100%",
-                                  objectFit: "cover"
-                                }}
-                              />
-                            ) : (
-                              <span
-                                style={{
-                                  fontSize: "1.6rem",
-                                  fontWeight: 600,
-                                  color: "#e5e7eb"
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: "0.8rem",
+                                  color: "#6b7280",
                                 }}
                               >
-                                {actor.name?.[0]?.toUpperCase() || "?"}
-                              </span>
+                                Kein Bild
+                              </div>
                             )}
                           </div>
                           <div className="actor-name">{actor.name}</div>
@@ -696,7 +628,6 @@ export default function HomePage() {
                   </section>
                 )}
 
-                {/* Filme-Ansicht (nach Klick oder Suche) */}
                 {viewMode === "movies" && (
                   <section id="moviesSection" className="movies-section">
                     <div className="movies-header">
@@ -711,7 +642,7 @@ export default function HomePage() {
                         className="back-btn"
                         onClick={handleBackToActors}
                       >
-                        Zurück zur Hauptdarsteller-Übersicht
+                        Zurück zur Darsteller-Übersicht
                       </button>
                     </div>
                     <div id="movieList" className="movie-grid">
@@ -752,7 +683,7 @@ export default function HomePage() {
                               style={{
                                 textDecoration: "none",
                                 display: "inline-block",
-                                textAlign: "center"
+                                textAlign: "center",
                               }}
                             >
                               Abspielen
