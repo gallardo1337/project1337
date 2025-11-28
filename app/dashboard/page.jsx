@@ -46,7 +46,7 @@ const CHANGELOG = [
     version: "0.1.0",
     date: "2025-11-26",
     items: [
-      "Erste Version der 1337 Library mit Darsteller-/Film-Ansicht",
+      "Erste Version der 1337 Film-Bibliothek mit Darsteller-/Film-Ansicht",
       "Supabase-Anbindung (movies, studios, actors, tags, movie_actors, movie_tags)"
     ]
   }
@@ -82,7 +82,7 @@ function VersionHint() {
                   Version &amp; Changelog
                 </div>
                 <div className="text-lg font-semibold text-neutral-50">
-                  1337 Library
+                  1337 Dashboard
                 </div>
               </div>
               <button
@@ -673,14 +673,25 @@ export default function DashboardPage() {
     <div className="page min-h-screen bg-gradient-to-br from-neutral-950 via-black to-neutral-900 text-neutral-100 text-[15px]">
       {/* Header */}
       <header className="topbar sticky top-0 z-40 border-b border-neutral-800/70 bg-black/80 backdrop-blur-lg">
-        <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-4 md:px-6">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 md:px-6">
+          {/* Links: Hauptseite */}
+          <div className="flex items-center">
+            <a
+              href="/"
+              className="rounded-full border border-neutral-600 bg-neutral-900/80 px-4 py-1.5 text-sm text-neutral-100 hover:bg-neutral-800 hover:border-neutral-400 transition-all"
+            >
+              Hauptseite
+            </a>
+          </div>
+
+          {/* Mitte: Logo + Titel */}
           <div className="flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-600 text-sm font-semibold tracking-tight shadow-lg shadow-red-900/60">
               1337
             </div>
-            <div className="flex flex-col leading-tight">
+            <div className="flex flex-col leading-tight text-center">
               <span className="text-lg font-semibold text-neutral-50">
-                Library Dashboard
+                1337 Dashboard
               </span>
               <span className="text-xs text-neutral-400">
                 Manage Movies, Cast &amp; Tags
@@ -688,9 +699,8 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="ml-auto flex items-center gap-4">
-            <VersionHint />
-
+          {/* Rechts: Login oder User + Logout */}
+          <div className="flex items-center justify-end gap-4">
             {!loggedIn ? (
               <form
                 onSubmit={handleLogin}
@@ -729,12 +739,6 @@ export default function DashboardPage() {
                   <span className="inline-block h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
                   {loginUser}
                 </span>
-                <a
-                  href="/"
-                  className="rounded-full border border-neutral-600 bg-neutral-900/80 px-4 py-1.5 text-sm text-neutral-100 hover:bg-neutral-800 hover:border-neutral-400 transition-all"
-                >
-                  Hauptseite
-                </a>
                 <button
                   type="button"
                   onClick={handleLogout}
@@ -1262,7 +1266,7 @@ export default function DashboardPage() {
                               className="mt-1 rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-black shadow shadow-red-900/70 disabled:opacity-60"
                               disabled={!newActorName.trim()}
                             >
-                              + Haupt
+                              Speichern
                             </button>
                           </form>
 
@@ -1323,7 +1327,7 @@ export default function DashboardPage() {
                               className="mt-1 rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-black shadow shadow-red-900/70 disabled:opacity-60"
                               disabled={!newSupportName.trim()}
                             >
-                              + Neben
+                              Speichern
                             </button>
                           </form>
 
@@ -1389,7 +1393,7 @@ export default function DashboardPage() {
                               className="mt-1 rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-black shadow shadow-red-900/70 disabled:opacity-60"
                               disabled={!newStudioName.trim()}
                             >
-                              + Studio
+                              Speichern
                             </button>
                           </form>
 
@@ -1427,7 +1431,7 @@ export default function DashboardPage() {
                               className="mt-1 rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-black shadow shadow-red-900/70 disabled:opacity-60"
                               disabled={!newTagName.trim()}
                             >
-                              + Tag
+                              Speichern
                             </button>
                             <div className="mt-1 text-xs text-neutral-500">
                               Vorhanden: {tags.length}
@@ -1463,6 +1467,11 @@ export default function DashboardPage() {
           </section>
         )}
       </main>
+
+      {/* Changelog-Button unten rechts */}
+      <div className="fixed bottom-4 right-4 z-40">
+        <VersionHint />
+      </div>
     </div>
   );
 }
