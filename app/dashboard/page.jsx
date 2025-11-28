@@ -1,12 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import { supabase } from "../../lib/supabaseClient";
 
-
 // -------------------------------
-// Version / Changelog (gleich wie auf Startseite)
+// Version / Changelog (wie Startseite)
 // -------------------------------
 
 const CHANGELOG = [
@@ -180,12 +178,19 @@ function VersionHint() {
   );
 }
 
+// Helper für einheitliche Chip-Farben
+const chipClass = (active) =>
+  "px-2 py-[3px] rounded-full border text-[11px] " +
+  (active
+    ? "bg-orange-500 border-orange-600 text-black"
+    : "bg-slate-900 border-slate-600 text-slate-200");
+
 // -------------------------------
 // Dashboard
 // -------------------------------
 
 export default function DashboardPage() {
-  // Login-Status identisch zur Startseite
+  // Login-Status (wie Startseite)
   const [loggedIn, setLoggedIn] = useState(false);
   const [loginUser, setLoginUser] = useState("gallardo1337");
   const [loginPassword, setLoginPassword] = useState("");
@@ -225,7 +230,7 @@ export default function DashboardPage() {
 
   const [editingFilmId, setEditingFilmId] = useState(null);
 
-  // beim Mount: Login aus localStorage übernehmen
+  // Login-Status aus localStorage laden
   useEffect(() => {
     if (typeof window === "undefined") return;
     const flag = window.localStorage.getItem("auth_1337_flag");
@@ -238,7 +243,7 @@ export default function DashboardPage() {
     }
   }, []);
 
-  // Daten nur laden, wenn eingeloggt
+  // Daten laden, wenn eingeloggt
   useEffect(() => {
     const loadAll = async () => {
       if (!loggedIn) {
@@ -347,7 +352,7 @@ export default function DashboardPage() {
     try {
       await fetch("/api/logout", { method: "POST" });
     } catch {
-      // egal, localStorage reicht
+      // ignorieren
     }
     if (typeof window !== "undefined") {
       window.localStorage.removeItem("auth_1337_flag");
@@ -456,6 +461,139 @@ export default function DashboardPage() {
     setNewTagName("");
   };
 
+  // --------- Darsteller & Tag bearbeiten/löschen ---------
+
+  const handleEditActor = async (actor) => {
+    const newName = window.prompt(
+      "Neuer Name für Hauptdarsteller:",
+      actor.name || ""
+    );
+    if (newName === null) return;
+    const trimmedName = newName.trim();
+    if (!trimmedName) return;
+
+    const newImg = window.prompt(
+      "Neue Bild-URL (leer lassen für unverändert, nur ein Leerzeichen für löschen):",
+      actor.profile_image || ""
+    );
+    let profile_image = actor.profile_image;
+    if (newImg !== null) {
+      const t = newImg.trim();
+      profile_image = t === "" ? null : t;
+    }
+
+    const { data, error: updateError } = await supabase
+      .from("actors")
+      .update({ name: trimmedName, profile_image })
+      .eq("id", actor.id)
+      .select("*")
+      .single();
+
+    if (updateError) {
+      console.error(updateError);
+      setError(updateError.message);
+      return;
+    }
+
+    setHauptdarsteller((prev) =>
+      prev.map((a) => (a.id === actor.id ? data : a))
+    );
+  };
+
+  const handleDeleteActor = async (actorId) => {
+    const ok = window.confirm("Diesen Hauptdarsteller wirklich löschen?");
+    if (!ok) return;
+
+    const { error: deleteError } = await supabase
+      .from("actors")
+      .delete()
+      .eq("id", actorId);
+
+    if (deleteError) {
+      console.error(deleteError);
+      setError(deleteError.message);
+      return;
+    }
+
+    setHauptdarsteller((prev) => prev.filter((a) => a.id !== actorId));
+    setSelectedMainActorIds((prev) => prev.filter((id) => id !== actorId));
+  };
+
+  const handleEditSupportActor = async (actor) => {
+    const newName = window.prompt(
+      "Neuer Name für Nebendarsteller:",
+      actor.name || ""
+    );
+    if (newName === null) return;
+    const trimmedName = newName.trim();
+    if (!trimmedName) return;
+
+    const newImg = window.prompt(
+      "Neue Bild-URL (leer lassen für unverändert, nur ein Leerzeichen für löschen):",
+      actor.profile_image || ""
+    );
+    let profile_image = actor.profile_image;
+    if (newImg !== null) {
+      const t = newImg.trim();
+      profile_image = t === "" ? null : t;
+    }
+
+    const { data, error: updateError } = await supabase
+      .from("actors2")
+      .update({ name: trimmedName, profile_image })
+      .eq("id", actor.id)
+      .select("*")
+      .single();
+
+    if (updateError) {
+      console.error(updateError);
+      setError(updateError.message);
+      return;
+    }
+
+    setNebendarsteller((prev) =>
+      prev.map((a) => (a.id === actor.id ? data : a))
+    );
+  };
+
+  const handleDeleteSupportActor = async (actorId) => {
+    const ok = window.confirm("Diesen Nebendarsteller wirklich löschen?");
+    if (!ok) return;
+
+    const { error: deleteError } = await supabase
+      .from("actors2")
+      .delete()
+      .eq("id", actorId);
+
+    if (deleteError) {
+      console.error(deleteError);
+      setError(deleteError.message);
+      return;
+    }
+
+    setNebendarsteller((prev) => prev.filter((a) => a.id !== actorId));
+    setSelectedSupportActorIds((prev) => prev.filter((id) => id !== actorId));
+  };
+
+  const handleDeleteTagGlobal = async (tagId) => {
+    const ok = window.confirm("Diesen Tag wirklich komplett löschen?");
+    if (!ok) return;
+
+    const { error: deleteError } = await supabase
+      .from("tags")
+      .delete()
+      .eq("id", tagId);
+
+    if (deleteError) {
+      console.error(deleteError);
+      setError(deleteError.message);
+      return;
+    }
+
+    setTags((prev) => prev.filter((t) => t.id !== tagId));
+    setSelectedTagIds((prev) => prev.filter((id) => id !== tagId));
+  };
+
   // ---------------- Filme anlegen / bearbeiten / löschen ----------------
 
   const resetFilmForm = () => {
@@ -547,7 +685,9 @@ export default function DashboardPage() {
       Array.isArray(film.main_actor_ids) ? film.main_actor_ids : []
     );
     setSelectedSupportActorIds(
-      Array.isArray(film.supporting_actor_ids) ? film.supporting_actor_ids : []
+      Array.isArray(film.supporting_actor_ids)
+        ? film.supporting_actor_ids
+        : []
     );
     setSelectedTagIds(Array.isArray(film.tag_ids) ? film.tag_ids : []);
   };
@@ -581,7 +721,7 @@ export default function DashboardPage() {
 
   return (
     <div className="page">
-      {/* Header identisch zum Home-Header, aber mit Link zur Hauptseite statt Dashboard */}
+      {/* Header wie auf Hauptseite, aber mit Link zurück zur Hauptseite */}
       <header className="topbar">
         <div className="logo-text">1337 Library</div>
 
@@ -712,7 +852,10 @@ export default function DashboardPage() {
           <section style={{ padding: "20px" }}>
             <div className="mx-auto max-w-5xl space-y-6">
               {error && (
-                <div className="text-red-400 text-sm rounded border border-red-600 bg-red-950/40 px-3 py-2">
+                <div
+                  className="text-red-400 text-sm rounded border border-red-600 bg-red-950/40 px-3 py-2"
+                  style={{ marginBottom: "8px" }}
+                >
                   Fehler: {error}
                 </div>
               )}
@@ -755,9 +898,7 @@ export default function DashboardPage() {
                             <input
                               className="mt-1 w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-sm"
                               value={filmTitel}
-                              onChange={(e) =>
-                                setFilmTitel(e.target.value)
-                              }
+                              onChange={(e) => setFilmTitel(e.target.value)}
                               placeholder="z. B. Interstellar"
                             />
                           </div>
@@ -768,9 +909,7 @@ export default function DashboardPage() {
                             <input
                               className="mt-1 w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-sm"
                               value={filmJahr}
-                              onChange={(e) =>
-                                setFilmJahr(e.target.value)
-                              }
+                              onChange={(e) => setFilmJahr(e.target.value)}
                               placeholder="2014"
                               type="number"
                             />
@@ -839,12 +978,7 @@ export default function DashboardPage() {
                                         setSelectedMainActorIds
                                       )
                                     }
-                                    className={
-                                      "px-2 py-[3px] rounded-full border text-[11px] " +
-                                      (active
-                                        ? "bg-sky-600 border-sky-500 text-white"
-                                        : "bg-slate-900 border-slate-700 text-slate-200")
-                                    }
+                                    className={chipClass(active)}
                                   >
                                     {a.name}
                                   </button>
@@ -879,12 +1013,7 @@ export default function DashboardPage() {
                                         setSelectedSupportActorIds
                                       )
                                     }
-                                    className={
-                                      "px-2 py-[3px] rounded-full border text-[11px] " +
-                                      (active
-                                        ? "bg-emerald-600 border-emerald-500 text-white"
-                                        : "bg-slate-900 border-slate-700 text-slate-200")
-                                    }
+                                    className={chipClass(active)}
                                   >
                                     {a.name}
                                   </button>
@@ -918,12 +1047,7 @@ export default function DashboardPage() {
                                         setSelectedTagIds
                                       )
                                     }
-                                    className={
-                                      "px-2 py-[3px] rounded-full border text-[11px] " +
-                                      (active
-                                        ? "bg-amber-600 border-amber-500 text-black"
-                                        : "bg-slate-900 border-slate-700 text-slate-200")
-                                    }
+                                    className={chipClass(active)}
                                   >
                                     {t.name}
                                   </button>
@@ -936,7 +1060,7 @@ export default function DashboardPage() {
                         <div className="flex gap-2 pt-2">
                           <button
                             type="submit"
-                            className="bg-sky-600 px-4 py-2 rounded text-xs font-medium disabled:opacity-60"
+                            className="bg-orange-500 px-4 py-2 rounded text-xs font-medium disabled:opacity-60 text-black"
                             disabled={!filmTitel.trim()}
                           >
                             {editingFilmId
@@ -1025,7 +1149,7 @@ export default function DashboardPage() {
                                           return (
                                             <span
                                               key={id}
-                                              className="text-[10px] px-2 py-[1px] rounded-full border border-slate-700 bg-slate-900 text-slate-100"
+                                              className={chipClass(true)}
                                             >
                                               {t.name}
                                             </span>
@@ -1035,7 +1159,7 @@ export default function DashboardPage() {
                                     )}
 
                                   {f.file_url && (
-                                    <div className="text-sky-300 text-[11px] break-all mt-1">
+                                    <div className="text-orange-400 text-[11px] break-all mt-1">
                                       File: {f.file_url}
                                     </div>
                                   )}
@@ -1069,116 +1193,209 @@ export default function DashboardPage() {
                   <section className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 space-y-4 text-xs">
                     <h2 className="text-sm font-semibold">Stammdaten</h2>
 
-                    <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="grid gap-4 sm:grid-cols-2">
                       {/* Hauptdarsteller */}
-                      <form onSubmit={handleAddActor} className="space-y-1">
-                        <div className="font-medium">Hauptdarsteller</div>
-                        <input
-                          className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1"
-                          placeholder="Name"
-                          value={newActorName}
-                          onChange={(e) =>
-                            setNewActorName(e.target.value)
-                          }
-                        />
-                        <input
-                          className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1"
-                          placeholder="Bild-URL (optional)"
-                          value={newActorImage}
-                          onChange={(e) =>
-                            setNewActorImage(e.target.value)
-                          }
-                        />
-                        <button
-                          type="submit"
-                          className="mt-1 bg-sky-600 px-2 py-1 rounded text-[10px]"
-                          disabled={!newActorName.trim()}
-                        >
-                          + Haupt
-                        </button>
-                      </form>
+                      <div className="space-y-2">
+                        <form onSubmit={handleAddActor} className="space-y-1">
+                          <div className="font-medium">Hauptdarsteller</div>
+                          <input
+                            className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1"
+                            placeholder="Name"
+                            value={newActorName}
+                            onChange={(e) =>
+                              setNewActorName(e.target.value)
+                            }
+                          />
+                          <input
+                            className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1"
+                            placeholder="Bild-URL (optional)"
+                            value={newActorImage}
+                            onChange={(e) =>
+                              setNewActorImage(e.target.value)
+                            }
+                          />
+                          <button
+                            type="submit"
+                            className="mt-1 bg-orange-500 px-2 py-1 rounded text-[10px] text-black disabled:opacity-60"
+                            disabled={!newActorName.trim()}
+                          >
+                            + Haupt
+                          </button>
+                        </form>
+
+                        <div className="max-h-32 overflow-y-auto space-y-1 mt-1">
+                          {hauptdarsteller.map((a) => (
+                            <div
+                              key={a.id}
+                              className="flex items-center justify-between gap-2 border border-slate-800 rounded px-2 py-1 bg-slate-950"
+                            >
+                              <span>{a.name}</span>
+                              <div className="flex gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleEditActor(a)}
+                                  className="text-[10px] px-2 py-[2px] rounded border border-slate-600 text-slate-100 hover:bg-slate-700"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteActor(a.id)}
+                                  className="text-[10px] px-2 py-[2px] rounded border border-red-600 text-red-200 hover:bg-red-700/70"
+                                >
+                                  X
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
 
                       {/* Nebendarsteller */}
-                      <form
-                        onSubmit={handleAddSupportActor}
-                        className="space-y-1"
-                      >
-                        <div className="font-medium">Nebendarsteller</div>
-                        <input
-                          className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1"
-                          placeholder="Name"
-                          value={newSupportName}
-                          onChange={(e) =>
-                            setNewSupportName(e.target.value)
-                          }
-                        />
-                        <input
-                          className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1"
-                          placeholder="Bild-URL (optional)"
-                          value={newSupportImage}
-                          onChange={(e) =>
-                            setNewSupportImage(e.target.value)
-                          }
-                        />
-                        <button
-                          type="submit"
-                          className="mt-1 bg-emerald-600 px-2 py-1 rounded text-[10px]"
-                          disabled={!newSupportName.trim()}
+                      <div className="space-y-2">
+                        <form
+                          onSubmit={handleAddSupportActor}
+                          className="space-y-1"
                         >
-                          + Neben
-                        </button>
-                      </form>
+                          <div className="font-medium">Nebendarsteller</div>
+                          <input
+                            className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1"
+                            placeholder="Name"
+                            value={newSupportName}
+                            onChange={(e) =>
+                              setNewSupportName(e.target.value)
+                            }
+                          />
+                          <input
+                            className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1"
+                            placeholder="Bild-URL (optional)"
+                            value={newSupportImage}
+                            onChange={(e) =>
+                              setNewSupportImage(e.target.value)
+                            }
+                          />
+                          <button
+                            type="submit"
+                            className="mt-1 bg-orange-500 px-2 py-1 rounded text-[10px] text-black disabled:opacity-60"
+                            disabled={!newSupportName.trim()}
+                          >
+                            + Neben
+                          </button>
+                        </form>
+
+                        <div className="max-h-32 overflow-y-auto space-y-1 mt-1">
+                          {nebendarsteller.map((a) => (
+                            <div
+                              key={a.id}
+                              className="flex items-center justify-between gap-2 border border-slate-800 rounded px-2 py-1 bg-slate-950"
+                            >
+                              <span>{a.name}</span>
+                              <div className="flex gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleEditSupportActor(a)}
+                                  className="text-[10px] px-2 py-[2px] rounded border border-slate-600 text-slate-100 hover:bg-slate-700"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleDeleteSupportActor(a.id)
+                                  }
+                                  className="text-[10px] px-2 py-[2px] rounded border border-red-600 text-red-200 hover:bg-red-700/70"
+                                >
+                                  X
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
 
                       {/* Studios */}
-                      <form onSubmit={handleAddStudio} className="space-y-1">
-                        <div className="font-medium">Studios</div>
-                        <input
-                          className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1"
-                          placeholder="Studio"
-                          value={newStudioName}
-                          onChange={(e) =>
-                            setNewStudioName(e.target.value)
-                          }
-                        />
-                        <input
-                          className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1"
-                          placeholder="Bild-URL (optional)"
-                          value={newStudioImage}
-                          onChange={(e) =>
-                            setNewStudioImage(e.target.value)
-                          }
-                        />
-                        <button
-                          type="submit"
-                          className="mt-1 bg-indigo-600 px-2 py-1 rounded text-[10px]"
-                          disabled={!newStudioName.trim()}
-                        >
-                          + Studio
-                        </button>
-                      </form>
+                      <div className="space-y-2">
+                        <form onSubmit={handleAddStudio} className="space-y-1">
+                          <div className="font-medium">Studios</div>
+                          <input
+                            className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1"
+                            placeholder="Studio"
+                            value={newStudioName}
+                            onChange={(e) =>
+                              setNewStudioName(e.target.value)
+                            }
+                          />
+                          <input
+                            className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1"
+                            placeholder="Bild-URL (optional)"
+                            value={newStudioImage}
+                            onChange={(e) =>
+                              setNewStudioImage(e.target.value)
+                            }
+                          />
+                          <button
+                            type="submit"
+                            className="mt-1 bg-orange-500 px-2 py-1 rounded text-[10px] text-black disabled:opacity-60"
+                            disabled={!newStudioName.trim()}
+                          >
+                            + Studio
+                          </button>
+                        </form>
+
+                        <div className="max-h-32 overflow-y-auto space-y-1 mt-1">
+                          {studios.map((s) => (
+                            <div
+                              key={s.id}
+                              className="flex items-center justify-between gap-2 border border-slate-800 rounded px-2 py-1 bg-slate-950"
+                            >
+                              <span>{s.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
 
                       {/* Tags */}
-                      <form onSubmit={handleAddTag} className="space-y-1">
-                        <div className="font-medium">Tags</div>
-                        <input
-                          className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1"
-                          placeholder="Tag-Name"
-                          value={newTagName}
-                          onChange={(e) =>
-                            setNewTagName(e.target.value)
-                          }
-                        />
-                        <button
-                          type="submit"
-                          className="mt-1 bg-amber-600 px-2 py-1 rounded text-[10px]"
-                          disabled={!newTagName.trim()}
-                        >
-                          + Tag
-                        </button>
-                        <div className="text-[10px] text-slate-500 mt-1">
-                          Vorhanden: {tags.length}
+                      <div className="space-y-2">
+                        <form onSubmit={handleAddTag} className="space-y-1">
+                          <div className="font-medium">Tags</div>
+                          <input
+                            className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1"
+                            placeholder="Tag-Name"
+                            value={newTagName}
+                            onChange={(e) =>
+                              setNewTagName(e.target.value)
+                            }
+                          />
+                          <button
+                            type="submit"
+                            className="mt-1 bg-orange-500 px-2 py-1 rounded text-[10px] text-black disabled:opacity-60"
+                            disabled={!newTagName.trim()}
+                          >
+                            + Tag
+                          </button>
+                          <div className="text-[10px] text-slate-500 mt-1">
+                            Vorhanden: {tags.length}
+                          </div>
+                        </form>
+
+                        <div className="max-h-32 overflow-y-auto space-y-1 mt-1">
+                          {tags.map((t) => (
+                            <div
+                              key={t.id}
+                              className="flex items-center justify-between gap-2 border border-slate-800 rounded px-2 py-1 bg-slate-950"
+                            >
+                              <span>{t.name}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteTagGlobal(t.id)}
+                                className="text-[10px] px-2 py-[2px] rounded border border-red-600 text-red-200 hover:bg-red-700/70"
+                              >
+                                X
+                              </button>
+                            </div>
+                          ))}
                         </div>
-                      </form>
+                      </div>
                     </div>
                   </section>
                 </>
