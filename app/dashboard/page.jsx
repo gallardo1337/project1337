@@ -198,8 +198,8 @@ export default function DashboardPage() {
   const [loginErr, setLoginErr] = useState(null);
   const [loginLoading, setLoginLoading] = useState(false);
 
-  // Film-Ansicht: Tabs
-  const [activeFilmSection, setActiveFilmSection] = useState("stats"); // "stats" | "new"
+  // Tabs: Filmestatistik / Neuer Film / Stammdaten
+  const [activeFilmSection, setActiveFilmSection] = useState("stats"); // "stats" | "new" | "meta"
 
   // Daten
   const [hauptdarsteller, setHauptdarsteller] = useState([]);
@@ -229,8 +229,7 @@ export default function DashboardPage() {
   const [filmStudioId, setFilmStudioId] = useState("");
   const [filmFileUrl, setFilmFileUrl] = useState("");
   const [selectedMainActorIds, setSelectedMainActorIds] = useState([]);
-  const [selectedSupportActorIds, setSelectedSupportActorIds] =
-    useState([]);
+  const [selectedSupportActorIds, setSelectedSupportActorIds] = useState([]);
   const [selectedTagIds, setSelectedTagIds] = useState([]);
 
   const [editingFilmId, setEditingFilmId] = useState(null);
@@ -872,7 +871,7 @@ export default function DashboardPage() {
                 <p className="text-slate-300 text-sm">Lade Daten…</p>
               ) : (
                 <>
-                  {/* Film-Tab-Bereich: Filmestatistik / Neuen Film hinzufügen */}
+                  {/* Tabs: Filmestatistik / Neuer Film / Stammdaten */}
                   <section className="space-y-4">
                     <div className="inline-flex rounded-full border border-slate-700 bg-slate-900/60 p-1 text-xs">
                       <button
@@ -899,8 +898,21 @@ export default function DashboardPage() {
                       >
                         Neuen Film hinzufügen
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveFilmSection("meta")}
+                        className={
+                          "px-3 py-1 rounded-full transition-colors " +
+                          (activeFilmSection === "meta"
+                            ? "bg-orange-500 text-black"
+                            : "text-slate-200")
+                        }
+                      >
+                        Stammdaten
+                      </button>
                     </div>
 
+                    {/* Tab: Neuer Film */}
                     {activeFilmSection === "new" && (
                       <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 space-y-3">
                         <div className="flex items-center justify-between gap-2">
@@ -1116,6 +1128,7 @@ export default function DashboardPage() {
                       </div>
                     )}
 
+                    {/* Tab: Filmestatistik */}
                     {activeFilmSection === "stats" && (
                       <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 space-y-3">
                         <div className="flex items-center justify-between">
@@ -1235,212 +1248,235 @@ export default function DashboardPage() {
                         )}
                       </div>
                     )}
-                  </section>
 
-                  {/* Stammdaten-Kurzbereich */}
-                  <section className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 space-y-4 text-xs">
-                    <h2 className="text-sm font-semibold">Stammdaten</h2>
+                    {/* Tab: Stammdaten */}
+                    {activeFilmSection === "meta" && (
+                      <section className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 space-y-4 text-xs">
+                        <h2 className="text-sm font-semibold">Stammdaten</h2>
 
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      {/* Hauptdarsteller */}
-                      <div className="space-y-2">
-                        <form onSubmit={handleAddActor} className="space-y-1">
-                          <div className="font-medium">Hauptdarsteller</div>
-                          <input
-                            className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1"
-                            placeholder="Name"
-                            value={newActorName}
-                            onChange={(e) =>
-                              setNewActorName(e.target.value)
-                            }
-                          />
-
-                          {/* Upload + Crop für Hauptdarsteller */}
-                          <ActorImageUploader
-                            onUploaded={(url) => setNewActorImage(url)}
-                          />
-
-                          <button
-                            type="submit"
-                            className="mt-1 bg-orange-500 px-2 py-1 rounded text-[10px] text-black disabled:opacity-60"
-                            disabled={!newActorName.trim()}
-                          >
-                            + Haupt
-                          </button>
-                        </form>
-
-                        <div className="max-h-32 overflow-y-auto space-y-1 mt-1">
-                          {hauptdarsteller.map((a) => (
-                            <div
-                              key={a.id}
-                              className="flex items-center justify-between gap-2 border border-slate-800 rounded px-2 py-1 bg-slate-950"
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          {/* Hauptdarsteller */}
+                          <div className="space-y-2">
+                            <form
+                              onSubmit={handleAddActor}
+                              className="space-y-1"
                             >
-                              <span>{a.name}</span>
-                              <div className="flex gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() => handleEditActor(a)}
-                                  className="text-[10px] px-2 py-[2px] rounded border border-slate-600 text-slate-100 hover:bg-slate-700"
-                                >
-                                  Edit
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteActor(a.id)}
-                                  className="text-[10px] px-2 py-[2px] rounded border border-red-600 text-red-200 hover:bg-red-700/70"
-                                >
-                                  X
-                                </button>
+                              <div className="font-medium">
+                                Hauptdarsteller
                               </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+                              <input
+                                className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1"
+                                placeholder="Name"
+                                value={newActorName}
+                                onChange={(e) =>
+                                  setNewActorName(e.target.value)
+                                }
+                              />
 
-                      {/* Nebendarsteller */}
-                      <div className="space-y-2">
-                        <form
-                          onSubmit={handleAddSupportActor}
-                          className="space-y-1"
-                        >
-                          <div className="font-medium">Nebendarsteller</div>
-                          <input
-                            className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1"
-                            placeholder="Name"
-                            value={newSupportName}
-                            onChange={(e) =>
-                              setNewSupportName(e.target.value)
-                            }
-                          />
+                              {/* Upload + Crop für Hauptdarsteller */}
+                              <ActorImageUploader
+                                onUploaded={(url) => setNewActorImage(url)}
+                              />
 
-                          {/* Upload + Crop für Nebendarsteller */}
-                          <ActorImageUploader
-                            onUploaded={(url) => setNewSupportImage(url)}
-                          />
-
-                          <button
-                            type="submit"
-                            className="mt-1 bg-orange-500 px-2 py-1 rounded text-[10px] text-black disabled:opacity-60"
-                            disabled={!newSupportName.trim()}
-                          >
-                            + Neben
-                          </button>
-                        </form>
-
-                        <div className="max-h-32 overflow-y-auto space-y-1 mt-1">
-                          {nebendarsteller.map((a) => (
-                            <div
-                              key={a.id}
-                              className="flex items-center justify-between gap-2 border border-slate-800 rounded px-2 py-1 bg-slate-950"
-                            >
-                              <span>{a.name}</span>
-                              <div className="flex gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() => handleEditSupportActor(a)}
-                                  className="text-[10px] px-2 py-[2px] rounded border border-slate-600 text-slate-100 hover:bg-slate-700"
-                                >
-                                  Edit
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleDeleteSupportActor(a.id)
-                                  }
-                                  className="text-[10px] px-2 py-[2px] rounded border border-red-600 text-red-200 hover:bg-red-700/70"
-                                >
-                                  X
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Studios */}
-                      <div className="space-y-2">
-                        <form onSubmit={handleAddStudio} className="space-y-1">
-                          <div className="font-medium">Studios</div>
-                          <input
-                            className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1"
-                            placeholder="Studio"
-                            value={newStudioName}
-                            onChange={(e) =>
-                              setNewStudioName(e.target.value)
-                            }
-                          />
-                          <input
-                            className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1"
-                            placeholder="Bild-URL (optional)"
-                            value={newStudioImage}
-                            onChange={(e) =>
-                              setNewStudioImage(e.target.value)
-                            }
-                          />
-                          <button
-                            type="submit"
-                            className="mt-1 bg-orange-500 px-2 py-1 rounded text-[10px] text-black disabled:opacity-60"
-                            disabled={!newStudioName.trim()}
-                          >
-                            + Studio
-                          </button>
-                        </form>
-
-                        <div className="max-h-32 overflow-y-auto space-y-1 mt-1">
-                          {studios.map((s) => (
-                            <div
-                              key={s.id}
-                              className="flex items-center justify-between gap-2 border border-slate-800 rounded px-2 py-1 bg-slate-950"
-                            >
-                              <span>{s.name}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Tags */}
-                      <div className="space-y-2">
-                        <form onSubmit={handleAddTag} className="space-y-1">
-                          <div className="font-medium">Tags</div>
-                          <input
-                            className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1"
-                            placeholder="Tag-Name"
-                            value={newTagName}
-                            onChange={(e) =>
-                              setNewTagName(e.target.value)
-                            }
-                          />
-                          <button
-                            type="submit"
-                            className="mt-1 bg-orange-500 px-2 py-1 rounded text-[10px] text-black disabled:opacity-60"
-                            disabled={!newTagName.trim()}
-                          >
-                            + Tag
-                          </button>
-                          <div className="text-[10px] text-slate-500 mt-1">
-                            Vorhanden: {tags.length}
-                          </div>
-                        </form>
-
-                        <div className="max-h-32 overflow-y-auto space-y-1 mt-1">
-                          {tags.map((t) => (
-                            <div
-                              key={t.id}
-                              className="flex items-center justify-between gap-2 border border-slate-800 rounded px-2 py-1 bg-slate-950"
-                            >
-                              <span>{t.name}</span>
                               <button
-                                type="button"
-                                onClick={() => handleDeleteTagGlobal(t.id)}
-                                className="text-[10px] px-2 py-[2px] rounded border border-red-600 text-red-200 hover:bg-red-700/70"
+                                type="submit"
+                                className="mt-1 bg-orange-500 px-2 py-1 rounded text-[10px] text-black disabled:opacity-60"
+                                disabled={!newActorName.trim()}
                               >
-                                X
+                                + Haupt
                               </button>
+                            </form>
+
+                            <div className="max-h-32 overflow-y-auto space-y-1 mt-1">
+                              {hauptdarsteller.map((a) => (
+                                <div
+                                  key={a.id}
+                                  className="flex items-center justify-between gap-2 border border-slate-800 rounded px-2 py-1 bg-slate-950"
+                                >
+                                  <span>{a.name}</span>
+                                  <div className="flex gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleEditActor(a)}
+                                      className="text-[10px] px-2 py-[2px] rounded border border-slate-600 text-slate-100 hover:bg-slate-700"
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleDeleteActor(a.id)
+                                      }
+                                      className="text-[10px] px-2 py-[2px] rounded border border-red-600 text-red-200 hover:bg-red-700/70"
+                                    >
+                                      X
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
                             </div>
-                          ))}
+                          </div>
+
+                          {/* Nebendarsteller */}
+                          <div className="space-y-2">
+                            <form
+                              onSubmit={handleAddSupportActor}
+                              className="space-y-1"
+                            >
+                              <div className="font-medium">
+                                Nebendarsteller
+                              </div>
+                              <input
+                                className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1"
+                                placeholder="Name"
+                                value={newSupportName}
+                                onChange={(e) =>
+                                  setNewSupportName(e.target.value)
+                                }
+                              />
+
+                              {/* Upload + Crop für Nebendarsteller */}
+                              <ActorImageUploader
+                                onUploaded={(url) =>
+                                  setNewSupportImage(url)
+                                }
+                              />
+
+                              <button
+                                type="submit"
+                                className="mt-1 bg-orange-500 px-2 py-1 rounded text-[10px] text-black disabled:opacity-60"
+                                disabled={!newSupportName.trim()}
+                              >
+                                + Neben
+                              </button>
+                            </form>
+
+                            <div className="max-h-32 overflow-y-auto space-y-1 mt-1">
+                              {nebendarsteller.map((a) => (
+                                <div
+                                  key={a.id}
+                                  className="flex items-center justify-between gap-2 border border-slate-800 rounded px-2 py-1 bg-slate-950"
+                                >
+                                  <span>{a.name}</span>
+                                  <div className="flex gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleEditSupportActor(a)
+                                      }
+                                      className="text-[10px] px-2 py-[2px] rounded border border-slate-600 text-slate-100 hover:bg-slate-700"
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleDeleteSupportActor(a.id)
+                                      }
+                                      className="text-[10px] px-2 py-[2px] rounded border border-red-600 text-red-200 hover:bg-red-700/70"
+                                    >
+                                      X
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Studios */}
+                          <div className="space-y-2">
+                            <form
+                              onSubmit={handleAddStudio}
+                              className="space-y-1"
+                            >
+                              <div className="font-medium">Studios</div>
+                              <input
+                                className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1"
+                                placeholder="Studio"
+                                value={newStudioName}
+                                onChange={(e) =>
+                                  setNewStudioName(e.target.value)
+                                }
+                              />
+                              <input
+                                className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1"
+                                placeholder="Bild-URL (optional)"
+                                value={newStudioImage}
+                                onChange={(e) =>
+                                  setNewStudioImage(e.target.value)
+                                }
+                              />
+                              <button
+                                type="submit"
+                                className="mt-1 bg-orange-500 px-2 py-1 rounded text-[10px] text-black disabled:opacity-60"
+                                disabled={!newStudioName.trim()}
+                              >
+                                + Studio
+                              </button>
+                            </form>
+
+                            <div className="max-h-32 overflow-y-auto space-y-1 mt-1">
+                              {studios.map((s) => (
+                                <div
+                                  key={s.id}
+                                  className="flex items-center justify-between gap-2 border border-slate-800 rounded px-2 py-1 bg-slate-950"
+                                >
+                                  <span>{s.name}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Tags */}
+                          <div className="space-y-2">
+                            <form
+                              onSubmit={handleAddTag}
+                              className="space-y-1"
+                            >
+                              <div className="font-medium">Tags</div>
+                              <input
+                                className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1"
+                                placeholder="Tag-Name"
+                                value={newTagName}
+                                onChange={(e) =>
+                                  setNewTagName(e.target.value)
+                                }
+                              />
+                              <button
+                                type="submit"
+                                className="mt-1 bg-orange-500 px-2 py-1 rounded text-[10px] text-black disabled:opacity-60"
+                                disabled={!newTagName.trim()}
+                              >
+                                + Tag
+                              </button>
+                              <div className="text-[10px] text-slate-500 mt-1">
+                                Vorhanden: {tags.length}
+                              </div>
+                            </form>
+
+                            <div className="max-h-32 overflow-y-auto space-y-1 mt-1">
+                              {tags.map((t) => (
+                                <div
+                                  key={t.id}
+                                  className="flex items-center justify-between gap-2 border border-slate-800 rounded px-2 py-1 bg-slate-950"
+                                >
+                                  <span>{t.name}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleDeleteTagGlobal(t.id)
+                                    }
+                                    className="text-[10px] px-2 py-[2px] rounded border border-red-600 text-red-200 hover:bg-red-700/70"
+                                  >
+                                    X
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
+                      </section>
+                    )}
                   </section>
                 </>
               )}
