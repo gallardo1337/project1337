@@ -149,10 +149,7 @@ function VersionHint() {
                       {entry.version}
                     </div>
                     <div
-                      style={{
-                        fontSize: "0.8rem",
-                        color: "#9ca3af"
-                      }}
+                      style={{ fontSize: "0.8rem", color: "#9ca3af" }}
                     >
                       {entry.date}
                     </div>
@@ -198,17 +195,21 @@ export default function HomePage() {
 
   // Login-Status
   const [loggedIn, setLoggedIn] = useState(false);
-  const [loginUser, setLoginUser] = useState("");
+  const [loginUser, setLoginUser] = useState("gallardo1337");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginErr, setLoginErr] = useState(null);
   const [loginLoading, setLoginLoading] = useState(false);
 
-  // Beim Laden prüfen, ob wir schon "eingeloggt" sind (localStorage)
+  // Beim Laden prüfen, ob Session existiert
   useEffect(() => {
     if (typeof window === "undefined") return;
     const flag = window.localStorage.getItem("auth_1337_flag");
-    if (flag === "1") {
+    const user = window.localStorage.getItem("auth_1337_user");
+    if (flag === "1" && user) {
       setLoggedIn(true);
+      setLoginUser(user);
+    } else {
+      setLoggedIn(false);
     }
   }, []);
 
@@ -344,7 +345,10 @@ export default function HomePage() {
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: loginPassword })
+        body: JSON.stringify({
+          username: loginUser,
+          password: loginPassword
+        })
       });
 
       if (!res.ok) {
@@ -358,9 +362,11 @@ export default function HomePage() {
 
       if (typeof window !== "undefined") {
         window.localStorage.setItem("auth_1337_flag", "1");
+        window.localStorage.setItem("auth_1337_user", loginUser);
       }
       setLoggedIn(true);
       setLoginErr(null);
+      setLoginPassword("");
     } catch (error) {
       console.error(error);
       setLoginErr("Netzwerkfehler beim Login.");
@@ -373,10 +379,11 @@ export default function HomePage() {
     try {
       await fetch("/api/logout", { method: "POST" });
     } catch {
-      // ignorieren, lokal reicht
+      // ignorieren, localStorage reicht
     }
     if (typeof window !== "undefined") {
       window.localStorage.removeItem("auth_1337_flag");
+      window.localStorage.removeItem("auth_1337_user");
     }
     setLoggedIn(false);
     setSearch("");
@@ -422,7 +429,7 @@ export default function HomePage() {
                   color: "#e5e7eb",
                   fontSize: "0.8rem",
                   padding: "4px 8px",
-                  width: 110
+                  width: 130
                 }}
               />
               <input
@@ -469,7 +476,9 @@ export default function HomePage() {
                 color: "#9ca3af"
               }}
             >
-              <span style={{ color: "#4ade80" }}>Eingeloggt</span>
+              <span style={{ color: "#4ade80" }}>
+                Willkommen, {loginUser}
+              </span>
               <a
                 href="/admin"
                 style={{
