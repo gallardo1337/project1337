@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import dynamic from "next/dynamic";
-import Head from "next/head";
 
 // ActorImageUploader nur im Client laden (wegen react-easy-crop / Canvas)
 const ActorImageUploader = dynamic(
@@ -672,9 +671,6 @@ export default function DashboardPage() {
 
   return (
     <>
-      <Head>
-        <title>1337 Dashboard</title>
-      </Head>
 
       <div className="page min-h-screen bg-gradient-to-br from-neutral-950 via-black to-neutral-900 text-neutral-100 text-[15px]">
         {/* Header */}
