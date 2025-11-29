@@ -1142,9 +1142,23 @@ export default function DashboardPage() {
                                     </span>
                                   )}
                                 </div>
-                                <span className="text-xs text-neutral-500 group-open:text-red-400">
-                                  Details anzeigen
-                                </span>
+                                <div className="flex items-center gap-1 text-xs text-neutral-500 group-open:text-red-400">
+                                  <span>Details</span>
+                                  <svg
+                                    className="h-3 w-3 transform transition-transform group-open:rotate-90"
+                                    viewBox="0 0 20 20"
+                                    fill="none"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                  >
+                                    <path
+                                      d="M7 5L12 10L7 15"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    />
+                                  </svg>
+                                </div>
                               </summary>
 
                               <div className="mt-3 border-t border-neutral-800 pt-3 space-y-1.5">
