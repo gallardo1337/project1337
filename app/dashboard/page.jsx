@@ -1,5 +1,9 @@
 "use client";
 
+export const metadata = {
+  title: "1337 Dashboard",
+};
+
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import dynamic from "next/dynamic";
