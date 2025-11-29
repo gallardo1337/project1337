@@ -21,7 +21,7 @@ const CHANGELOG = [
     version: "0.3.0",
     date: "2025-11-28",
     items: [
-      "Dashboard neu strukturiert: Tabs für Filmestatistik, Neuen Film hinzufügen und Stammdaten",
+      "Dashboard neu strukturiert: Tabs für Filme, Neuen Film hinzufügen und Stammdaten",
       "Stammdaten-Bereich aus Filmformular ausgelagert (Übersicht + Bearbeiten/Löschen jeder Kategorie)",
       "Hauptdarsteller- und Nebendarsteller-Formulare mit integriertem Upload & Crop (ActorImageUploader) statt manueller Bild-URL",
       "Bild-Upload via Hostinger (upload.php) integriert",
@@ -139,7 +139,7 @@ export default function DashboardPage() {
   const [loginErr, setLoginErr] = useState(null);
   const [loginLoading, setLoginLoading] = useState(false);
 
-  // Tabs: Filmestatistik / Neuer Film / Stammdaten
+  // Tabs: Filme / Neuer Film / Stammdaten
   const [activeFilmSection, setActiveFilmSection] = useState("stats"); // "stats" | "new" | "meta"
 
   // Daten
@@ -168,9 +168,7 @@ export default function DashboardPage() {
   const [filmTitel, setFilmTitel] = useState("");
   const [filmJahr, setFilmJahr] = useState("");
   const [filmStudioId, setFilmStudioId] = useState("");
-  const [filmFileUrl, setFilmFileUrl] = useState(
-    "http://192.168.178.72/1337/"
-  );
+  const [filmFileUrl, setFilmFileUrl] = useState("");
   const [selectedMainActorIds, setSelectedMainActorIds] = useState([]);
   const [selectedSupportActorIds, setSelectedSupportActorIds] = useState([]);
   const [selectedTagIds, setSelectedTagIds] = useState([]);
@@ -547,7 +545,7 @@ export default function DashboardPage() {
     setFilmTitel("");
     setFilmJahr("");
     setFilmStudioId("");
-    setFilmFileUrl("http://192.168.178.72/1337/");
+    setFilmFileUrl("");
     setSelectedMainActorIds([]);
     setSelectedSupportActorIds([]);
     setSelectedTagIds([]);
@@ -627,7 +625,7 @@ export default function DashboardPage() {
     setFilmTitel(film.title || "");
     setFilmJahr(film.year ? String(film.year) : "");
     setFilmStudioId(film.studio_id || "");
-    setFilmFileUrl(film.file_url || "http://192.168.178.72/1337/");
+    setFilmFileUrl(film.file_url || "");
     setSelectedMainActorIds(
       Array.isArray(film.main_actor_ids) ? film.main_actor_ids : []
     );
@@ -667,96 +665,6 @@ export default function DashboardPage() {
   };
 
   // ---------------- Render ----------------
-
-  // Hilfs-Component: Sidebar-Inhalt (damit wir ihn für Desktop & Mobile nutzen können)
-  const SidebarContent = () => (
-    <>
-      <div className="rounded-3xl border border-neutral-800 bg-gradient-to-b from-neutral-950/90 to-black/90 px-5 py-5 shadow-2xl shadow-black/70">
-        <h2 className="mb-1 text-base font-semibold text-neutral-50">
-          Bereiche
-        </h2>
-        <p className="mb-4 text-xs text-neutral-500">
-          Wähle aus, was du bearbeiten möchtest.
-        </p>
-
-        <div className="flex flex-row gap-2 lg:flex-col">
-          <button
-            type="button"
-            onClick={() => setActiveFilmSection("stats")}
-            className={
-              "flex flex-1 items-center justify-between gap-2 rounded-2xl px-4 py-2.5 text-sm transition-all " +
-              (activeFilmSection === "stats"
-                ? "bg-red-600 text-black shadow-lg shadow-red-900/60"
-                : "bg-neutral-900/80 text-neutral-200 hover:bg-neutral-800 hover:text-neutral-50")
-            }
-          >
-            <span>Filmestatistik</span>
-            <span className="text-xs opacity-80">{filme.length}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveFilmSection("new")}
-            className={
-              "flex flex-1 items-center justify-between gap-2 rounded-2xl px-4 py-2.5 text-sm transition-all " +
-              (activeFilmSection === "new"
-                ? "bg-red-600 text-black shadow-lg shadow-red-900/60"
-                : "bg-neutral-900/80 text-neutral-200 hover:bg-neutral-800 hover:text-neutral-50")
-            }
-          >
-            <span>Neuer Film</span>
-            <span className="text-xs opacity-80">+1</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveFilmSection("meta")}
-            className={
-              "flex flex-1 items-center justify-between gap-2 rounded-2xl px-4 py-2.5 text-sm transition-all " +
-              (activeFilmSection === "meta"
-                ? "bg-red-600 text-black shadow-lg shadow-red-900/60"
-                : "bg-neutral-900/80 text-neutral-200 hover:bg-neutral-800 hover:text-neutral-50")
-            }
-          >
-            <span>Stammdaten</span>
-            <span className="text-xs opacity-80">{tags.length} Tags</span>
-          </button>
-        </div>
-      </div>
-
-      <div className="rounded-3xl border border-neutral-800 bg-neutral-950/90 px-5 py-4 text-sm shadow-xl shadow-black/70">
-        <div className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">
-          Überblick
-        </div>
-        <div className="space-y-2 text-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-neutral-300">Filme</span>
-            <span className="font-semibold text-neutral-50">
-              {filme.length}
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-neutral-300">Hauptdarsteller</span>
-            <span className="font-semibold text-neutral-50">
-              {hauptdarsteller.length}
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-neutral-300">Nebendarsteller</span>
-            <span className="font-semibold text-neutral-50">
-              {nebendarsteller.length}
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-neutral-300">Studios</span>
-            <span className="font-semibold text-neutral-50">
-              {studios.length}
-            </span>
-          </div>
-        </div>
-      </div>
-    </>
-  );
 
   return (
     <div className="page min-h-screen bg-gradient-to-br from-neutral-950 via-black to-neutral-900 text-neutral-100 text-[15px]">
@@ -868,641 +776,698 @@ export default function DashboardPage() {
                 <span>Lade Daten…</span>
               </div>
             ) : (
-              <>
-                {/* Desktop-Layout: Film-Box exakt mittig, Sidebar absolut links daneben */}
-                <div className="hidden lg:flex justify-center w-full">
-                  <div className="relative w-full max-w-4xl">
-                    {/* Sidebar links, beeinflusst das Zentrieren nicht */}
-                    <aside className="absolute -left-72 top-0 w-64 space-y-4">
-                      <SidebarContent />
-                    </aside>
+              <div className="flex flex-col gap-6 lg:flex-row">
+                {/* Sidebar */}
+                <aside className="w-full lg:w-64 space-y-4">
+                  {/* Bereiche – ohne Überschrift & Beschreibung */}
+                  <div className="rounded-3xl border border-neutral-800 bg-gradient-to-b from-neutral-950/90 to-black/90 px-5 py-5 shadow-2xl shadow-black/70">
+                    <div className="flex flex-row gap-2 lg:flex-col">
+                      {/* Filme */}
+                      <button
+                        type="button"
+                        onClick={() => setActiveFilmSection("stats")}
+                        className={
+                          "flex flex-1 items-center justify-between gap-2 rounded-2xl px-4 py-2.5 text-sm transition-all " +
+                          (activeFilmSection === "stats"
+                            ? "bg-red-600 text-black shadow-lg shadow-red-900/60"
+                            : "bg-neutral-900/80 text-neutral-200 hover:bg-neutral-800 hover:text-neutral-50")
+                        }
+                      >
+                        <span>Filme</span>
+                      </button>
 
-                    {/* Haupt-Content (Filmestatistik / Neuer Film / Stammdaten) */}
-                    <section className="w-full space-y-5">
-                      {/* Tab: Neuer Film */}
-                      {activeFilmSection === "new" && (
-                        <div className="group rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950/95 to-black/95 p-6 shadow-2xl shadow-black/70 transition-transform duration-200">
-                          <div className="mb-4 flex items-center justify-between gap-2">
-                            <div>
-                              <h2 className="text-xl font-semibold text-neutral-50">
-                                {editingFilmId
-                                  ? "Film bearbeiten"
-                                  : "Neuen Film hinzufügen"}
-                              </h2>
-                              <p className="text-sm text-neutral-500">
-                                Titel, Jahr, Studio, Cast und Tags festlegen.
-                              </p>
-                            </div>
-                            {editingFilmId && (
-                              <button
-                                type="button"
-                                onClick={handleCancelEdit}
-                                className="text-sm text-neutral-300 underline underline-offset-4 hover:text-neutral-50"
-                              >
-                                Bearbeitung abbrechen
-                              </button>
+                      {/* Neuer Film */}
+                      <button
+                        type="button"
+                        onClick={() => setActiveFilmSection("new")}
+                        className={
+                          "flex flex-1 items-center justify-between gap-2 rounded-2xl px-4 py-2.5 text-sm transition-all " +
+                          (activeFilmSection === "new"
+                            ? "bg-red-600 text-black shadow-lg shadow-red-900/60"
+                            : "bg-neutral-900/80 text-neutral-200 hover:bg-neutral-800 hover:text-neutral-50")
+                        }
+                      >
+                        <span>Neuer Film</span>
+                      </button>
+
+                      {/* Stammdaten */}
+                      <button
+                        type="button"
+                        onClick={() => setActiveFilmSection("meta")}
+                        className={
+                          "flex flex-1 items-center justify-between gap-2 rounded-2xl px-4 py-2.5 text-sm transition-all " +
+                          (activeFilmSection === "meta"
+                            ? "bg-red-600 text-black shadow-lg shadow-red-900/60"
+                            : "bg-neutral-900/80 text-neutral-200 hover:bg-neutral-800 hover:text-neutral-50")
+                        }
+                      >
+                        <span>Stammdaten</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Überblick – mit Tags-Anzahl */}
+                  <div className="rounded-3xl border border-neutral-800 bg-neutral-950/90 px-5 py-4 text-sm shadow-xl shadow-black/70">
+                    <div className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">
+                      Überblick
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-neutral-300">Filme</span>
+                        <span className="font-semibold text-neutral-50">
+                          {filme.length}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-neutral-300">
+                          Hauptdarsteller
+                        </span>
+                        <span className="font-semibold text-neutral-50">
+                          {hauptdarsteller.length}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-neutral-300">
+                          Nebendarsteller
+                        </span>
+                        <span className="font-semibold text-neutral-50">
+                          {nebendarsteller.length}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-neutral-300">Studios</span>
+                        <span className="font-semibold text-neutral-50">
+                          {studios.length}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-neutral-300">Tags</span>
+                        <span className="font-semibold text-neutral-50">
+                          {tags.length}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </aside>
+
+                {/* Main Content – zentriert begrenzt */}
+                <section className="flex-1 space-y-5 max-w-3xl mx-auto w-full">
+                  {/* Tab: Neuer Film */}
+                  {activeFilmSection === "new" && (
+                    <div className="group rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950/95 to-black/95 p-6 shadow-2xl shadow-black/70 transition-transform duration-200">
+                      <div className="mb-4 flex items-center justify-between gap-2">
+                        <div>
+                          <h2 className="text-xl font-semibold text-neutral-50">
+                            {editingFilmId
+                              ? "Film bearbeiten"
+                              : "Neuen Film hinzufügen"}
+                          </h2>
+                          <p className="text-sm text-neutral-500">
+                            Titel, Jahr, Studio, Cast und Tags festlegen.
+                          </p>
+                        </div>
+                        {editingFilmId && (
+                          <button
+                            type="button"
+                            onClick={handleCancelEdit}
+                            className="text-sm text-neutral-300 underline underline-offset-4 hover:text-neutral-50"
+                          >
+                            Bearbeitung abbrechen
+                          </button>
+                        )}
+                      </div>
+
+                      <form
+                        onSubmit={handleAddOrUpdateFilm}
+                        className="space-y-5 text-base"
+                      >
+                        {/* Titel + Jahr */}
+                        <div className="grid grid-cols-[2fr,1fr] gap-4 max-sm:grid-cols-1">
+                          <div>
+                            <label className="text-sm text-neutral-300">
+                              Filmname
+                            </label>
+                            <input
+                              className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                              value={filmTitel}
+                              onChange={(e) => setFilmTitel(e.target.value)}
+                              placeholder="z. B. Interstellar"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm text-neutral-300">
+                              Erscheinungsjahr
+                            </label>
+                            <input
+                              className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                              value={filmJahr}
+                              onChange={(e) => setFilmJahr(e.target.value)}
+                              placeholder="2014"
+                              type="number"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Studio + File URL */}
+                        <div className="grid grid-cols-1 gap-4">
+                          <div>
+                            <label className="text-sm text-neutral-300">
+                              Studio
+                            </label>
+                            <select
+                              className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 focus:border-red-500 focus:outline-none"
+                              value={filmStudioId}
+                              onChange={(e) =>
+                                setFilmStudioId(e.target.value)
+                              }
+                            >
+                              <option value="">(kein Studio)</option>
+                              {studios.map((s) => (
+                                <option key={s.id} value={s.id}>
+                                  {s.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="text-sm text-neutral-300">
+                              File-URL / NAS-Pfad
+                            </label>
+                            <input
+                              className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                              value={filmFileUrl}
+                              onChange={(e) =>
+                                setFilmFileUrl(e.target.value)
+                              }
+                              placeholder="http://192.168.178.72/1337/"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Hauptdarsteller Chips */}
+                        <div>
+                          <label className="text-sm text-neutral-300">
+                            Hauptdarsteller (klick zum Auswählen / Entfernen)
+                          </label>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {hauptdarsteller.length === 0 ? (
+                              <span className="text-sm text-neutral-500">
+                                Noch keine Hauptdarsteller angelegt.
+                              </span>
+                            ) : (
+                              hauptdarsteller.map((a) => {
+                                const active =
+                                  selectedMainActorIds.includes(a.id);
+                                return (
+                                  <button
+                                    key={a.id}
+                                    type="button"
+                                    onClick={() =>
+                                      toggleId(
+                                        a.id,
+                                        selectedMainActorIds,
+                                        setSelectedMainActorIds
+                                      )
+                                    }
+                                    className={chipClass(active)}
+                                  >
+                                    {a.name}
+                                  </button>
+                                );
+                              })
                             )}
                           </div>
-
-                          <form
-                            onSubmit={handleAddOrUpdateFilm}
-                            className="space-y-5 text-base"
-                          >
-                            {/* Titel + Jahr */}
-                            <div className="grid grid-cols-[2fr,1fr] gap-4 max-sm:grid-cols-1">
-                              <div>
-                                <label className="text-sm text-neutral-300">
-                                  Filmname
-                                </label>
-                                <input
-                                  className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
-                                  value={filmTitel}
-                                  onChange={(e) =>
-                                    setFilmTitel(e.target.value)
-                                  }
-                                  placeholder="z. B. Interstellar"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-sm text-neutral-300">
-                                  Erscheinungsjahr
-                                </label>
-                                <input
-                                  className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
-                                  value={filmJahr}
-                                  onChange={(e) =>
-                                    setFilmJahr(e.target.value)
-                                  }
-                                  placeholder="2014"
-                                  type="number"
-                                />
-                              </div>
-                            </div>
-
-                            {/* Studio + File URL */}
-                            <div className="grid grid-cols-1 gap-4">
-                              <div>
-                                <label className="text-sm text-neutral-300">
-                                  Studio
-                                </label>
-                                <select
-                                  className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 focus:border-red-500 focus:outline-none"
-                                  value={filmStudioId}
-                                  onChange={(e) =>
-                                    setFilmStudioId(e.target.value)
-                                  }
-                                >
-                                  <option value="">(kein Studio)</option>
-                                  {studios.map((s) => (
-                                    <option key={s.id} value={s.id}>
-                                      {s.name}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-
-                              <div>
-                                <label className="text-sm text-neutral-300">
-                                  File-URL / NAS-Pfad
-                                </label>
-                                <input
-                                  className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
-                                  value={filmFileUrl}
-                                  onChange={(e) =>
-                                    setFilmFileUrl(e.target.value)
-                                  }
-                                  placeholder="http://192.168.178.72/1337/"
-                                />
-                              </div>
-                            </div>
-
-                            {/* Hauptdarsteller Chips */}
-                            <div>
-                              <label className="text-sm text-neutral-300">
-                                Hauptdarsteller (klick zum Auswählen / Entfernen)
-                              </label>
-                              <div className="mt-2 flex flex-wrap gap-2">
-                                {hauptdarsteller.length === 0 ? (
-                                  <span className="text-sm text-neutral-500">
-                                    Noch keine Hauptdarsteller angelegt.
-                                  </span>
-                                ) : (
-                                  hauptdarsteller.map((a) => {
-                                    const active =
-                                      selectedMainActorIds.includes(a.id);
-                                    return (
-                                      <button
-                                        key={a.id}
-                                        type="button"
-                                        onClick={() =>
-                                          toggleId(
-                                            a.id,
-                                            selectedMainActorIds,
-                                            setSelectedMainActorIds
-                                          )
-                                        }
-                                        className={chipClass(active)}
-                                      >
-                                        {a.name}
-                                      </button>
-                                    );
-                                  })
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Nebendarsteller Chips */}
-                            <div>
-                              <label className="text-sm text-neutral-300">
-                                Nebendarsteller (klick zum Auswählen / Entfernen)
-                              </label>
-                              <div className="mt-2 flex flex-wrap gap-2">
-                                {nebendarsteller.length === 0 ? (
-                                  <span className="text-sm text-neutral-500">
-                                    Noch keine Nebendarsteller angelegt.
-                                  </span>
-                                ) : (
-                                  nebendarsteller.map((a) => {
-                                    const active =
-                                      selectedSupportActorIds.includes(a.id);
-                                    return (
-                                      <button
-                                        key={a.id}
-                                        type="button"
-                                        onClick={() =>
-                                          toggleId(
-                                            a.id,
-                                            selectedSupportActorIds,
-                                            setSelectedSupportActorIds
-                                          )
-                                        }
-                                        className={chipClass(active)}
-                                      >
-                                        {a.name}
-                                      </button>
-                                    );
-                                  })
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Tags Chips */}
-                            <div>
-                              <label className="text-sm text-neutral-300">
-                                Tags (klick zum Auswählen / Entfernen)
-                              </label>
-                              <div className="mt-2 flex flex-wrap gap-2">
-                                {tags.length === 0 ? (
-                                  <span className="text-sm text-neutral-500">
-                                    Noch keine Tags angelegt.
-                                  </span>
-                                ) : (
-                                  tags.map((t) => {
-                                    const active =
-                                      selectedTagIds.includes(t.id);
-                                    return (
-                                      <button
-                                        key={t.id}
-                                        type="button"
-                                        onClick={() =>
-                                          toggleId(
-                                            t.id,
-                                            selectedTagIds,
-                                            setSelectedTagIds
-                                          )
-                                        }
-                                        className={chipClass(active)}
-                                      >
-                                        {t.name}
-                                      </button>
-                                    );
-                                  })
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="flex gap-3 pt-1">
-                              <button
-                                type="submit"
-                                className="rounded-xl bg-red-500 px-5 py-2.5 text-sm font-semibold text-black shadow shadow-red-900/70 hover:bg-red-400 hover:shadow-lg hover:shadow-red-900/70 disabled:opacity-60"
-                                disabled={!filmTitel.trim()}
-                              >
-                                {editingFilmId
-                                  ? "Film aktualisieren"
-                                  : "Film speichern"}
-                              </button>
-                              {editingFilmId && (
-                                <button
-                                  type="button"
-                                  onClick={handleCancelEdit}
-                                  className="rounded-xl border border-neutral-600 px-4 py-2.5 text-sm text-neutral-200 hover:bg-neutral-800"
-                                >
-                                  Abbrechen
-                                </button>
-                              )}
-                            </div>
-                          </form>
                         </div>
-                      )}
 
-                      {/* Tab: Filmestatistik */}
-                      {activeFilmSection === "stats" && (
-                        <div className="rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950 to-black/95 p-6 shadow-2xl shadow-black/70 space-y-4 w-full">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h2 className="text-xl font-semibold text-neutral-50">
-                                Filmestatistik
-                              </h2>
-                              <p className="mt-1 text-sm text-neutral-500">
-                                Insgesamt{" "}
-                                <span className="font-semibold text-neutral-100">
-                                  {filme.length}
-                                </span>{" "}
-                                Filme in der Bibliothek.
-                              </p>
-                            </div>
+                        {/* Nebendarsteller Chips */}
+                        <div>
+                          <label className="text-sm text-neutral-300">
+                            Nebendarsteller (klick zum Auswählen / Entfernen)
+                          </label>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {nebendarsteller.length === 0 ? (
+                              <span className="text-sm text-neutral-500">
+                                Noch keine Nebendarsteller angelegt.
+                              </span>
+                            ) : (
+                              nebendarsteller.map((a) => {
+                                const active =
+                                  selectedSupportActorIds.includes(a.id);
+                                return (
+                                  <button
+                                    key={a.id}
+                                    type="button"
+                                    onClick={() =>
+                                      toggleId(
+                                        a.id,
+                                        selectedSupportActorIds,
+                                        setSelectedSupportActorIds
+                                      )
+                                    }
+                                    className={chipClass(active)}
+                                  >
+                                    {a.name}
+                                  </button>
+                                );
+                              })
+                            )}
                           </div>
+                        </div>
 
-                          {filme.length === 0 ? (
-                            <p className="text-sm text-neutral-500">
-                              Noch keine Filme angelegt.
-                            </p>
-                          ) : (
-                            <div className="space-y-3 text-sm">
-                              {filme.map((f) => (
-                                <details
-                                  key={f.id}
-                                  className="group rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4 shadow-sm shadow-black/60 transition-all hover:border-red-500/70"
-                                >
-                                  <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-base font-medium text-neutral-50">
-                                        {f.title}
-                                      </span>
-                                      {f.year && (
-                                        <span className="text-xs text-neutral-400">
-                                          {f.year}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div className="flex items-center gap-1 text-xs text-neutral-500 group-open:text-red-400">
-                                      <span>Details</span>
-                                      <svg
-                                        className="h-3 w-3 transform transition-transform group-open:rotate-90"
-                                        viewBox="0 0 20 20"
-                                        fill="none"
-                                        xmlns="http://www.w3.org/2000/svg"
-                                      >
-                                        <path
-                                          d="M7 5L12 10L7 15"
-                                          stroke="currentColor"
-                                          strokeWidth="2"
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                        />
-                                      </svg>
-                                    </div>
-                                  </summary>
+                        {/* Tags Chips */}
+                        <div>
+                          <label className="text-sm text-neutral-300">
+                            Tags (klick zum Auswählen / Entfernen)
+                          </label>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {tags.length === 0 ? (
+                              <span className="text-sm text-neutral-500">
+                                Noch keine Tags angelegt.
+                              </span>
+                            ) : (
+                              tags.map((t) => {
+                                const active = selectedTagIds.includes(t.id);
+                                return (
+                                  <button
+                                    key={t.id}
+                                    type="button"
+                                    onClick={() =>
+                                      toggleId(
+                                        t.id,
+                                        selectedTagIds,
+                                        setSelectedTagIds
+                                      )
+                                    }
+                                    className={chipClass(active)}
+                                  >
+                                    {t.name}
+                                  </button>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
 
-                                  <div className="mt-3 border-t border-neutral-800 pt-3 space-y-1.5">
-                                    {f.studio_id &&
-                                      studioMap[f.studio_id] && (
-                                        <div className="text-sm text-neutral-400">
-                                          Studio:{" "}
-                                          {studioMap[f.studio_id].name}
-                                        </div>
-                                      )}
-
-                                    {Array.isArray(f.main_actor_ids) &&
-                                      f.main_actor_ids.length > 0 && (
-                                        <div className="text-sm text-neutral-300">
-                                          Hauptdarsteller:{" "}
-                                          {f.main_actor_ids
-                                            .map(
-                                              (id) => actorMap[id]?.name
-                                            )
-                                            .filter(Boolean)
-                                            .join(", ")}
-                                        </div>
-                                      )}
-
-                                    {Array.isArray(f.supporting_actor_ids) &&
-                                      f.supporting_actor_ids.length > 0 && (
-                                        <div className="text-sm text-neutral-300">
-                                          Nebendarsteller:{" "}
-                                          {f.supporting_actor_ids
-                                            .map(
-                                              (id) => supportMap[id]?.name
-                                            )
-                                            .filter(Boolean)
-                                            .join(", ")}
-                                        </div>
-                                      )}
-
-                                    {Array.isArray(f.tag_ids) &&
-                                      f.tag_ids.length > 0 && (
-                                        <div className="mt-1 flex flex-wrap gap-2">
-                                          {f.tag_ids.map((id) => {
-                                            const t = tagMap[id];
-                                            if (!t) return null;
-                                            return (
-                                              <span
-                                                key={id}
-                                                className={chipClass(true)}
-                                              >
-                                                {t.name}
-                                              </span>
-                                            );
-                                          })}
-                                        </div>
-                                      )}
-
-                                    {f.file_url && (
-                                      <div className="mt-1 break-all text-sm text-red-400">
-                                        File: {f.file_url}
-                                      </div>
-                                    )}
-
-                                    <div className="mt-3 flex gap-2">
-                                      <button
-                                        type="button"
-                                        onClick={() => handleEditFilm(f)}
-                                        className="rounded-lg border border-neutral-600 px-3 py-1.5 text-xs text-neutral-100 hover:bg-neutral-800"
-                                      >
-                                        Bearbeiten
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          handleDeleteFilm(f.id)
-                                        }
-                                        className="rounded-lg border border-red-600 px-3 py-1.5 text-xs text-red-200 hover:bg-red-700/80"
-                                      >
-                                        Löschen
-                                      </button>
-                                    </div>
-                                  </div>
-                                </details>
-                              ))}
-                            </div>
+                        <div className="flex gap-3 pt-1">
+                          <button
+                            type="submit"
+                            className="rounded-xl bg-red-500 px-5 py-2.5 text-sm font-semibold text-black shadow shadow-red-900/70 hover:bg-red-400 hover:shadow-lg hover:shadow-red-900/70 disabled:opacity-60"
+                            disabled={!filmTitel.trim()}
+                          >
+                            {editingFilmId
+                              ? "Film aktualisieren"
+                              : "Film speichern"}
+                          </button>
+                          {editingFilmId && (
+                            <button
+                              type="button"
+                              onClick={handleCancelEdit}
+                              className="rounded-xl border border-neutral-600 px-4 py-2.5 text-sm text-neutral-200 hover:bg-neutral-800"
+                            >
+                              Abbrechen
+                            </button>
                           )}
                         </div>
-                      )}
+                      </form>
+                    </div>
+                  )}
 
-                      {/* Tab: Stammdaten */}
-                      {activeFilmSection === "meta" && (
-                        <section className="rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950 to-black/95 p-6 text-sm text-neutral-100 shadow-2xl shadow-black/70 space-y-5">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h2 className="text-xl font-semibold text-neutral-50">
-                                Stammdaten
-                              </h2>
-                              <p className="mt-1 text-sm text-neutral-500">
-                                Darsteller, Studios und Tags verwalten.
-                              </p>
-                            </div>
-                          </div>
+                  {/* Tab: Filmestatistik */}
+                  {activeFilmSection === "stats" && (
+                    <div className="rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950 to-black/95 p-6 shadow-2xl shadow-black/70 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h2 className="text-xl font-semibold text-neutral-50">
+                            Filmestatistik
+                          </h2>
+                          <p className="mt-1 text-sm text-neutral-500">
+                            Insgesamt{" "}
+                            <span className="font-semibold text-neutral-100">
+                              {filme.length}
+                            </span>{" "}
+                            Filme in der Bibliothek.
+                          </p>
+                        </div>
+                      </div>
 
-                          <div className="grid gap-5 md:grid-cols-2">
-                            {/* Hauptdarsteller */}
-                            <div className="space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4">
-                              <form
-                                onSubmit={handleAddActor}
-                                className="space-y-2"
-                              >
-                                <div className="font-medium text-neutral-50 text-base">
-                                  Hauptdarsteller
+                      {filme.length === 0 ? (
+                        <p className="text-sm text-neutral-500">
+                          Noch keine Filme angelegt.
+                        </p>
+                      ) : (
+                        <div className="space-y-3 text-sm">
+                          {filme.map((f) => (
+                            <details
+                              key={f.id}
+                              className="group rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4 shadow-sm shadow-black/60 transition-all hover:border-red-500/70"
+                            >
+                              <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-base font-medium text-neutral-50">
+                                    {f.title}
+                                  </span>
+                                  {f.year && (
+                                    <span className="text-xs text-neutral-400">
+                                      {f.year}
+                                    </span>
+                                  )}
                                 </div>
-                                <input
-                                  className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
-                                  placeholder="Name"
-                                  value={newActorName}
-                                  onChange={(e) =>
-                                    setNewActorName(e.target.value)
-                                  }
-                                />
-
-                                <ActorImageUploader
-                                  onUploaded={(url) =>
-                                    setNewActorImage(url)
-                                  }
-                                />
-
-                                <button
-                                  type="submit"
-                                  className="mt-1 rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-black shadow shadow-red-900/70 disabled:opacity-60"
-                                  disabled={!newActorName.trim()}
-                                >
-                                  Speichern
-                                </button>
-                              </form>
-
-                              <div className="mt-2 max-h-44 space-y-1.5 overflow-y-auto">
-                                {hauptdarsteller.map((a) => (
-                                  <div
-                                    key={a.id}
-                                    className="flex items-center justify-between gap-2 rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2"
+                                <div className="flex items-center gap-1 text-xs text-neutral-500 group-open:text-red-400">
+                                  <span>Details</span>
+                                  <svg
+                                    className="h-3 w-3 transform transition-transform group-open:rotate-90"
+                                    viewBox="0 0 20 20"
+                                    fill="none"
+                                    xmlns="http://www.w3.org/2000/svg"
                                   >
-                                    <span className="text-sm">{a.name}</span>
-                                    <div className="flex gap-1.5">
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          handleEditActor(a)
-                                        }
-                                        className="rounded border border-neutral-600 px-2.5 py-1 text-xs text-neutral-100 hover:bg-neutral-800"
-                                      >
-                                        Edit
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          handleDeleteActor(a.id)
-                                        }
-                                        className="rounded border border-red-600 px-2.5 py-1 text-xs text-red-200 hover:bg-red-700/80"
-                                      >
-                                        X
-                                      </button>
+                                    <path
+                                      d="M7 5L12 10L7 15"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    />
+                                  </svg>
+                                </div>
+                              </summary>
+
+                              <div className="mt-3 border-t border-neutral-800 pt-3 space-y-1.5">
+                                {f.studio_id && studioMap[f.studio_id] && (
+                                  <div className="text-sm text-neutral-400">
+                                    Studio: {studioMap[f.studio_id].name}
+                                  </div>
+                                )}
+
+                                {Array.isArray(f.main_actor_ids) &&
+                                  f.main_actor_ids.length > 0 && (
+                                    <div className="text-sm text-neutral-300">
+                                      Hauptdarsteller:{" "}
+                                      {f.main_actor_ids
+                                        .map((id) => actorMap[id]?.name)
+                                        .filter(Boolean)
+                                        .join(", ")}
                                     </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
+                                  )}
 
-                            {/* Nebendarsteller */}
-                            <div className="space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4">
-                              <form
-                                onSubmit={handleAddSupportActor}
-                                className="space-y-2"
-                              >
-                                <div className="font-medium text-neutral-50 text-base">
-                                  Nebendarsteller
-                                </div>
-                                <input
-                                  className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
-                                  placeholder="Name"
-                                  value={newSupportName}
-                                  onChange={(e) =>
-                                    setNewSupportName(e.target.value)
-                                  }
-                                />
-
-                                <ActorImageUploader
-                                  onUploaded={(url) =>
-                                    setNewSupportImage(url)
-                                  }
-                                />
-
-                                <button
-                                  type="submit"
-                                  className="mt-1 rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-black shadow shadow-red-900/70 disabled:opacity-60"
-                                  disabled={!newSupportName.trim()}
-                                >
-                                  Speichern
-                                </button>
-                              </form>
-
-                              <div className="mt-2 max-h-44 space-y-1.5 overflow-y-auto">
-                                {nebendarsteller.map((a) => (
-                                  <div
-                                    key={a.id}
-                                    className="flex items-center justify-between gap-2 rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2"
-                                  >
-                                    <span className="text-sm">{a.name}</span>
-                                    <div className="flex gap-1.5">
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          handleEditSupportActor(a)
-                                        }
-                                        className="rounded border border-neutral-600 px-2.5 py-1 text-xs text-neutral-100 hover:bg-neutral-800"
-                                      >
-                                        Edit
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          handleDeleteSupportActor(a.id)
-                                        }
-                                        className="rounded border border-red-600 px-2.5 py-1 text-xs text-red-200 hover:bg-red-700/80"
-                                      >
-                                        X
-                                      </button>
+                                {Array.isArray(f.supporting_actor_ids) &&
+                                  f.supporting_actor_ids.length > 0 && (
+                                    <div className="text-sm text-neutral-300">
+                                      Nebendarsteller:{" "}
+                                      {f.supporting_actor_ids
+                                        .map((id) => supportMap[id]?.name)
+                                        .filter(Boolean)
+                                        .join(", ")}
                                     </div>
+                                  )}
+
+                                {Array.isArray(f.tag_ids) &&
+                                  f.tag_ids.length > 0 && (
+                                    <div className="mt-1 flex flex-wrap gap-2">
+                                      {f.tag_ids.map((id) => {
+                                        const t = tagMap[id];
+                                        if (!t) return null;
+                                        return (
+                                          <span
+                                            key={id}
+                                            className={chipClass(true)}
+                                          >
+                                            {t.name}
+                                          </span>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+
+                                {f.file_url && (
+                                  <div className="mt-1 break-all text-sm text-red-400">
+                                    File: {f.file_url}
                                   </div>
-                                ))}
-                              </div>
-                            </div>
+                                )}
 
-                            {/* Studios */}
-                            <div className="space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4">
-                              <form
-                                onSubmit={handleAddStudio}
-                                className="space-y-2"
-                              >
-                                <div className="font-medium text-neutral-50 text-base">
-                                  Studios
-                                </div>
-                                <input
-                                  className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
-                                  placeholder="Studio"
-                                  value={newStudioName}
-                                  onChange={(e) =>
-                                    setNewStudioName(e.target.value)
-                                  }
-                                />
-                                <input
-                                  className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
-                                  placeholder="Bild-URL (optional)"
-                                  value={newStudioImage}
-                                  onChange={(e) =>
-                                    setNewStudioImage(e.target.value)
-                                  }
-                                />
-                                <button
-                                  type="submit"
-                                  className="mt-1 rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-black shadow shadow-red-900/70 disabled:opacity-60"
-                                  disabled={!newStudioName.trim()}
-                                >
-                                  Speichern
-                                </button>
-                              </form>
-
-                              <div className="mt-2 max-h-44 space-y-1.5 overflow-y-auto">
-                                {studios.map((s) => (
-                                  <div
-                                    key={s.id}
-                                    className="flex items-center justify-between gap-2 rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2"
+                                <div className="mt-3 flex gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleEditFilm(f)}
+                                    className="rounded-lg border border-neutral-600 px-3 py-1.5 text-xs text-neutral-100 hover:bg-neutral-800"
                                   >
-                                    <span className="text-sm">{s.name}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-
-                            {/* Tags */}
-                            <div className="space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4">
-                              <form
-                                onSubmit={handleAddTag}
-                                className="space-y-2"
-                              >
-                                <div className="font-medium text-neutral-50 text-base">
-                                  Tags
-                                </div>
-                                <input
-                                  className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
-                                  placeholder="Tag-Name"
-                                  value={newTagName}
-                                  onChange={(e) =>
-                                    setNewTagName(e.target.value)
-                                  }
-                                />
-                                <button
-                                  type="submit"
-                                  className="mt-1 rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-black shadow shadow-red-900/70 disabled:opacity-60"
-                                  disabled={!newTagName.trim()}
-                                >
-                                  Speichern
-                                </button>
-                                <div className="mt-1 text-xs text-neutral-500">
-                                  Vorhanden: {tags.length}
-                                </div>
-                              </form>
-
-                              <div className="mt-2 max-h-44 space-y-1.5 overflow-y-auto">
-                                {tags.map((t) => (
-                                  <div
-                                    key={t.id}
-                                    className="flex items-center justify-between gap-2 rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2"
+                                    Bearbeiten
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteFilm(f.id)}
+                                    className="rounded-lg border border-red-600 px-3 py-1.5 text-xs text-red-200 hover:bg-red-700/80"
                                   >
-                                    <span className="text-sm">{t.name}</span>
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        handleDeleteTagGlobal(t.id)
-                                      }
-                                      className="rounded border border-red-600 px-2.5 py-1 text-xs text-red-200 hover:bg-red-700/80"
-                                    >
-                                      X
-                                    </button>
-                                  </div>
-                                ))}
+                                    Löschen
+                                  </button>
+                                </div>
                               </div>
-                            </div>
-                          </div>
-                        </section>
+                            </details>
+                          ))}
+                        </div>
                       )}
+                    </div>
+                  )}
+
+                  {/* Tab: Stammdaten */}
+                  {activeFilmSection === "meta" && (
+                    <section className="rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950 to-black/95 p-6 text-sm text-neutral-100 shadow-2xl shadow-black/70 space-y-5">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h2 className="text-xl font-semibold text-neutral-50">
+                            Stammdaten
+                          </h2>
+                          <p className="mt-1 text-sm text-neutral-500">
+                            Darsteller, Studios und Tags verwalten.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-5 md:grid-cols-2">
+                        {/* Hauptdarsteller */}
+                        <div className="space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4">
+                          <form
+                            onSubmit={handleAddActor}
+                            className="space-y-2"
+                          >
+                            <div className="font-medium text-neutral-50 text-base">
+                              Hauptdarsteller
+                            </div>
+                            <input
+                              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                              placeholder="Name"
+                              value={newActorName}
+                              onChange={(e) =>
+                                setNewActorName(e.target.value)
+                              }
+                            />
+
+                            <ActorImageUploader
+                              onUploaded={(url) => setNewActorImage(url)}
+                            />
+
+                            <button
+                              type="submit"
+                              className="mt-1 rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-black shadow shadow-red-900/70 disabled:opacity-60"
+                              disabled={!newActorName.trim()}
+                            >
+                              Speichern
+                            </button>
+                          </form>
+
+                          <div className="mt-2 max-h-44 space-y-1.5 overflow-y-auto">
+                            {hauptdarsteller.map((a) => (
+                              <div
+                                key={a.id}
+                                className="flex items-center justify-between gap-2 rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2"
+                              >
+                                <span className="text-sm">{a.name}</span>
+                                <div className="flex gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleEditActor(a)}
+                                    className="rounded border border-neutral-600 px-2.5 py-1 text-xs text-neutral-100 hover:bg-neutral-800"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteActor(a.id)}
+                                    className="rounded border border-red-600 px-2.5 py-1 text-xs text-red-200 hover:bg-red-700/80"
+                                  >
+                                    X
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Nebendarsteller */}
+                        <div className="space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4">
+                          <form
+                            onSubmit={handleAddSupportActor}
+                            className="space-y-2"
+                          >
+                            <div className="font-medium text-neutral-50 text-base">
+                              Nebendarsteller
+                            </div>
+                            <input
+                              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                              placeholder="Name"
+                              value={newSupportName}
+                              onChange={(e) =>
+                                setNewSupportName(e.target.value)
+                              }
+                            />
+
+                            <ActorImageUploader
+                              onUploaded={(url) =>
+                                setNewSupportImage(url)
+                              }
+                            />
+
+                            <button
+                              type="submit"
+                              className="mt-1 rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-black shadow shadow-red-900/70 disabled:opacity-60"
+                              disabled={!newSupportName.trim()}
+                            >
+                              Speichern
+                            </button>
+                          </form>
+
+                          <div className="mt-2 max-h-44 space-y-1.5 overflow-y-auto">
+                            {nebendarsteller.map((a) => (
+                              <div
+                                key={a.id}
+                                className="flex items-center justify-between gap-2 rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2"
+                              >
+                                <span className="text-sm">{a.name}</span>
+                                <div className="flex gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleEditSupportActor(a)
+                                    }
+                                    className="rounded border border-neutral-600 px-2.5 py-1 text-xs text-neutral-100 hover:bg-neutral-800"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleDeleteSupportActor(a.id)
+                                    }
+                                    className="rounded border border-red-600 px-2.5 py-1 text-xs text-red-200 hover:bg-red-700/80"
+                                  >
+                                    X
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Studios */}
+                        <div className="space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4">
+                          <form
+                            onSubmit={handleAddStudio}
+                            className="space-y-2"
+                          >
+                            <div className="font-medium text-neutral-50 text-base">
+                              Studios
+                            </div>
+                            <input
+                              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                              placeholder="Studio"
+                              value={newStudioName}
+                              onChange={(e) =>
+                                setNewStudioName(e.target.value)
+                              }
+                            />
+                            <input
+                              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                              placeholder="Bild-URL (optional)"
+                              value={newStudioImage}
+                              onChange={(e) =>
+                                setNewStudioImage(e.target.value)
+                              }
+                            />
+                            <button
+                              type="submit"
+                              className="mt-1 rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-black shadow shadow-red-900/70 disabled:opacity-60"
+                              disabled={!newStudioName.trim()}
+                            >
+                              Speichern
+                            </button>
+                          </form>
+
+                          <div className="mt-2 max-h-44 space-y-1.5 overflow-y-auto">
+                            {studios.map((s) => (
+                              <div
+                                key={s.id}
+                                className="flex items-center justify-between gap-2 rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2"
+                              >
+                                <span className="text-sm">{s.name}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Tags */}
+                        <div className="space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4">
+                          <form
+                            onSubmit={handleAddTag}
+                            className="space-y-2"
+                          >
+                            <div className="font-medium text-neutral-50 text-base">
+                              Tags
+                            </div>
+                            <input
+                              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                              placeholder="Tag-Name"
+                              value={newTagName}
+                              onChange={(e) =>
+                                setNewTagName(e.target.value)
+                              }
+                            />
+                            <button
+                              type="submit"
+                              className="mt-1 rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-black shadow shadow-red-900/70 disabled:opacity-60"
+                              disabled={!newTagName.trim()}
+                            >
+                              Speichern
+                            </button>
+                            <div className="mt-1 text-xs text-neutral-500">
+                              Vorhanden: {tags.length}
+                            </div>
+                          </form>
+
+                          <div className="mt-2 max-h-44 space-y-1.5 overflow-y-auto">
+                            {tags.map((t) => (
+                              <div
+                                key={t.id}
+                                className="flex items-center justify-between gap-2 rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2"
+                              >
+                                <span className="text-sm">{t.name}</span>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleDeleteTagGlobal(t.id)
+                                  }
+                                  className="rounded border border-red-600 px-2.5 py-1 text-xs text-red-200 hover:bg-red-700/80"
+                                >
+                                  X
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
                     </section>
-                  </div>
-                </div>
-
-                {/* Mobile-Layout: Sidebar unter der Hauptbox, damit nichts abgeschnitten wird */}
-                <div className="mt-8 flex flex-col items-center gap-4 lg:hidden">
-                  <div className="w-full max-w-md space-y-4">
-                    <SidebarContent />
-                  </div>
-                </div>
-              </>
+                  )}
+                </section>
+              </div>
             )}
           </section>
         )}
