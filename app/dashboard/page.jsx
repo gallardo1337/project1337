@@ -673,9 +673,9 @@ export default function DashboardPage() {
     <div className="page min-h-screen bg-gradient-to-br from-neutral-950 via-black to-neutral-900 text-neutral-100 text-[15px]">
       {/* Header */}
       <header className="topbar sticky top-0 z-40 border-b border-neutral-800/70 bg-black/80 backdrop-blur-lg">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 md:px-6">
-          {/* Links: Hauptseite */}
-          <div className="flex items-center">
+        <div className="mx-auto flex max-w-6xl items-center px-4 py-4 md:px-6">
+          {/* Links: Hauptseite am Rand links */}
+          <div className="flex w-1/3 justify-start">
             <a
               href="/"
               className="rounded-full border border-neutral-600 bg-neutral-900/80 px-4 py-1.5 text-sm text-neutral-100 hover:bg-neutral-800 hover:border-neutral-400 transition-all"
@@ -684,23 +684,25 @@ export default function DashboardPage() {
             </a>
           </div>
 
-          {/* Mitte: Logo + Titel */}
-          <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-600 text-sm font-semibold tracking-tight shadow-lg shadow-red-900/60">
-              1337
-            </div>
-            <div className="flex flex-col leading-tight text-center">
-              <span className="text-lg font-semibold text-neutral-50">
-                1337 Dashboard
-              </span>
-              <span className="text-xs text-neutral-400">
-                Manage Movies, Cast &amp; Tags
-              </span>
+          {/* Mitte: 1337 Dashboard zentriert */}
+          <div className="flex w-1/3 flex-col items-center gap-2">
+            <div className="flex items-center gap-2">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-600 text-sm font-semibold tracking-tight shadow-lg shadow-red-900/60">
+                1337
+              </div>
+              <div className="flex flex-col leading-tight text-center">
+                <span className="text-lg font-semibold text-neutral-50">
+                  1337 Dashboard
+                </span>
+                <span className="text-xs text-neutral-400">
+                  Manage Movies, Cast &amp; Tags
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Rechts: Login oder User + Logout */}
-          <div className="flex items-center justify-end gap-4">
+          {/* Rechts: User + Logout am Rand rechts */}
+          <div className="flex w-1/3 justify-end">
             {!loggedIn ? (
               <form
                 onSubmit={handleLogin}
@@ -711,14 +713,14 @@ export default function DashboardPage() {
                   placeholder="User"
                   value={loginUser}
                   onChange={(e) => setLoginUser(e.target.value)}
-                  className="w-[140px] rounded-full border border-transparent bg-transparent px-2 py-1.5 text-sm text-neutral-100 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                  className="w-[120px] rounded-full border border-transparent bg-transparent px-2 py-1.5 text-sm text-neutral-100 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
                 />
                 <input
                   type="password"
                   placeholder="Passwort"
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
-                  className="w-[130px] rounded-full border border-transparent bg-transparent px-2 py-1.5 text-sm text-neutral-100 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                  className="w-[110px] rounded-full border border-transparent bg-transparent px-2 py-1.5 text-sm text-neutral-100 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
                 />
                 <button
                   type="submit"
