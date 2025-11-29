@@ -877,8 +877,8 @@ export default function DashboardPage() {
                   </div>
                 </aside>
 
-                {/* Main Content */}
-                <section className="flex-1 space-y-5">
+                {/* Main Content – jetzt zentriert begrenzt */}
+                <section className="flex-1 space-y-5 max-w-3xl mx-auto w-full">
                   {/* Tab: Neuer Film */}
                   {activeFilmSection === "new" && (
                     <div className="group rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950/95 to-black/95 p-6 shadow-2xl shadow-black/70 transition-transform duration-200">
@@ -1102,9 +1102,9 @@ export default function DashboardPage() {
                     </div>
                   )}
 
-                  {/* Tab: Filmestatistik */}
+                  {/* Tab: Filmestatistik – Box jetzt zentriert über Section */}
                   {activeFilmSection === "stats" && (
-                    <div className="max-w-3xl mx-auto rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950 to-black/95 p-6 shadow-2xl shadow-black/70 space-y-4">
+                    <div className="rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950 to-black/95 p-6 shadow-2xl shadow-black/70 space-y-4">
                       <div className="flex items-center justify-between">
                         <div>
                           <h2 className="text-xl font-semibold text-neutral-50">
