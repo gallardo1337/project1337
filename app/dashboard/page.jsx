@@ -673,8 +673,8 @@ export default function DashboardPage() {
     <div className="page min-h-screen bg-gradient-to-br from-neutral-950 via-black to-neutral-900 text-neutral-100 text-[15px]">
       {/* Header */}
       <header className="topbar sticky top-0 z-40 border-b border-neutral-800/70 bg-black/80 backdrop-blur-lg">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 md:px-6 relative">
-          {/* Links: Hauptseite links am Rand */}
+        <div className="flex w-full items-center justify-between px-4 py-4 md:px-6 relative">
+          {/* Links: Hauptseite GANZ LINKS (mit kleinem Padding) */}
           <div className="flex items-center">
             <a
               href="/"
@@ -699,7 +699,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Rechts: Login oder User + Logout rechts am Rand */}
+          {/* Rechts: Login oder User + Logout GANZ RECHTS */}
           <div className="flex items-center justify-end gap-3">
             {!loggedIn ? (
               <form
