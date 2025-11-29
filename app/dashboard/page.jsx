@@ -1125,84 +1125,82 @@ export default function DashboardPage() {
                           Noch keine Filme angelegt.
                         </p>
                       ) : (
-                        <div className="max-h-[460px] space-y-3 overflow-y-auto text-sm pr-1">
+                        <div className="space-y-3 text-sm">
                           {filme.map((f) => (
-                            <div
+                            <details
                               key={f.id}
-                              className="group space-y-1.5 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4 shadow-sm shadow-black/60 transition-all hover:-translate-y-0.5 hover:border-red-500/70 hover:shadow-lg hover:shadow-black/70"
+                              className="group rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4 shadow-sm shadow-black/60 transition-all hover:border-red-500/70"
                             >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="space-y-1.5">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-base font-medium text-neutral-50">
-                                      {f.title}
+                              <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-base font-medium text-neutral-50">
+                                    {f.title}
+                                  </span>
+                                  {f.year && (
+                                    <span className="text-xs text-neutral-400">
+                                      {f.year}
                                     </span>
-                                    {f.year && (
-                                      <span className="text-xs text-neutral-400">
-                                        {f.year}
-                                      </span>
-                                    )}
-                                  </div>
-                                  {f.studio_id &&
-                                    studioMap[f.studio_id] && (
-                                      <div className="text-sm text-neutral-400">
-                                        Studio:{" "}
-                                        {studioMap[f.studio_id].name}
-                                      </div>
-                                    )}
-
-                                  {Array.isArray(f.main_actor_ids) &&
-                                    f.main_actor_ids.length > 0 && (
-                                      <div className="text-sm text-neutral-300">
-                                        Hauptdarsteller:{" "}
-                                        {f.main_actor_ids
-                                          .map(
-                                            (id) => actorMap[id]?.name
-                                          )
-                                          .filter(Boolean)
-                                          .join(", ")}
-                                      </div>
-                                    )}
-
-                                  {Array.isArray(f.supporting_actor_ids) &&
-                                    f.supporting_actor_ids.length > 0 && (
-                                      <div className="text-sm text-neutral-300">
-                                        Nebendarsteller:{" "}
-                                        {f.supporting_actor_ids
-                                          .map(
-                                            (id) => supportMap[id]?.name
-                                          )
-                                          .filter(Boolean)
-                                          .join(", ")}
-                                      </div>
-                                    )}
-
-                                  {Array.isArray(f.tag_ids) &&
-                                    f.tag_ids.length > 0 && (
-                                      <div className="mt-1 flex flex-wrap gap-2">
-                                        {f.tag_ids.map((id) => {
-                                          const t = tagMap[id];
-                                          if (!t) return null;
-                                          return (
-                                            <span
-                                              key={id}
-                                              className={chipClass(true)}
-                                            >
-                                              {t.name}
-                                            </span>
-                                          );
-                                        })}
-                                      </div>
-                                    )}
-
-                                  {f.file_url && (
-                                    <div className="mt-1 break-all text-sm text-red-400">
-                                      File: {f.file_url}
-                                    </div>
                                   )}
                                 </div>
+                                <span className="text-xs text-neutral-500 group-open:text-red-400">
+                                  Details anzeigen
+                                </span>
+                              </summary>
 
-                                <div className="flex flex-col gap-2">
+                              <div className="mt-3 border-t border-neutral-800 pt-3 space-y-1.5">
+                                {f.studio_id && studioMap[f.studio_id] && (
+                                  <div className="text-sm text-neutral-400">
+                                    Studio: {studioMap[f.studio_id].name}
+                                  </div>
+                                )}
+
+                                {Array.isArray(f.main_actor_ids) &&
+                                  f.main_actor_ids.length > 0 && (
+                                    <div className="text-sm text-neutral-300">
+                                      Hauptdarsteller:{" "}
+                                      {f.main_actor_ids
+                                        .map((id) => actorMap[id]?.name)
+                                        .filter(Boolean)
+                                        .join(", ")}
+                                    </div>
+                                  )}
+
+                                {Array.isArray(f.supporting_actor_ids) &&
+                                  f.supporting_actor_ids.length > 0 && (
+                                    <div className="text-sm text-neutral-300">
+                                      Nebendarsteller:{" "}
+                                      {f.supporting_actor_ids
+                                        .map((id) => supportMap[id]?.name)
+                                        .filter(Boolean)
+                                        .join(", ")}
+                                    </div>
+                                  )}
+
+                                {Array.isArray(f.tag_ids) &&
+                                  f.tag_ids.length > 0 && (
+                                    <div className="mt-1 flex flex-wrap gap-2">
+                                      {f.tag_ids.map((id) => {
+                                        const t = tagMap[id];
+                                        if (!t) return null;
+                                        return (
+                                          <span
+                                            key={id}
+                                            className={chipClass(true)}
+                                          >
+                                            {t.name}
+                                          </span>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+
+                                {f.file_url && (
+                                  <div className="mt-1 break-all text-sm text-red-400">
+                                    File: {f.file_url}
+                                  </div>
+                                )}
+
+                                <div className="mt-3 flex gap-2">
                                   <button
                                     type="button"
                                     onClick={() => handleEditFilm(f)}
@@ -1219,7 +1217,7 @@ export default function DashboardPage() {
                                   </button>
                                 </div>
                               </div>
-                            </div>
+                            </details>
                           ))}
                         </div>
                       )}
