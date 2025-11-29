@@ -666,6 +666,97 @@ export default function DashboardPage() {
 
   // ---------------- Render ----------------
 
+  // Sidebar-Inhalt (einmal definieren, dann mobil + desktop nutzen)
+  const SidebarContent = (
+    <>
+      {/* Bereiche */}
+      <div className="rounded-3xl border border-neutral-800 bg-gradient-to-b from-neutral-950/90 to-black/90 px-5 py-5 shadow-2xl shadow-black/70">
+        <div className="flex flex-row gap-2 lg:flex-col">
+          {/* Filme */}
+          <button
+            type="button"
+            onClick={() => setActiveFilmSection("stats")}
+            className={
+              "flex flex-1 items-center justify-between gap-2 rounded-2xl px-4 py-2.5 text-sm transition-all " +
+              (activeFilmSection === "stats"
+                ? "bg-red-600 text-black shadow-lg shadow-red-900/60"
+                : "bg-neutral-900/80 text-neutral-200 hover:bg-neutral-800 hover:text-neutral-50")
+            }
+          >
+            <span>Filme</span>
+          </button>
+
+          {/* Neuer Film */}
+          <button
+            type="button"
+            onClick={() => setActiveFilmSection("new")}
+            className={
+              "flex flex-1 items-center justify-between gap-2 rounded-2xl px-4 py-2.5 text-sm transition-all " +
+              (activeFilmSection === "new"
+                ? "bg-red-600 text-black shadow-lg shadow-red-900/60"
+                : "bg-neutral-900/80 text-neutral-200 hover:bg-neutral-800 hover:text-neutral-50")
+            }
+          >
+            <span>Neuer Film</span>
+          </button>
+
+          {/* Stammdaten */}
+          <button
+            type="button"
+            onClick={() => setActiveFilmSection("meta")}
+            className={
+              "flex flex-1 items-center justify-between gap-2 rounded-2xl px-4 py-2.5 text-sm transition-all " +
+              (activeFilmSection === "meta"
+                ? "bg-red-600 text-black shadow-lg shadow-red-900/60"
+                : "bg-neutral-900/80 text-neutral-200 hover:bg-neutral-800 hover:text-neutral-50")
+            }
+          >
+            <span>Stammdaten</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Überblick */}
+      <div className="rounded-3xl border border-neutral-800 bg-neutral-950/90 px-5 py-4 text-sm shadow-xl shadow-black/70">
+        <div className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">
+          Überblick
+        </div>
+        <div className="space-y-2 text-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-neutral-300">Filme</span>
+            <span className="font-semibold text-neutral-50">
+              {filme.length}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-neutral-300">Hauptdarsteller</span>
+            <span className="font-semibold text-neutral-50">
+              {hauptdarsteller.length}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-neutral-300">Nebendarsteller</span>
+            <span className="font-semibold text-neutral-50">
+              {nebendarsteller.length}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-neutral-300">Studios</span>
+            <span className="font-semibold text-neutral-50">
+              {studios.length}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-neutral-300">Tags</span>
+            <span className="font-semibold text-neutral-50">
+              {tags.length}
+            </span>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+
   return (
     <div className="page min-h-screen bg-gradient-to-br from-neutral-950 via-black to-neutral-900 text-neutral-100 text-[15px]">
       {/* Header */}
@@ -776,102 +867,14 @@ export default function DashboardPage() {
                 <span>Lade Daten…</span>
               </div>
             ) : (
-              <div className="flex flex-col gap-6 lg:flex-row">
-                {/* Sidebar */}
-                <aside className="w-full lg:w-64 space-y-4">
-                  {/* Bereiche – ohne Überschrift & Beschreibung */}
-                  <div className="rounded-3xl border border-neutral-800 bg-gradient-to-b from-neutral-950/90 to-black/90 px-5 py-5 shadow-2xl shadow-black/70">
-                    <div className="flex flex-row gap-2 lg:flex-col">
-                      {/* Filme */}
-                      <button
-                        type="button"
-                        onClick={() => setActiveFilmSection("stats")}
-                        className={
-                          "flex flex-1 items-center justify-between gap-2 rounded-2xl px-4 py-2.5 text-sm transition-all " +
-                          (activeFilmSection === "stats"
-                            ? "bg-red-600 text-black shadow-lg shadow-red-900/60"
-                            : "bg-neutral-900/80 text-neutral-200 hover:bg-neutral-800 hover:text-neutral-50")
-                        }
-                      >
-                        <span>Filme</span>
-                      </button>
+              <div className="relative">
+                {/* Mobile: Sidebar oberhalb der Hauptbox */}
+                <div className="mb-5 w-full space-y-4 lg:hidden">
+                  {SidebarContent}
+                </div>
 
-                      {/* Neuer Film */}
-                      <button
-                        type="button"
-                        onClick={() => setActiveFilmSection("new")}
-                        className={
-                          "flex flex-1 items-center justify-between gap-2 rounded-2xl px-4 py-2.5 text-sm transition-all " +
-                          (activeFilmSection === "new"
-                            ? "bg-red-600 text-black shadow-lg shadow-red-900/60"
-                            : "bg-neutral-900/80 text-neutral-200 hover:bg-neutral-800 hover:text-neutral-50")
-                        }
-                      >
-                        <span>Neuer Film</span>
-                      </button>
-
-                      {/* Stammdaten */}
-                      <button
-                        type="button"
-                        onClick={() => setActiveFilmSection("meta")}
-                        className={
-                          "flex flex-1 items-center justify-between gap-2 rounded-2xl px-4 py-2.5 text-sm transition-all " +
-                          (activeFilmSection === "meta"
-                            ? "bg-red-600 text-black shadow-lg shadow-red-900/60"
-                            : "bg-neutral-900/80 text-neutral-200 hover:bg-neutral-800 hover:text-neutral-50")
-                        }
-                      >
-                        <span>Stammdaten</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Überblick – mit Tags-Anzahl */}
-                  <div className="rounded-3xl border border-neutral-800 bg-neutral-950/90 px-5 py-4 text-sm shadow-xl shadow-black/70">
-                    <div className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">
-                      Überblick
-                    </div>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center justify-between">
-                        <span className="text-neutral-300">Filme</span>
-                        <span className="font-semibold text-neutral-50">
-                          {filme.length}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-neutral-300">
-                          Hauptdarsteller
-                        </span>
-                        <span className="font-semibold text-neutral-50">
-                          {hauptdarsteller.length}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-neutral-300">
-                          Nebendarsteller
-                        </span>
-                        <span className="font-semibold text-neutral-50">
-                          {nebendarsteller.length}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-neutral-300">Studios</span>
-                        <span className="font-semibold text-neutral-50">
-                          {studios.length}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-neutral-300">Tags</span>
-                        <span className="font-semibold text-neutral-50">
-                          {tags.length}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </aside>
-
-                {/* Main Content – zentriert begrenzt */}
-                <section className="flex-1 space-y-5 max-w-3xl mx-auto w-full">
+                {/* Hauptbox: EXAKT horizontal zentriert */}
+                <section className="space-y-5 max-w-3xl mx-auto w-full">
                   {/* Tab: Neuer Film */}
                   {activeFilmSection === "new" && (
                     <div className="group rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950/95 to-black/95 p-6 shadow-2xl shadow-black/70 transition-transform duration-200">
@@ -1467,6 +1470,11 @@ export default function DashboardPage() {
                     </section>
                   )}
                 </section>
+
+                {/* Desktop: Sidebar links von der zentrierten Hauptbox, Position ignoriert die Zentrierung */}
+                <aside className="hidden lg:flex lg:flex-col lg:space-y-4 lg:absolute lg:-left-72 lg:top-0 lg:w-64">
+                  {SidebarContent}
+                </aside>
               </div>
             )}
           </section>
