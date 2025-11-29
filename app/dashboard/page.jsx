@@ -1104,7 +1104,7 @@ export default function DashboardPage() {
 
                   {/* Tab: Filmestatistik */}
                   {activeFilmSection === "stats" && (
-                    <div className="rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950 to-black/95 p-6 shadow-2xl shadow-black/70 space-y-4">
+                    <div className="max-w-3xl mx-auto rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950 to-black/95 p-6 shadow-2xl shadow-black/70 space-y-4">
                       <div className="flex items-center justify-between">
                         <div>
                           <h2 className="text-xl font-semibold text-neutral-50">
