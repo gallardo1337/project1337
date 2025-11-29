@@ -156,7 +156,7 @@ export default function DashboardPage() {
   const [error, setError] = useState(null);
 
   // Stammdaten Inputs
-  the [newActorName, setNewActorName] = useState("");
+  const [newActorName, setNewActorName] = useState("");
   const [newActorImage, setNewActorImage] = useState("");
 
   const [newSupportName, setNewSupportName] = useState("");
