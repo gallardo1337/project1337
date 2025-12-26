@@ -906,7 +906,7 @@ export default function HomePage() {
         }
 
         .card__body {
-          padding: 10px 10px 12px;
+          padding: 8px 10px 8px;
           text-align: center;
         }
         .card__title {
@@ -919,7 +919,7 @@ export default function HomePage() {
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
-          min-height: 34px;
+          min-height: 18px;
         }
 
         /* Filmcount Badge unten rechts IM Poster */
