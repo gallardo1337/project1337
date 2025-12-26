@@ -12,67 +12,6 @@ import { supabase } from "../lib/supabaseClient";
  * - Filterlogik: Multi-Select ist UND + wirkt zusätzlich zur Textsuche
  */
 
-const CHANGELOG = [
-  {
-    version: "0.3.8",
-    date: "2025-12-26",
-    items: [
-      "Hero-Box komplett entfernt",
-      "Logo frei (ohne Box) + kleiner",
-      "Erweiterte Suche öffnet beim Fokus in der Suchleiste (Popover)",
-      "Kein extra Filter-Button mehr",
-      "Klick außerhalb schließt Popover, Input bleibt aktiv",
-      "Keine unerwünschten Hinweis-/Tipptexte",
-    ],
-  },
-];
-
-function VersionHint() {
-  const [open, setOpen] = useState(false);
-  const current = CHANGELOG[0];
-
-  return (
-    <>
-      <button type="button" className="chip" onClick={() => setOpen(true)}>
-        <span className="chip__dot" />
-        <span className="chip__ver">{current.version}</span>
-        <span className="chip__label">Changelog</span>
-      </button>
-
-      {open && (
-        <div className="modalOverlay" onClick={() => setOpen(false)} role="dialog" aria-modal="true">
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal__head">
-              <div>
-                <div className="modal__kicker">Version & Changelog</div>
-                <div className="modal__title">1337 Library</div>
-              </div>
-              <button type="button" className="btn btn--ghost" onClick={() => setOpen(false)}>
-                Schließen
-              </button>
-            </div>
-
-            <div className="modal__body">
-              {CHANGELOG.map((entry) => (
-                <div key={entry.version} className="logCard">
-                  <div className="logCard__top">
-                    <div className="logCard__ver">{entry.version}</div>
-                    <div className="logCard__date">{entry.date}</div>
-                  </div>
-                  <ul className="logCard__list">
-                    {entry.items.map((it, idx) => (
-                      <li key={idx}>{it}</li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
 
 function Pill({ children }) {
   return <span className="pill">{children}</span>;
@@ -1153,62 +1092,6 @@ export default function HomePage() {
           animation: shimmer 1.2s infinite linear;
         }
 
-        /* Modal (Changelog) */
-        .modalOverlay {
-          position: fixed;
-          inset: 0;
-          background: rgba(0, 0, 0, 0.65);
-          backdrop-filter: blur(8px);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 18px;
-          z-index: 1000;
-        }
-        .modal {
-          width: 100%;
-          max-width: 980px;
-          border-radius: 20px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          background: rgba(10, 10, 14, 0.92);
-          box-shadow: 0 40px 120px rgba(0, 0, 0, 0.75);
-          overflow: hidden;
-        }
-        .modal__head {
-          padding: 16px 16px 12px;
-          display: flex;
-          justify-content: space-between;
-          gap: 10px;
-          align-items: center;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-        }
-        .modal__kicker {
-          color: rgba(255, 255, 255, 0.65);
-          font-size: 12px;
-          font-weight: 650;
-          letter-spacing: 0.05em;
-          text-transform: uppercase;
-        }
-        .modal__title {
-          font-weight: 900;
-          font-size: 16px;
-          margin-top: 2px;
-        }
-        .modal__body {
-          padding: 16px;
-          max-height: 78vh;
-          overflow: auto;
-          display: grid;
-          gap: 12px;
-        }
-
-        .logCard {
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          background: rgba(255, 255, 255, 0.04);
-          border-radius: 16px;
-          padding: 14px;
-        }
-
         /* Filter layout */
         .filterGrid {
           display: grid;
@@ -1725,7 +1608,6 @@ export default function HomePage() {
         </div>
 
         <div className="topbar__right">
-          <VersionHint />
 
           {loggedIn ? (
             <>
