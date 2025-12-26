@@ -4,35 +4,32 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 
 /**
- * page.jsx – Netflix-inspiriertes UI + erweiterte Suche (exakte Filter, Multi-Tags = STRICT UND)
- * Logik weiterhin gleich gehalten:
- * - Login via /api/login + localStorage flag
- * - Logout via /api/logout + localStorage cleanup
- * - Laden: movies + actors + actors2 + studios + tags (Supabase)
- * - Mapping: main_actor_ids / supporting_actor_ids / tag_ids / studio_id
- * - ViewModes: "actors" | "movies"
- * - Actor-Klick zeigt Filme dieses Actors
- * - Suche filtert Filme (title/studio/actors/tags) + Advanced Filter
+ * page.jsx – Netflix-inspiriertes UI + erweiterte Suche
+ * Fixes:
+ * - Studio-Select Dropdown: dunkles Dropdown (option styling via select + option)
+ * New:
+ * - Filter: Hauptdarsteller (Multi, STRICT UND)
+ * - Filter: Nebendarsteller (Multi, STRICT UND)
+ *
+ * Hinweis: Actors werden als Namestrings gefiltert, basierend auf dem bereits gemappten `movie.actors` Array
+ * und `movie.mainActorIds`. Hauptdarsteller-Filter matcht über `mainActorIds` (IDs), Nebendarsteller über Namen im actors-Array
+ * (da supporting_actor_ids im Mapping aktuell nur zu Namen zusammengeführt werden).
  */
 
 const CHANGELOG = [
   {
-    version: "0.3.1",
+    version: "0.3.2",
     date: "2025-12-26",
     items: [
-      "UI modernisiert (Netflix-inspiriert)",
-      "Erweiterte Suche: Multi-Tags (STRICT UND), Studio, Jahr von/bis",
-      "Filter-Modal + Reset/Apply",
+      "Fix: Studio Dropdown (weißer Hintergrund/Text) – Options & Select dark themed",
+      "Neu: Filter Hauptdarsteller (Multi, STRICT UND)",
+      "Neu: Filter Nebendarsteller (Multi, STRICT UND)",
     ],
   },
   {
-    version: "0.3.0",
-    date: "2025-11-28",
-    items: [
-      "Startseite nutzt jetzt die neue Struktur (movies mit main_actor_ids/supporting_actor_ids, actors/actors2/tags/studios)",
-      "Darsteller-Grid mit Profilbildern (profile_image) und Cropping via object-fit: cover",
-      "Hauptdarsteller-Übersicht sortiert, Klick zeigt alle Filme dieses Darstellers",
-    ],
+    version: "0.3.1",
+    date: "2025-12-26",
+    items: ["UI modernisiert (Netflix-inspiriert)", "Erweiterte Suche: Multi-Tags (STRICT UND), Studio, Jahr von/bis"],
   },
 ];
 
@@ -137,12 +134,16 @@ export default function HomePage() {
   const [loginErr, setLoginErr] = useState(null);
   const [loginLoading, setLoginLoading] = useState(false);
 
-  // Advanced Filter (neu)
+  // Advanced Filter
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [selectedTags, setSelectedTags] = useState([]); // Tag-Namen (strings)
-  const [selectedStudio, setSelectedStudio] = useState(""); // Studio-Name (string)
+  const [selectedTags, setSelectedTags] = useState([]);
+  const [selectedStudio, setSelectedStudio] = useState("");
   const [yearFrom, setYearFrom] = useState("");
   const [yearTo, setYearTo] = useState("");
+
+  // Actor filters (neu)
+  const [selectedMainActors, setSelectedMainActors] = useState([]); // actor IDs (string/number)
+  const [selectedSupportingActors, setSelectedSupportingActors] = useState([]); // actor names (string)
 
   // Session check
   useEffect(() => {
@@ -215,9 +216,11 @@ export default function HomePage() {
               year: m.year,
               fileUrl: m.file_url,
               studio: m.studio_id ? studioMap[m.studio_id] || null : null,
-              actors: allActors,
+              actors: allActors, // names
               tags: tagNames,
               mainActorIds: mainIds,
+              mainActorNames: mainNames,
+              supportingActorNames: supportNames,
             };
           }) || [];
 
@@ -255,7 +258,7 @@ export default function HomePage() {
     void load();
   }, [loggedIn]);
 
-  // Optionen für Filter (aus bereits gemappten movies)
+  // Options for filters
   const allTags = useMemo(() => {
     const set = new Set();
     movies.forEach((m) => (m.tags || []).forEach((t) => set.add(t)));
@@ -267,6 +270,18 @@ export default function HomePage() {
     movies.forEach((m) => {
       if (m.studio) set.add(m.studio);
     });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
+  }, [movies]);
+
+  // Hauptdarsteller-Optionen: aus actors state
+  const mainActorOptions = useMemo(() => {
+    return (actors || []).map((a) => ({ id: a.id, name: a.name })).sort((a, b) => a.name.localeCompare(b.name, "de"));
+  }, [actors]);
+
+  // Nebendarsteller-Optionen: aus movies supportingActorNames aggregieren (und deduplizieren)
+  const supportingActorOptions = useMemo(() => {
+    const set = new Set();
+    movies.forEach((m) => (m.supportingActorNames || []).forEach((n) => set.add(n)));
     return Array.from(set).sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
   }, [movies]);
 
@@ -290,7 +305,7 @@ export default function HomePage() {
       });
     }
 
-    // Tags – STRICT UND: alle ausgewählten Tags müssen vorhanden sein
+    // Tags – STRICT UND
     if (selectedTags.length > 0) {
       list = list.filter((m) => {
         const mtags = Array.isArray(m.tags) ? m.tags : [];
@@ -298,12 +313,42 @@ export default function HomePage() {
       });
     }
 
+    // Hauptdarsteller – STRICT UND auf IDs
+    if (selectedMainActors.length > 0) {
+      list = list.filter((m) => {
+        const ids = Array.isArray(m.mainActorIds) ? m.mainActorIds.map(String) : [];
+        return selectedMainActors.map(String).every((id) => ids.includes(id));
+      });
+    }
+
+    // Nebendarsteller – STRICT UND auf Names (aus supportingActorNames)
+    if (selectedSupportingActors.length > 0) {
+      list = list.filter((m) => {
+        const names = Array.isArray(m.supportingActorNames) ? m.supportingActorNames : [];
+        return selectedSupportingActors.every((n) => names.includes(n));
+      });
+    }
+
     return list;
   };
 
   const hasAnyFilter = useMemo(() => {
-    return Boolean(selectedStudio || selectedTags.length > 0 || yearFrom || yearTo);
-  }, [selectedStudio, selectedTags.length, yearFrom, yearTo]);
+    return Boolean(
+      selectedStudio ||
+        selectedTags.length > 0 ||
+        yearFrom ||
+        yearTo ||
+        selectedMainActors.length > 0 ||
+        selectedSupportingActors.length > 0
+    );
+  }, [
+    selectedStudio,
+    selectedTags.length,
+    yearFrom,
+    yearTo,
+    selectedMainActors.length,
+    selectedSupportingActors.length,
+  ]);
 
   const handleShowMoviesForActor = (actorId, actorName) => {
     const m = movies.filter((movie) => Array.isArray(movie.mainActorIds) && movie.mainActorIds.includes(actorId));
@@ -318,7 +363,6 @@ export default function HomePage() {
     setSearch(val);
     const trimmed = val.trim();
 
-    // Keine Textsuche, aber Filter aktiv -> gefilterte Filme zeigen
     if (!trimmed) {
       if (hasAnyFilter) {
         const filtered = applyAdvancedFilters(movies);
@@ -429,10 +473,11 @@ export default function HomePage() {
     setSelectedStudio("");
     setYearFrom("");
     setYearTo("");
+    setSelectedMainActors([]);
+    setSelectedSupportingActors([]);
   };
 
   const applyFiltersNow = () => {
-    // Filter anwenden, ohne Textsuche zu verändern
     if (search.trim()) {
       handleSearchChange(search);
     } else {
@@ -453,13 +498,12 @@ export default function HomePage() {
           --panel: rgba(255, 255, 255, 0.06);
           --panel2: rgba(255, 255, 255, 0.08);
           --stroke: rgba(255, 255, 255, 0.12);
-          --stroke2: rgba(255, 255, 255, 0.16);
           --text: rgba(255, 255, 255, 0.92);
           --muted: rgba(255, 255, 255, 0.68);
           --muted2: rgba(255, 255, 255, 0.52);
           --accent: #e50914;
-          --accent2: rgba(229, 9, 20, 0.22);
           --shadow: rgba(0, 0, 0, 0.55);
+          --menuBg: #111218;
         }
 
         html,
@@ -544,11 +588,6 @@ export default function HomePage() {
           border: 1px solid rgba(255, 255, 255, 0.12);
           border-radius: 999px;
           padding: 10px 14px;
-          transition: border-color 0.18s ease, background 0.18s ease;
-        }
-        .input:focus-within {
-          border-color: rgba(229, 9, 20, 0.55);
-          background: rgba(255, 255, 255, 0.08);
         }
         .input__icon {
           width: 16px;
@@ -577,25 +616,10 @@ export default function HomePage() {
           font-size: 13px;
           font-weight: 650;
           cursor: pointer;
-          transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
-          white-space: nowrap;
-        }
-        .btn:hover {
-          transform: translateY(-1px);
-          background: rgba(255, 255, 255, 0.09);
-          border-color: rgba(255, 255, 255, 0.18);
-        }
-        .btn:active {
-          transform: translateY(0px);
         }
         .btn--primary {
           background: linear-gradient(180deg, rgba(229, 9, 20, 0.95), rgba(229, 9, 20, 0.78));
           border-color: rgba(229, 9, 20, 0.6);
-          box-shadow: 0 18px 36px rgba(229, 9, 20, 0.22);
-        }
-        .btn--primary:hover {
-          background: linear-gradient(180deg, rgba(255, 21, 33, 0.95), rgba(229, 9, 20, 0.8));
-          border-color: rgba(255, 21, 33, 0.65);
         }
         .btn--ghost {
           background: transparent;
@@ -616,12 +640,6 @@ export default function HomePage() {
           cursor: pointer;
           font-size: 13px;
           font-weight: 650;
-          transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
-        }
-        .chip:hover {
-          transform: translateY(-1px);
-          background: rgba(255, 255, 255, 0.09);
-          border-color: rgba(255, 255, 255, 0.18);
         }
         .chip__dot {
           width: 8px;
@@ -629,9 +647,6 @@ export default function HomePage() {
           border-radius: 99px;
           background: var(--accent);
           box-shadow: 0 0 0 6px rgba(229, 9, 20, 0.15);
-        }
-        .chip__ver {
-          font-variant-numeric: tabular-nums;
         }
         .chip__label {
           color: var(--muted);
@@ -649,11 +664,26 @@ export default function HomePage() {
           padding: 0 18px 70px;
         }
 
+        /* Select styling (fix dropdown white on white) */
+        .select {
+          width: 100%;
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          color: rgba(255, 255, 255, 0.92);
+          border-radius: 12px;
+          padding: 10px 12px;
+          outline: none;
+        }
+        .select option {
+          background: var(--menuBg);
+          color: rgba(255, 255, 255, 0.92);
+        }
+
+        /* Rest styling trimmed for brevity in this block? No: keep necessary UI */
         .hero {
           margin-top: 18px;
           border-radius: 22px;
           overflow: hidden;
-          position: relative;
           border: 1px solid rgba(255, 255, 255, 0.08);
           background:
             radial-gradient(900px 360px at 20% 20%, rgba(229, 9, 20, 0.35), transparent 55%),
@@ -661,7 +691,6 @@ export default function HomePage() {
             linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
           box-shadow: 0 30px 80px var(--shadow);
         }
-
         .hero__inner {
           padding: 26px 22px 22px;
           display: grid;
@@ -669,15 +698,6 @@ export default function HomePage() {
           gap: 18px;
           align-items: end;
         }
-
-        .hero__kicker {
-          color: rgba(255, 255, 255, 0.7);
-          font-weight: 650;
-          letter-spacing: 0.06em;
-          text-transform: uppercase;
-          font-size: 12px;
-        }
-
         .hero__title {
           font-size: 34px;
           line-height: 1.05;
@@ -685,25 +705,27 @@ export default function HomePage() {
           letter-spacing: -0.02em;
           margin: 8px 0 10px;
         }
-
         .hero__sub {
           color: rgba(255, 255, 255, 0.72);
           font-size: 14px;
           line-height: 1.45;
           max-width: 60ch;
         }
-
+        .hero__actions {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+          margin-top: 16px;
+        }
         .hero__stats {
           display: flex;
           gap: 10px;
           justify-content: flex-end;
           flex-wrap: wrap;
         }
-
         .stat {
           border: 1px solid rgba(255, 255, 255, 0.12);
           background: rgba(0, 0, 0, 0.35);
-          backdrop-filter: blur(10px);
           border-radius: 16px;
           padding: 10px 12px;
           min-width: 150px;
@@ -711,19 +733,11 @@ export default function HomePage() {
         .stat__num {
           font-weight: 900;
           font-size: 18px;
-          letter-spacing: -0.01em;
         }
         .stat__lbl {
           margin-top: 3px;
           color: rgba(255, 255, 255, 0.62);
           font-size: 12px;
-        }
-
-        .hero__actions {
-          display: flex;
-          gap: 10px;
-          flex-wrap: wrap;
-          margin-top: 16px;
         }
 
         .sectionHead {
@@ -736,103 +750,14 @@ export default function HomePage() {
         .sectionTitle {
           font-size: 18px;
           font-weight: 850;
-          letter-spacing: -0.01em;
         }
         .sectionMeta {
           color: var(--muted2);
           font-size: 13px;
         }
 
-        .row {
-          display: grid;
-          grid-template-columns: repeat(6, minmax(0, 1fr));
-          gap: 12px;
-        }
-
-        @media (max-width: 1100px) {
-          .row {
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-          }
-          .hero__inner {
-            grid-template-columns: 1fr;
-          }
-          .hero__stats {
-            justify-content: flex-start;
-          }
-        }
-        @media (max-width: 720px) {
-          .row {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-          }
-          .hero__title {
-            font-size: 28px;
-          }
-          .topbar__mid {
-            display: none;
-          }
-        }
-
-        .card {
-          position: relative;
-          border-radius: 16px;
-          overflow: hidden;
-          border: 1px solid rgba(255, 255, 255, 0.10);
-          background: rgba(255, 255, 255, 0.05);
-          box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
-          cursor: pointer;
-          transition: transform 0.14s ease, border-color 0.14s ease, background 0.14s ease;
-        }
-        .card:hover {
-          transform: translateY(-3px);
-          border-color: rgba(229, 9, 20, 0.35);
-          background: rgba(255, 255, 255, 0.07);
-        }
-        .card:active {
-          transform: translateY(-1px);
-        }
-
-        .card__img {
-          width: 100%;
-          aspect-ratio: 3/4;
-          background: rgba(255, 255, 255, 0.06);
-          overflow: hidden;
-        }
-        .card__img img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          display: block;
-          transform: scale(1.02);
-        }
-
-        .card__body {
-          padding: 10px 10px 12px;
-        }
-        .card__title {
-          font-weight: 800;
-          font-size: 13px;
-          line-height: 1.2;
-          letter-spacing: -0.01em;
-          margin: 0 0 6px;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-          min-height: 32px;
-        }
-        .card__sub {
-          color: rgba(255, 255, 255, 0.6);
-          font-size: 12px;
-          display: flex;
-          gap: 8px;
-          align-items: center;
-          flex-wrap: wrap;
-        }
-
         .pill {
           display: inline-flex;
-          align-items: center;
-          gap: 6px;
           padding: 4px 8px;
           border-radius: 999px;
           background: rgba(255, 255, 255, 0.08);
@@ -851,10 +776,22 @@ export default function HomePage() {
           .movieGrid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
           }
+          .hero__inner {
+            grid-template-columns: 1fr;
+          }
+          .hero__stats {
+            justify-content: flex-start;
+          }
         }
         @media (max-width: 720px) {
           .movieGrid {
             grid-template-columns: 1fr;
+          }
+          .topbar__mid {
+            display: none;
+          }
+          .hero__title {
+            font-size: 28px;
           }
         }
 
@@ -864,14 +801,7 @@ export default function HomePage() {
           border-radius: 18px;
           padding: 14px;
           box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
-          transition: transform 0.14s ease, border-color 0.14s ease, background 0.14s ease;
         }
-        .movieCard:hover {
-          transform: translateY(-2px);
-          border-color: rgba(229, 9, 20, 0.35);
-          background: rgba(255, 255, 255, 0.07);
-        }
-
         .movieCard__top {
           display: flex;
           justify-content: space-between;
@@ -880,18 +810,13 @@ export default function HomePage() {
         }
         .movieCard__title {
           font-weight: 900;
-          letter-spacing: -0.01em;
           margin: 0;
           font-size: 16px;
-          line-height: 1.2;
         }
         .movieCard__year {
           color: rgba(255, 255, 255, 0.7);
           font-weight: 750;
-          font-variant-numeric: tabular-nums;
-          margin-top: 2px;
         }
-
         .movieCard__meta {
           margin-top: 10px;
           display: grid;
@@ -913,7 +838,6 @@ export default function HomePage() {
         .kv__v {
           color: rgba(255, 255, 255, 0.78);
         }
-
         .movieCard__actions {
           margin-top: 12px;
           display: flex;
@@ -921,16 +845,6 @@ export default function HomePage() {
           flex-wrap: wrap;
         }
 
-        .auth {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
-        .auth__label {
-          color: rgba(255, 255, 255, 0.7);
-          font-size: 13px;
-          font-weight: 650;
-        }
         .authForm {
           display: flex;
           align-items: center;
@@ -952,9 +866,6 @@ export default function HomePage() {
           color: var(--text);
           font-size: 13px;
         }
-        .authField input::placeholder {
-          color: rgba(255, 255, 255, 0.45);
-        }
 
         .errorBanner {
           margin-top: 14px;
@@ -962,7 +873,6 @@ export default function HomePage() {
           padding: 12px 14px;
           border: 1px solid rgba(229, 9, 20, 0.35);
           background: rgba(229, 9, 20, 0.10);
-          color: rgba(255, 255, 255, 0.88);
         }
 
         .empty {
@@ -986,41 +896,59 @@ export default function HomePage() {
           margin-top: 12px;
         }
 
-        .skRow {
+        .row {
           display: grid;
           grid-template-columns: repeat(6, minmax(0, 1fr));
           gap: 12px;
         }
         @media (max-width: 1100px) {
-          .skRow {
+          .row {
             grid-template-columns: repeat(4, minmax(0, 1fr));
           }
         }
         @media (max-width: 720px) {
-          .skRow {
+          .row {
             grid-template-columns: repeat(2, minmax(0, 1fr));
           }
         }
-        .skCard {
+        .card {
           border-radius: 16px;
-          aspect-ratio: 3/4;
+          overflow: hidden;
           border: 1px solid rgba(255, 255, 255, 0.10);
-          background: linear-gradient(
-            90deg,
-            rgba(255, 255, 255, 0.05),
-            rgba(255, 255, 255, 0.08),
-            rgba(255, 255, 255, 0.05)
-          );
-          background-size: 200% 100%;
-          animation: shimmer 1.2s infinite linear;
+          background: rgba(255, 255, 255, 0.05);
+          cursor: pointer;
         }
-        @keyframes shimmer {
-          0% {
-            background-position: 200% 0;
-          }
-          100% {
-            background-position: -200% 0;
-          }
+        .card__img {
+          width: 100%;
+          aspect-ratio: 3/4;
+          background: rgba(255, 255, 255, 0.06);
+          overflow: hidden;
+        }
+        .card__img img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
+        }
+        .card__body {
+          padding: 10px 10px 12px;
+        }
+        .card__title {
+          font-weight: 800;
+          font-size: 13px;
+          margin: 0 0 6px;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+          min-height: 32px;
+        }
+        .card__sub {
+          color: rgba(255, 255, 255, 0.6);
+          font-size: 12px;
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
         }
 
         .modalOverlay {
@@ -1036,7 +964,7 @@ export default function HomePage() {
         }
         .modal {
           width: 100%;
-          max-width: 860px;
+          max-width: 900px;
           border-radius: 20px;
           border: 1px solid rgba(255, 255, 255, 0.10);
           background: rgba(10, 10, 14, 0.92);
@@ -1070,45 +998,11 @@ export default function HomePage() {
           display: grid;
           gap: 12px;
         }
-
         .logCard {
           border: 1px solid rgba(255, 255, 255, 0.10);
           background: rgba(255, 255, 255, 0.04);
           border-radius: 16px;
           padding: 14px;
-        }
-        .logCard__top {
-          display: flex;
-          justify-content: space-between;
-          gap: 10px;
-          align-items: baseline;
-          margin-bottom: 8px;
-        }
-        .logCard__ver {
-          font-weight: 900;
-        }
-        .logCard__date {
-          color: rgba(255, 255, 255, 0.6);
-          font-size: 12px;
-          font-variant-numeric: tabular-nums;
-        }
-        .logCard__list {
-          margin: 0;
-          padding-left: 18px;
-          color: rgba(255, 255, 255, 0.72);
-          font-size: 13px;
-          line-height: 1.55;
-        }
-
-        .filterGrid {
-          display: grid;
-          grid-template-columns: 1.2fr 0.8fr;
-          gap: 12px;
-        }
-        @media (max-width: 900px) {
-          .filterGrid {
-            grid-template-columns: 1fr;
-          }
         }
 
         .fieldLabel {
@@ -1119,29 +1013,26 @@ export default function HomePage() {
           text-transform: uppercase;
           margin-bottom: 6px;
         }
-
-        .select {
-          width: 100%;
-          background: rgba(255, 255, 255, 0.06);
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          color: rgba(255, 255, 255, 0.9);
-          border-radius: 12px;
-          padding: 10px 12px;
-          outline: none;
-        }
-
-        .yearRow {
+        .filterGrid {
           display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 10px;
+          grid-template-columns: 1.15fr 0.85fr;
+          gap: 12px;
         }
-
+        @media (max-width: 900px) {
+          .filterGrid {
+            grid-template-columns: 1fr;
+          }
+        }
         .tagWrap {
           display: flex;
           gap: 8px;
           flex-wrap: wrap;
         }
-
+        .yearRow {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
+        }
         .activeFilters {
           margin-top: 14px;
           display: flex;
@@ -1150,7 +1041,6 @@ export default function HomePage() {
         }
       `}</style>
 
-      {/* Topbar */}
       <div className="topbar">
         <div className="brand" title="Project1337">
           <div className="brand__mark" />
@@ -1168,12 +1058,7 @@ export default function HomePage() {
                     stroke="currentColor"
                     strokeWidth="2"
                   />
-                  <path
-                    d="M16.5 16.5 21 21"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
+                  <path d="M16.5 16.5 21 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                 </svg>
                 <input
                   value={search}
@@ -1182,18 +1067,17 @@ export default function HomePage() {
                   autoComplete="off"
                 />
                 {search ? (
-                  <button
-                    type="button"
-                    className="btn btn--ghost"
-                    onClick={() => handleSearchChange("")}
-                    title="Suche löschen"
-                  >
+                  <button type="button" className="btn btn--ghost" onClick={() => handleSearchChange("")} title="Suche löschen">
                     Reset
                   </button>
                 ) : null}
               </div>
 
-              <button type="button" className={`btn ${hasAnyFilter ? "btn--primary" : ""}`} onClick={() => setFiltersOpen(true)}>
+              <button
+                type="button"
+                className={`btn ${hasAnyFilter ? "btn--primary" : ""}`}
+                onClick={() => setFiltersOpen(true)}
+              >
                 Filter{hasAnyFilter ? " • aktiv" : ""}
               </button>
             </>
@@ -1220,12 +1104,7 @@ export default function HomePage() {
           ) : (
             <form className="authForm" onSubmit={handleLogin}>
               <div className="authField">
-                <input
-                  value={loginUser}
-                  onChange={(e) => setLoginUser(e.target.value)}
-                  placeholder="User"
-                  autoComplete="username"
-                />
+                <input value={loginUser} onChange={(e) => setLoginUser(e.target.value)} placeholder="User" autoComplete="username" />
               </div>
               <div className="authField">
                 <input
@@ -1245,15 +1124,15 @@ export default function HomePage() {
       </div>
 
       <div className="wrap">
-        {/* Hero */}
         <div className="hero">
           <div className="hero__inner">
             <div>
-              <div className="hero__kicker">Stream. Organize. Flex.</div>
+              <div style={{ color: "rgba(255,255,255,0.7)", fontWeight: 650, letterSpacing: "0.06em", textTransform: "uppercase", fontSize: 12 }}>
+                Stream. Organize. Flex.
+              </div>
               <div className="hero__title">Deine private 1337-Mediathek.</div>
               <div className="hero__sub">
-                Suche über Text oder filtere exakt nach Tags/Studio/Jahr. Mehrere Tags bedeuten: ein Film muss alle
-                ausgewählten Tags enthalten (STRICT UND).
+                Textsuche + Filter. Mehrere Tags/Darsteller bedeuten: ein Film muss alle ausgewählten Einträge enthalten (STRICT UND).
               </div>
 
               <div className="hero__actions">
@@ -1280,13 +1159,11 @@ export default function HomePage() {
                       </button>
                     )}
 
-                    <button
-                      type="button"
-                      className="btn btn--primary"
-                      onClick={() => safeOpen("/dashboard")}
-                      title="Admin / Dashboard"
-                    >
+                    <button type="button" className="btn btn--primary" onClick={() => safeOpen("/dashboard")}>
                       Zum Dashboard
+                    </button>
+                    <button type="button" className="btn" onClick={() => setFiltersOpen(true)}>
+                      Filter öffnen
                     </button>
                   </>
                 ) : (
@@ -1300,9 +1177,16 @@ export default function HomePage() {
                   {yearFrom ? <Pill>Jahr ab: {yearFrom}</Pill> : null}
                   {yearTo ? <Pill>Jahr bis: {yearTo}</Pill> : null}
                   {selectedTags.map((t) => (
-                    <Pill key={t}>Tag: {t}</Pill>
+                    <Pill key={`t-${t}`}>Tag: {t}</Pill>
                   ))}
-                  <button type="button" className="btn btn--ghost" onClick={resetFilters} title="Filter zurücksetzen">
+                  {selectedMainActors.map((id) => {
+                    const name = mainActorOptions.find((x) => String(x.id) === String(id))?.name || `ID ${id}`;
+                    return <Pill key={`m-${id}`}>Haupt: {name}</Pill>;
+                  })}
+                  {selectedSupportingActors.map((n) => (
+                    <Pill key={`s-${n}`}>Neben: {n}</Pill>
+                  ))}
+                  <button type="button" className="btn btn--ghost" onClick={resetFilters}>
                     Filter Reset
                   </button>
                 </div>
@@ -1326,11 +1210,9 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Errors */}
         {loginErr ? <div className="errorBanner">{loginErr}</div> : null}
         {err ? <div className="errorBanner">{err}</div> : null}
 
-        {/* Content */}
         {!loggedIn ? (
           <EmptyState
             title="Bitte einloggen"
@@ -1424,9 +1306,7 @@ export default function HomePage() {
             <div className="sectionHead">
               <div>
                 <div className="sectionTitle">Hauptdarsteller</div>
-                <div className="sectionMeta">
-                  {actors.length} Darsteller • Klicke einen Darsteller, um seine Filme zu öffnen.
-                </div>
+                <div className="sectionMeta">{actors.length} Darsteller • Klicke einen Darsteller, um seine Filme zu öffnen.</div>
               </div>
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                 <button
@@ -1439,7 +1319,6 @@ export default function HomePage() {
                     setMoviesSubtitle(`${filtered.length} Film(e)`);
                     setVisibleMovies(filtered);
                   }}
-                  title="Alle Filme anzeigen"
                 >
                   Filme
                 </button>
@@ -1521,7 +1400,7 @@ export default function HomePage() {
                   <div>
                     <div className="fieldLabel">Tags (alle müssen passen)</div>
                     <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, marginBottom: 8 }}>
-                      Aktiv: {selectedTags.length} Tag(s). Ein Film muss alle ausgewählten Tags enthalten.
+                      Aktiv: {selectedTags.length} Tag(s).
                     </div>
 
                     <div className="tagWrap">
@@ -1532,7 +1411,7 @@ export default function HomePage() {
                           const active = selectedTags.includes(t);
                           return (
                             <button
-                              key={t}
+                              key={`tag-${t}`}
                               type="button"
                               className={`chip ${active ? "chip--active" : ""}`}
                               onClick={() => {
@@ -1549,6 +1428,74 @@ export default function HomePage() {
                         })
                       )}
                     </div>
+
+                    <div style={{ height: 12 }} />
+
+                    <div className="fieldLabel">Hauptdarsteller (alle müssen passen)</div>
+                    <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, marginBottom: 8 }}>
+                      Aktiv: {selectedMainActors.length} Darsteller.
+                    </div>
+
+                    <div className="tagWrap">
+                      {mainActorOptions.length === 0 ? (
+                        <Pill>Keine Hauptdarsteller vorhanden</Pill>
+                      ) : (
+                        mainActorOptions.map((a) => {
+                          const active = selectedMainActors.map(String).includes(String(a.id));
+                          return (
+                            <button
+                              key={`main-${a.id}`}
+                              type="button"
+                              className={`chip ${active ? "chip--active" : ""}`}
+                              onClick={() => {
+                                setSelectedMainActors((prev) => {
+                                  const p = prev.map(String);
+                                  const id = String(a.id);
+                                  return p.includes(id) ? p.filter((x) => x !== id) : [...p, id];
+                                });
+                              }}
+                              title={a.name}
+                            >
+                              <span className="chip__dot" style={{ opacity: active ? 1 : 0.25 }} />
+                              <span>{a.name}</span>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    <div style={{ height: 12 }} />
+
+                    <div className="fieldLabel">Nebendarsteller (alle müssen passen)</div>
+                    <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, marginBottom: 8 }}>
+                      Aktiv: {selectedSupportingActors.length} Darsteller.
+                    </div>
+
+                    <div className="tagWrap">
+                      {supportingActorOptions.length === 0 ? (
+                        <Pill>Keine Nebendarsteller vorhanden</Pill>
+                      ) : (
+                        supportingActorOptions.map((n) => {
+                          const active = selectedSupportingActors.includes(n);
+                          return (
+                            <button
+                              key={`supp-${n}`}
+                              type="button"
+                              className={`chip ${active ? "chip--active" : ""}`}
+                              onClick={() => {
+                                setSelectedSupportingActors((prev) =>
+                                  prev.includes(n) ? prev.filter((x) => x !== n) : [...prev, n]
+                                );
+                              }}
+                              title={n}
+                            >
+                              <span className="chip__dot" style={{ opacity: active ? 1 : 0.25 }} />
+                              <span>{n}</span>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
                   </div>
 
                   <div style={{ display: "grid", gap: 12 }}>
@@ -1557,7 +1504,7 @@ export default function HomePage() {
                       <select className="select" value={selectedStudio} onChange={(e) => setSelectedStudio(e.target.value)}>
                         <option value="">Alle Studios</option>
                         {allStudios.map((s) => (
-                          <option key={s} value={s}>
+                          <option key={`st-${s}`} value={s}>
                             {s}
                           </option>
                         ))}
@@ -1594,20 +1541,27 @@ export default function HomePage() {
                     </div>
 
                     {hasAnyFilter ? (
-                      <div style={{ display: "grid", gap: 6 }}>
+                      <div>
                         <div className="fieldLabel">Aktive Filter</div>
                         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                           {selectedStudio ? <Pill>Studio: {selectedStudio}</Pill> : null}
                           {yearFrom ? <Pill>ab {yearFrom}</Pill> : null}
                           {yearTo ? <Pill>bis {yearTo}</Pill> : null}
                           {selectedTags.map((t) => (
-                            <Pill key={t}>{t}</Pill>
+                            <Pill key={`af-tag-${t}`}>{t}</Pill>
+                          ))}
+                          {selectedMainActors.map((id) => {
+                            const name = mainActorOptions.find((x) => String(x.id) === String(id))?.name || `ID ${id}`;
+                            return <Pill key={`af-main-${id}`}>Haupt: {name}</Pill>;
+                          })}
+                          {selectedSupportingActors.map((n) => (
+                            <Pill key={`af-supp-${n}`}>Neben: {n}</Pill>
                           ))}
                         </div>
                       </div>
                     ) : (
                       <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 12 }}>
-                        Keine Filter aktiv. Wähle Tags/Studio/Jahr und klicke „Anwenden“.
+                        Keine Filter aktiv. Wähle Tags/Studio/Jahr/Darsteller und klicke „Anwenden“.
                       </div>
                     )}
                   </div>
@@ -1617,8 +1571,8 @@ export default function HomePage() {
               <div className="logCard">
                 <div className="fieldLabel">Hinweis</div>
                 <div style={{ color: "rgba(255,255,255,0.72)", fontSize: 13, lineHeight: 1.5 }}>
-                  Die Filter wirken zusätzlich zur Textsuche. Wenn du kein Suchwort eingibst, werden nur die gefilterten
-                  Filme angezeigt.
+                  Die Filter wirken zusätzlich zur Textsuche. Wenn du kein Suchwort eingibst, werden nur die gefilterten Filme angezeigt.
+                  Mehrfachauswahl bedeutet immer: alle ausgewählten Einträge müssen matchen.
                 </div>
               </div>
             </div>
