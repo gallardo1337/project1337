@@ -12,7 +12,6 @@ import { supabase } from "../lib/supabaseClient";
  * - Filterlogik: Multi-Select ist UND + wirkt zusätzlich zur Textsuche
  */
 
-
 function Pill({ children }) {
   return <span className="pill">{children}</span>;
 }
@@ -745,39 +744,6 @@ export default function HomePage() {
           font-size: 12px;
         }
 
-        /* Chip */
-        .chip {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          padding: 10px 12px;
-          border-radius: 999px;
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          background: rgba(255, 255, 255, 0.06);
-          color: var(--text);
-          cursor: pointer;
-          font-size: 13px;
-          font-weight: 650;
-        }
-        .chip:hover {
-          background: rgba(255, 255, 255, 0.09);
-          border-color: rgba(255, 255, 255, 0.18);
-        }
-        .chip__dot {
-          width: 8px;
-          height: 8px;
-          border-radius: 99px;
-          background: var(--accent);
-          box-shadow: 0 0 0 6px rgba(229, 9, 20, 0.15);
-        }
-        .chip__ver {
-          font-variant-numeric: tabular-nums;
-        }
-        .chip__label {
-          color: var(--muted);
-          font-weight: 600;
-        }
-
         .auth__label {
           color: rgba(255, 255, 255, 0.72);
           font-weight: 700;
@@ -929,6 +895,7 @@ export default function HomePage() {
         }
         .card__body {
           padding: 10px 10px 12px;
+          text-align: center; /* Name mittig */
         }
         .card__title {
           font-weight: 800;
@@ -942,13 +909,34 @@ export default function HomePage() {
           overflow: hidden;
           min-height: 32px;
         }
-        .card__sub {
-          color: rgba(255, 255, 255, 0.6);
-          font-size: 12px;
-          display: flex;
-          gap: 8px;
+
+        /* Filmcount Badge unten rechts */
+        .card__count {
+          position: absolute;
+          right: 10px;
+          bottom: 10px;
+
+          min-width: 28px;
+          height: 28px;
+          padding: 0 10px;
+
+          display: inline-flex;
           align-items: center;
-          flex-wrap: wrap;
+          justify-content: center;
+
+          border-radius: 999px;
+          font-size: 12px;
+          font-weight: 900;
+          font-variant-numeric: tabular-nums;
+
+          background: rgba(0, 0, 0, 0.55);
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          color: rgba(255, 255, 255, 0.92);
+
+          backdrop-filter: blur(8px);
+        }
+        .card:hover .card__count {
+          border-color: rgba(229, 9, 20, 0.35);
         }
 
         .movieCard {
@@ -1569,7 +1557,9 @@ export default function HomePage() {
                                     {yearTo ? <Pill>bis {yearTo}</Pill> : null}
                                     {selectedTags.length ? <Pill>{selectedTags.length} Tags</Pill> : null}
                                     {selectedMainActors.length ? <Pill>{selectedMainActors.length} Haupt</Pill> : null}
-                                    {selectedSupportingActors.length ? <Pill>{selectedSupportingActors.length} Neben</Pill> : null}
+                                    {selectedSupportingActors.length ? (
+                                      <Pill>{selectedSupportingActors.length} Neben</Pill>
+                                    ) : null}
                                   </div>
                                 </div>
                               </>
@@ -1608,7 +1598,6 @@ export default function HomePage() {
         </div>
 
         <div className="topbar__right">
-
           {loggedIn ? (
             <>
               <div className="auth__label">Willkommen, {loginUser}</div>
@@ -1651,7 +1640,6 @@ export default function HomePage() {
       <div className="wrap">
         {/* Logo frei (ohne Box) */}
         <div className="logoSolo">
-          {/* Pfad anpassen falls dein Logo anders heißt */}
           <img className="logoSolo__img" src="/logo.png" alt="Project1337" />
         </div>
 
@@ -1693,7 +1681,10 @@ export default function HomePage() {
             </div>
 
             {visibleMovies.length === 0 ? (
-              <EmptyState title="Keine Filme gefunden" subtitle="Passe Suche/Filter an oder gehe zurück zur Darsteller-Ansicht." />
+              <EmptyState
+                title="Keine Filme gefunden"
+                subtitle="Passe Suche/Filter an oder gehe zurück zur Darsteller-Ansicht."
+              />
             ) : (
               <div className="movieGrid">
                 {visibleMovies.map((m) => (
@@ -1721,7 +1712,12 @@ export default function HomePage() {
                     </div>
 
                     <div className="movieCard__actions">
-                      <button type="button" className="btn btn--primary" onClick={() => safeOpen(m.fileUrl)} title="Film starten">
+                      <button
+                        type="button"
+                        className="btn btn--primary"
+                        onClick={() => safeOpen(m.fileUrl)}
+                        title="Film starten"
+                      >
                         Play
                       </button>
                       <button
@@ -1749,7 +1745,8 @@ export default function HomePage() {
             <div className="sectionHead">
               <div>
                 <div className="sectionTitle">Hauptdarsteller</div>
-                <div className="sectionMeta">{actors.length} Darsteller • Klicke einen Darsteller, um seine Filme zu öffnen.</div>
+                {/* Hinweistext entfernt */}
+                <div className="sectionMeta">{actors.length} Darsteller</div>
               </div>
 
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -1797,11 +1794,13 @@ export default function HomePage() {
                         </div>
                       )}
                     </div>
+
                     <div className="card__body">
                       <div className="card__title">{a.name}</div>
-                      <div className="card__sub">
-                        <Pill>{a.movieCount} Film(e)</Pill>
-                      </div>
+                    </div>
+
+                    <div className="card__count" aria-label={`${a.movieCount} Filme`}>
+                      {a.movieCount}
                     </div>
                   </div>
                 ))}
