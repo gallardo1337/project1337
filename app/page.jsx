@@ -668,30 +668,30 @@ export default function HomePage() {
         }
 
         /* Topbar */
-        .topbar {
-          position: sticky;
-          top: 0;
-          z-index: 50;
-          padding: 14px 18px;
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          background: rgba(0, 0, 0, 0.55);
-          backdrop-filter: blur(14px);
-          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-        }
-        .topbar__mid {
-          flex: 1;
-          display: flex;
-          justify-content: center;
-          gap: 10px;
-          align-items: center;
-        }
-        .topbar__right {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  padding: 14px 18px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.topbar__mid {
+  justify-self: center;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.topbar__right {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 
         /* Search */
         .input {
