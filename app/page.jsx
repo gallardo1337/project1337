@@ -5,17 +5,19 @@ import { supabase } from "../lib/supabaseClient";
 
 /**
  * page.jsx – Netflix-inspiriert + Advanced Filter (skalierbar)
+ * - Multi-Select ist STRICT UND (implizit, ohne Hinweistext)
+ * - Filter wirken zusätzlich zur Textsuche
  */
 
 const CHANGELOG = [
   {
-    version: "0.3.3",
+    version: "0.3.4",
     date: "2025-12-26",
     items: [
-      "Filter UX refactored: Sections + Search + Scroll + Selected-only Toggle",
-      "Nur ein Filter-Button (Topbar)",
-      "Studio dropdown dark options",
-      "Multi Haupt-/Nebendarsteller Filter bleibt STRICT UND",
+      "Topbar: Suche + Filter exakt mittig (stabil, grid + spacer)",
+      "Removed unwanted hint texts in filter UI",
+      "Dark dropdown options for Studio",
+      "Multi-select Haupt-/Nebendarsteller (STRICT UND)",
     ],
   },
 ];
@@ -126,6 +128,7 @@ function FilterSection({
   const [open, setOpen] = useState(defaultOpen);
 
   const selectedSet = useMemo(() => new Set(selectedKeys.map(String)), [selectedKeys]);
+
   const filtered = useMemo(() => {
     const base = items || [];
     let list = base;
@@ -240,8 +243,8 @@ function FilterSection({
 
 export default function HomePage() {
   const [movies, setMovies] = useState([]);
-  const [actors, setActors] = useState([]);
-  const [viewMode, setViewMode] = useState("actors");
+  const [actors, setActors] = useState([]); // Hauptdarsteller-Liste
+  const [viewMode, setViewMode] = useState("actors"); // "actors" | "movies"
   const [visibleMovies, setVisibleMovies] = useState([]);
   const [moviesTitle, setMoviesTitle] = useState("Filme");
   const [moviesSubtitle, setMoviesSubtitle] = useState("");
@@ -249,22 +252,27 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
 
+  // Login
   const [loggedIn, setLoggedIn] = useState(false);
   const [loginUser, setLoginUser] = useState("gallardo1337");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginErr, setLoginErr] = useState(null);
   const [loginLoading, setLoginLoading] = useState(false);
 
+  // Filter modal
   const [filtersOpen, setFiltersOpen] = useState(false);
 
+  // Filters: core
   const [selectedTags, setSelectedTags] = useState([]);
   const [selectedStudio, setSelectedStudio] = useState("");
   const [yearFrom, setYearFrom] = useState("");
   const [yearTo, setYearTo] = useState("");
 
-  const [selectedMainActors, setSelectedMainActors] = useState([]);
-  const [selectedSupportingActors, setSelectedSupportingActors] = useState([]);
+  // Actor filters
+  const [selectedMainActors, setSelectedMainActors] = useState([]); // actor IDs (string)
+  const [selectedSupportingActors, setSelectedSupportingActors] = useState([]); // names
 
+  // Filter UI state
   const [tagSearch, setTagSearch] = useState("");
   const [mainActorSearch, setMainActorSearch] = useState("");
   const [suppActorSearch, setSuppActorSearch] = useState("");
@@ -273,6 +281,7 @@ export default function HomePage() {
   const [mainSelectedOnly, setMainSelectedOnly] = useState(false);
   const [suppSelectedOnly, setSuppSelectedOnly] = useState(false);
 
+  // Session check
   useEffect(() => {
     if (typeof window === "undefined") return;
     const flag = window.localStorage.getItem("auth_1337_flag");
@@ -285,6 +294,7 @@ export default function HomePage() {
     }
   }, []);
 
+  // Load data
   useEffect(() => {
     if (!loggedIn) {
       setMovies([]);
@@ -340,7 +350,7 @@ export default function HomePage() {
             year: m.year,
             fileUrl: m.file_url,
             studio: m.studio_id ? studioMap[m.studio_id] || null : null,
-            actors: allActors,
+            actors: allActors, // names
             tags: tagNames,
             mainActorIds: mainIds,
             mainActorNames: mainNames,
@@ -350,6 +360,7 @@ export default function HomePage() {
 
         setMovies(mappedMovies);
 
+        // main actor list + counts
         const movieCountByActorId = new Map();
         moviesData.forEach((m) => {
           const arr = Array.isArray(m.main_actor_ids) ? m.main_actor_ids : [];
@@ -369,6 +380,12 @@ export default function HomePage() {
           .sort((a, b) => a.name.localeCompare(b.name, "de", { sensitivity: "base" }));
 
         setActors(actorList);
+
+        // Ensure initial mode has data
+        setViewMode("actors");
+        setVisibleMovies([]);
+        setMoviesTitle("Filme");
+        setMoviesSubtitle("");
       } catch (e) {
         console.error(e);
         setErr("Fehler beim Laden der Daten.");
@@ -380,6 +397,7 @@ export default function HomePage() {
     void load();
   }, [loggedIn]);
 
+  // Options
   const allTags = useMemo(() => {
     const set = new Set();
     movies.forEach((m) => (m.tags || []).forEach((t) => set.add(t)));
@@ -406,6 +424,7 @@ export default function HomePage() {
     return Array.from(set).sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
   }, [movies]);
 
+  // Filter engine (STRICT UND)
   const applyAdvancedFilters = (baseList) => {
     let list = baseList;
 
@@ -458,11 +477,24 @@ export default function HomePage() {
     );
   }, [selectedStudio, selectedTags.length, yearFrom, yearTo, selectedMainActors.length, selectedSupportingActors.length]);
 
+  const showMovies = viewMode === "movies";
+  const movieList = showMovies ? visibleMovies : [];
+
+  // Actions
   const handleShowMoviesForActor = (actorId, actorName) => {
-    const m = movies.filter((movie) => Array.isArray(movie.mainActorIds) && movie.mainActorIds.includes(actorId));
-    const filtered = applyAdvancedFilters(m);
+    const subset = movies.filter((movie) => Array.isArray(movie.mainActorIds) && movie.mainActorIds.includes(actorId));
+    const filtered = applyAdvancedFilters(subset);
     setMoviesTitle(actorName);
     setMoviesSubtitle(`${filtered.length} Film(e)`);
+    setVisibleMovies(filtered);
+    setViewMode("movies");
+  };
+
+  const showAllMovies = () => {
+    const base = movies;
+    const filtered = applyAdvancedFilters(base);
+    setMoviesTitle(hasAnyFilter ? "Gefilterte Filme" : "Filme");
+    setMoviesSubtitle(`${filtered.length} Treffer`);
     setVisibleMovies(filtered);
     setViewMode("movies");
   };
@@ -471,6 +503,7 @@ export default function HomePage() {
     setSearch(val);
     const trimmed = val.trim();
 
+    // if empty -> either show actors OR show filtered movies if filters active
     if (!trimmed) {
       if (hasAnyFilter) {
         const filtered = applyAdvancedFilters(movies);
@@ -487,6 +520,7 @@ export default function HomePage() {
       return;
     }
 
+    // search in movies first, then apply filters additionally
     const q = trimmed.toLowerCase();
     const raw = movies.filter((movie) => {
       const haystack = [movie.title || "", movie.studio || "", movie.actors.join(" "), movie.tags.join(" ")]
@@ -495,10 +529,10 @@ export default function HomePage() {
       return haystack.includes(q);
     });
 
-    const m = applyAdvancedFilters(raw);
+    const filtered = applyAdvancedFilters(raw);
     setMoviesTitle(`Suchergebnis für "${trimmed}"`);
-    setMoviesSubtitle(`${m.length} Treffer`);
-    setVisibleMovies(m);
+    setMoviesSubtitle(`${filtered.length} Treffer`);
+    setVisibleMovies(filtered);
     setViewMode("movies");
   };
 
@@ -544,7 +578,9 @@ export default function HomePage() {
   const handleLogout = async () => {
     try {
       await fetch("/api/logout", { method: "POST" });
-    } catch {}
+    } catch {
+      // ignore
+    }
     if (typeof window !== "undefined") {
       window.localStorage.removeItem("auth_1337_flag");
       window.localStorage.removeItem("auth_1337_user");
@@ -560,9 +596,6 @@ export default function HomePage() {
   const heroCounts = useMemo(() => {
     return { movieCount: movies.length || 0, actorCount: actors.length || 0 };
   }, [movies.length, actors.length]);
-
-  const showMovies = viewMode === "movies";
-  const movieList = showMovies ? visibleMovies : [];
 
   const resetFilters = () => {
     setSelectedTags([]);
@@ -581,14 +614,11 @@ export default function HomePage() {
   };
 
   const applyFiltersNow = () => {
+    // Apply to current query
     if (search.trim()) {
       handleSearchChange(search);
     } else {
-      const filtered = applyAdvancedFilters(movies);
-      setMoviesTitle("Gefilterte Filme");
-      setMoviesSubtitle(`${filtered.length} Treffer`);
-      setVisibleMovies(filtered);
-      setViewMode("movies");
+      showAllMovies();
     }
     setFiltersOpen(false);
   };
@@ -607,7 +637,10 @@ export default function HomePage() {
     setSelectedSupportingActors((prev) => (prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name]));
 
   const tagItems = useMemo(() => allTags.map((t) => ({ key: t, label: t })), [allTags]);
-  const mainItems = useMemo(() => mainActorOptions.map((a) => ({ key: String(a.id), label: a.name })), [mainActorOptions]);
+  const mainItems = useMemo(
+    () => mainActorOptions.map((a) => ({ key: String(a.id), label: a.name })),
+    [mainActorOptions]
+  );
   const suppItems = useMemo(() => supportingActorOptions.map((n) => ({ key: n, label: n })), [supportingActorOptions]);
 
   return (
@@ -615,15 +648,10 @@ export default function HomePage() {
       <style jsx global>{`
         :root {
           --bg: #0b0b0f;
-          --panel: rgba(255, 255, 255, 0.06);
-          --panel2: rgba(255, 255, 255, 0.08);
-          --stroke: rgba(255, 255, 255, 0.12);
-          --stroke2: rgba(255, 255, 255, 0.16);
           --text: rgba(255, 255, 255, 0.92);
           --muted: rgba(255, 255, 255, 0.68);
           --muted2: rgba(255, 255, 255, 0.52);
           --accent: #e50914;
-          --accent2: rgba(229, 9, 20, 0.18);
           --shadow: rgba(0, 0, 0, 0.55);
           --menuBg: #111218;
         }
@@ -649,7 +677,7 @@ export default function HomePage() {
             linear-gradient(180deg, rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0.95));
         }
 
-        /* Topbar (stabil: links spacer, mitte center, rechts end) */
+        /* Topbar: stable center */
         .topbar {
           position: sticky;
           top: 0;
@@ -664,7 +692,7 @@ export default function HomePage() {
           border-bottom: 1px solid rgba(255, 255, 255, 0.06);
         }
         .topbar__left {
-          /* absichtlich leer: nur spacer */
+          /* spacer only */
         }
         .topbar__mid {
           justify-self: center;
@@ -791,6 +819,12 @@ export default function HomePage() {
           font-weight: 600;
         }
 
+        .auth__label {
+          color: rgba(255, 255, 255, 0.72);
+          font-weight: 700;
+          font-size: 13px;
+        }
+
         /* Layout */
         .wrap {
           width: 100%;
@@ -808,7 +842,7 @@ export default function HomePage() {
           border: 1px solid rgba(255, 255, 255, 0.08);
           background:
             radial-gradient(900px 360px at 20% 20%, rgba(229, 9, 20, 0.35), transparent 55%),
-            radial-gradient(900px 520px at 70% 50%, rgba(255, 255, 255, 0.10), transparent 60%),
+            radial-gradient(900px 520px at 70% 50%, rgba(255, 255, 255, 0.1), transparent 60%),
             linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
           box-shadow: 0 30px 80px var(--shadow);
         }
@@ -893,44 +927,19 @@ export default function HomePage() {
           grid-template-columns: repeat(6, minmax(0, 1fr));
           gap: 12px;
         }
-        @media (max-width: 1100px) {
-          .row {
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-          }
-          .hero__inner {
-            grid-template-columns: 1fr;
-          }
-          .hero__stats {
-            justify-content: flex-start;
-          }
+
+        /* Movies */
+        .movieGrid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 12px;
         }
-        @media (max-width: 720px) {
-          .row {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-          }
-          .hero__title {
-            font-size: 28px;
-          }
-          .topbar {
-            grid-template-columns: 1fr;
-          }
-          .topbar__left {
-            display: none;
-          }
-          .topbar__right {
-            justify-self: center;
-            flex-wrap: wrap;
-            justify-content: center;
-          }
-          .topbar__mid {
-            display: none;
-          }
-        }
+
         .card {
           position: relative;
           border-radius: 16px;
           overflow: hidden;
-          border: 1px solid rgba(255, 255, 255, 0.10);
+          border: 1px solid rgba(255, 255, 255, 0.1);
           background: rgba(255, 255, 255, 0.05);
           box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
           cursor: pointer;
@@ -978,24 +987,8 @@ export default function HomePage() {
           flex-wrap: wrap;
         }
 
-        /* Movies */
-        .movieGrid {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 12px;
-        }
-        @media (max-width: 1100px) {
-          .movieGrid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-          }
-        }
-        @media (max-width: 720px) {
-          .movieGrid {
-            grid-template-columns: 1fr;
-          }
-        }
         .movieCard {
-          border: 1px solid rgba(255, 255, 255, 0.10);
+          border: 1px solid rgba(255, 255, 255, 0.1);
           background: rgba(255, 255, 255, 0.05);
           border-radius: 18px;
           padding: 14px;
@@ -1006,6 +999,53 @@ export default function HomePage() {
           transform: translateY(-2px);
           border-color: rgba(229, 9, 20, 0.35);
           background: rgba(255, 255, 255, 0.07);
+        }
+        .movieCard__top {
+          display: flex;
+          justify-content: space-between;
+          align-items: baseline;
+          gap: 10px;
+        }
+        .movieCard__title {
+          margin: 0;
+          font-size: 16px;
+          font-weight: 900;
+          letter-spacing: -0.01em;
+        }
+        .movieCard__year {
+          color: rgba(255, 255, 255, 0.62);
+          font-weight: 800;
+          font-size: 13px;
+          white-space: nowrap;
+        }
+        .movieCard__meta {
+          margin-top: 10px;
+          display: grid;
+          gap: 8px;
+        }
+        .kv {
+          display: grid;
+          grid-template-columns: 90px 1fr;
+          gap: 10px;
+          align-items: start;
+        }
+        .kv__k {
+          color: rgba(255, 255, 255, 0.55);
+          font-size: 12px;
+          font-weight: 900;
+          letter-spacing: 0.03em;
+          text-transform: uppercase;
+        }
+        .kv__v {
+          color: rgba(255, 255, 255, 0.84);
+          font-size: 13px;
+          line-height: 1.35;
+        }
+        .movieCard__actions {
+          margin-top: 12px;
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
         }
 
         /* Auth */
@@ -1036,12 +1076,12 @@ export default function HomePage() {
           border-radius: 16px;
           padding: 12px 14px;
           border: 1px solid rgba(229, 9, 20, 0.35);
-          background: rgba(229, 9, 20, 0.10);
+          background: rgba(229, 9, 20, 0.1);
           color: rgba(255, 255, 255, 0.88);
         }
 
         .empty {
-          border: 1px solid rgba(255, 255, 255, 0.10);
+          border: 1px solid rgba(255, 255, 255, 0.1);
           background: rgba(255, 255, 255, 0.04);
           border-radius: 18px;
           padding: 22px;
@@ -1077,7 +1117,7 @@ export default function HomePage() {
         .skCard {
           border-radius: 16px;
           aspect-ratio: 3/4;
-          border: 1px solid rgba(255, 255, 255, 0.10);
+          border: 1px solid rgba(255, 255, 255, 0.1);
           background: linear-gradient(
             90deg,
             rgba(255, 255, 255, 0.05),
@@ -1104,7 +1144,7 @@ export default function HomePage() {
           width: 100%;
           max-width: 980px;
           border-radius: 20px;
-          border: 1px solid rgba(255, 255, 255, 0.10);
+          border: 1px solid rgba(255, 255, 255, 0.1);
           background: rgba(10, 10, 14, 0.92);
           box-shadow: 0 40px 120px rgba(0, 0, 0, 0.75);
           overflow: hidden;
@@ -1138,7 +1178,7 @@ export default function HomePage() {
         }
 
         .logCard {
-          border: 1px solid rgba(255, 255, 255, 0.10);
+          border: 1px solid rgba(255, 255, 255, 0.1);
           background: rgba(255, 255, 255, 0.04);
           border-radius: 16px;
           padding: 14px;
@@ -1165,6 +1205,7 @@ export default function HomePage() {
           margin-bottom: 6px;
         }
 
+        /* Select dark dropdown */
         .select {
           width: 100%;
           background: rgba(255, 255, 255, 0.06);
@@ -1185,8 +1226,9 @@ export default function HomePage() {
           gap: 10px;
         }
 
+        /* Sections */
         .fsec {
-          border: 1px solid rgba(255, 255, 255, 0.10);
+          border: 1px solid rgba(255, 255, 255, 0.1);
           background: rgba(255, 255, 255, 0.03);
           border-radius: 16px;
           overflow: hidden;
@@ -1219,7 +1261,7 @@ export default function HomePage() {
           display: grid;
           place-items: center;
           border-radius: 12px;
-          border: 1px solid rgba(255, 255, 255, 0.10);
+          border: 1px solid rgba(255, 255, 255, 0.1);
           background: rgba(255, 255, 255, 0.04);
           font-weight: 900;
         }
@@ -1270,7 +1312,7 @@ export default function HomePage() {
           user-select: none;
           padding: 8px 10px;
           border-radius: 12px;
-          border: 1px solid rgba(255, 255, 255, 0.10);
+          border: 1px solid rgba(255, 255, 255, 0.1);
           background: rgba(255, 255, 255, 0.03);
         }
         .toggle input {
@@ -1289,7 +1331,7 @@ export default function HomePage() {
           padding: 8px 10px;
           border-radius: 999px;
           border: 1px solid rgba(229, 9, 20, 0.28);
-          background: rgba(229, 9, 20, 0.10);
+          background: rgba(229, 9, 20, 0.1);
           color: rgba(255, 255, 255, 0.88);
           cursor: pointer;
           font-size: 12px;
@@ -1317,7 +1359,7 @@ export default function HomePage() {
           max-height: 260px;
           overflow: auto;
           border-radius: 14px;
-          border: 1px solid rgba(255, 255, 255, 0.10);
+          border: 1px solid rgba(255, 255, 255, 0.1);
           background: rgba(0, 0, 0, 0.22);
           padding: 6px;
         }
@@ -1336,7 +1378,7 @@ export default function HomePage() {
           text-align: left;
         }
         .pick--on {
-          background: rgba(229, 9, 20, 0.10);
+          background: rgba(229, 9, 20, 0.1);
           border-color: rgba(229, 9, 20, 0.22);
         }
         .pick__dot {
@@ -1376,6 +1418,47 @@ export default function HomePage() {
           height: 1px;
           background: rgba(255, 255, 255, 0.08);
           margin: 10px 0;
+        }
+
+        /* Responsive */
+        @media (max-width: 1100px) {
+          .row {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+          }
+          .movieGrid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+          .hero__inner {
+            grid-template-columns: 1fr;
+          }
+          .hero__stats {
+            justify-content: flex-start;
+          }
+        }
+        @media (max-width: 720px) {
+          .row {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+          .movieGrid {
+            grid-template-columns: 1fr;
+          }
+          .hero__title {
+            font-size: 28px;
+          }
+          .topbar {
+            grid-template-columns: 1fr;
+          }
+          .topbar__left {
+            display: none;
+          }
+          .topbar__mid {
+            display: none;
+          }
+          .topbar__right {
+            justify-self: center;
+            flex-wrap: wrap;
+            justify-content: center;
+          }
         }
       `}</style>
 
@@ -1438,7 +1521,12 @@ export default function HomePage() {
           ) : (
             <form className="authForm" onSubmit={handleLogin}>
               <div className="authField">
-                <input value={loginUser} onChange={(e) => setLoginUser(e.target.value)} placeholder="User" autoComplete="username" />
+                <input
+                  value={loginUser}
+                  onChange={(e) => setLoginUser(e.target.value)}
+                  placeholder="User"
+                  autoComplete="username"
+                />
               </div>
               <div className="authField">
                 <input
@@ -1475,7 +1563,7 @@ export default function HomePage() {
                 <div className="stat__lbl">Hauptdarsteller</div>
               </div>
               <div className="stat">
-                <div className="stat__num">{loggedIn ? (viewMode === "movies" ? "Filme" : "Darsteller") : "—"}</div>
+                <div className="stat__num">{loggedIn ? (showMovies ? "Filme" : "Darsteller") : "—"}</div>
                 <div className="stat__lbl">Ansicht</div>
               </div>
             </div>
@@ -1485,14 +1573,304 @@ export default function HomePage() {
         {loginErr ? <div className="errorBanner">{loginErr}</div> : null}
         {err ? <div className="errorBanner">{err}</div> : null}
 
-        {/* Rest deiner Seite bleibt unverändert – Filter Modal ebenfalls */}
-        {/* Hinweis: Ich habe den restlichen Body hier nicht nochmal abgeschnitten/umgebaut.
-            Wenn du willst, paste ich dir den kompletten Rest 1:1 auch nochmal rein,
-            aber Topbar ist damit auf jeden Fall gefixt und sauber mittig. */}
+        {!loggedIn ? (
+          <EmptyState
+            title="Bitte einloggen"
+            subtitle="Ohne Login werden keine Inhalte geladen. Logge dich oben rechts ein, um Darsteller und Filme zu sehen."
+            action={<Pill>Project1337 • Private Library</Pill>}
+          />
+        ) : loading ? (
+          <>
+            <div className="sectionHead">
+              <div>
+                <div className="sectionTitle">Lade Inhalte…</div>
+                <div className="sectionMeta">Supabase-Abfragen werden ausgeführt.</div>
+              </div>
+              <Pill>Bitte warten</Pill>
+            </div>
+            <SkeletonRow />
+            <div style={{ height: 16 }} />
+            <SkeletonRow />
+          </>
+        ) : showMovies ? (
+          <>
+            <div className="sectionHead">
+              <div>
+                <div className="sectionTitle">{moviesTitle}</div>
+                <div className="sectionMeta">{moviesSubtitle || `${movieList.length} Film(e)`}</div>
+              </div>
+
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <button type="button" className="btn" onClick={handleBackToActors}>
+                  Darsteller
+                </button>
+              </div>
+            </div>
+
+            {movieList.length === 0 ? (
+              <EmptyState title="Keine Filme gefunden" subtitle="Passe Suche/Filter an oder gehe zurück zur Darsteller-Ansicht." />
+            ) : (
+              <div className="movieGrid">
+                {movieList.map((m) => (
+                  <div key={m.id} className="movieCard">
+                    <div className="movieCard__top">
+                      <h3 className="movieCard__title">{m.title || "Unbenannt"}</h3>
+                      <div className="movieCard__year">{m.year || ""}</div>
+                    </div>
+
+                    <div className="movieCard__meta">
+                      <div className="kv">
+                        <div className="kv__k">Studio</div>
+                        <div className="kv__v">{m.studio || "-"}</div>
+                      </div>
+
+                      <div className="kv">
+                        <div className="kv__k">Darsteller</div>
+                        <div className="kv__v">{m.actors && m.actors.length ? m.actors.join(", ") : "-"}</div>
+                      </div>
+
+                      <div className="kv">
+                        <div className="kv__k">Tags</div>
+                        <div className="kv__v">{m.tags && m.tags.length ? m.tags.join(", ") : "-"}</div>
+                      </div>
+                    </div>
+
+                    <div className="movieCard__actions">
+                      <button type="button" className="btn btn--primary" onClick={() => safeOpen(m.fileUrl)} title="Film starten">
+                        Play
+                      </button>
+                      <button
+                        type="button"
+                        className="btn"
+                        onClick={() => {
+                          try {
+                            navigator.clipboard.writeText(m.fileUrl || "");
+                          } catch {
+                            // ignore
+                          }
+                        }}
+                        title="Link kopieren"
+                      >
+                        Copy Link
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="sectionHead">
+              <div>
+                <div className="sectionTitle">Hauptdarsteller</div>
+                <div className="sectionMeta">{actors.length} Darsteller • Klicke einen Darsteller, um seine Filme zu öffnen.</div>
+              </div>
+
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <button type="button" className="btn" onClick={showAllMovies} title="Alle Filme anzeigen">
+                  Filme
+                </button>
+              </div>
+            </div>
+
+            {actors.length === 0 ? (
+              <EmptyState
+                title="Keine Hauptdarsteller verfügbar"
+                subtitle="Entweder sind noch keine Filme mit main_actor_ids hinterlegt oder es fehlen Datensätze."
+              />
+            ) : (
+              <div className="row">
+                {actors.map((a) => (
+                  <div
+                    key={a.id}
+                    className="card"
+                    onClick={() => handleShowMoviesForActor(a.id, a.name)}
+                    title={`${a.name} öffnen`}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") handleShowMoviesForActor(a.id, a.name);
+                    }}
+                  >
+                    <div className="card__img">
+                      {a.profileImage ? (
+                        <img src={a.profileImage} alt={a.name} />
+                      ) : (
+                        <div
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            display: "grid",
+                            placeItems: "center",
+                            color: "rgba(255,255,255,0.55)",
+                            fontWeight: 800,
+                            letterSpacing: "0.02em",
+                          }}
+                        >
+                          NO IMAGE
+                        </div>
+                      )}
+                    </div>
+                    <div className="card__body">
+                      <div className="card__title">{a.name}</div>
+                      <div className="card__sub">
+                        <Pill>{a.movieCount} Film(e)</Pill>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
       </div>
 
-      {/* --- Wichtig: Hier muss bei dir unten der komplette restliche Code stehen (Movies/Actors + Filter Modal).
-         Wenn du willst: sag "komplett komplett", dann poste ich wirklich die gesamte Datei ohne Kürzung. --- */}
+      {/* Filter Modal */}
+      {filtersOpen && loggedIn && (
+        <div className="modalOverlay" onClick={() => setFiltersOpen(false)} role="dialog" aria-modal="true">
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal__head">
+              <div>
+                <div className="modal__kicker">Erweiterte Suche</div>
+                <div className="modal__title">Filter</div>
+              </div>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                <button type="button" className="btn" onClick={resetFilters}>
+                  Reset
+                </button>
+                <button type="button" className="btn btn--primary" onClick={applyFiltersNow}>
+                  Anwenden
+                </button>
+                <button type="button" className="btn btn--ghost" onClick={() => setFiltersOpen(false)}>
+                  Schließen
+                </button>
+              </div>
+            </div>
+
+            <div className="modal__body">
+              <div className="logCard">
+                <div className="filterGrid">
+                  <div style={{ display: "grid", gap: 12 }}>
+                    <FilterSection
+                      title="Tags"
+                      subtitle=""
+                      items={tagItems}
+                      selectedKeys={selectedTags}
+                      getKey={(it) => it.key}
+                      getLabel={(it) => it.label}
+                      onToggle={(k) => toggleTag(String(k))}
+                      search={tagSearch}
+                      setSearch={setTagSearch}
+                      showSelectedOnly={tagsSelectedOnly}
+                      setShowSelectedOnly={setTagsSelectedOnly}
+                      defaultOpen={true}
+                    />
+
+                    <FilterSection
+                      title="Hauptdarsteller"
+                      subtitle=""
+                      items={mainItems}
+                      selectedKeys={selectedMainActors}
+                      getKey={(it) => it.key}
+                      getLabel={(it) => it.label}
+                      onToggle={(k) => toggleMainActor(String(k))}
+                      search={mainActorSearch}
+                      setSearch={setMainActorSearch}
+                      showSelectedOnly={mainSelectedOnly}
+                      setShowSelectedOnly={setMainSelectedOnly}
+                      defaultOpen={false}
+                    />
+
+                    <FilterSection
+                      title="Nebendarsteller"
+                      subtitle=""
+                      items={suppItems}
+                      selectedKeys={selectedSupportingActors}
+                      getKey={(it) => it.key}
+                      getLabel={(it) => it.label}
+                      onToggle={(k) => toggleSupportingActor(String(k))}
+                      search={suppActorSearch}
+                      setSearch={setSuppActorSearch}
+                      showSelectedOnly={suppSelectedOnly}
+                      setShowSelectedOnly={setSuppSelectedOnly}
+                      defaultOpen={false}
+                    />
+                  </div>
+
+                  <div style={{ display: "grid", gap: 12 }}>
+                    <div className="fsec">
+                      <div className="fsec__head" style={{ cursor: "default" }}>
+                        <div className="fsec__headL">
+                          <div className="fsec__title">Basis</div>
+                          <div className="fsec__sub">Studio & Jahr</div>
+                        </div>
+                        <div className="fsec__headR">
+                          <span className="fsec__chev" style={{ opacity: 0.35 }}>
+                            ✓
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="fsec__body">
+                        <div>
+                          <div className="fieldLabel">Studio</div>
+                          <select className="select" value={selectedStudio} onChange={(e) => setSelectedStudio(e.target.value)}>
+                            <option value="">Alle Studios</option>
+                            {allStudios.map((s) => (
+                              <option key={`st-${s}`} value={s}>
+                                {s}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <div className="fieldLabel">Jahr</div>
+                          <div className="yearRow">
+                            <input
+                              className="select"
+                              value={yearFrom}
+                              onChange={(e) => setYearFrom(e.target.value)}
+                              placeholder="von (z.B. 1999)"
+                              inputMode="numeric"
+                            />
+                            <input
+                              className="select"
+                              value={yearTo}
+                              onChange={(e) => setYearTo(e.target.value)}
+                              placeholder="bis (z.B. 2025)"
+                              inputMode="numeric"
+                            />
+                          </div>
+                        </div>
+
+                        {hasAnyFilter ? (
+                          <>
+                            <div className="divider" />
+                            <div style={{ display: "grid", gap: 8 }}>
+                              <div className="fieldLabel">Aktiv</div>
+                              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                {selectedStudio ? <Pill>Studio</Pill> : null}
+                                {yearFrom ? <Pill>ab {yearFrom}</Pill> : null}
+                                {yearTo ? <Pill>bis {yearTo}</Pill> : null}
+                                {selectedTags.length ? <Pill>{selectedTags.length} Tags</Pill> : null}
+                                {selectedMainActors.length ? <Pill>{selectedMainActors.length} Haupt</Pill> : null}
+                                {selectedSupportingActors.length ? <Pill>{selectedSupportingActors.length} Neben</Pill> : null}
+                              </div>
+                            </div>
+                          </>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {/* keine Tipps / Hinweistexte */}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
