@@ -650,7 +650,7 @@ export default function HomePage() {
           position: sticky;
           top: 0;
           z-index: 50;
-          padding: 14px 18px;
+          padding: 10px 18px;
           display: grid;
           grid-template-columns: 1fr minmax(0, 860px) 1fr;
           align-items: center;
