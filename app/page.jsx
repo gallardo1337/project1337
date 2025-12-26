@@ -1,20 +1,25 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 
 /**
- * app/page.jsx – Netflix-inspiriert + Advanced Filter (skalierbar)
+ * page.jsx – Netflix-inspiriert + Advanced Filter Popover
+ * - Filter öffnet beim Fokus in die Suchleiste (ohne extra Button)
  * - Multi-Select ist STRICT UND (implizit, ohne Hinweistext)
  * - Filter wirken zusätzlich zur Textsuche
- * - Hero-Box entfernt, stattdessen Logo aus /public/logo.png
  */
 
 const CHANGELOG = [
   {
     version: "0.3.5",
     date: "2025-12-26",
-    items: ["Hero entfernt, Logo unter Topbar", "Topbar: Suche + Filter mittig", "Filter UX (Sections + Selected only)"],
+    items: [
+      "Erweiterte Suche öffnet beim Fokus in der Suchleiste (Popover)",
+      "Kein extra Filter-Button mehr",
+      "Klick außerhalb schließt Popover, Input bleibt beim Arbeiten aktiv",
+      "Keine unerwünschten Hinweis-/Tipptexte",
+    ],
   },
 ];
 
@@ -255,7 +260,7 @@ export default function HomePage() {
   const [loginErr, setLoginErr] = useState(null);
   const [loginLoading, setLoginLoading] = useState(false);
 
-  // Filter modal
+  // Filter popover open/close
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   // Filters: core
@@ -277,6 +282,10 @@ export default function HomePage() {
   const [mainSelectedOnly, setMainSelectedOnly] = useState(false);
   const [suppSelectedOnly, setSuppSelectedOnly] = useState(false);
 
+  // Refs for popover behavior
+  const searchWrapRef = useRef(null);
+  const searchInputRef = useRef(null);
+
   // Session check
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -289,6 +298,25 @@ export default function HomePage() {
       setLoggedIn(false);
     }
   }, []);
+
+  // Close popover on outside click
+  useEffect(() => {
+    if (!filtersOpen) return;
+
+    const onDown = (e) => {
+      const root = searchWrapRef.current;
+      if (!root) return;
+      if (!root.contains(e.target)) setFiltersOpen(false);
+    };
+
+    document.addEventListener("mousedown", onDown, true);
+    document.addEventListener("touchstart", onDown, true);
+
+    return () => {
+      document.removeEventListener("mousedown", onDown, true);
+      document.removeEventListener("touchstart", onDown, true);
+    };
+  }, [filtersOpen]);
 
   // Load data
   useEffect(() => {
@@ -377,7 +405,7 @@ export default function HomePage() {
 
         setActors(actorList);
 
-        // reset view
+        // Ensure initial mode has data
         setViewMode("actors");
         setVisibleMovies([]);
         setMoviesTitle("Filme");
@@ -487,8 +515,7 @@ export default function HomePage() {
   };
 
   const showAllMovies = () => {
-    const base = movies;
-    const filtered = applyAdvancedFilters(base);
+    const filtered = applyAdvancedFilters(movies);
     setMoviesTitle(hasAnyFilter ? "Gefilterte Filme" : "Filme");
     setMoviesSubtitle(`${filtered.length} Treffer`);
     setVisibleMovies(filtered);
@@ -586,6 +613,10 @@ export default function HomePage() {
     setMoviesTitle("Filme");
     setMoviesSubtitle("");
   };
+
+  const heroCounts = useMemo(() => {
+    return { movieCount: movies.length || 0, actorCount: actors.length || 0 };
+  }, [movies.length, actors.length]);
 
   const resetFilters = () => {
     setSelectedTags([]);
@@ -688,7 +719,6 @@ export default function HomePage() {
           width: 100%;
           display: flex;
           justify-content: center;
-          gap: 10px;
           align-items: center;
         }
         .topbar__right {
@@ -698,27 +728,9 @@ export default function HomePage() {
           gap: 10px;
         }
 
-        /* Logo under topbar */
-        .logoWrap {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          padding: 26px 18px 10px;
-        }
-        .logoWrap img {
-          width: 100%;
-          max-width: 260px;
-          height: auto;
-          opacity: 0.96;
-          filter: drop-shadow(0 14px 48px rgba(229, 9, 20, 0.22));
-          user-select: none;
-          -webkit-user-drag: none;
-        }
-
         /* Search */
         .input {
           width: 100%;
-          max-width: 720px;
           display: flex;
           align-items: center;
           gap: 10px;
@@ -831,6 +843,55 @@ export default function HomePage() {
           font-size: 13px;
         }
 
+        /* Popover anchor */
+        .searchWrap {
+          position: relative;
+          width: 100%;
+          max-width: 860px;
+          display: grid;
+          gap: 10px;
+        }
+
+        .filterPopover {
+          position: absolute;
+          top: calc(100% + 10px);
+          left: 0;
+          right: 0;
+          z-index: 2000;
+          border-radius: 18px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: rgba(10, 10, 14, 0.92);
+          box-shadow: 0 40px 120px rgba(0, 0, 0, 0.75);
+          overflow: hidden;
+        }
+
+        .filterPopover__head {
+          padding: 12px 12px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .filterPopover__title {
+          font-weight: 900;
+          letter-spacing: -0.01em;
+        }
+
+        .filterPopover__actions {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+        }
+
+        .filterPopover__body {
+          padding: 12px;
+          max-height: min(70vh, 640px);
+          overflow: auto;
+        }
+
         /* Layout */
         .wrap {
           width: 100%;
@@ -839,12 +900,70 @@ export default function HomePage() {
           padding: 0 18px 70px;
         }
 
+        /* Hero */
+        .hero {
+          margin-top: 18px;
+          border-radius: 22px;
+          overflow: hidden;
+          position: relative;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          background:
+            radial-gradient(900px 360px at 20% 20%, rgba(229, 9, 20, 0.35), transparent 55%),
+            radial-gradient(900px 520px at 70% 50%, rgba(255, 255, 255, 0.1), transparent 60%),
+            linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+          box-shadow: 0 30px 80px var(--shadow);
+        }
+        .hero__inner {
+          padding: 26px 22px 22px;
+          display: grid;
+          grid-template-columns: 1.2fr 0.8fr;
+          gap: 18px;
+          align-items: end;
+        }
+        .hero__kicker {
+          color: rgba(255, 255, 255, 0.7);
+          font-weight: 650;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+          font-size: 12px;
+        }
+        .hero__title {
+          font-size: 34px;
+          line-height: 1.05;
+          font-weight: 900;
+          letter-spacing: -0.02em;
+          margin: 8px 0 10px;
+        }
+        .hero__stats {
+          display: flex;
+          gap: 10px;
+          justify-content: flex-end;
+          flex-wrap: wrap;
+        }
+        .stat {
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: rgba(0, 0, 0, 0.35);
+          border-radius: 16px;
+          padding: 10px 12px;
+          min-width: 150px;
+        }
+        .stat__num {
+          font-weight: 900;
+          font-size: 18px;
+          letter-spacing: -0.01em;
+        }
+        .stat__lbl {
+          margin-top: 3px;
+          color: rgba(255, 255, 255, 0.62);
+          font-size: 12px;
+        }
+
         .sectionHead {
           display: flex;
           align-items: baseline;
           justify-content: space-between;
           gap: 12px;
-          margin: 18px 2px 12px;
+          margin: 26px 2px 12px;
         }
         .sectionTitle {
           font-size: 18px;
@@ -1076,7 +1195,7 @@ export default function HomePage() {
           animation: shimmer 1.2s infinite linear;
         }
 
-        /* Modal */
+        /* Modal (Changelog) */
         .modalOverlay {
           position: fixed;
           inset: 0;
@@ -1130,27 +1249,6 @@ export default function HomePage() {
           background: rgba(255, 255, 255, 0.04);
           border-radius: 16px;
           padding: 14px;
-        }
-        .logCard__top {
-          display: flex;
-          justify-content: space-between;
-          align-items: baseline;
-          gap: 10px;
-          margin-bottom: 8px;
-        }
-        .logCard__ver {
-          font-weight: 900;
-        }
-        .logCard__date {
-          color: rgba(255, 255, 255, 0.6);
-          font-size: 12px;
-        }
-        .logCard__list {
-          margin: 0;
-          padding-left: 18px;
-          color: rgba(255, 255, 255, 0.78);
-          font-size: 13px;
-          line-height: 1.45;
         }
 
         /* Filter layout */
@@ -1397,6 +1495,12 @@ export default function HomePage() {
           .movieGrid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
           }
+          .hero__inner {
+            grid-template-columns: 1fr;
+          }
+          .hero__stats {
+            justify-content: flex-start;
+          }
         }
         @media (max-width: 720px) {
           .row {
@@ -1404,6 +1508,9 @@ export default function HomePage() {
           }
           .movieGrid {
             grid-template-columns: 1fr;
+          }
+          .hero__title {
+            font-size: 28px;
           }
           .topbar {
             grid-template-columns: 1fr;
@@ -1419,9 +1526,6 @@ export default function HomePage() {
             flex-wrap: wrap;
             justify-content: center;
           }
-          .logoWrap img {
-            max-width: 220px;
-          }
         }
       `}</style>
 
@@ -1431,7 +1535,7 @@ export default function HomePage() {
 
         <div className="topbar__mid">
           {loggedIn ? (
-            <>
+            <div className="searchWrap" ref={searchWrapRef}>
               <div className="input" title="Suche nach Titel, Studio, Darsteller, Tags">
                 <svg className="input__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <path
@@ -1441,17 +1545,28 @@ export default function HomePage() {
                   />
                   <path d="M16.5 16.5 21 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                 </svg>
+
                 <input
+                  ref={searchInputRef}
                   value={search}
                   onChange={(e) => handleSearchChange(e.target.value)}
+                  onFocus={() => {
+                    setFiltersOpen(true);
+                    requestAnimationFrame(() => searchInputRef.current?.focus());
+                  }}
                   placeholder="Suchen: Titel, Studio, Darsteller, Tags…"
                   autoComplete="off"
                 />
+
                 {search ? (
                   <button
                     type="button"
                     className="btn btn--ghost"
-                    onClick={() => handleSearchChange("")}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      handleSearchChange("");
+                      requestAnimationFrame(() => searchInputRef.current?.focus());
+                    }}
                     title="Suche löschen"
                   >
                     Reset
@@ -1459,15 +1574,178 @@ export default function HomePage() {
                 ) : null}
               </div>
 
-              <button
-                type="button"
-                className={`btn ${hasAnyFilter ? "btn--primary" : ""}`}
-                onClick={() => setFiltersOpen(true)}
-                title="Erweiterte Suche / Filter"
-              >
-                Filter{hasAnyFilter ? " • aktiv" : ""}
-              </button>
-            </>
+              {filtersOpen ? (
+                <div
+                  className="filterPopover"
+                  onMouseDown={(e) => {
+                    // Klicks im Popover sollen den Input nicht defokussieren
+                    e.preventDefault();
+                  }}
+                >
+                  <div className="filterPopover__head">
+                    <div className="filterPopover__title">Filter</div>
+
+                    <div className="filterPopover__actions">
+                      <button
+                        type="button"
+                        className="btn"
+                        onClick={() => {
+                          resetFilters();
+                          requestAnimationFrame(() => searchInputRef.current?.focus());
+                        }}
+                      >
+                        Reset
+                      </button>
+
+                      <button
+                        type="button"
+                        className="btn btn--primary"
+                        onClick={() => {
+                          applyFiltersNow();
+                          requestAnimationFrame(() => searchInputRef.current?.focus());
+                        }}
+                      >
+                        Anwenden
+                      </button>
+
+                      <button
+                        type="button"
+                        className="btn btn--ghost"
+                        onClick={() => {
+                          setFiltersOpen(false);
+                          requestAnimationFrame(() => searchInputRef.current?.focus());
+                        }}
+                      >
+                        Schließen
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="filterPopover__body">
+                    <div className="filterGrid">
+                      <div style={{ display: "grid", gap: 12 }}>
+                        <FilterSection
+                          title="Tags"
+                          subtitle=""
+                          items={tagItems}
+                          selectedKeys={selectedTags}
+                          getKey={(it) => it.key}
+                          getLabel={(it) => it.label}
+                          onToggle={(k) => toggleTag(String(k))}
+                          search={tagSearch}
+                          setSearch={setTagSearch}
+                          showSelectedOnly={tagsSelectedOnly}
+                          setShowSelectedOnly={setTagsSelectedOnly}
+                          defaultOpen={true}
+                        />
+
+                        <FilterSection
+                          title="Hauptdarsteller"
+                          subtitle=""
+                          items={mainItems}
+                          selectedKeys={selectedMainActors}
+                          getKey={(it) => it.key}
+                          getLabel={(it) => it.label}
+                          onToggle={(k) => toggleMainActor(String(k))}
+                          search={mainActorSearch}
+                          setSearch={setMainActorSearch}
+                          showSelectedOnly={mainSelectedOnly}
+                          setShowSelectedOnly={setMainSelectedOnly}
+                          defaultOpen={false}
+                        />
+
+                        <FilterSection
+                          title="Nebendarsteller"
+                          subtitle=""
+                          items={suppItems}
+                          selectedKeys={selectedSupportingActors}
+                          getKey={(it) => it.key}
+                          getLabel={(it) => it.label}
+                          onToggle={(k) => toggleSupportingActor(String(k))}
+                          search={suppActorSearch}
+                          setSearch={setSuppActorSearch}
+                          showSelectedOnly={suppSelectedOnly}
+                          setShowSelectedOnly={setSuppSelectedOnly}
+                          defaultOpen={false}
+                        />
+                      </div>
+
+                      <div style={{ display: "grid", gap: 12 }}>
+                        <div className="fsec">
+                          <div className="fsec__head" style={{ cursor: "default" }}>
+                            <div className="fsec__headL">
+                              <div className="fsec__title">Basis</div>
+                              <div className="fsec__sub">Studio & Jahr</div>
+                            </div>
+                            <div className="fsec__headR">
+                              <span className="fsec__chev" style={{ opacity: 0.35 }}>
+                                ✓
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="fsec__body">
+                            <div>
+                              <div className="fieldLabel">Studio</div>
+                              <select
+                                className="select"
+                                value={selectedStudio}
+                                onChange={(e) => setSelectedStudio(e.target.value)}
+                              >
+                                <option value="">Alle Studios</option>
+                                {allStudios.map((s) => (
+                                  <option key={`st-${s}`} value={s}>
+                                    {s}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div>
+                              <div className="fieldLabel">Jahr</div>
+                              <div className="yearRow">
+                                <input
+                                  className="select"
+                                  value={yearFrom}
+                                  onChange={(e) => setYearFrom(e.target.value)}
+                                  placeholder="von (z.B. 1999)"
+                                  inputMode="numeric"
+                                />
+                                <input
+                                  className="select"
+                                  value={yearTo}
+                                  onChange={(e) => setYearTo(e.target.value)}
+                                  placeholder="bis (z.B. 2025)"
+                                  inputMode="numeric"
+                                />
+                              </div>
+                            </div>
+
+                            {hasAnyFilter ? (
+                              <>
+                                <div className="divider" />
+                                <div style={{ display: "grid", gap: 8 }}>
+                                  <div className="fieldLabel">Aktiv</div>
+                                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                    {selectedStudio ? <Pill>Studio</Pill> : null}
+                                    {yearFrom ? <Pill>ab {yearFrom}</Pill> : null}
+                                    {yearTo ? <Pill>bis {yearTo}</Pill> : null}
+                                    {selectedTags.length ? <Pill>{selectedTags.length} Tags</Pill> : null}
+                                    {selectedMainActors.length ? <Pill>{selectedMainActors.length} Haupt</Pill> : null}
+                                    {selectedSupportingActors.length ? <Pill>{selectedSupportingActors.length} Neben</Pill> : null}
+                                  </div>
+                                </div>
+                              </>
+                            ) : null}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    {/* keine Tipps / Hinweistexte */}
+                  </div>
+                </div>
+              ) : null}
+            </div>
           ) : null}
         </div>
 
@@ -1514,16 +1792,39 @@ export default function HomePage() {
       </div>
 
       <div className="wrap">
-        {/* Logo (statt großer Box) */}
-        <div className="logoWrap">
-          <img src="/logo.png" alt="Project1337 Logo" />
+        <div className="hero">
+          <div className="hero__inner">
+            <div>
+              <div className="hero__kicker">Stream. Organize. Flex.</div>
+              <div className="hero__title">Deine private 1337-Mediathek.</div>
+            </div>
+
+            <div className="hero__stats">
+              <div className="stat">
+                <div className="stat__num">{loggedIn ? heroCounts.movieCount : "—"}</div>
+                <div className="stat__lbl">Filme</div>
+              </div>
+              <div className="stat">
+                <div className="stat__num">{loggedIn ? heroCounts.actorCount : "—"}</div>
+                <div className="stat__lbl">Hauptdarsteller</div>
+              </div>
+              <div className="stat">
+                <div className="stat__num">{loggedIn ? (showMovies ? "Filme" : "Darsteller") : "—"}</div>
+                <div className="stat__lbl">Ansicht</div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {loginErr ? <div className="errorBanner">{loginErr}</div> : null}
         {err ? <div className="errorBanner">{err}</div> : null}
 
         {!loggedIn ? (
-          <EmptyState title="Bitte einloggen" subtitle="Ohne Login werden keine Inhalte geladen." action={<Pill>Project1337</Pill>} />
+          <EmptyState
+            title="Bitte einloggen"
+            subtitle="Ohne Login werden keine Inhalte geladen. Logge dich oben rechts ein, um Darsteller und Filme zu sehen."
+            action={<Pill>Project1337 • Private Library</Pill>}
+          />
         ) : loading ? (
           <>
             <div className="sectionHead">
@@ -1609,7 +1910,7 @@ export default function HomePage() {
             <div className="sectionHead">
               <div>
                 <div className="sectionTitle">Hauptdarsteller</div>
-                <div className="sectionMeta">{actors.length} Darsteller</div>
+                <div className="sectionMeta">{actors.length} Darsteller • Klicke einen Darsteller, um seine Filme zu öffnen.</div>
               </div>
 
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -1620,7 +1921,10 @@ export default function HomePage() {
             </div>
 
             {actors.length === 0 ? (
-              <EmptyState title="Keine Hauptdarsteller verfügbar" subtitle="Prüfe movies.main_actor_ids / actors Tabelle." />
+              <EmptyState
+                title="Keine Hauptdarsteller verfügbar"
+                subtitle="Entweder sind noch keine Filme mit main_actor_ids hinterlegt oder es fehlen Datensätze."
+              />
             ) : (
               <div className="row">
                 {actors.map((a) => (
@@ -1667,152 +1971,6 @@ export default function HomePage() {
           </>
         )}
       </div>
-
-      {/* Filter Modal */}
-      {filtersOpen && loggedIn && (
-        <div className="modalOverlay" onClick={() => setFiltersOpen(false)} role="dialog" aria-modal="true">
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal__head">
-              <div>
-                <div className="modal__kicker">Erweiterte Suche</div>
-                <div className="modal__title">Filter</div>
-              </div>
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
-                <button type="button" className="btn" onClick={resetFilters}>
-                  Reset
-                </button>
-                <button type="button" className="btn btn--primary" onClick={applyFiltersNow}>
-                  Anwenden
-                </button>
-                <button type="button" className="btn btn--ghost" onClick={() => setFiltersOpen(false)}>
-                  Schließen
-                </button>
-              </div>
-            </div>
-
-            <div className="modal__body">
-              <div className="logCard">
-                <div className="filterGrid">
-                  <div style={{ display: "grid", gap: 12 }}>
-                    <FilterSection
-                      title="Tags"
-                      subtitle=""
-                      items={tagItems}
-                      selectedKeys={selectedTags}
-                      getKey={(it) => it.key}
-                      getLabel={(it) => it.label}
-                      onToggle={(k) => toggleTag(String(k))}
-                      search={tagSearch}
-                      setSearch={setTagSearch}
-                      showSelectedOnly={tagsSelectedOnly}
-                      setShowSelectedOnly={setTagsSelectedOnly}
-                      defaultOpen={true}
-                    />
-
-                    <FilterSection
-                      title="Hauptdarsteller"
-                      subtitle=""
-                      items={mainItems}
-                      selectedKeys={selectedMainActors}
-                      getKey={(it) => it.key}
-                      getLabel={(it) => it.label}
-                      onToggle={(k) => toggleMainActor(String(k))}
-                      search={mainActorSearch}
-                      setSearch={setMainActorSearch}
-                      showSelectedOnly={mainSelectedOnly}
-                      setShowSelectedOnly={setMainSelectedOnly}
-                      defaultOpen={false}
-                    />
-
-                    <FilterSection
-                      title="Nebendarsteller"
-                      subtitle=""
-                      items={suppItems}
-                      selectedKeys={selectedSupportingActors}
-                      getKey={(it) => it.key}
-                      getLabel={(it) => it.label}
-                      onToggle={(k) => toggleSupportingActor(String(k))}
-                      search={suppActorSearch}
-                      setSearch={setSuppActorSearch}
-                      showSelectedOnly={suppSelectedOnly}
-                      setShowSelectedOnly={setSuppSelectedOnly}
-                      defaultOpen={false}
-                    />
-                  </div>
-
-                  <div style={{ display: "grid", gap: 12 }}>
-                    <div className="fsec">
-                      <div className="fsec__head" style={{ cursor: "default" }}>
-                        <div className="fsec__headL">
-                          <div className="fsec__title">Basis</div>
-                          <div className="fsec__sub">Studio & Jahr</div>
-                        </div>
-                        <div className="fsec__headR">
-                          <span className="fsec__chev" style={{ opacity: 0.35 }}>
-                            ✓
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="fsec__body">
-                        <div>
-                          <div className="fieldLabel">Studio</div>
-                          <select className="select" value={selectedStudio} onChange={(e) => setSelectedStudio(e.target.value)}>
-                            <option value="">Alle Studios</option>
-                            {allStudios.map((s) => (
-                              <option key={`st-${s}`} value={s}>
-                                {s}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div>
-                          <div className="fieldLabel">Jahr</div>
-                          <div className="yearRow">
-                            <input
-                              className="select"
-                              value={yearFrom}
-                              onChange={(e) => setYearFrom(e.target.value)}
-                              placeholder="von (z.B. 1999)"
-                              inputMode="numeric"
-                            />
-                            <input
-                              className="select"
-                              value={yearTo}
-                              onChange={(e) => setYearTo(e.target.value)}
-                              placeholder="bis (z.B. 2025)"
-                              inputMode="numeric"
-                            />
-                          </div>
-                        </div>
-
-                        {hasAnyFilter ? (
-                          <>
-                            <div className="divider" />
-                            <div style={{ display: "grid", gap: 8 }}>
-                              <div className="fieldLabel">Aktiv</div>
-                              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                                {selectedStudio ? <Pill>Studio</Pill> : null}
-                                {yearFrom ? <Pill>ab {yearFrom}</Pill> : null}
-                                {yearTo ? <Pill>bis {yearTo}</Pill> : null}
-                                {selectedTags.length ? <Pill>{selectedTags.length} Tags</Pill> : null}
-                                {selectedMainActors.length ? <Pill>{selectedMainActors.length} Haupt</Pill> : null}
-                                {selectedSupportingActors.length ? <Pill>{selectedSupportingActors.length} Neben</Pill> : null}
-                              </div>
-                            </div>
-                          </>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              {/* keine Tipps / Hinweistexte */}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
