@@ -194,8 +194,8 @@ textarea:focus {
 }
 
 .actor-name {
-  font-weight: 600;
-  font-size: 1rem;
+  font-weight: 400;
+  font-size: 0.95rem;
 }
 
 .actor-count {
