@@ -4,22 +4,24 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 
 /**
- * page.jsx – Netflix-inspiriert + Advanced Filter Popover
- * - Filter öffnet beim Fokus in der Suchleiste (ohne extra Button)
- * - Multi-Select ist STRICT UND (implizit, ohne Hinweistext)
- * - Filter wirken zusätzlich zur Textsuche
- * - Hero-Box entfernt, stattdessen Logo-Header
+ * app/page.jsx
+ * - Keine Hero-Box mehr (komplett entfernt)
+ * - Stattdessen großes Logo im Content-Bereich
+ * - Advanced Filter Popover öffnet beim Fokus in der Suchleiste (kein extra Button)
+ * - Keine Hinweis-/Tipptexte
+ * - Filterlogik unverändert: Multi-Select ist UND + wirkt zusätzlich zur Textsuche
  */
 
 const CHANGELOG = [
   {
-    version: "0.3.6",
+    version: "0.3.7",
     date: "2025-12-26",
     items: [
+      "Hero-Box komplett entfernt",
+      "Großes Logo im Content-Bereich",
       "Erweiterte Suche öffnet beim Fokus in der Suchleiste (Popover)",
       "Kein extra Filter-Button mehr",
-      "Klick außerhalb schließt Popover, Input bleibt beim Arbeiten aktiv",
-      "Hero-Box entfernt, Logo-Header wiederhergestellt",
+      "Klick außerhalb schließt Popover, Input bleibt aktiv",
       "Keine unerwünschten Hinweis-/Tipptexte",
     ],
   },
@@ -246,7 +248,7 @@ function FilterSection({
 
 export default function HomePage() {
   const [movies, setMovies] = useState([]);
-  const [actors, setActors] = useState([]); // Hauptdarsteller-Liste
+  const [actors, setActors] = useState([]); // Hauptdarsteller
   const [viewMode, setViewMode] = useState("actors"); // "actors" | "movies"
   const [visibleMovies, setVisibleMovies] = useState([]);
   const [moviesTitle, setMoviesTitle] = useState("Filme");
@@ -272,7 +274,7 @@ export default function HomePage() {
   const [yearTo, setYearTo] = useState("");
 
   // Actor filters
-  const [selectedMainActors, setSelectedMainActors] = useState([]); // actor IDs (string)
+  const [selectedMainActors, setSelectedMainActors] = useState([]); // IDs (string)
   const [selectedSupportingActors, setSelectedSupportingActors] = useState([]); // names
 
   // Filter UI state
@@ -284,7 +286,7 @@ export default function HomePage() {
   const [mainSelectedOnly, setMainSelectedOnly] = useState(false);
   const [suppSelectedOnly, setSuppSelectedOnly] = useState(false);
 
-  // Refs for popover behavior
+  // Refs
   const searchWrapRef = useRef(null);
   const searchInputRef = useRef(null);
 
@@ -503,7 +505,6 @@ export default function HomePage() {
   }, [selectedStudio, selectedTags.length, yearFrom, yearTo, selectedMainActors.length, selectedSupportingActors.length]);
 
   const showMovies = viewMode === "movies";
-  const movieList = showMovies ? visibleMovies : [];
 
   // Actions
   const handleShowMoviesForActor = (actorId, actorName) => {
@@ -698,7 +699,7 @@ export default function HomePage() {
             linear-gradient(180deg, rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0.95));
         }
 
-        /* Topbar: stable center */
+        /* Topbar */
         .topbar {
           position: sticky;
           top: 0;
@@ -901,67 +902,22 @@ export default function HomePage() {
           padding: 0 18px 70px;
         }
 
-        /* Logo Header (replaces Hero) */
-        .brandHeader {
-          margin-top: 18px;
+        /* Big Logo block */
+        .logoBlock {
+          margin-top: 20px;
           border-radius: 22px;
-          overflow: hidden;
           border: 1px solid rgba(255, 255, 255, 0.08);
           background: rgba(255, 255, 255, 0.03);
           box-shadow: 0 30px 80px var(--shadow);
-          padding: 18px 18px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 14px;
+          padding: 30px 18px;
+          display: grid;
+          place-items: center;
         }
-
-        .brandHeader__left {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          min-width: 0;
-        }
-
-        .brandHeader__logo {
-          height: 44px;
-          width: auto;
+        .logoBlock__img {
+          width: min(720px, 86%);
+          height: auto;
           display: block;
-          filter: drop-shadow(0 10px 25px rgba(0, 0, 0, 0.45));
-        }
-
-        .brandHeader__right {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          flex-wrap: wrap;
-          justify-content: flex-end;
-        }
-
-        .brandStat {
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          background: rgba(0, 0, 0, 0.35);
-          border-radius: 16px;
-          padding: 10px 12px;
-          min-width: 140px;
-        }
-
-        .brandStat__num {
-          font-weight: 900;
-          font-size: 18px;
-          letter-spacing: -0.01em;
-        }
-
-        .brandStat__lbl {
-          margin-top: 3px;
-          color: rgba(255, 255, 255, 0.62);
-          font-size: 12px;
-        }
-
-        .brandHeader__hint {
-          color: rgba(255, 255, 255, 0.7);
-          font-weight: 700;
-          font-size: 13px;
+          filter: drop-shadow(0 18px 55px rgba(0, 0, 0, 0.65));
         }
 
         .sectionHead {
@@ -969,7 +925,7 @@ export default function HomePage() {
           align-items: baseline;
           justify-content: space-between;
           gap: 12px;
-          margin: 26px 2px 12px;
+          margin: 22px 2px 12px;
         }
         .sectionTitle {
           font-size: 18px;
@@ -1509,6 +1465,7 @@ export default function HomePage() {
           .movieGrid {
             grid-template-columns: 1fr;
           }
+
           .topbar {
             grid-template-columns: 1fr;
           }
@@ -1522,6 +1479,13 @@ export default function HomePage() {
             justify-self: center;
             flex-wrap: wrap;
             justify-content: center;
+          }
+
+          .logoBlock {
+            padding: 22px 14px;
+          }
+          .logoBlock__img {
+            width: min(520px, 92%);
           }
         }
       `}</style>
@@ -1736,6 +1700,27 @@ export default function HomePage() {
                             ) : null}
                           </div>
                         </div>
+
+                        {/* Optional: kleiner Stats-Block ohne Hero-Optik */}
+                        <div className="fsec">
+                          <div className="fsec__head" style={{ cursor: "default" }}>
+                            <div className="fsec__headL">
+                              <div className="fsec__title">Überblick</div>
+                              <div className="fsec__sub">Nur Anzeige</div>
+                            </div>
+                            <div className="fsec__headR">
+                              <span className="fsec__chev" style={{ opacity: 0.35 }}>
+                                ✓
+                              </span>
+                            </div>
+                          </div>
+                          <div className="fsec__body" style={{ display: "grid", gap: 10 }}>
+                            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                              <Pill>{heroCounts.movieCount} Filme</Pill>
+                              <Pill>{heroCounts.actorCount} Hauptdarsteller</Pill>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                     {/* keine Tipps / Hinweistexte */}
@@ -1789,29 +1774,10 @@ export default function HomePage() {
       </div>
 
       <div className="wrap">
-        {/* Logo Header (statt Hero) */}
-        <div className="brandHeader">
-          <div className="brandHeader__left">
-            {/* Passe den Pfad an, falls dein Logo anders heißt (z.B. /project1337.svg) */}
-            <img src="/logo.png" alt="Project1337" className="brandHeader__logo" />
-          </div>
-
-          <div className="brandHeader__right">
-            {loggedIn ? (
-              <>
-                <div className="brandStat">
-                  <div className="brandStat__num">{heroCounts.movieCount}</div>
-                  <div className="brandStat__lbl">Filme</div>
-                </div>
-                <div className="brandStat">
-                  <div className="brandStat__num">{heroCounts.actorCount}</div>
-                  <div className="brandStat__lbl">Hauptdarsteller</div>
-                </div>
-              </>
-            ) : (
-              <div className="brandHeader__hint">Login erforderlich</div>
-            )}
-          </div>
+        {/* Großes Logo (statt Hero) */}
+        <div className="logoBlock">
+          {/* Pfad anpassen falls dein Logo anders heißt */}
+          <img className="logoBlock__img" src="/logo.png" alt="Project1337" />
         </div>
 
         {loginErr ? <div className="errorBanner">{loginErr}</div> : null}
@@ -1836,7 +1802,7 @@ export default function HomePage() {
             <div style={{ height: 16 }} />
             <SkeletonRow />
           </>
-        ) : viewMode === "movies" ? (
+        ) : showMovies ? (
           <>
             <div className="sectionHead">
               <div>
