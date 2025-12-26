@@ -4,21 +4,27 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 
 /**
- * page.jsx – UI modernisiert (Netflix-inspiriert), Logik/Funktionen unverändert gehalten:
+ * page.jsx – Netflix-inspiriertes UI + erweiterte Suche (exakte Filter, Multi-Tags = STRICT UND)
+ * Logik weiterhin gleich gehalten:
  * - Login via /api/login + localStorage flag
  * - Logout via /api/logout + localStorage cleanup
  * - Laden: movies + actors + actors2 + studios + tags (Supabase)
  * - Mapping: main_actor_ids / supporting_actor_ids / tag_ids / studio_id
  * - ViewModes: "actors" | "movies"
  * - Actor-Klick zeigt Filme dieses Actors
- * - Suche filtert Filme (title/studio/actors/tags)
+ * - Suche filtert Filme (title/studio/actors/tags) + Advanced Filter
  */
 
-// -------------------------------
-// Version / Changelog (UI only)
-// -------------------------------
-
 const CHANGELOG = [
+  {
+    version: "0.3.1",
+    date: "2025-12-26",
+    items: [
+      "UI modernisiert (Netflix-inspiriert)",
+      "Erweiterte Suche: Multi-Tags (STRICT UND), Studio, Jahr von/bis",
+      "Filter-Modal + Reset/Apply",
+    ],
+  },
   {
     version: "0.3.0",
     date: "2025-11-28",
@@ -26,23 +32,6 @@ const CHANGELOG = [
       "Startseite nutzt jetzt die neue Struktur (movies mit main_actor_ids/supporting_actor_ids, actors/actors2/tags/studios)",
       "Darsteller-Grid mit Profilbildern (profile_image) und Cropping via object-fit: cover",
       "Hauptdarsteller-Übersicht sortiert, Klick zeigt alle Filme dieses Darstellers",
-    ],
-  },
-  {
-    version: "0.2.0",
-    date: "2025-11-27",
-    items: [
-      "HTTP-Streaming über NAS-Symlink (/1337) vorbereitet",
-      "Play-Button öffnet direkte NAS-Links (fileUrl) im neuen Tab",
-      "Version-Hinweis & Login-Leiste integriert",
-    ],
-  },
-  {
-    version: "0.1.0",
-    date: "2025-11-26",
-    items: [
-      "Erste Version der 1337 Library mit Darsteller-/Film-Ansicht",
-      "Supabase-Anbindung (erste Tabellen-Version)",
     ],
   },
 ];
@@ -94,10 +83,6 @@ function VersionHint() {
   );
 }
 
-// -------------------------------
-// Kleine UI-Helpers (UI only)
-// -------------------------------
-
 function Pill({ children }) {
   return <span className="pill">{children}</span>;
 }
@@ -134,10 +119,6 @@ function safeOpen(url) {
   }
 }
 
-// -------------------------------
-// Startseite
-// -------------------------------
-
 export default function HomePage() {
   const [movies, setMovies] = useState([]);
   const [actors, setActors] = useState([]); // Hauptdarsteller-Liste
@@ -155,6 +136,13 @@ export default function HomePage() {
   const [loginPassword, setLoginPassword] = useState("");
   const [loginErr, setLoginErr] = useState(null);
   const [loginLoading, setLoginLoading] = useState(false);
+
+  // Advanced Filter (neu)
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [selectedTags, setSelectedTags] = useState([]); // Tag-Namen (strings)
+  const [selectedStudio, setSelectedStudio] = useState(""); // Studio-Name (string)
+  const [yearFrom, setYearFrom] = useState("");
+  const [yearTo, setYearTo] = useState("");
 
   // Session check
   useEffect(() => {
@@ -209,7 +197,6 @@ export default function HomePage() {
         const studioMap = Object.fromEntries(studios.map((s) => [s.id, s.name]));
         const tagMap = Object.fromEntries(tags.map((t) => [t.id, t.name]));
 
-        // Filme mappen
         const mappedMovies =
           moviesData.map((m) => {
             const mainIds = Array.isArray(m.main_actor_ids) ? m.main_actor_ids : [];
@@ -236,7 +223,7 @@ export default function HomePage() {
 
         setMovies(mappedMovies);
 
-        // Hauptdarsteller-Liste mit movieCount + profilbild
+        // Hauptdarsteller-Liste
         const movieCountByActorId = new Map();
         moviesData.forEach((m) => {
           const arr = Array.isArray(m.main_actor_ids) ? m.main_actor_ids : [];
@@ -268,32 +255,95 @@ export default function HomePage() {
     void load();
   }, [loggedIn]);
 
+  // Optionen für Filter (aus bereits gemappten movies)
+  const allTags = useMemo(() => {
+    const set = new Set();
+    movies.forEach((m) => (m.tags || []).forEach((t) => set.add(t)));
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
+  }, [movies]);
+
+  const allStudios = useMemo(() => {
+    const set = new Set();
+    movies.forEach((m) => {
+      if (m.studio) set.add(m.studio);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
+  }, [movies]);
+
+  const applyAdvancedFilters = (baseList) => {
+    let list = baseList;
+
+    if (selectedStudio) {
+      list = list.filter((m) => (m.studio || "") === selectedStudio);
+    }
+
+    const yf = yearFrom ? parseInt(yearFrom, 10) : null;
+    const yt = yearTo ? parseInt(yearTo, 10) : null;
+
+    if (yf || yt) {
+      list = list.filter((m) => {
+        const y = m.year ? parseInt(m.year, 10) : null;
+        if (!y) return false;
+        if (yf && y < yf) return false;
+        if (yt && y > yt) return false;
+        return true;
+      });
+    }
+
+    // Tags – STRICT UND: alle ausgewählten Tags müssen vorhanden sein
+    if (selectedTags.length > 0) {
+      list = list.filter((m) => {
+        const mtags = Array.isArray(m.tags) ? m.tags : [];
+        return selectedTags.every((t) => mtags.includes(t));
+      });
+    }
+
+    return list;
+  };
+
+  const hasAnyFilter = useMemo(() => {
+    return Boolean(selectedStudio || selectedTags.length > 0 || yearFrom || yearTo);
+  }, [selectedStudio, selectedTags.length, yearFrom, yearTo]);
+
   const handleShowMoviesForActor = (actorId, actorName) => {
     const m = movies.filter((movie) => Array.isArray(movie.mainActorIds) && movie.mainActorIds.includes(actorId));
+    const filtered = applyAdvancedFilters(m);
     setMoviesTitle(actorName);
-    setMoviesSubtitle(`${m.length} Film(e)`);
-    setVisibleMovies(m);
+    setMoviesSubtitle(`${filtered.length} Film(e)`);
+    setVisibleMovies(filtered);
     setViewMode("movies");
   };
 
   const handleSearchChange = (val) => {
     setSearch(val);
     const trimmed = val.trim();
+
+    // Keine Textsuche, aber Filter aktiv -> gefilterte Filme zeigen
     if (!trimmed) {
-      setViewMode("actors");
-      setVisibleMovies([]);
-      setMoviesTitle("Filme");
-      setMoviesSubtitle("");
+      if (hasAnyFilter) {
+        const filtered = applyAdvancedFilters(movies);
+        setMoviesTitle("Gefilterte Filme");
+        setMoviesSubtitle(`${filtered.length} Treffer`);
+        setVisibleMovies(filtered);
+        setViewMode("movies");
+      } else {
+        setViewMode("actors");
+        setVisibleMovies([]);
+        setMoviesTitle("Filme");
+        setMoviesSubtitle("");
+      }
       return;
     }
 
     const q = trimmed.toLowerCase();
-    const m = movies.filter((movie) => {
+    const raw = movies.filter((movie) => {
       const haystack = [movie.title || "", movie.studio || "", movie.actors.join(" "), movie.tags.join(" ")]
         .join(" ")
         .toLowerCase();
       return haystack.includes(q);
     });
+
+    const m = applyAdvancedFilters(raw);
 
     setMoviesTitle(`Suchergebnis für "${trimmed}"`);
     setMoviesSubtitle(`${m.length} Treffer`);
@@ -351,7 +401,7 @@ export default function HomePage() {
     try {
       await fetch("/api/logout", { method: "POST" });
     } catch {
-      // ignorieren
+      // ignore
     }
     if (typeof window !== "undefined") {
       window.localStorage.removeItem("auth_1337_flag");
@@ -365,7 +415,6 @@ export default function HomePage() {
     setMoviesSubtitle("");
   };
 
-  // UI-only: kleine Kennzahl für hero
   const heroCounts = useMemo(() => {
     const movieCount = movies.length || 0;
     const actorCount = actors.length || 0;
@@ -374,6 +423,27 @@ export default function HomePage() {
 
   const showMovies = viewMode === "movies";
   const movieList = showMovies ? visibleMovies : [];
+
+  const resetFilters = () => {
+    setSelectedTags([]);
+    setSelectedStudio("");
+    setYearFrom("");
+    setYearTo("");
+  };
+
+  const applyFiltersNow = () => {
+    // Filter anwenden, ohne Textsuche zu verändern
+    if (search.trim()) {
+      handleSearchChange(search);
+    } else {
+      const filtered = applyAdvancedFilters(movies);
+      setMoviesTitle("Gefilterte Filme");
+      setMoviesSubtitle(`${filtered.length} Treffer`);
+      setVisibleMovies(filtered);
+      setViewMode("movies");
+    }
+    setFiltersOpen(false);
+  };
 
   return (
     <div className="nfx">
@@ -411,7 +481,6 @@ export default function HomePage() {
             linear-gradient(180deg, rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0.95));
         }
 
-        /* Topbar */
         .topbar {
           position: sticky;
           top: 0;
@@ -455,6 +524,8 @@ export default function HomePage() {
           flex: 1;
           display: flex;
           justify-content: center;
+          gap: 10px;
+          align-items: center;
         }
 
         .topbar__right {
@@ -463,7 +534,6 @@ export default function HomePage() {
           gap: 10px;
         }
 
-        /* Inputs & Buttons */
         .input {
           width: 100%;
           max-width: 720px;
@@ -567,8 +637,11 @@ export default function HomePage() {
           color: var(--muted);
           font-weight: 600;
         }
+        .chip--active {
+          border-color: rgba(229, 9, 20, 0.55) !important;
+          background: rgba(229, 9, 20, 0.14) !important;
+        }
 
-        /* Layout */
         .wrap {
           width: 100%;
           max-width: 1240px;
@@ -617,7 +690,7 @@ export default function HomePage() {
           color: rgba(255, 255, 255, 0.72);
           font-size: 14px;
           line-height: 1.45;
-          max-width: 56ch;
+          max-width: 60ch;
         }
 
         .hero__stats {
@@ -653,14 +726,6 @@ export default function HomePage() {
           margin-top: 16px;
         }
 
-        .grid2 {
-          margin-top: 18px;
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 16px;
-        }
-
-        /* Cards / Sections */
         .sectionHead {
           display: flex;
           align-items: baseline;
@@ -777,7 +842,6 @@ export default function HomePage() {
           font-weight: 650;
         }
 
-        /* Movie list */
         .movieGrid {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -857,7 +921,6 @@ export default function HomePage() {
           flex-wrap: wrap;
         }
 
-        /* Auth area */
         .auth {
           display: flex;
           align-items: center;
@@ -902,7 +965,6 @@ export default function HomePage() {
           color: rgba(255, 255, 255, 0.88);
         }
 
-        /* Empty / Loading */
         .empty {
           border: 1px solid rgba(255, 255, 255, 0.10);
           background: rgba(255, 255, 255, 0.04);
@@ -961,7 +1023,6 @@ export default function HomePage() {
           }
         }
 
-        /* Modal */
         .modalOverlay {
           position: fixed;
           inset: 0;
@@ -975,7 +1036,7 @@ export default function HomePage() {
         }
         .modal {
           width: 100%;
-          max-width: 760px;
+          max-width: 860px;
           border-radius: 20px;
           border: 1px solid rgba(255, 255, 255, 0.10);
           background: rgba(10, 10, 14, 0.92);
@@ -1038,6 +1099,55 @@ export default function HomePage() {
           font-size: 13px;
           line-height: 1.55;
         }
+
+        .filterGrid {
+          display: grid;
+          grid-template-columns: 1.2fr 0.8fr;
+          gap: 12px;
+        }
+        @media (max-width: 900px) {
+          .filterGrid {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        .fieldLabel {
+          color: rgba(255, 255, 255, 0.72);
+          font-weight: 800;
+          font-size: 12px;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+          margin-bottom: 6px;
+        }
+
+        .select {
+          width: 100%;
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          color: rgba(255, 255, 255, 0.9);
+          border-radius: 12px;
+          padding: 10px 12px;
+          outline: none;
+        }
+
+        .yearRow {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
+        }
+
+        .tagWrap {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .activeFilters {
+          margin-top: 14px;
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
       `}</style>
 
       {/* Topbar */}
@@ -1050,37 +1160,43 @@ export default function HomePage() {
 
         <div className="topbar__mid">
           {loggedIn ? (
-            <div className="input" title="Suche nach Titel, Studio, Darsteller, Tags">
-              <svg className="input__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path
-                  d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"
-                  stroke="currentColor"
-                  strokeWidth="2"
+            <>
+              <div className="input" title="Suche nach Titel, Studio, Darsteller, Tags">
+                <svg className="input__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  />
+                  <path
+                    d="M16.5 16.5 21 21"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <input
+                  value={search}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  placeholder="Suchen: Titel, Studio, Darsteller, Tags…"
+                  autoComplete="off"
                 />
-                <path
-                  d="M16.5 16.5 21 21"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-              </svg>
-              <input
-                value={search}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                placeholder="Suchen: Titel, Studio, Darsteller, Tags…"
-                autoComplete="off"
-              />
-              {search ? (
-                <button
-                  type="button"
-                  className="btn btn--ghost"
-                  onClick={() => handleSearchChange("")}
-                  title="Suche löschen"
-                >
-                  Reset
-                </button>
-              ) : null}
-            </div>
+                {search ? (
+                  <button
+                    type="button"
+                    className="btn btn--ghost"
+                    onClick={() => handleSearchChange("")}
+                    title="Suche löschen"
+                  >
+                    Reset
+                  </button>
+                ) : null}
+              </div>
+
+              <button type="button" className={`btn ${hasAnyFilter ? "btn--primary" : ""}`} onClick={() => setFiltersOpen(true)}>
+                Filter{hasAnyFilter ? " • aktiv" : ""}
+              </button>
+            </>
           ) : null}
         </div>
 
@@ -1093,13 +1209,7 @@ export default function HomePage() {
                 <div className="auth__label">Willkommen, {loginUser}</div>
               </div>
 
-              {/* Optional: Dashboard Link (nur UI; ändert keine Logik) */}
-              <button
-                type="button"
-                className="btn"
-                onClick={() => safeOpen("/dashboard")}
-                title="Zum Dashboard"
-              >
+              <button type="button" className="btn" onClick={() => safeOpen("/dashboard")} title="Zum Dashboard">
                 Dashboard
               </button>
 
@@ -1142,8 +1252,8 @@ export default function HomePage() {
               <div className="hero__kicker">Stream. Organize. Flex.</div>
               <div className="hero__title">Deine private 1337-Mediathek.</div>
               <div className="hero__sub">
-                Netflix-inspiriertes UI – aber deine Daten. Suche Filme, browse Darsteller und starte direkt den Stream
-                über deine hinterlegten Links. (Nur Styling geändert – Logik bleibt wie gehabt.)
+                Suche über Text oder filtere exakt nach Tags/Studio/Jahr. Mehrere Tags bedeuten: ein Film muss alle
+                ausgewählten Tags enthalten (STRICT UND).
               </div>
 
               <div className="hero__actions">
@@ -1158,10 +1268,11 @@ export default function HomePage() {
                         type="button"
                         className="btn"
                         onClick={() => {
+                          const filtered = applyAdvancedFilters(movies);
                           setViewMode("movies");
-                          setMoviesTitle("Filme");
-                          setMoviesSubtitle(`${movies.length} Film(e)`);
-                          setVisibleMovies(movies);
+                          setMoviesTitle(hasAnyFilter ? "Gefilterte Filme" : "Filme");
+                          setMoviesSubtitle(`${filtered.length} Film(e)`);
+                          setVisibleMovies(filtered);
                         }}
                         title="Alle Filme anzeigen"
                       >
@@ -1182,6 +1293,20 @@ export default function HomePage() {
                   <Pill>Login erforderlich</Pill>
                 )}
               </div>
+
+              {loggedIn && hasAnyFilter ? (
+                <div className="activeFilters">
+                  {selectedStudio ? <Pill>Studio: {selectedStudio}</Pill> : null}
+                  {yearFrom ? <Pill>Jahr ab: {yearFrom}</Pill> : null}
+                  {yearTo ? <Pill>Jahr bis: {yearTo}</Pill> : null}
+                  {selectedTags.map((t) => (
+                    <Pill key={t}>Tag: {t}</Pill>
+                  ))}
+                  <button type="button" className="btn btn--ghost" onClick={resetFilters} title="Filter zurücksetzen">
+                    Filter Reset
+                  </button>
+                </div>
+              ) : null}
             </div>
 
             <div className="hero__stats">
@@ -1207,13 +1332,11 @@ export default function HomePage() {
 
         {/* Content */}
         {!loggedIn ? (
-          <div className="grid2">
-            <EmptyState
-              title="Bitte einloggen"
-              subtitle="Ohne Login werden keine Inhalte geladen. Logge dich oben rechts ein, um Darsteller und Filme zu sehen."
-              action={<Pill>Project1337 • Private Library</Pill>}
-            />
-          </div>
+          <EmptyState
+            title="Bitte einloggen"
+            subtitle="Ohne Login werden keine Inhalte geladen. Logge dich oben rechts ein, um Darsteller und Filme zu sehen."
+            action={<Pill>Project1337 • Private Library</Pill>}
+          />
         ) : loading ? (
           <>
             <div className="sectionHead">
@@ -1238,19 +1361,14 @@ export default function HomePage() {
                 <button type="button" className="btn" onClick={handleBackToActors}>
                   Darsteller
                 </button>
-                <button
-                  type="button"
-                  className="btn btn--ghost"
-                  onClick={() => safeOpen("/dashboard")}
-                  title="Dashboard öffnen"
-                >
-                  Dashboard
+                <button type="button" className="btn btn--ghost" onClick={() => setFiltersOpen(true)}>
+                  Filter
                 </button>
               </div>
             </div>
 
             {movieList.length === 0 ? (
-              <EmptyState title="Keine Filme gefunden" subtitle="Passe die Suche an oder gehe zurück zur Darsteller-Ansicht." />
+              <EmptyState title="Keine Filme gefunden" subtitle="Passe Suche/Filter an oder gehe zurück zur Darsteller-Ansicht." />
             ) : (
               <div className="movieGrid">
                 {movieList.map((m) => (
@@ -1278,19 +1396,13 @@ export default function HomePage() {
                     </div>
 
                     <div className="movieCard__actions">
-                      <button
-                        type="button"
-                        className="btn btn--primary"
-                        onClick={() => safeOpen(m.fileUrl)}
-                        title="Film starten"
-                      >
+                      <button type="button" className="btn btn--primary" onClick={() => safeOpen(m.fileUrl)} title="Film starten">
                         Play
                       </button>
                       <button
                         type="button"
                         className="btn"
                         onClick={() => {
-                          // UI only: Copy
                           try {
                             navigator.clipboard.writeText(m.fileUrl || "");
                           } catch {
@@ -1321,14 +1433,18 @@ export default function HomePage() {
                   type="button"
                   className="btn"
                   onClick={() => {
+                    const filtered = applyAdvancedFilters(movies);
                     setViewMode("movies");
-                    setMoviesTitle("Filme");
-                    setMoviesSubtitle(`${movies.length} Film(e)`);
-                    setVisibleMovies(movies);
+                    setMoviesTitle(hasAnyFilter ? "Gefilterte Filme" : "Filme");
+                    setMoviesSubtitle(`${filtered.length} Film(e)`);
+                    setVisibleMovies(filtered);
                   }}
                   title="Alle Filme anzeigen"
                 >
                   Filme
+                </button>
+                <button type="button" className="btn btn--ghost" onClick={() => setFiltersOpen(true)}>
+                  Filter
                 </button>
               </div>
             </div>
@@ -1384,6 +1500,131 @@ export default function HomePage() {
           </>
         )}
       </div>
+
+      {/* Filter Modal */}
+      {filtersOpen && loggedIn && (
+        <div className="modalOverlay" onClick={() => setFiltersOpen(false)} role="dialog" aria-modal="true">
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal__head">
+              <div>
+                <div className="modal__kicker">Erweiterte Suche</div>
+                <div className="modal__title">Filter</div>
+              </div>
+              <button type="button" className="btn btn--ghost" onClick={() => setFiltersOpen(false)}>
+                Schließen
+              </button>
+            </div>
+
+            <div className="modal__body">
+              <div className="logCard">
+                <div className="filterGrid">
+                  <div>
+                    <div className="fieldLabel">Tags (alle müssen passen)</div>
+                    <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, marginBottom: 8 }}>
+                      Aktiv: {selectedTags.length} Tag(s). Ein Film muss alle ausgewählten Tags enthalten.
+                    </div>
+
+                    <div className="tagWrap">
+                      {allTags.length === 0 ? (
+                        <Pill>Keine Tags vorhanden</Pill>
+                      ) : (
+                        allTags.map((t) => {
+                          const active = selectedTags.includes(t);
+                          return (
+                            <button
+                              key={t}
+                              type="button"
+                              className={`chip ${active ? "chip--active" : ""}`}
+                              onClick={() => {
+                                setSelectedTags((prev) =>
+                                  prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]
+                                );
+                              }}
+                              title={t}
+                            >
+                              <span className="chip__dot" style={{ opacity: active ? 1 : 0.25 }} />
+                              <span>{t}</span>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+
+                  <div style={{ display: "grid", gap: 12 }}>
+                    <div>
+                      <div className="fieldLabel">Studio</div>
+                      <select className="select" value={selectedStudio} onChange={(e) => setSelectedStudio(e.target.value)}>
+                        <option value="">Alle Studios</option>
+                        {allStudios.map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <div className="fieldLabel">Jahr</div>
+                      <div className="yearRow">
+                        <input
+                          className="select"
+                          value={yearFrom}
+                          onChange={(e) => setYearFrom(e.target.value)}
+                          placeholder="von (z.B. 1999)"
+                          inputMode="numeric"
+                        />
+                        <input
+                          className="select"
+                          value={yearTo}
+                          onChange={(e) => setYearTo(e.target.value)}
+                          placeholder="bis (z.B. 2025)"
+                          inputMode="numeric"
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                      <button type="button" className="btn" onClick={resetFilters}>
+                        Reset
+                      </button>
+                      <button type="button" className="btn btn--primary" onClick={applyFiltersNow}>
+                        Anwenden
+                      </button>
+                    </div>
+
+                    {hasAnyFilter ? (
+                      <div style={{ display: "grid", gap: 6 }}>
+                        <div className="fieldLabel">Aktive Filter</div>
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                          {selectedStudio ? <Pill>Studio: {selectedStudio}</Pill> : null}
+                          {yearFrom ? <Pill>ab {yearFrom}</Pill> : null}
+                          {yearTo ? <Pill>bis {yearTo}</Pill> : null}
+                          {selectedTags.map((t) => (
+                            <Pill key={t}>{t}</Pill>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 12 }}>
+                        Keine Filter aktiv. Wähle Tags/Studio/Jahr und klicke „Anwenden“.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="logCard">
+                <div className="fieldLabel">Hinweis</div>
+                <div style={{ color: "rgba(255,255,255,0.72)", fontSize: 13, lineHeight: 1.5 }}>
+                  Die Filter wirken zusätzlich zur Textsuche. Wenn du kein Suchwort eingibst, werden nur die gefilterten
+                  Filme angezeigt.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
