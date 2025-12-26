@@ -618,6 +618,16 @@ export default function HomePage() {
         body {
           background: var(--bg);
           color: var(--text);
+
+          font-family:
+            -apple-system,
+            BlinkMacSystemFont,
+            "SF Pro Display",
+            system-ui,
+            "Segoe UI",
+            Roboto,
+            Arial,
+            sans-serif;
         }
         * {
           box-sizing: border-box;
@@ -640,7 +650,7 @@ export default function HomePage() {
           position: sticky;
           top: 0;
           z-index: 50;
-          padding: 10px 18px;
+          padding: 14px 18px;
           display: grid;
           grid-template-columns: 1fr minmax(0, 860px) 1fr;
           align-items: center;
@@ -896,7 +906,7 @@ export default function HomePage() {
         }
 
         .card__body {
-          padding: 8px 10px 8px;
+          padding: 10px 10px 12px;
           text-align: center;
         }
         .card__title {
@@ -909,7 +919,7 @@ export default function HomePage() {
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
-          min-height: 18px;
+          min-height: 34px;
         }
 
         /* Filmcount Badge unten rechts IM Poster */
