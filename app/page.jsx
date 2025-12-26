@@ -5,11 +5,13 @@ import { supabase } from "../lib/supabaseClient";
 
 /**
  * app/page.jsx
- * - Hero-Box ist komplett entfernt
- * - Logo ist frei (keine Box drumherum) und kleiner
- * - Advanced Filter Popover öffnet beim Fokus in der Suchleiste (kein extra Button)
- * - Keine Hinweis-/Tipptexte
+ * - Logo frei (keine Box) + kleiner
+ * - Erweiterte Suche (Filter-Popover) öffnet beim Fokus in die Suchleiste (kein extra Button)
+ * - Keine unerwünschten Hinweis-/Tipptexte
  * - Filterlogik: Multi-Select ist UND + wirkt zusätzlich zur Textsuche
+ * - Hauptdarsteller-Grid:
+ *   - Name zentriert + eine Stufe größer
+ *   - Filmcount als Badge unten rechts IM Poster (nicht unter dem Namen)
  */
 
 function Pill({ children }) {
@@ -69,17 +71,13 @@ function FilterSection({
   defaultOpen = true,
 }) {
   const [open, setOpen] = useState(defaultOpen);
-
   const selectedSet = useMemo(() => new Set(selectedKeys.map(String)), [selectedKeys]);
 
   const filtered = useMemo(() => {
     const base = items || [];
     let list = base;
 
-    if (showSelectedOnly) {
-      list = list.filter((it) => selectedSet.has(String(getKey(it))));
-    }
-
+    if (showSelectedOnly) list = list.filter((it) => selectedSet.has(String(getKey(it))));
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       list = list.filter((it) => includesLoose(getLabel(it), q));
@@ -880,7 +878,10 @@ export default function HomePage() {
           border-color: rgba(229, 9, 20, 0.35);
           background: rgba(255, 255, 255, 0.07);
         }
+
+        /* Poster */
         .card__img {
+          position: relative; /* wichtig: Badge soll im Poster sitzen */
           width: 100%;
           aspect-ratio: 3/4;
           background: rgba(255, 255, 255, 0.06);
@@ -893,24 +894,25 @@ export default function HomePage() {
           display: block;
           transform: scale(1.02);
         }
+
         .card__body {
           padding: 10px 10px 12px;
-          text-align: center; /* Name mittig */
+          text-align: center;
         }
         .card__title {
-          font-weight: 800;
-          font-size: 13px;
+          font-weight: 850;
+          font-size: 14px; /* eine Stufe größer */
           line-height: 1.2;
           letter-spacing: -0.01em;
-          margin: 0 0 6px;
+          margin: 0;
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
-          min-height: 32px;
+          min-height: 34px;
         }
 
-        /* Filmcount Badge unten rechts */
+        /* Filmcount Badge unten rechts IM Poster */
         .card__count {
           position: absolute;
           right: 10px;
@@ -1567,7 +1569,6 @@ export default function HomePage() {
                           </div>
                         </div>
 
-                        {/* Optional: kleiner Stats-Block ohne Hero-Optik */}
                         <div className="fsec">
                           <div className="fsec__head" style={{ cursor: "default" }}>
                             <div className="fsec__headL">
@@ -1589,7 +1590,6 @@ export default function HomePage() {
                         </div>
                       </div>
                     </div>
-                    {/* keine Tipps / Hinweistexte */}
                   </div>
                 </div>
               ) : null}
@@ -1638,7 +1638,6 @@ export default function HomePage() {
       </div>
 
       <div className="wrap">
-        {/* Logo frei (ohne Box) */}
         <div className="logoSolo">
           <img className="logoSolo__img" src="/logo.png" alt="Project1337" />
         </div>
@@ -1745,7 +1744,6 @@ export default function HomePage() {
             <div className="sectionHead">
               <div>
                 <div className="sectionTitle">Hauptdarsteller</div>
-                {/* Hinweistext entfernt */}
                 <div className="sectionMeta">{actors.length} Darsteller</div>
               </div>
 
@@ -1793,14 +1791,14 @@ export default function HomePage() {
                           NO IMAGE
                         </div>
                       )}
+
+                      <div className="card__count" aria-label={`${a.movieCount} Filme`}>
+                        {a.movieCount}
+                      </div>
                     </div>
 
                     <div className="card__body">
                       <div className="card__title">{a.name}</div>
-                    </div>
-
-                    <div className="card__count" aria-label={`${a.movieCount} Filme`}>
-                      {a.movieCount}
                     </div>
                   </div>
                 ))}
