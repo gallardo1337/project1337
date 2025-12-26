@@ -5,19 +5,21 @@ import { supabase } from "../lib/supabaseClient";
 
 /**
  * page.jsx – Netflix-inspiriert + Advanced Filter Popover
- * - Filter öffnet beim Fokus in die Suchleiste (ohne extra Button)
+ * - Filter öffnet beim Fokus in der Suchleiste (ohne extra Button)
  * - Multi-Select ist STRICT UND (implizit, ohne Hinweistext)
  * - Filter wirken zusätzlich zur Textsuche
+ * - Hero-Box entfernt, stattdessen Logo-Header
  */
 
 const CHANGELOG = [
   {
-    version: "0.3.5",
+    version: "0.3.6",
     date: "2025-12-26",
     items: [
       "Erweiterte Suche öffnet beim Fokus in der Suchleiste (Popover)",
       "Kein extra Filter-Button mehr",
       "Klick außerhalb schließt Popover, Input bleibt beim Arbeiten aktiv",
+      "Hero-Box entfernt, Logo-Header wiederhergestellt",
       "Keine unerwünschten Hinweis-/Tipptexte",
     ],
   },
@@ -405,7 +407,6 @@ export default function HomePage() {
 
         setActors(actorList);
 
-        // Ensure initial mode has data
         setViewMode("actors");
         setVisibleMovies([]);
         setMoviesTitle("Filme");
@@ -900,62 +901,67 @@ export default function HomePage() {
           padding: 0 18px 70px;
         }
 
-        /* Hero */
-        .hero {
+        /* Logo Header (replaces Hero) */
+        .brandHeader {
           margin-top: 18px;
           border-radius: 22px;
           overflow: hidden;
-          position: relative;
           border: 1px solid rgba(255, 255, 255, 0.08);
-          background:
-            radial-gradient(900px 360px at 20% 20%, rgba(229, 9, 20, 0.35), transparent 55%),
-            radial-gradient(900px 520px at 70% 50%, rgba(255, 255, 255, 0.1), transparent 60%),
-            linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+          background: rgba(255, 255, 255, 0.03);
           box-shadow: 0 30px 80px var(--shadow);
-        }
-        .hero__inner {
-          padding: 26px 22px 22px;
-          display: grid;
-          grid-template-columns: 1.2fr 0.8fr;
-          gap: 18px;
-          align-items: end;
-        }
-        .hero__kicker {
-          color: rgba(255, 255, 255, 0.7);
-          font-weight: 650;
-          letter-spacing: 0.06em;
-          text-transform: uppercase;
-          font-size: 12px;
-        }
-        .hero__title {
-          font-size: 34px;
-          line-height: 1.05;
-          font-weight: 900;
-          letter-spacing: -0.02em;
-          margin: 8px 0 10px;
-        }
-        .hero__stats {
+          padding: 18px 18px;
           display: flex;
-          gap: 10px;
-          justify-content: flex-end;
-          flex-wrap: wrap;
+          align-items: center;
+          justify-content: space-between;
+          gap: 14px;
         }
-        .stat {
+
+        .brandHeader__left {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          min-width: 0;
+        }
+
+        .brandHeader__logo {
+          height: 44px;
+          width: auto;
+          display: block;
+          filter: drop-shadow(0 10px 25px rgba(0, 0, 0, 0.45));
+        }
+
+        .brandHeader__right {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+        }
+
+        .brandStat {
           border: 1px solid rgba(255, 255, 255, 0.12);
           background: rgba(0, 0, 0, 0.35);
           border-radius: 16px;
           padding: 10px 12px;
-          min-width: 150px;
+          min-width: 140px;
         }
-        .stat__num {
+
+        .brandStat__num {
           font-weight: 900;
           font-size: 18px;
           letter-spacing: -0.01em;
         }
-        .stat__lbl {
+
+        .brandStat__lbl {
           margin-top: 3px;
           color: rgba(255, 255, 255, 0.62);
           font-size: 12px;
+        }
+
+        .brandHeader__hint {
+          color: rgba(255, 255, 255, 0.7);
+          font-weight: 700;
+          font-size: 13px;
         }
 
         .sectionHead {
@@ -1495,12 +1501,6 @@ export default function HomePage() {
           .movieGrid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
           }
-          .hero__inner {
-            grid-template-columns: 1fr;
-          }
-          .hero__stats {
-            justify-content: flex-start;
-          }
         }
         @media (max-width: 720px) {
           .row {
@@ -1508,9 +1508,6 @@ export default function HomePage() {
           }
           .movieGrid {
             grid-template-columns: 1fr;
-          }
-          .hero__title {
-            font-size: 28px;
           }
           .topbar {
             grid-template-columns: 1fr;
@@ -1792,27 +1789,28 @@ export default function HomePage() {
       </div>
 
       <div className="wrap">
-        <div className="hero">
-          <div className="hero__inner">
-            <div>
-              <div className="hero__kicker">Stream. Organize. Flex.</div>
-              <div className="hero__title">Deine private 1337-Mediathek.</div>
-            </div>
+        {/* Logo Header (statt Hero) */}
+        <div className="brandHeader">
+          <div className="brandHeader__left">
+            {/* Passe den Pfad an, falls dein Logo anders heißt (z.B. /project1337.svg) */}
+            <img src="/logo.png" alt="Project1337" className="brandHeader__logo" />
+          </div>
 
-            <div className="hero__stats">
-              <div className="stat">
-                <div className="stat__num">{loggedIn ? heroCounts.movieCount : "—"}</div>
-                <div className="stat__lbl">Filme</div>
-              </div>
-              <div className="stat">
-                <div className="stat__num">{loggedIn ? heroCounts.actorCount : "—"}</div>
-                <div className="stat__lbl">Hauptdarsteller</div>
-              </div>
-              <div className="stat">
-                <div className="stat__num">{loggedIn ? (showMovies ? "Filme" : "Darsteller") : "—"}</div>
-                <div className="stat__lbl">Ansicht</div>
-              </div>
-            </div>
+          <div className="brandHeader__right">
+            {loggedIn ? (
+              <>
+                <div className="brandStat">
+                  <div className="brandStat__num">{heroCounts.movieCount}</div>
+                  <div className="brandStat__lbl">Filme</div>
+                </div>
+                <div className="brandStat">
+                  <div className="brandStat__num">{heroCounts.actorCount}</div>
+                  <div className="brandStat__lbl">Hauptdarsteller</div>
+                </div>
+              </>
+            ) : (
+              <div className="brandHeader__hint">Login erforderlich</div>
+            )}
           </div>
         </div>
 
@@ -1838,12 +1836,12 @@ export default function HomePage() {
             <div style={{ height: 16 }} />
             <SkeletonRow />
           </>
-        ) : showMovies ? (
+        ) : viewMode === "movies" ? (
           <>
             <div className="sectionHead">
               <div>
                 <div className="sectionTitle">{moviesTitle}</div>
-                <div className="sectionMeta">{moviesSubtitle || `${movieList.length} Film(e)`}</div>
+                <div className="sectionMeta">{moviesSubtitle || `${visibleMovies.length} Film(e)`}</div>
               </div>
 
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -1853,11 +1851,11 @@ export default function HomePage() {
               </div>
             </div>
 
-            {movieList.length === 0 ? (
+            {visibleMovies.length === 0 ? (
               <EmptyState title="Keine Filme gefunden" subtitle="Passe Suche/Filter an oder gehe zurück zur Darsteller-Ansicht." />
             ) : (
               <div className="movieGrid">
-                {movieList.map((m) => (
+                {visibleMovies.map((m) => (
                   <div key={m.id} className="movieCard">
                     <div className="movieCard__top">
                       <h3 className="movieCard__title">{m.title || "Unbenannt"}</h3>
