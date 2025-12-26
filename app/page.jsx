@@ -4,21 +4,17 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 
 /**
- * page.jsx – Netflix-inspiriert + Advanced Filter (skalierbar)
+ * app/page.jsx – Netflix-inspiriert + Advanced Filter (skalierbar)
  * - Multi-Select ist STRICT UND (implizit, ohne Hinweistext)
  * - Filter wirken zusätzlich zur Textsuche
+ * - Hero-Box entfernt, stattdessen Logo aus /public/logo.png
  */
 
 const CHANGELOG = [
   {
-    version: "0.3.4",
+    version: "0.3.5",
     date: "2025-12-26",
-    items: [
-      "Topbar: Suche + Filter exakt mittig (stabil, grid + spacer)",
-      "Removed unwanted hint texts in filter UI",
-      "Dark dropdown options for Studio",
-      "Multi-select Haupt-/Nebendarsteller (STRICT UND)",
-    ],
+    items: ["Hero entfernt, Logo unter Topbar", "Topbar: Suche + Filter mittig", "Filter UX (Sections + Selected only)"],
   },
 ];
 
@@ -381,7 +377,7 @@ export default function HomePage() {
 
         setActors(actorList);
 
-        // Ensure initial mode has data
+        // reset view
         setViewMode("actors");
         setVisibleMovies([]);
         setMoviesTitle("Filme");
@@ -503,7 +499,6 @@ export default function HomePage() {
     setSearch(val);
     const trimmed = val.trim();
 
-    // if empty -> either show actors OR show filtered movies if filters active
     if (!trimmed) {
       if (hasAnyFilter) {
         const filtered = applyAdvancedFilters(movies);
@@ -520,7 +515,6 @@ export default function HomePage() {
       return;
     }
 
-    // search in movies first, then apply filters additionally
     const q = trimmed.toLowerCase();
     const raw = movies.filter((movie) => {
       const haystack = [movie.title || "", movie.studio || "", movie.actors.join(" "), movie.tags.join(" ")]
@@ -593,10 +587,6 @@ export default function HomePage() {
     setMoviesSubtitle("");
   };
 
-  const heroCounts = useMemo(() => {
-    return { movieCount: movies.length || 0, actorCount: actors.length || 0 };
-  }, [movies.length, actors.length]);
-
   const resetFilters = () => {
     setSelectedTags([]);
     setSelectedStudio("");
@@ -614,7 +604,6 @@ export default function HomePage() {
   };
 
   const applyFiltersNow = () => {
-    // Apply to current query
     if (search.trim()) {
       handleSearchChange(search);
     } else {
@@ -707,6 +696,23 @@ export default function HomePage() {
           display: flex;
           align-items: center;
           gap: 10px;
+        }
+
+        /* Logo under topbar */
+        .logoWrap {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          padding: 26px 18px 10px;
+        }
+        .logoWrap img {
+          width: 100%;
+          max-width: 260px;
+          height: auto;
+          opacity: 0.96;
+          filter: drop-shadow(0 14px 48px rgba(229, 9, 20, 0.22));
+          user-select: none;
+          -webkit-user-drag: none;
         }
 
         /* Search */
@@ -833,70 +839,12 @@ export default function HomePage() {
           padding: 0 18px 70px;
         }
 
-        /* Hero */
-        .hero {
-          margin-top: 18px;
-          border-radius: 22px;
-          overflow: hidden;
-          position: relative;
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          background:
-            radial-gradient(900px 360px at 20% 20%, rgba(229, 9, 20, 0.35), transparent 55%),
-            radial-gradient(900px 520px at 70% 50%, rgba(255, 255, 255, 0.1), transparent 60%),
-            linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
-          box-shadow: 0 30px 80px var(--shadow);
-        }
-        .hero__inner {
-          padding: 26px 22px 22px;
-          display: grid;
-          grid-template-columns: 1.2fr 0.8fr;
-          gap: 18px;
-          align-items: end;
-        }
-        .hero__kicker {
-          color: rgba(255, 255, 255, 0.7);
-          font-weight: 650;
-          letter-spacing: 0.06em;
-          text-transform: uppercase;
-          font-size: 12px;
-        }
-        .hero__title {
-          font-size: 34px;
-          line-height: 1.05;
-          font-weight: 900;
-          letter-spacing: -0.02em;
-          margin: 8px 0 10px;
-        }
-        .hero__stats {
-          display: flex;
-          gap: 10px;
-          justify-content: flex-end;
-          flex-wrap: wrap;
-        }
-        .stat {
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          background: rgba(0, 0, 0, 0.35);
-          border-radius: 16px;
-          padding: 10px 12px;
-          min-width: 150px;
-        }
-        .stat__num {
-          font-weight: 900;
-          font-size: 18px;
-          letter-spacing: -0.01em;
-        }
-        .stat__lbl {
-          margin-top: 3px;
-          color: rgba(255, 255, 255, 0.62);
-          font-size: 12px;
-        }
-
         .sectionHead {
           display: flex;
           align-items: baseline;
           justify-content: space-between;
           gap: 12px;
-          margin: 26px 2px 12px;
+          margin: 18px 2px 12px;
         }
         .sectionTitle {
           font-size: 18px;
@@ -1183,6 +1131,27 @@ export default function HomePage() {
           border-radius: 16px;
           padding: 14px;
         }
+        .logCard__top {
+          display: flex;
+          justify-content: space-between;
+          align-items: baseline;
+          gap: 10px;
+          margin-bottom: 8px;
+        }
+        .logCard__ver {
+          font-weight: 900;
+        }
+        .logCard__date {
+          color: rgba(255, 255, 255, 0.6);
+          font-size: 12px;
+        }
+        .logCard__list {
+          margin: 0;
+          padding-left: 18px;
+          color: rgba(255, 255, 255, 0.78);
+          font-size: 13px;
+          line-height: 1.45;
+        }
 
         /* Filter layout */
         .filterGrid {
@@ -1428,12 +1397,6 @@ export default function HomePage() {
           .movieGrid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
           }
-          .hero__inner {
-            grid-template-columns: 1fr;
-          }
-          .hero__stats {
-            justify-content: flex-start;
-          }
         }
         @media (max-width: 720px) {
           .row {
@@ -1441,9 +1404,6 @@ export default function HomePage() {
           }
           .movieGrid {
             grid-template-columns: 1fr;
-          }
-          .hero__title {
-            font-size: 28px;
           }
           .topbar {
             grid-template-columns: 1fr;
@@ -1458,6 +1418,9 @@ export default function HomePage() {
             justify-self: center;
             flex-wrap: wrap;
             justify-content: center;
+          }
+          .logoWrap img {
+            max-width: 220px;
           }
         }
       `}</style>
@@ -1485,7 +1448,12 @@ export default function HomePage() {
                   autoComplete="off"
                 />
                 {search ? (
-                  <button type="button" className="btn btn--ghost" onClick={() => handleSearchChange("")} title="Suche löschen">
+                  <button
+                    type="button"
+                    className="btn btn--ghost"
+                    onClick={() => handleSearchChange("")}
+                    title="Suche löschen"
+                  >
                     Reset
                   </button>
                 ) : null}
@@ -1546,39 +1514,16 @@ export default function HomePage() {
       </div>
 
       <div className="wrap">
-        <div className="hero">
-          <div className="hero__inner">
-            <div>
-              <div className="hero__kicker">Stream. Organize. Flex.</div>
-              <div className="hero__title">Deine private 1337-Mediathek.</div>
-            </div>
-
-            <div className="hero__stats">
-              <div className="stat">
-                <div className="stat__num">{loggedIn ? heroCounts.movieCount : "—"}</div>
-                <div className="stat__lbl">Filme</div>
-              </div>
-              <div className="stat">
-                <div className="stat__num">{loggedIn ? heroCounts.actorCount : "—"}</div>
-                <div className="stat__lbl">Hauptdarsteller</div>
-              </div>
-              <div className="stat">
-                <div className="stat__num">{loggedIn ? (showMovies ? "Filme" : "Darsteller") : "—"}</div>
-                <div className="stat__lbl">Ansicht</div>
-              </div>
-            </div>
-          </div>
+        {/* Logo (statt großer Box) */}
+        <div className="logoWrap">
+          <img src="/logo.png" alt="Project1337 Logo" />
         </div>
 
         {loginErr ? <div className="errorBanner">{loginErr}</div> : null}
         {err ? <div className="errorBanner">{err}</div> : null}
 
         {!loggedIn ? (
-          <EmptyState
-            title="Bitte einloggen"
-            subtitle="Ohne Login werden keine Inhalte geladen. Logge dich oben rechts ein, um Darsteller und Filme zu sehen."
-            action={<Pill>Project1337 • Private Library</Pill>}
-          />
+          <EmptyState title="Bitte einloggen" subtitle="Ohne Login werden keine Inhalte geladen." action={<Pill>Project1337</Pill>} />
         ) : loading ? (
           <>
             <div className="sectionHead">
@@ -1664,7 +1609,7 @@ export default function HomePage() {
             <div className="sectionHead">
               <div>
                 <div className="sectionTitle">Hauptdarsteller</div>
-                <div className="sectionMeta">{actors.length} Darsteller • Klicke einen Darsteller, um seine Filme zu öffnen.</div>
+                <div className="sectionMeta">{actors.length} Darsteller</div>
               </div>
 
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -1675,10 +1620,7 @@ export default function HomePage() {
             </div>
 
             {actors.length === 0 ? (
-              <EmptyState
-                title="Keine Hauptdarsteller verfügbar"
-                subtitle="Entweder sind noch keine Filme mit main_actor_ids hinterlegt oder es fehlen Datensätze."
-              />
+              <EmptyState title="Keine Hauptdarsteller verfügbar" subtitle="Prüfe movies.main_actor_ids / actors Tabelle." />
             ) : (
               <div className="row">
                 {actors.map((a) => (
