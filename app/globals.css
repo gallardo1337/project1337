@@ -22,12 +22,13 @@ body {
   color: #e5e5e5;
   font-size: 16px;
 
-  /* PREMIUM + APPLE TV SAFE FONT STACK */
+  /* FINAL FONT STACK (Premium + Apple TV + Windows) */
   font-family:
     -apple-system,
     BlinkMacSystemFont,
     "SF Pro Display",
     "SF Pro Text",
+    "Segoe UI Variable",
     "Manrope",
     system-ui,
     "Segoe UI",
@@ -43,7 +44,7 @@ body {
   line-height: 1.5;
 }
 
-/* Global text smoothing */
+/* Global text rendering */
 body {
   text-rendering: optimizeLegibility;
 }
