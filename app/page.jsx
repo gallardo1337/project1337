@@ -15,10 +15,6 @@ import { supabase } from "../lib/supabaseClient";
  *   - Chips der Auswahl oben
  * - Studio dropdown dark (option background)
  * - Auf der Hauptseite nur EIN Filter-Zugang (Topbar Button). Hero/Sections haben keine extra Filter-Buttons mehr.
- *
- * Logik:
- * - Multi-Auswahl bleibt STRICT UND (alle gewählten müssen matchen)
- * - Textsuche bleibt unverändert, Filter wirken zusätzlich
  */
 
 const CHANGELOG = [
@@ -890,12 +886,7 @@ export default function HomePage() {
           letter-spacing: -0.02em;
           margin: 8px 0 10px;
         }
-        .hero__sub {
-          color: rgba(255, 255, 255, 0.72);
-          font-size: 14px;
-          line-height: 1.45;
-          max-width: 60ch;
-        }
+
         .hero__stats {
           display: flex;
           gap: 10px;
@@ -1634,9 +1625,6 @@ export default function HomePage() {
             <div>
               <div className="hero__kicker">Stream. Organize. Flex.</div>
               <div className="hero__title">Deine private 1337-Mediathek.</div>
-              <div className="hero__sub">
-                Suche über Text oder filtere exakt. Mehrfachauswahl bedeutet immer: ein Film muss alle ausgewählten Einträge enthalten (STRICT UND).
-              </div>
             </div>
 
             <div className="hero__stats">
@@ -1856,7 +1844,7 @@ export default function HomePage() {
                   <div style={{ display: "grid", gap: 12 }}>
                     <FilterSection
                       title="Tags"
-                      subtitle="alle müssen passen"
+                      subtitle=""
                       items={tagItems}
                       selectedKeys={selectedTags}
                       getKey={(it) => it.key}
@@ -1871,7 +1859,7 @@ export default function HomePage() {
 
                     <FilterSection
                       title="Hauptdarsteller"
-                      subtitle="alle müssen passen"
+                      subtitle=""
                       items={mainItems}
                       selectedKeys={selectedMainActors}
                       getKey={(it) => it.key}
@@ -1886,7 +1874,7 @@ export default function HomePage() {
 
                     <FilterSection
                       title="Nebendarsteller"
-                      subtitle="alle müssen passen"
+                      subtitle=""
                       items={suppItems}
                       selectedKeys={selectedSupportingActors}
                       getKey={(it) => it.key}
@@ -1948,13 +1936,6 @@ export default function HomePage() {
                           </div>
                         </div>
 
-                        <div className="divider" />
-
-                        <div style={{ color: "rgba(255,255,255,0.72)", fontSize: 13, lineHeight: 1.5 }}>
-                          <b>Logik:</b> Mehrfachauswahl ist immer <b>UND</b>. Ein Film muss alle ausgewählten Tags/Darsteller enthalten.
-                          Filter wirken zusätzlich zur Textsuche.
-                        </div>
-
                         {hasAnyFilter ? (
                           <>
                             <div className="divider" />
@@ -1977,14 +1958,7 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Optional helper row */}
-              <div className="logCard">
-                <div className="fieldLabel">Tipp</div>
-                <div style={{ color: "rgba(255,255,255,0.72)", fontSize: 13, lineHeight: 1.5 }}>
-                  Bei sehr vielen Einträgen: nutze das Suchfeld innerhalb der Section oder aktiviere „Nur Auswahl“, um deine
-                  aktuell gesetzten Filter schnell zu sehen und zu bearbeiten.
-                </div>
-              </div>
+              {/* Tipp-Block entfernt */}
             </div>
           </div>
         </div>
