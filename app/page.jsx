@@ -4,32 +4,33 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 
 /**
- * page.jsx – Netflix-inspiriertes UI + erweiterte Suche
- * Fixes:
- * - Studio-Select Dropdown: dunkles Dropdown (option styling via select + option)
- * New:
- * - Filter: Hauptdarsteller (Multi, STRICT UND)
- * - Filter: Nebendarsteller (Multi, STRICT UND)
+ * page.jsx – Netflix-inspiriert + Advanced Filter (skalierbar)
  *
- * Hinweis: Actors werden als Namestrings gefiltert, basierend auf dem bereits gemappten `movie.actors` Array
- * und `movie.mainActorIds`. Hauptdarsteller-Filter matcht über `mainActorIds` (IDs), Nebendarsteller über Namen im actors-Array
- * (da supporting_actor_ids im Mapping aktuell nur zu Namen zusammengeführt werden).
+ * Fix/UX:
+ * - Filter-Fenster explodiert nicht mehr: Sections + Search + Scroll + "Nur ausgewählte anzeigen"
+ * - Tags / Hauptdarsteller / Nebendarsteller sind jeweils:
+ *   - einklappbar
+ *   - Suchfeld
+ *   - scrollbarer Bereich
+ *   - Chips der Auswahl oben
+ * - Studio dropdown dark (option background)
+ * - Auf der Hauptseite nur EIN Filter-Zugang (Topbar Button). Hero/Sections haben keine extra Filter-Buttons mehr.
+ *
+ * Logik:
+ * - Multi-Auswahl bleibt STRICT UND (alle gewählten müssen matchen)
+ * - Textsuche bleibt unverändert, Filter wirken zusätzlich
  */
 
 const CHANGELOG = [
   {
-    version: "0.3.2",
+    version: "0.3.3",
     date: "2025-12-26",
     items: [
-      "Fix: Studio Dropdown (weißer Hintergrund/Text) – Options & Select dark themed",
-      "Neu: Filter Hauptdarsteller (Multi, STRICT UND)",
-      "Neu: Filter Nebendarsteller (Multi, STRICT UND)",
+      "Filter UX refactored: Sections + Search + Scroll + Selected-only Toggle",
+      "Nur ein Filter-Button (Topbar)",
+      "Studio dropdown dark options",
+      "Multi Haupt-/Nebendarsteller Filter bleibt STRICT UND",
     ],
-  },
-  {
-    version: "0.3.1",
-    date: "2025-12-26",
-    items: ["UI modernisiert (Netflix-inspiriert)", "Erweiterte Suche: Multi-Tags (STRICT UND), Studio, Jahr von/bis"],
   },
 ];
 
@@ -116,6 +117,141 @@ function safeOpen(url) {
   }
 }
 
+function includesLoose(hay, needle) {
+  return String(hay || "")
+    .toLowerCase()
+    .includes(String(needle || "").toLowerCase());
+}
+
+function FilterSection({
+  title,
+  subtitle,
+  items,
+  selectedKeys,
+  getKey,
+  getLabel,
+  onToggle,
+  search,
+  setSearch,
+  showSelectedOnly,
+  setShowSelectedOnly,
+  defaultOpen = true,
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  const selectedSet = useMemo(() => new Set(selectedKeys.map(String)), [selectedKeys]);
+  const filtered = useMemo(() => {
+    const base = items || [];
+    let list = base;
+
+    if (showSelectedOnly) {
+      list = list.filter((it) => selectedSet.has(String(getKey(it))));
+    }
+
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      list = list.filter((it) => includesLoose(getLabel(it), q));
+    }
+
+    return list;
+  }, [items, showSelectedOnly, selectedSet, search, getKey, getLabel]);
+
+  return (
+    <div className="fsec">
+      <button type="button" className="fsec__head" onClick={() => setOpen((v) => !v)}>
+        <div className="fsec__headL">
+          <div className="fsec__title">{title}</div>
+          <div className="fsec__sub">
+            {subtitle} • <span className="mono">{selectedKeys.length}</span> aktiv
+          </div>
+        </div>
+        <div className="fsec__headR">
+          <span className="fsec__chev">{open ? "—" : "+"}</span>
+        </div>
+      </button>
+
+      {open && (
+        <div className="fsec__body">
+          <div className="fsec__tools">
+            <div className="fsearch">
+              <svg className="fsearch__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path
+                  d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                />
+                <path d="M16.5 16.5 21 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Suchen…" />
+              {search ? (
+                <button type="button" className="btn btn--ghost btn--xs" onClick={() => setSearch("")}>
+                  Reset
+                </button>
+              ) : null}
+            </div>
+
+            <label className="toggle">
+              <input
+                type="checkbox"
+                checked={showSelectedOnly}
+                onChange={(e) => setShowSelectedOnly(e.target.checked)}
+              />
+              <span>Nur Auswahl</span>
+            </label>
+          </div>
+
+          {selectedKeys.length > 0 ? (
+            <div className="chipsRow">
+              {selectedKeys.slice(0, 14).map((k) => {
+                const it = items.find((x) => String(getKey(x)) === String(k));
+                const label = it ? getLabel(it) : String(k);
+                return (
+                  <button
+                    key={`sel-${title}-${k}`}
+                    type="button"
+                    className="selChip"
+                    onClick={() => onToggle(k)}
+                    title="Entfernen"
+                  >
+                    <span className="selChip__dot" />
+                    <span className="selChip__txt">{label}</span>
+                    <span className="selChip__x">×</span>
+                  </button>
+                );
+              })}
+              {selectedKeys.length > 14 ? <Pill>+{selectedKeys.length - 14}</Pill> : null}
+            </div>
+          ) : null}
+
+          <div className="pickList">
+            {filtered.length === 0 ? (
+              <div className="pickEmpty">Keine Treffer</div>
+            ) : (
+              filtered.map((it) => {
+                const key = String(getKey(it));
+                const active = selectedSet.has(key);
+                return (
+                  <button
+                    key={`${title}-${key}`}
+                    type="button"
+                    className={`pick ${active ? "pick--on" : ""}`}
+                    onClick={() => onToggle(key)}
+                    title={getLabel(it)}
+                  >
+                    <span className="pick__dot" />
+                    <span className="pick__txt">{getLabel(it)}</span>
+                    <span className="pick__state">{active ? "ON" : ""}</span>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function HomePage() {
   const [movies, setMovies] = useState([]);
   const [actors, setActors] = useState([]); // Hauptdarsteller-Liste
@@ -127,23 +263,34 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
 
-  // Login-Status
+  // Login
   const [loggedIn, setLoggedIn] = useState(false);
   const [loginUser, setLoginUser] = useState("gallardo1337");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginErr, setLoginErr] = useState(null);
   const [loginLoading, setLoginLoading] = useState(false);
 
-  // Advanced Filter
+  // Filter modal
   const [filtersOpen, setFiltersOpen] = useState(false);
+
+  // Filters: core
   const [selectedTags, setSelectedTags] = useState([]);
   const [selectedStudio, setSelectedStudio] = useState("");
   const [yearFrom, setYearFrom] = useState("");
   const [yearTo, setYearTo] = useState("");
 
-  // Actor filters (neu)
-  const [selectedMainActors, setSelectedMainActors] = useState([]); // actor IDs (string/number)
-  const [selectedSupportingActors, setSelectedSupportingActors] = useState([]); // actor names (string)
+  // Actor filters
+  const [selectedMainActors, setSelectedMainActors] = useState([]); // actor IDs
+  const [selectedSupportingActors, setSelectedSupportingActors] = useState([]); // names
+
+  // Filter UI state
+  const [tagSearch, setTagSearch] = useState("");
+  const [mainActorSearch, setMainActorSearch] = useState("");
+  const [suppActorSearch, setSuppActorSearch] = useState("");
+
+  const [tagsSelectedOnly, setTagsSelectedOnly] = useState(false);
+  const [mainSelectedOnly, setMainSelectedOnly] = useState(false);
+  const [suppSelectedOnly, setSuppSelectedOnly] = useState(false);
 
   // Session check
   useEffect(() => {
@@ -158,7 +305,7 @@ export default function HomePage() {
     }
   }, []);
 
-  // Daten laden: movies + actors + actors2 + studios + tags
+  // Load data
   useEffect(() => {
     if (!loggedIn) {
       setMovies([]);
@@ -198,41 +345,38 @@ export default function HomePage() {
         const studioMap = Object.fromEntries(studios.map((s) => [s.id, s.name]));
         const tagMap = Object.fromEntries(tags.map((t) => [t.id, t.name]));
 
-        const mappedMovies =
-          moviesData.map((m) => {
-            const mainIds = Array.isArray(m.main_actor_ids) ? m.main_actor_ids : [];
-            const supportIds = Array.isArray(m.supporting_actor_ids) ? m.supporting_actor_ids : [];
+        const mappedMovies = (moviesData || []).map((m) => {
+          const mainIds = Array.isArray(m.main_actor_ids) ? m.main_actor_ids : [];
+          const supportIds = Array.isArray(m.supporting_actor_ids) ? m.supporting_actor_ids : [];
 
-            const mainNames = mainIds.map((id) => mainActorById[id]?.name).filter(Boolean);
-            const supportNames = supportIds.map((id) => supportActorById[id]?.name).filter(Boolean);
+          const mainNames = mainIds.map((id) => mainActorById[id]?.name).filter(Boolean);
+          const supportNames = supportIds.map((id) => supportActorById[id]?.name).filter(Boolean);
 
-            const allActors = [...mainNames, ...supportNames];
+          const allActors = [...mainNames, ...supportNames];
+          const tagNames = Array.isArray(m.tag_ids) ? m.tag_ids.map((id) => tagMap[id]).filter(Boolean) : [];
 
-            const tagNames = Array.isArray(m.tag_ids) ? m.tag_ids.map((id) => tagMap[id]).filter(Boolean) : [];
-
-            return {
-              id: m.id,
-              title: m.title,
-              year: m.year,
-              fileUrl: m.file_url,
-              studio: m.studio_id ? studioMap[m.studio_id] || null : null,
-              actors: allActors, // names
-              tags: tagNames,
-              mainActorIds: mainIds,
-              mainActorNames: mainNames,
-              supportingActorNames: supportNames,
-            };
-          }) || [];
+          return {
+            id: m.id,
+            title: m.title,
+            year: m.year,
+            fileUrl: m.file_url,
+            studio: m.studio_id ? studioMap[m.studio_id] || null : null,
+            actors: allActors, // names
+            tags: tagNames,
+            mainActorIds: mainIds,
+            mainActorNames: mainNames,
+            supportingActorNames: supportNames,
+          };
+        });
 
         setMovies(mappedMovies);
 
-        // Hauptdarsteller-Liste
+        // main actor list
         const movieCountByActorId = new Map();
         moviesData.forEach((m) => {
           const arr = Array.isArray(m.main_actor_ids) ? m.main_actor_ids : [];
           arr.forEach((id) => {
-            if (!movieCountByActorId.has(id)) movieCountByActorId.set(id, 0);
-            movieCountByActorId.set(id, movieCountByActorId.get(id) + 1);
+            movieCountByActorId.set(id, (movieCountByActorId.get(id) || 0) + 1);
           });
         });
 
@@ -258,7 +402,7 @@ export default function HomePage() {
     void load();
   }, [loggedIn]);
 
-  // Options for filters
+  // Options
   const allTags = useMemo(() => {
     const set = new Set();
     movies.forEach((m) => (m.tags || []).forEach((t) => set.add(t)));
@@ -273,28 +417,28 @@ export default function HomePage() {
     return Array.from(set).sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
   }, [movies]);
 
-  // Hauptdarsteller-Optionen: aus actors state
   const mainActorOptions = useMemo(() => {
-    return (actors || []).map((a) => ({ id: a.id, name: a.name })).sort((a, b) => a.name.localeCompare(b.name, "de"));
+    return (actors || [])
+      .map((a) => ({ id: a.id, name: a.name }))
+      .sort((a, b) => a.name.localeCompare(b.name, "de", { sensitivity: "base" }));
   }, [actors]);
 
-  // Nebendarsteller-Optionen: aus movies supportingActorNames aggregieren (und deduplizieren)
   const supportingActorOptions = useMemo(() => {
     const set = new Set();
     movies.forEach((m) => (m.supportingActorNames || []).forEach((n) => set.add(n)));
     return Array.from(set).sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
   }, [movies]);
 
+  // Filter engine
   const applyAdvancedFilters = (baseList) => {
     let list = baseList;
 
-    if (selectedStudio) {
-      list = list.filter((m) => (m.studio || "") === selectedStudio);
-    }
+    // Studio
+    if (selectedStudio) list = list.filter((m) => (m.studio || "") === selectedStudio);
 
+    // Year
     const yf = yearFrom ? parseInt(yearFrom, 10) : null;
     const yt = yearTo ? parseInt(yearTo, 10) : null;
-
     if (yf || yt) {
       list = list.filter((m) => {
         const y = m.year ? parseInt(m.year, 10) : null;
@@ -305,7 +449,7 @@ export default function HomePage() {
       });
     }
 
-    // Tags – STRICT UND
+    // Tags strict AND
     if (selectedTags.length > 0) {
       list = list.filter((m) => {
         const mtags = Array.isArray(m.tags) ? m.tags : [];
@@ -313,7 +457,7 @@ export default function HomePage() {
       });
     }
 
-    // Hauptdarsteller – STRICT UND auf IDs
+    // Main actors strict AND (IDs)
     if (selectedMainActors.length > 0) {
       list = list.filter((m) => {
         const ids = Array.isArray(m.mainActorIds) ? m.mainActorIds.map(String) : [];
@@ -321,7 +465,7 @@ export default function HomePage() {
       });
     }
 
-    // Nebendarsteller – STRICT UND auf Names (aus supportingActorNames)
+    // Supporting actors strict AND (names)
     if (selectedSupportingActors.length > 0) {
       list = list.filter((m) => {
         const names = Array.isArray(m.supportingActorNames) ? m.supportingActorNames : [];
@@ -341,15 +485,9 @@ export default function HomePage() {
         selectedMainActors.length > 0 ||
         selectedSupportingActors.length > 0
     );
-  }, [
-    selectedStudio,
-    selectedTags.length,
-    yearFrom,
-    yearTo,
-    selectedMainActors.length,
-    selectedSupportingActors.length,
-  ]);
+  }, [selectedStudio, selectedTags.length, yearFrom, yearTo, selectedMainActors.length, selectedSupportingActors.length]);
 
+  // Actions
   const handleShowMoviesForActor = (actorId, actorName) => {
     const m = movies.filter((movie) => Array.isArray(movie.mainActorIds) && movie.mainActorIds.includes(actorId));
     const filtered = applyAdvancedFilters(m);
@@ -388,7 +526,6 @@ export default function HomePage() {
     });
 
     const m = applyAdvancedFilters(raw);
-
     setMoviesTitle(`Suchergebnis für "${trimmed}"`);
     setMoviesSubtitle(`${m.length} Treffer`);
     setVisibleMovies(m);
@@ -411,18 +548,11 @@ export default function HomePage() {
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: loginUser,
-          password: loginPassword,
-        }),
+        body: JSON.stringify({ username: loginUser, password: loginPassword }),
       });
 
       if (!res.ok) {
-        if (res.status === 401) {
-          setLoginErr("User oder Passwort falsch.");
-        } else {
-          setLoginErr("Login fehlgeschlagen.");
-        }
+        setLoginErr(res.status === 401 ? "User oder Passwort falsch." : "Login fehlgeschlagen.");
         return;
       }
 
@@ -460,9 +590,7 @@ export default function HomePage() {
   };
 
   const heroCounts = useMemo(() => {
-    const movieCount = movies.length || 0;
-    const actorCount = actors.length || 0;
-    return { movieCount, actorCount };
+    return { movieCount: movies.length || 0, actorCount: actors.length || 0 };
   }, [movies.length, actors.length]);
 
   const showMovies = viewMode === "movies";
@@ -475,6 +603,14 @@ export default function HomePage() {
     setYearTo("");
     setSelectedMainActors([]);
     setSelectedSupportingActors([]);
+
+    // also reset UI search/toggles (optional but feels clean)
+    setTagSearch("");
+    setMainActorSearch("");
+    setSuppActorSearch("");
+    setTagsSelectedOnly(false);
+    setMainSelectedOnly(false);
+    setSuppSelectedOnly(false);
   };
 
   const applyFiltersNow = () => {
@@ -490,6 +626,28 @@ export default function HomePage() {
     setFiltersOpen(false);
   };
 
+  // Toggle helpers
+  const toggleTag = (t) => {
+    setSelectedTags((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
+  };
+
+  const toggleMainActor = (id) => {
+    const sid = String(id);
+    setSelectedMainActors((prev) => {
+      const p = prev.map(String);
+      return p.includes(sid) ? p.filter((x) => x !== sid) : [...p, sid];
+    });
+  };
+
+  const toggleSupportingActor = (name) => {
+    setSelectedSupportingActors((prev) => (prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name]));
+  };
+
+  // Filter data shaped for section component
+  const tagItems = useMemo(() => allTags.map((t) => ({ key: t, label: t })), [allTags]);
+  const mainItems = useMemo(() => mainActorOptions.map((a) => ({ key: String(a.id), label: a.name })), [mainActorOptions]);
+  const suppItems = useMemo(() => supportingActorOptions.map((n) => ({ key: n, label: n })), [supportingActorOptions]);
+
   return (
     <div className="nfx">
       <style jsx global>{`
@@ -498,10 +656,12 @@ export default function HomePage() {
           --panel: rgba(255, 255, 255, 0.06);
           --panel2: rgba(255, 255, 255, 0.08);
           --stroke: rgba(255, 255, 255, 0.12);
+          --stroke2: rgba(255, 255, 255, 0.16);
           --text: rgba(255, 255, 255, 0.92);
           --muted: rgba(255, 255, 255, 0.68);
           --muted2: rgba(255, 255, 255, 0.52);
           --accent: #e50914;
+          --accent2: rgba(229, 9, 20, 0.18);
           --shadow: rgba(0, 0, 0, 0.55);
           --menuBg: #111218;
         }
@@ -511,9 +671,11 @@ export default function HomePage() {
           background: var(--bg);
           color: var(--text);
         }
-
         * {
           box-sizing: border-box;
+        }
+        .mono {
+          font-variant-numeric: tabular-nums;
         }
 
         .nfx {
@@ -525,6 +687,7 @@ export default function HomePage() {
             linear-gradient(180deg, rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0.95));
         }
 
+        /* Topbar */
         .topbar {
           position: sticky;
           top: 0;
@@ -537,7 +700,6 @@ export default function HomePage() {
           backdrop-filter: blur(14px);
           border-bottom: 1px solid rgba(255, 255, 255, 0.06);
         }
-
         .brand {
           display: flex;
           align-items: center;
@@ -563,7 +725,6 @@ export default function HomePage() {
           padding: 4px 8px;
           border-radius: 999px;
         }
-
         .topbar__mid {
           flex: 1;
           display: flex;
@@ -571,13 +732,13 @@ export default function HomePage() {
           gap: 10px;
           align-items: center;
         }
-
         .topbar__right {
           display: flex;
           align-items: center;
           gap: 10px;
         }
 
+        /* Search */
         .input {
           width: 100%;
           max-width: 720px;
@@ -588,6 +749,11 @@ export default function HomePage() {
           border: 1px solid rgba(255, 255, 255, 0.12);
           border-radius: 999px;
           padding: 10px 14px;
+          transition: border-color 0.18s ease, background 0.18s ease;
+        }
+        .input:focus-within {
+          border-color: rgba(229, 9, 20, 0.55);
+          background: rgba(255, 255, 255, 0.08);
         }
         .input__icon {
           width: 16px;
@@ -606,6 +772,7 @@ export default function HomePage() {
           color: rgba(255, 255, 255, 0.45);
         }
 
+        /* Buttons */
         .btn {
           appearance: none;
           border: 1px solid rgba(255, 255, 255, 0.12);
@@ -616,10 +783,25 @@ export default function HomePage() {
           font-size: 13px;
           font-weight: 650;
           cursor: pointer;
+          transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+          white-space: nowrap;
+        }
+        .btn:hover {
+          transform: translateY(-1px);
+          background: rgba(255, 255, 255, 0.09);
+          border-color: rgba(255, 255, 255, 0.18);
+        }
+        .btn:active {
+          transform: translateY(0px);
         }
         .btn--primary {
           background: linear-gradient(180deg, rgba(229, 9, 20, 0.95), rgba(229, 9, 20, 0.78));
           border-color: rgba(229, 9, 20, 0.6);
+          box-shadow: 0 18px 36px rgba(229, 9, 20, 0.22);
+        }
+        .btn--primary:hover {
+          background: linear-gradient(180deg, rgba(255, 21, 33, 0.95), rgba(229, 9, 20, 0.8));
+          border-color: rgba(255, 21, 33, 0.65);
         }
         .btn--ghost {
           background: transparent;
@@ -627,7 +809,13 @@ export default function HomePage() {
         .btn--danger {
           border-color: rgba(229, 9, 20, 0.35);
         }
+        .btn--xs {
+          padding: 6px 10px;
+          border-radius: 10px;
+          font-size: 12px;
+        }
 
+        /* Chip */
         .chip {
           display: inline-flex;
           align-items: center;
@@ -641,6 +829,10 @@ export default function HomePage() {
           font-size: 13px;
           font-weight: 650;
         }
+        .chip:hover {
+          background: rgba(255, 255, 255, 0.09);
+          border-color: rgba(255, 255, 255, 0.18);
+        }
         .chip__dot {
           width: 8px;
           height: 8px;
@@ -648,15 +840,15 @@ export default function HomePage() {
           background: var(--accent);
           box-shadow: 0 0 0 6px rgba(229, 9, 20, 0.15);
         }
+        .chip__ver {
+          font-variant-numeric: tabular-nums;
+        }
         .chip__label {
           color: var(--muted);
           font-weight: 600;
         }
-        .chip--active {
-          border-color: rgba(229, 9, 20, 0.55) !important;
-          background: rgba(229, 9, 20, 0.14) !important;
-        }
 
+        /* Layout */
         .wrap {
           width: 100%;
           max-width: 1240px;
@@ -664,26 +856,12 @@ export default function HomePage() {
           padding: 0 18px 70px;
         }
 
-        /* Select styling (fix dropdown white on white) */
-        .select {
-          width: 100%;
-          background: rgba(255, 255, 255, 0.06);
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          color: rgba(255, 255, 255, 0.92);
-          border-radius: 12px;
-          padding: 10px 12px;
-          outline: none;
-        }
-        .select option {
-          background: var(--menuBg);
-          color: rgba(255, 255, 255, 0.92);
-        }
-
-        /* Rest styling trimmed for brevity in this block? No: keep necessary UI */
+        /* Hero */
         .hero {
           margin-top: 18px;
           border-radius: 22px;
           overflow: hidden;
+          position: relative;
           border: 1px solid rgba(255, 255, 255, 0.08);
           background:
             radial-gradient(900px 360px at 20% 20%, rgba(229, 9, 20, 0.35), transparent 55%),
@@ -698,6 +876,13 @@ export default function HomePage() {
           gap: 18px;
           align-items: end;
         }
+        .hero__kicker {
+          color: rgba(255, 255, 255, 0.7);
+          font-weight: 650;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+          font-size: 12px;
+        }
         .hero__title {
           font-size: 34px;
           line-height: 1.05;
@@ -710,12 +895,6 @@ export default function HomePage() {
           font-size: 14px;
           line-height: 1.45;
           max-width: 60ch;
-        }
-        .hero__actions {
-          display: flex;
-          gap: 10px;
-          flex-wrap: wrap;
-          margin-top: 16px;
         }
         .hero__stats {
           display: flex;
@@ -733,6 +912,7 @@ export default function HomePage() {
         .stat__num {
           font-weight: 900;
           font-size: 18px;
+          letter-spacing: -0.01em;
         }
         .stat__lbl {
           margin-top: 3px;
@@ -750,6 +930,7 @@ export default function HomePage() {
         .sectionTitle {
           font-size: 18px;
           font-weight: 850;
+          letter-spacing: -0.01em;
         }
         .sectionMeta {
           color: var(--muted2);
@@ -758,6 +939,8 @@ export default function HomePage() {
 
         .pill {
           display: inline-flex;
+          align-items: center;
+          gap: 6px;
           padding: 4px 8px;
           border-radius: 999px;
           background: rgba(255, 255, 255, 0.08);
@@ -767,14 +950,15 @@ export default function HomePage() {
           font-weight: 650;
         }
 
-        .movieGrid {
+        /* Actor grid */
+        .row {
           display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
+          grid-template-columns: repeat(6, minmax(0, 1fr));
           gap: 12px;
         }
         @media (max-width: 1100px) {
-          .movieGrid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+          .row {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
           }
           .hero__inner {
             grid-template-columns: 1fr;
@@ -784,23 +968,96 @@ export default function HomePage() {
           }
         }
         @media (max-width: 720px) {
-          .movieGrid {
-            grid-template-columns: 1fr;
-          }
-          .topbar__mid {
-            display: none;
+          .row {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
           }
           .hero__title {
             font-size: 28px;
           }
+          .topbar__mid {
+            display: none;
+          }
+        }
+        .card {
+          position: relative;
+          border-radius: 16px;
+          overflow: hidden;
+          border: 1px solid rgba(255, 255, 255, 0.10);
+          background: rgba(255, 255, 255, 0.05);
+          box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+          cursor: pointer;
+          transition: transform 0.14s ease, border-color 0.14s ease, background 0.14s ease;
+        }
+        .card:hover {
+          transform: translateY(-3px);
+          border-color: rgba(229, 9, 20, 0.35);
+          background: rgba(255, 255, 255, 0.07);
+        }
+        .card__img {
+          width: 100%;
+          aspect-ratio: 3/4;
+          background: rgba(255, 255, 255, 0.06);
+          overflow: hidden;
+        }
+        .card__img img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
+          transform: scale(1.02);
+        }
+        .card__body {
+          padding: 10px 10px 12px;
+        }
+        .card__title {
+          font-weight: 800;
+          font-size: 13px;
+          line-height: 1.2;
+          letter-spacing: -0.01em;
+          margin: 0 0 6px;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+          min-height: 32px;
+        }
+        .card__sub {
+          color: rgba(255, 255, 255, 0.6);
+          font-size: 12px;
+          display: flex;
+          gap: 8px;
+          align-items: center;
+          flex-wrap: wrap;
         }
 
+        /* Movies */
+        .movieGrid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 12px;
+        }
+        @media (max-width: 1100px) {
+          .movieGrid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+        }
+        @media (max-width: 720px) {
+          .movieGrid {
+            grid-template-columns: 1fr;
+          }
+        }
         .movieCard {
           border: 1px solid rgba(255, 255, 255, 0.10);
           background: rgba(255, 255, 255, 0.05);
           border-radius: 18px;
           padding: 14px;
           box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+          transition: transform 0.14s ease, border-color 0.14s ease, background 0.14s ease;
+        }
+        .movieCard:hover {
+          transform: translateY(-2px);
+          border-color: rgba(229, 9, 20, 0.35);
+          background: rgba(255, 255, 255, 0.07);
         }
         .movieCard__top {
           display: flex;
@@ -810,12 +1067,16 @@ export default function HomePage() {
         }
         .movieCard__title {
           font-weight: 900;
+          letter-spacing: -0.01em;
           margin: 0;
           font-size: 16px;
+          line-height: 1.2;
         }
         .movieCard__year {
           color: rgba(255, 255, 255, 0.7);
           font-weight: 750;
+          font-variant-numeric: tabular-nums;
+          margin-top: 2px;
         }
         .movieCard__meta {
           margin-top: 10px;
@@ -845,6 +1106,7 @@ export default function HomePage() {
           flex-wrap: wrap;
         }
 
+        /* Auth */
         .authForm {
           display: flex;
           align-items: center;
@@ -866,6 +1128,14 @@ export default function HomePage() {
           color: var(--text);
           font-size: 13px;
         }
+        .authField input::placeholder {
+          color: rgba(255, 255, 255, 0.45);
+        }
+        .auth__label {
+          color: rgba(255, 255, 255, 0.7);
+          font-size: 13px;
+          font-weight: 650;
+        }
 
         .errorBanner {
           margin-top: 14px;
@@ -873,6 +1143,7 @@ export default function HomePage() {
           padding: 12px 14px;
           border: 1px solid rgba(229, 9, 20, 0.35);
           background: rgba(229, 9, 20, 0.10);
+          color: rgba(255, 255, 255, 0.88);
         }
 
         .empty {
@@ -896,61 +1167,44 @@ export default function HomePage() {
           margin-top: 12px;
         }
 
-        .row {
+        .skRow {
           display: grid;
           grid-template-columns: repeat(6, minmax(0, 1fr));
           gap: 12px;
         }
+        @keyframes shimmer {
+          0% {
+            background-position: 200% 0;
+          }
+          100% {
+            background-position: -200% 0;
+          }
+        }
+        .skCard {
+          border-radius: 16px;
+          aspect-ratio: 3/4;
+          border: 1px solid rgba(255, 255, 255, 0.10);
+          background: linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0.05),
+            rgba(255, 255, 255, 0.08),
+            rgba(255, 255, 255, 0.05)
+          );
+          background-size: 200% 100%;
+          animation: shimmer 1.2s infinite linear;
+        }
         @media (max-width: 1100px) {
-          .row {
+          .skRow {
             grid-template-columns: repeat(4, minmax(0, 1fr));
           }
         }
         @media (max-width: 720px) {
-          .row {
+          .skRow {
             grid-template-columns: repeat(2, minmax(0, 1fr));
           }
         }
-        .card {
-          border-radius: 16px;
-          overflow: hidden;
-          border: 1px solid rgba(255, 255, 255, 0.10);
-          background: rgba(255, 255, 255, 0.05);
-          cursor: pointer;
-        }
-        .card__img {
-          width: 100%;
-          aspect-ratio: 3/4;
-          background: rgba(255, 255, 255, 0.06);
-          overflow: hidden;
-        }
-        .card__img img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          display: block;
-        }
-        .card__body {
-          padding: 10px 10px 12px;
-        }
-        .card__title {
-          font-weight: 800;
-          font-size: 13px;
-          margin: 0 0 6px;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-          min-height: 32px;
-        }
-        .card__sub {
-          color: rgba(255, 255, 255, 0.6);
-          font-size: 12px;
-          display: flex;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
 
+        /* Modal */
         .modalOverlay {
           position: fixed;
           inset: 0;
@@ -964,7 +1218,7 @@ export default function HomePage() {
         }
         .modal {
           width: 100%;
-          max-width: 900px;
+          max-width: 980px;
           border-radius: 20px;
           border: 1px solid rgba(255, 255, 255, 0.10);
           background: rgba(10, 10, 14, 0.92);
@@ -993,18 +1247,53 @@ export default function HomePage() {
         }
         .modal__body {
           padding: 16px;
-          max-height: 70vh;
+          max-height: 78vh;
           overflow: auto;
           display: grid;
           gap: 12px;
         }
+
         .logCard {
           border: 1px solid rgba(255, 255, 255, 0.10);
           background: rgba(255, 255, 255, 0.04);
           border-radius: 16px;
           padding: 14px;
         }
+        .logCard__top {
+          display: flex;
+          justify-content: space-between;
+          gap: 10px;
+          align-items: baseline;
+          margin-bottom: 8px;
+        }
+        .logCard__ver {
+          font-weight: 900;
+        }
+        .logCard__date {
+          color: rgba(255, 255, 255, 0.6);
+          font-size: 12px;
+          font-variant-numeric: tabular-nums;
+        }
+        .logCard__list {
+          margin: 0;
+          padding-left: 18px;
+          color: rgba(255, 255, 255, 0.72);
+          font-size: 13px;
+          line-height: 1.55;
+        }
 
+        /* Filter layout */
+        .filterGrid {
+          display: grid;
+          grid-template-columns: 1.25fr 0.75fr;
+          gap: 12px;
+          align-items: start;
+        }
+        @media (max-width: 900px) {
+          .filterGrid {
+            grid-template-columns: 1fr;
+          }
+        }
         .fieldLabel {
           color: rgba(255, 255, 255, 0.72);
           font-weight: 800;
@@ -1013,34 +1302,249 @@ export default function HomePage() {
           text-transform: uppercase;
           margin-bottom: 6px;
         }
-        .filterGrid {
-          display: grid;
-          grid-template-columns: 1.15fr 0.85fr;
-          gap: 12px;
+
+        /* Select dark dropdown */
+        .select {
+          width: 100%;
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          color: rgba(255, 255, 255, 0.92);
+          border-radius: 12px;
+          padding: 10px 12px;
+          outline: none;
         }
-        @media (max-width: 900px) {
-          .filterGrid {
-            grid-template-columns: 1fr;
-          }
+        .select option {
+          background: var(--menuBg);
+          color: rgba(255, 255, 255, 0.92);
         }
-        .tagWrap {
-          display: flex;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
+
         .yearRow {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 10px;
         }
-        .activeFilters {
-          margin-top: 14px;
+
+        /* Sections */
+        .fsec {
+          border: 1px solid rgba(255, 255, 255, 0.10);
+          background: rgba(255, 255, 255, 0.03);
+          border-radius: 16px;
+          overflow: hidden;
+        }
+        .fsec__head {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          padding: 12px 12px;
+          background: rgba(0, 0, 0, 0.25);
+          border: none;
+          color: var(--text);
+          cursor: pointer;
+          text-align: left;
+        }
+        .fsec__head:hover {
+          background: rgba(0, 0, 0, 0.32);
+        }
+        .fsec__title {
+          font-weight: 900;
+          letter-spacing: -0.01em;
+        }
+        .fsec__sub {
+          margin-top: 2px;
+          color: rgba(255, 255, 255, 0.62);
+          font-size: 12px;
+        }
+        .fsec__chev {
+          width: 34px;
+          height: 34px;
+          display: grid;
+          place-items: center;
+          border-radius: 12px;
+          border: 1px solid rgba(255, 255, 255, 0.10);
+          background: rgba(255, 255, 255, 0.04);
+          font-weight: 900;
+        }
+        .fsec__body {
+          padding: 12px;
+          display: grid;
+          gap: 10px;
+        }
+
+        /* section tools */
+        .fsec__tools {
+          display: flex;
+          gap: 10px;
+          align-items: center;
+          flex-wrap: wrap;
+        }
+        .fsearch {
+          flex: 1;
+          min-width: 220px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          border-radius: 12px;
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          padding: 8px 10px;
+        }
+        .fsearch__icon {
+          width: 16px;
+          height: 16px;
+          opacity: 0.75;
+        }
+        .fsearch input {
+          width: 100%;
+          outline: none;
+          border: none;
+          background: transparent;
+          color: var(--text);
+          font-size: 13px;
+        }
+        .fsearch input::placeholder {
+          color: rgba(255, 255, 255, 0.45);
+        }
+
+        .toggle {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          color: rgba(255, 255, 255, 0.72);
+          font-size: 12px;
+          font-weight: 700;
+          user-select: none;
+          padding: 8px 10px;
+          border-radius: 12px;
+          border: 1px solid rgba(255, 255, 255, 0.10);
+          background: rgba(255, 255, 255, 0.03);
+        }
+        .toggle input {
+          accent-color: var(--accent);
+        }
+
+        /* Selected chips row */
+        .chipsRow {
           display: flex;
           gap: 8px;
           flex-wrap: wrap;
         }
+        .selChip {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 10px;
+          border-radius: 999px;
+          border: 1px solid rgba(229, 9, 20, 0.28);
+          background: rgba(229, 9, 20, 0.10);
+          color: rgba(255, 255, 255, 0.88);
+          cursor: pointer;
+          font-size: 12px;
+          font-weight: 750;
+        }
+        .selChip:hover {
+          border-color: rgba(229, 9, 20, 0.40);
+          background: rgba(229, 9, 20, 0.14);
+        }
+        .selChip__dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 99px;
+          background: var(--accent);
+        }
+        .selChip__txt {
+          max-width: 220px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .selChip__x {
+          opacity: 0.9;
+          font-size: 14px;
+          line-height: 1;
+        }
+
+        /* Pick list */
+        .pickList {
+          max-height: 260px;
+          overflow: auto;
+          border-radius: 14px;
+          border: 1px solid rgba(255, 255, 255, 0.10);
+          background: rgba(0, 0, 0, 0.22);
+          padding: 6px;
+        }
+        .pickList::-webkit-scrollbar {
+          height: 10px;
+          width: 10px;
+        }
+        .pickList::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.12);
+          border-radius: 999px;
+        }
+        .pick {
+          width: 100%;
+          display: grid;
+          grid-template-columns: 14px 1fr auto;
+          align-items: center;
+          gap: 10px;
+          padding: 10px 10px;
+          border-radius: 12px;
+          border: 1px solid transparent;
+          background: transparent;
+          color: var(--text);
+          cursor: pointer;
+          text-align: left;
+        }
+        .pick:hover {
+          background: rgba(255, 255, 255, 0.04);
+          border-color: rgba(255, 255, 255, 0.08);
+        }
+        .pick--on {
+          background: rgba(229, 9, 20, 0.10);
+          border-color: rgba(229, 9, 20, 0.22);
+        }
+        .pick__dot {
+          width: 10px;
+          height: 10px;
+          border-radius: 99px;
+          background: rgba(255, 255, 255, 0.25);
+        }
+        .pick--on .pick__dot {
+          background: var(--accent);
+          box-shadow: 0 0 0 6px rgba(229, 9, 20, 0.12);
+        }
+        .pick__txt {
+          font-size: 13px;
+          font-weight: 700;
+          color: rgba(255, 255, 255, 0.88);
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .pick__state {
+          font-size: 11px;
+          font-weight: 900;
+          letter-spacing: 0.05em;
+          color: rgba(255, 255, 255, 0.55);
+        }
+        .pick--on .pick__state {
+          color: rgba(255, 255, 255, 0.80);
+        }
+        .pickEmpty {
+          padding: 14px 10px;
+          color: rgba(255, 255, 255, 0.6);
+          font-size: 13px;
+        }
+
+        .divider {
+          height: 1px;
+          background: rgba(255, 255, 255, 0.08);
+          margin: 10px 0;
+        }
       `}</style>
 
+      {/* Topbar */}
       <div className="topbar">
         <div className="brand" title="Project1337">
           <div className="brand__mark" />
@@ -1073,10 +1577,12 @@ export default function HomePage() {
                 ) : null}
               </div>
 
+              {/* EIN Filter Button */}
               <button
                 type="button"
                 className={`btn ${hasAnyFilter ? "btn--primary" : ""}`}
                 onClick={() => setFiltersOpen(true)}
+                title="Erweiterte Suche / Filter"
               >
                 Filter{hasAnyFilter ? " • aktiv" : ""}
               </button>
@@ -1089,9 +1595,7 @@ export default function HomePage() {
 
           {loggedIn ? (
             <>
-              <div className="auth">
-                <div className="auth__label">Willkommen, {loginUser}</div>
-              </div>
+              <div className="auth__label">Willkommen, {loginUser}</div>
 
               <button type="button" className="btn" onClick={() => safeOpen("/dashboard")} title="Zum Dashboard">
                 Dashboard
@@ -1124,73 +1628,15 @@ export default function HomePage() {
       </div>
 
       <div className="wrap">
+        {/* Hero */}
         <div className="hero">
           <div className="hero__inner">
             <div>
-              <div style={{ color: "rgba(255,255,255,0.7)", fontWeight: 650, letterSpacing: "0.06em", textTransform: "uppercase", fontSize: 12 }}>
-                Stream. Organize. Flex.
-              </div>
+              <div className="hero__kicker">Stream. Organize. Flex.</div>
               <div className="hero__title">Deine private 1337-Mediathek.</div>
               <div className="hero__sub">
-                Textsuche + Filter. Mehrere Tags/Darsteller bedeuten: ein Film muss alle ausgewählten Einträge enthalten (STRICT UND).
+                Suche über Text oder filtere exakt. Mehrfachauswahl bedeutet immer: ein Film muss alle ausgewählten Einträge enthalten (STRICT UND).
               </div>
-
-              <div className="hero__actions">
-                {loggedIn ? (
-                  <>
-                    {showMovies ? (
-                      <button type="button" className="btn" onClick={handleBackToActors}>
-                        Zurück zu Darstellern
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        className="btn"
-                        onClick={() => {
-                          const filtered = applyAdvancedFilters(movies);
-                          setViewMode("movies");
-                          setMoviesTitle(hasAnyFilter ? "Gefilterte Filme" : "Filme");
-                          setMoviesSubtitle(`${filtered.length} Film(e)`);
-                          setVisibleMovies(filtered);
-                        }}
-                        title="Alle Filme anzeigen"
-                      >
-                        Alle Filme
-                      </button>
-                    )}
-
-                    <button type="button" className="btn btn--primary" onClick={() => safeOpen("/dashboard")}>
-                      Zum Dashboard
-                    </button>
-                    <button type="button" className="btn" onClick={() => setFiltersOpen(true)}>
-                      Filter öffnen
-                    </button>
-                  </>
-                ) : (
-                  <Pill>Login erforderlich</Pill>
-                )}
-              </div>
-
-              {loggedIn && hasAnyFilter ? (
-                <div className="activeFilters">
-                  {selectedStudio ? <Pill>Studio: {selectedStudio}</Pill> : null}
-                  {yearFrom ? <Pill>Jahr ab: {yearFrom}</Pill> : null}
-                  {yearTo ? <Pill>Jahr bis: {yearTo}</Pill> : null}
-                  {selectedTags.map((t) => (
-                    <Pill key={`t-${t}`}>Tag: {t}</Pill>
-                  ))}
-                  {selectedMainActors.map((id) => {
-                    const name = mainActorOptions.find((x) => String(x.id) === String(id))?.name || `ID ${id}`;
-                    return <Pill key={`m-${id}`}>Haupt: {name}</Pill>;
-                  })}
-                  {selectedSupportingActors.map((n) => (
-                    <Pill key={`s-${n}`}>Neben: {n}</Pill>
-                  ))}
-                  <button type="button" className="btn btn--ghost" onClick={resetFilters}>
-                    Filter Reset
-                  </button>
-                </div>
-              ) : null}
             </div>
 
             <div className="hero__stats">
@@ -1210,9 +1656,11 @@ export default function HomePage() {
           </div>
         </div>
 
+        {/* Errors */}
         {loginErr ? <div className="errorBanner">{loginErr}</div> : null}
         {err ? <div className="errorBanner">{err}</div> : null}
 
+        {/* Content */}
         {!loggedIn ? (
           <EmptyState
             title="Bitte einloggen"
@@ -1239,12 +1687,10 @@ export default function HomePage() {
                 <div className="sectionTitle">{moviesTitle}</div>
                 <div className="sectionMeta">{moviesSubtitle || `${movieList.length} Film(e)`}</div>
               </div>
+
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                 <button type="button" className="btn" onClick={handleBackToActors}>
                   Darsteller
-                </button>
-                <button type="button" className="btn btn--ghost" onClick={() => setFiltersOpen(true)}>
-                  Filter
                 </button>
               </div>
             </div>
@@ -1306,8 +1752,11 @@ export default function HomePage() {
             <div className="sectionHead">
               <div>
                 <div className="sectionTitle">Hauptdarsteller</div>
-                <div className="sectionMeta">{actors.length} Darsteller • Klicke einen Darsteller, um seine Filme zu öffnen.</div>
+                <div className="sectionMeta">
+                  {actors.length} Darsteller • Klicke einen Darsteller, um seine Filme zu öffnen.
+                </div>
               </div>
+
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                 <button
                   type="button"
@@ -1319,11 +1768,9 @@ export default function HomePage() {
                     setMoviesSubtitle(`${filtered.length} Film(e)`);
                     setVisibleMovies(filtered);
                   }}
+                  title="Alle Filme anzeigen"
                 >
                   Filme
-                </button>
-                <button type="button" className="btn btn--ghost" onClick={() => setFiltersOpen(true)}>
-                  Filter
                 </button>
               </div>
             </div>
@@ -1389,190 +1836,153 @@ export default function HomePage() {
                 <div className="modal__kicker">Erweiterte Suche</div>
                 <div className="modal__title">Filter</div>
               </div>
-              <button type="button" className="btn btn--ghost" onClick={() => setFiltersOpen(false)}>
-                Schließen
-              </button>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                <button type="button" className="btn" onClick={resetFilters}>
+                  Reset
+                </button>
+                <button type="button" className="btn btn--primary" onClick={applyFiltersNow}>
+                  Anwenden
+                </button>
+                <button type="button" className="btn btn--ghost" onClick={() => setFiltersOpen(false)}>
+                  Schließen
+                </button>
+              </div>
             </div>
 
             <div className="modal__body">
               <div className="logCard">
                 <div className="filterGrid">
-                  <div>
-                    <div className="fieldLabel">Tags (alle müssen passen)</div>
-                    <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, marginBottom: 8 }}>
-                      Aktiv: {selectedTags.length} Tag(s).
-                    </div>
+                  {/* Left: big multi lists */}
+                  <div style={{ display: "grid", gap: 12 }}>
+                    <FilterSection
+                      title="Tags"
+                      subtitle="alle müssen passen"
+                      items={tagItems}
+                      selectedKeys={selectedTags}
+                      getKey={(it) => it.key}
+                      getLabel={(it) => it.label}
+                      onToggle={(k) => toggleTag(String(k))}
+                      search={tagSearch}
+                      setSearch={setTagSearch}
+                      showSelectedOnly={tagsSelectedOnly}
+                      setShowSelectedOnly={setTagsSelectedOnly}
+                      defaultOpen={true}
+                    />
 
-                    <div className="tagWrap">
-                      {allTags.length === 0 ? (
-                        <Pill>Keine Tags vorhanden</Pill>
-                      ) : (
-                        allTags.map((t) => {
-                          const active = selectedTags.includes(t);
-                          return (
-                            <button
-                              key={`tag-${t}`}
-                              type="button"
-                              className={`chip ${active ? "chip--active" : ""}`}
-                              onClick={() => {
-                                setSelectedTags((prev) =>
-                                  prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]
-                                );
-                              }}
-                              title={t}
-                            >
-                              <span className="chip__dot" style={{ opacity: active ? 1 : 0.25 }} />
-                              <span>{t}</span>
-                            </button>
-                          );
-                        })
-                      )}
-                    </div>
+                    <FilterSection
+                      title="Hauptdarsteller"
+                      subtitle="alle müssen passen"
+                      items={mainItems}
+                      selectedKeys={selectedMainActors}
+                      getKey={(it) => it.key}
+                      getLabel={(it) => it.label}
+                      onToggle={(k) => toggleMainActor(String(k))}
+                      search={mainActorSearch}
+                      setSearch={setMainActorSearch}
+                      showSelectedOnly={mainSelectedOnly}
+                      setShowSelectedOnly={setMainSelectedOnly}
+                      defaultOpen={false}
+                    />
 
-                    <div style={{ height: 12 }} />
-
-                    <div className="fieldLabel">Hauptdarsteller (alle müssen passen)</div>
-                    <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, marginBottom: 8 }}>
-                      Aktiv: {selectedMainActors.length} Darsteller.
-                    </div>
-
-                    <div className="tagWrap">
-                      {mainActorOptions.length === 0 ? (
-                        <Pill>Keine Hauptdarsteller vorhanden</Pill>
-                      ) : (
-                        mainActorOptions.map((a) => {
-                          const active = selectedMainActors.map(String).includes(String(a.id));
-                          return (
-                            <button
-                              key={`main-${a.id}`}
-                              type="button"
-                              className={`chip ${active ? "chip--active" : ""}`}
-                              onClick={() => {
-                                setSelectedMainActors((prev) => {
-                                  const p = prev.map(String);
-                                  const id = String(a.id);
-                                  return p.includes(id) ? p.filter((x) => x !== id) : [...p, id];
-                                });
-                              }}
-                              title={a.name}
-                            >
-                              <span className="chip__dot" style={{ opacity: active ? 1 : 0.25 }} />
-                              <span>{a.name}</span>
-                            </button>
-                          );
-                        })
-                      )}
-                    </div>
-
-                    <div style={{ height: 12 }} />
-
-                    <div className="fieldLabel">Nebendarsteller (alle müssen passen)</div>
-                    <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, marginBottom: 8 }}>
-                      Aktiv: {selectedSupportingActors.length} Darsteller.
-                    </div>
-
-                    <div className="tagWrap">
-                      {supportingActorOptions.length === 0 ? (
-                        <Pill>Keine Nebendarsteller vorhanden</Pill>
-                      ) : (
-                        supportingActorOptions.map((n) => {
-                          const active = selectedSupportingActors.includes(n);
-                          return (
-                            <button
-                              key={`supp-${n}`}
-                              type="button"
-                              className={`chip ${active ? "chip--active" : ""}`}
-                              onClick={() => {
-                                setSelectedSupportingActors((prev) =>
-                                  prev.includes(n) ? prev.filter((x) => x !== n) : [...prev, n]
-                                );
-                              }}
-                              title={n}
-                            >
-                              <span className="chip__dot" style={{ opacity: active ? 1 : 0.25 }} />
-                              <span>{n}</span>
-                            </button>
-                          );
-                        })
-                      )}
-                    </div>
+                    <FilterSection
+                      title="Nebendarsteller"
+                      subtitle="alle müssen passen"
+                      items={suppItems}
+                      selectedKeys={selectedSupportingActors}
+                      getKey={(it) => it.key}
+                      getLabel={(it) => it.label}
+                      onToggle={(k) => toggleSupportingActor(String(k))}
+                      search={suppActorSearch}
+                      setSearch={setSuppActorSearch}
+                      showSelectedOnly={suppSelectedOnly}
+                      setShowSelectedOnly={setSuppSelectedOnly}
+                      defaultOpen={false}
+                    />
                   </div>
 
+                  {/* Right: smaller core filters */}
                   <div style={{ display: "grid", gap: 12 }}>
-                    <div>
-                      <div className="fieldLabel">Studio</div>
-                      <select className="select" value={selectedStudio} onChange={(e) => setSelectedStudio(e.target.value)}>
-                        <option value="">Alle Studios</option>
-                        {allStudios.map((s) => (
-                          <option key={`st-${s}`} value={s}>
-                            {s}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <div className="fieldLabel">Jahr</div>
-                      <div className="yearRow">
-                        <input
-                          className="select"
-                          value={yearFrom}
-                          onChange={(e) => setYearFrom(e.target.value)}
-                          placeholder="von (z.B. 1999)"
-                          inputMode="numeric"
-                        />
-                        <input
-                          className="select"
-                          value={yearTo}
-                          onChange={(e) => setYearTo(e.target.value)}
-                          placeholder="bis (z.B. 2025)"
-                          inputMode="numeric"
-                        />
-                      </div>
-                    </div>
-
-                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
-                      <button type="button" className="btn" onClick={resetFilters}>
-                        Reset
-                      </button>
-                      <button type="button" className="btn btn--primary" onClick={applyFiltersNow}>
-                        Anwenden
-                      </button>
-                    </div>
-
-                    {hasAnyFilter ? (
-                      <div>
-                        <div className="fieldLabel">Aktive Filter</div>
-                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                          {selectedStudio ? <Pill>Studio: {selectedStudio}</Pill> : null}
-                          {yearFrom ? <Pill>ab {yearFrom}</Pill> : null}
-                          {yearTo ? <Pill>bis {yearTo}</Pill> : null}
-                          {selectedTags.map((t) => (
-                            <Pill key={`af-tag-${t}`}>{t}</Pill>
-                          ))}
-                          {selectedMainActors.map((id) => {
-                            const name = mainActorOptions.find((x) => String(x.id) === String(id))?.name || `ID ${id}`;
-                            return <Pill key={`af-main-${id}`}>Haupt: {name}</Pill>;
-                          })}
-                          {selectedSupportingActors.map((n) => (
-                            <Pill key={`af-supp-${n}`}>Neben: {n}</Pill>
-                          ))}
+                    <div className="fsec">
+                      <div className="fsec__head" style={{ cursor: "default" }}>
+                        <div className="fsec__headL">
+                          <div className="fsec__title">Basis</div>
+                          <div className="fsec__sub">Studio & Jahr</div>
+                        </div>
+                        <div className="fsec__headR">
+                          <span className="fsec__chev" style={{ opacity: 0.35 }}>
+                            ✓
+                          </span>
                         </div>
                       </div>
-                    ) : (
-                      <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 12 }}>
-                        Keine Filter aktiv. Wähle Tags/Studio/Jahr/Darsteller und klicke „Anwenden“.
+
+                      <div className="fsec__body">
+                        <div>
+                          <div className="fieldLabel">Studio</div>
+                          <select className="select" value={selectedStudio} onChange={(e) => setSelectedStudio(e.target.value)}>
+                            <option value="">Alle Studios</option>
+                            {allStudios.map((s) => (
+                              <option key={`st-${s}`} value={s}>
+                                {s}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <div className="fieldLabel">Jahr</div>
+                          <div className="yearRow">
+                            <input
+                              className="select"
+                              value={yearFrom}
+                              onChange={(e) => setYearFrom(e.target.value)}
+                              placeholder="von (z.B. 1999)"
+                              inputMode="numeric"
+                            />
+                            <input
+                              className="select"
+                              value={yearTo}
+                              onChange={(e) => setYearTo(e.target.value)}
+                              placeholder="bis (z.B. 2025)"
+                              inputMode="numeric"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="divider" />
+
+                        <div style={{ color: "rgba(255,255,255,0.72)", fontSize: 13, lineHeight: 1.5 }}>
+                          <b>Logik:</b> Mehrfachauswahl ist immer <b>UND</b>. Ein Film muss alle ausgewählten Tags/Darsteller enthalten.
+                          Filter wirken zusätzlich zur Textsuche.
+                        </div>
+
+                        {hasAnyFilter ? (
+                          <>
+                            <div className="divider" />
+                            <div style={{ display: "grid", gap: 8 }}>
+                              <div className="fieldLabel">Aktiv</div>
+                              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                {selectedStudio ? <Pill>Studio</Pill> : null}
+                                {yearFrom ? <Pill>ab {yearFrom}</Pill> : null}
+                                {yearTo ? <Pill>bis {yearTo}</Pill> : null}
+                                {selectedTags.length ? <Pill>{selectedTags.length} Tags</Pill> : null}
+                                {selectedMainActors.length ? <Pill>{selectedMainActors.length} Haupt</Pill> : null}
+                                {selectedSupportingActors.length ? <Pill>{selectedSupportingActors.length} Neben</Pill> : null}
+                              </div>
+                            </div>
+                          </>
+                        ) : null}
                       </div>
-                    )}
+                    </div>
                   </div>
                 </div>
               </div>
 
+              {/* Optional helper row */}
               <div className="logCard">
-                <div className="fieldLabel">Hinweis</div>
+                <div className="fieldLabel">Tipp</div>
                 <div style={{ color: "rgba(255,255,255,0.72)", fontSize: 13, lineHeight: 1.5 }}>
-                  Die Filter wirken zusätzlich zur Textsuche. Wenn du kein Suchwort eingibst, werden nur die gefilterten Filme angezeigt.
-                  Mehrfachauswahl bedeutet immer: alle ausgewählten Einträge müssen matchen.
+                  Bei sehr vielen Einträgen: nutze das Suchfeld innerhalb der Section oder aktiviere „Nur Auswahl“, um deine
+                  aktuell gesetzten Filter schnell zu sehen und zu bearbeiten.
                 </div>
               </div>
             </div>
