@@ -910,7 +910,7 @@ export default function HomePage() {
           text-align: center;
         }
         .card__title {
-          font-weight: 850;
+          font-weight: 500;
           font-size: 14px; /* eine Stufe größer */
           line-height: 1.2;
           letter-spacing: -0.01em;
