@@ -5,16 +5,6 @@ import { supabase } from "../lib/supabaseClient";
 
 /**
  * page.jsx – Netflix-inspiriert + Advanced Filter (skalierbar)
- *
- * Fix/UX:
- * - Filter-Fenster explodiert nicht mehr: Sections + Search + Scroll + "Nur ausgewählte anzeigen"
- * - Tags / Hauptdarsteller / Nebendarsteller sind jeweils:
- *   - einklappbar
- *   - Suchfeld
- *   - scrollbarer Bereich
- *   - Chips der Auswahl oben
- * - Studio dropdown dark (option background)
- * - Auf der Hauptseite nur EIN Filter-Zugang (Topbar Button). Hero/Sections haben keine extra Filter-Buttons mehr.
  */
 
 const CHANGELOG = [
@@ -600,7 +590,6 @@ export default function HomePage() {
     setSelectedMainActors([]);
     setSelectedSupportingActors([]);
 
-    // also reset UI search/toggles (optional but feels clean)
     setTagSearch("");
     setMainActorSearch("");
     setSuppActorSearch("");
@@ -622,10 +611,7 @@ export default function HomePage() {
     setFiltersOpen(false);
   };
 
-  // Toggle helpers
-  const toggleTag = (t) => {
-    setSelectedTags((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
-  };
+  const toggleTag = (t) => setSelectedTags((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
 
   const toggleMainActor = (id) => {
     const sid = String(id);
@@ -635,11 +621,9 @@ export default function HomePage() {
     });
   };
 
-  const toggleSupportingActor = (name) => {
+  const toggleSupportingActor = (name) =>
     setSelectedSupportingActors((prev) => (prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name]));
-  };
 
-  // Filter data shaped for section component
   const tagItems = useMemo(() => allTags.map((t) => ({ key: t, label: t })), [allTags]);
   const mainItems = useMemo(() => mainActorOptions.map((a) => ({ key: String(a.id), label: a.name })), [mainActorOptions]);
   const suppItems = useMemo(() => supportingActorOptions.map((n) => ({ key: n, label: n })), [supportingActorOptions]);
@@ -695,31 +679,6 @@ export default function HomePage() {
           background: rgba(0, 0, 0, 0.55);
           backdrop-filter: blur(14px);
           border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-        }
-        .brand {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          user-select: none;
-        }
-        .brand__mark {
-          width: 28px;
-          height: 28px;
-          border-radius: 8px;
-          background: linear-gradient(145deg, rgba(229, 9, 20, 0.95), rgba(229, 9, 20, 0.35));
-          box-shadow: 0 14px 30px rgba(229, 9, 20, 0.22);
-        }
-        .brand__name {
-          font-weight: 800;
-          letter-spacing: 0.02em;
-        }
-        .brand__sub {
-          margin-left: 8px;
-          font-size: 12px;
-          color: var(--muted2);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          padding: 4px 8px;
-          border-radius: 999px;
         }
         .topbar__mid {
           flex: 1;
@@ -886,7 +845,6 @@ export default function HomePage() {
           letter-spacing: -0.02em;
           margin: 8px 0 10px;
         }
-
         .hero__stats {
           display: flex;
           gap: 10px;
@@ -1050,52 +1008,6 @@ export default function HomePage() {
           border-color: rgba(229, 9, 20, 0.35);
           background: rgba(255, 255, 255, 0.07);
         }
-        .movieCard__top {
-          display: flex;
-          justify-content: space-between;
-          gap: 10px;
-          align-items: flex-start;
-        }
-        .movieCard__title {
-          font-weight: 900;
-          letter-spacing: -0.01em;
-          margin: 0;
-          font-size: 16px;
-          line-height: 1.2;
-        }
-        .movieCard__year {
-          color: rgba(255, 255, 255, 0.7);
-          font-weight: 750;
-          font-variant-numeric: tabular-nums;
-          margin-top: 2px;
-        }
-        .movieCard__meta {
-          margin-top: 10px;
-          display: grid;
-          gap: 8px;
-          color: rgba(255, 255, 255, 0.72);
-          font-size: 13px;
-        }
-        .kv {
-          display: flex;
-          gap: 10px;
-          align-items: baseline;
-          flex-wrap: wrap;
-        }
-        .kv__k {
-          color: rgba(255, 255, 255, 0.52);
-          font-weight: 700;
-          min-width: 88px;
-        }
-        .kv__v {
-          color: rgba(255, 255, 255, 0.78);
-        }
-        .movieCard__actions {
-          margin-top: 12px;
-          display: flex;
-          gap: 10px;
-          flex-wrap: wrap;
-        }
 
         /* Auth */
         .authForm {
@@ -1118,14 +1030,6 @@ export default function HomePage() {
           background: transparent;
           color: var(--text);
           font-size: 13px;
-        }
-        .authField input::placeholder {
-          color: rgba(255, 255, 255, 0.45);
-        }
-        .auth__label {
-          color: rgba(255, 255, 255, 0.7);
-          font-size: 13px;
-          font-weight: 650;
         }
 
         .errorBanner {
@@ -1184,16 +1088,6 @@ export default function HomePage() {
           background-size: 200% 100%;
           animation: shimmer 1.2s infinite linear;
         }
-        @media (max-width: 1100px) {
-          .skRow {
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-          }
-        }
-        @media (max-width: 720px) {
-          .skRow {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-          }
-        }
 
         /* Modal */
         .modalOverlay {
@@ -1249,28 +1143,6 @@ export default function HomePage() {
           background: rgba(255, 255, 255, 0.04);
           border-radius: 16px;
           padding: 14px;
-        }
-        .logCard__top {
-          display: flex;
-          justify-content: space-between;
-          gap: 10px;
-          align-items: baseline;
-          margin-bottom: 8px;
-        }
-        .logCard__ver {
-          font-weight: 900;
-        }
-        .logCard__date {
-          color: rgba(255, 255, 255, 0.6);
-          font-size: 12px;
-          font-variant-numeric: tabular-nums;
-        }
-        .logCard__list {
-          margin: 0;
-          padding-left: 18px;
-          color: rgba(255, 255, 255, 0.72);
-          font-size: 13px;
-          line-height: 1.55;
         }
 
         /* Filter layout */
@@ -1335,9 +1207,6 @@ export default function HomePage() {
           cursor: pointer;
           text-align: left;
         }
-        .fsec__head:hover {
-          background: rgba(0, 0, 0, 0.32);
-        }
         .fsec__title {
           font-weight: 900;
           letter-spacing: -0.01em;
@@ -1363,7 +1232,6 @@ export default function HomePage() {
           gap: 10px;
         }
 
-        /* section tools */
         .fsec__tools {
           display: flex;
           gap: 10px;
@@ -1394,9 +1262,6 @@ export default function HomePage() {
           color: var(--text);
           font-size: 13px;
         }
-        .fsearch input::placeholder {
-          color: rgba(255, 255, 255, 0.45);
-        }
 
         .toggle {
           display: inline-flex;
@@ -1415,7 +1280,6 @@ export default function HomePage() {
           accent-color: var(--accent);
         }
 
-        /* Selected chips row */
         .chipsRow {
           display: flex;
           gap: 8px;
@@ -1433,10 +1297,6 @@ export default function HomePage() {
           cursor: pointer;
           font-size: 12px;
           font-weight: 750;
-        }
-        .selChip:hover {
-          border-color: rgba(229, 9, 20, 0.40);
-          background: rgba(229, 9, 20, 0.14);
         }
         .selChip__dot {
           width: 7px;
@@ -1456,7 +1316,6 @@ export default function HomePage() {
           line-height: 1;
         }
 
-        /* Pick list */
         .pickList {
           max-height: 260px;
           overflow: auto;
@@ -1464,14 +1323,6 @@ export default function HomePage() {
           border: 1px solid rgba(255, 255, 255, 0.10);
           background: rgba(0, 0, 0, 0.22);
           padding: 6px;
-        }
-        .pickList::-webkit-scrollbar {
-          height: 10px;
-          width: 10px;
-        }
-        .pickList::-webkit-scrollbar-thumb {
-          background: rgba(255, 255, 255, 0.12);
-          border-radius: 999px;
         }
         .pick {
           width: 100%;
@@ -1486,10 +1337,6 @@ export default function HomePage() {
           color: var(--text);
           cursor: pointer;
           text-align: left;
-        }
-        .pick:hover {
-          background: rgba(255, 255, 255, 0.04);
-          border-color: rgba(255, 255, 255, 0.08);
         }
         .pick--on {
           background: rgba(229, 9, 20, 0.10);
@@ -1537,11 +1384,7 @@ export default function HomePage() {
 
       {/* Topbar */}
       <div className="topbar">
-        <div className="brand" title="Project1337">
-          <div className="brand__mark" />
-          <div className="brand__name">Project1337</div>
-          <div className="brand__sub">Library</div>
-        </div>
+        {/* Left brand entfernt */}
 
         <div className="topbar__mid">
           {loggedIn ? (
@@ -1562,13 +1405,17 @@ export default function HomePage() {
                   autoComplete="off"
                 />
                 {search ? (
-                  <button type="button" className="btn btn--ghost" onClick={() => handleSearchChange("")} title="Suche löschen">
+                  <button
+                    type="button"
+                    className="btn btn--ghost"
+                    onClick={() => handleSearchChange("")}
+                    title="Suche löschen"
+                  >
                     Reset
                   </button>
                 ) : null}
               </div>
 
-              {/* EIN Filter Button */}
               <button
                 type="button"
                 className={`btn ${hasAnyFilter ? "btn--primary" : ""}`}
@@ -1599,7 +1446,12 @@ export default function HomePage() {
           ) : (
             <form className="authForm" onSubmit={handleLogin}>
               <div className="authField">
-                <input value={loginUser} onChange={(e) => setLoginUser(e.target.value)} placeholder="User" autoComplete="username" />
+                <input
+                  value={loginUser}
+                  onChange={(e) => setLoginUser(e.target.value)}
+                  placeholder="User"
+                  autoComplete="username"
+                />
               </div>
               <div className="authField">
                 <input
@@ -1619,7 +1471,6 @@ export default function HomePage() {
       </div>
 
       <div className="wrap">
-        {/* Hero */}
         <div className="hero">
           <div className="hero__inner">
             <div>
@@ -1644,11 +1495,9 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Errors */}
         {loginErr ? <div className="errorBanner">{loginErr}</div> : null}
         {err ? <div className="errorBanner">{err}</div> : null}
 
-        {/* Content */}
         {!loggedIn ? (
           <EmptyState
             title="Bitte einloggen"
@@ -1840,7 +1689,6 @@ export default function HomePage() {
             <div className="modal__body">
               <div className="logCard">
                 <div className="filterGrid">
-                  {/* Left: big multi lists */}
                   <div style={{ display: "grid", gap: 12 }}>
                     <FilterSection
                       title="Tags"
@@ -1888,7 +1736,6 @@ export default function HomePage() {
                     />
                   </div>
 
-                  {/* Right: smaller core filters */}
                   <div style={{ display: "grid", gap: 12 }}>
                     <div className="fsec">
                       <div className="fsec__head" style={{ cursor: "default" }}>
