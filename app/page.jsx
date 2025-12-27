@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../lib/supabaseClient"; // FIX: app/page.jsx -> ../lib/supabaseClient
 
 function Pill({ children }) {
@@ -43,69 +43,6 @@ function includesLoose(hay, needle) {
   return String(hay || "")
     .toLowerCase()
     .includes(String(needle || "").toLowerCase());
-}
-
-/**
- * AutoFitTitle
- * - immer 1 Zeile
- * - keine Ellipsis / kein Cut
- * - Schrift wird verkleinert, bis es passt (minSize)
- * - reagiert auch auf Resizes (ResizeObserver)
- */
-function AutoFitTitle({
-  text,
-  maxSize = 16,
-  minSize = 11,
-  step = 0.5,
-  className = "",
-}) {
-  const elRef = useRef(null);
-
-  const fit = () => {
-    const el = elRef.current;
-    if (!el) return;
-
-    let size = maxSize;
-    el.style.fontSize = `${size}px`;
-
-    // verkleinern bis es in die Breite passt (1 Zeile)
-    // Achtung: scrollWidth > clientWidth bedeutet "überläuft"
-    while (size > minSize && el.scrollWidth > el.clientWidth) {
-      size -= step;
-      el.style.fontSize = `${size}px`;
-    }
-  };
-
-  useLayoutEffect(() => {
-    fit();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [text, maxSize, minSize, step]);
-
-  useEffect(() => {
-    const el = elRef.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
-
-    const ro = new ResizeObserver(() => fit());
-    ro.observe(el);
-
-    return () => ro.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [text, maxSize, minSize, step]);
-
-  return (
-    <div
-      ref={elRef}
-      className={className}
-      title={text}
-      style={{
-        whiteSpace: "nowrap",
-        overflow: "hidden",
-        maxWidth: "100%",
-      }}
-    >
-      {text}
-    </div>
-  );
 }
 
 function FilterSection({
@@ -428,11 +365,15 @@ export default function HomePage() {
         const tags = tagsRes.data || [];
         const resolutions = resolutionsRes.data || [];
 
-        const mainActorById = Object.fromEntries(mainActors.map((a) => [a.id, a]));
+        const mainActorById = Object.fromEntries(
+          mainActors.map((a) => [a.id, a])
+        );
         const supportActorById = Object.fromEntries(
           supportActors.map((a) => [a.id, a])
         );
-        const studioMap = Object.fromEntries(studios.map((s) => [s.id, s.name]));
+        const studioMap = Object.fromEntries(
+          studios.map((s) => [s.id, s.name])
+        );
         const tagMap = Object.fromEntries(tags.map((t) => [t.id, t.name]));
         const resolutionMap = Object.fromEntries(
           resolutions.map((r) => [r.id, r.name])
@@ -553,7 +494,9 @@ export default function HomePage() {
 
   const supportingActorOptions = useMemo(() => {
     const set = new Set();
-    movies.forEach((m) => (m.supportingActorNames || []).forEach((n) => set.add(n)));
+    movies.forEach((m) =>
+      (m.supportingActorNames || []).forEach((n) => set.add(n))
+    );
     return Array.from(set).sort((a, b) =>
       a.localeCompare(b, "de", { sensitivity: "base" })
     );
@@ -562,7 +505,8 @@ export default function HomePage() {
   const applyAdvancedFilters = (baseList) => {
     let list = baseList;
 
-    if (selectedStudio) list = list.filter((m) => (m.studio || "") === selectedStudio);
+    if (selectedStudio)
+      list = list.filter((m) => (m.studio || "") === selectedStudio);
     if (selectedResolution)
       list = list.filter((m) => (m.resolution || "") === selectedResolution);
 
@@ -587,14 +531,18 @@ export default function HomePage() {
 
     if (selectedMainActors.length > 0) {
       list = list.filter((m) => {
-        const ids = Array.isArray(m.mainActorIds) ? m.mainActorIds.map(String) : [];
+        const ids = Array.isArray(m.mainActorIds)
+          ? m.mainActorIds.map(String)
+          : [];
         return selectedMainActors.map(String).every((id) => ids.includes(id));
       });
     }
 
     if (selectedSupportingActors.length > 0) {
       list = list.filter((m) => {
-        const names = Array.isArray(m.supportingActorNames) ? m.supportingActorNames : [];
+        const names = Array.isArray(m.supportingActorNames)
+          ? m.supportingActorNames
+          : [];
         return selectedSupportingActors.every((n) => names.includes(n));
       });
     }
@@ -699,7 +647,9 @@ export default function HomePage() {
 
       if (!res.ok) {
         setLoginErr(
-          res.status === 401 ? "User oder Passwort falsch." : "Login fehlgeschlagen."
+          res.status === 401
+            ? "User oder Passwort falsch."
+            : "Login fehlgeschlagen."
         );
         return;
       }
@@ -1163,6 +1113,10 @@ export default function HomePage() {
           box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
           transition: transform 0.14s ease, border-color 0.14s ease,
             background 0.14s ease;
+
+          /* NEU: stabiler Aufbau */
+          display: flex;
+          flex-direction: column;
         }
         .movieCard:hover {
           transform: translateY(-2px);
@@ -1200,6 +1154,7 @@ export default function HomePage() {
           box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
           display: grid;
           place-items: center;
+          flex: 0 0 auto;
         }
         .movieCard__thumb img {
           width: 100%;
@@ -1212,17 +1167,26 @@ export default function HomePage() {
         .movieCard__top {
           display: flex;
           justify-content: space-between;
-          align-items: baseline;
+          align-items: flex-start;
           gap: 10px;
+          flex: 0 0 auto;
         }
 
-        /* WICHTIG: kein font-size hier, AutoFitTitle steuert das */
+        /* TITEL: IMMER 3 ZEILEN PLATZ (Clamp 3 + feste Mindesthöhe) */
         .movieCard__title {
           margin: 0;
           font-weight: 900;
           letter-spacing: -0.01em;
           line-height: 1.15;
           max-width: 100%;
+          font-size: 16px;
+
+          display: -webkit-box;
+          -webkit-line-clamp: 3;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+
+          min-height: 56px; /* ~ 16px * 1.15 * 3 = 55.2 */
         }
 
         .movieCard__year {
@@ -1230,12 +1194,16 @@ export default function HomePage() {
           font-weight: 800;
           font-size: 13px;
           white-space: nowrap;
+          padding-top: 2px;
         }
+
         .movieCard__meta {
           margin-top: 10px;
           display: grid;
           gap: 8px;
+          flex: 0 0 auto;
         }
+
         .kv {
           display: grid;
           grid-template-columns: 90px 1fr;
@@ -1254,11 +1222,22 @@ export default function HomePage() {
           font-size: 13px;
           line-height: 1.35;
         }
+
+        /* TAGS: IMMER 3 ZEILEN PLATZ (damit Play nicht hochrutscht) */
+        .movieCard__tags {
+          display: -webkit-box;
+          -webkit-line-clamp: 3;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+          min-height: 53px; /* ~ 13px * 1.35 * 3 = 52.65 */
+        }
+
         .movieCard__actions {
-          margin-top: 12px;
+          margin-top: auto; /* NEU: Button bleibt unten */
           display: flex;
           gap: 10px;
           flex-wrap: wrap;
+          padding-top: 12px;
         }
 
         .authForm {
@@ -2186,7 +2165,9 @@ export default function HomePage() {
                       ) : null}
 
                       <div className="movieCard__top">
-                        <AutoFitTitle text={m.title || "Unbenannt"} className="movieCard__title" maxSize={16} minSize={11} step={0.5} />
+                        <div className="movieCard__title" title={m.title || "Unbenannt"}>
+                          {m.title || "Unbenannt"}
+                        </div>
                         <div className="movieCard__year">{m.year || ""}</div>
                       </div>
 
@@ -2203,7 +2184,9 @@ export default function HomePage() {
 
                         <div className="kv">
                           <div className="kv__k">Tags</div>
-                          <div className="kv__v">{m.tags && m.tags.length ? m.tags.join(", ") : "-"}</div>
+                          <div className={`kv__v movieCard__tags`}>
+                            {m.tags && m.tags.length ? m.tags.join(", ") : "-"}
+                          </div>
                         </div>
                       </div>
 
