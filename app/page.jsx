@@ -40,6 +40,10 @@ import { supabase } from "../lib/supabaseClient";
  * - Basis-Filter erweitert: Resolution (Alle / 4K / FullHD / Retro ...)
  * - Suche berücksichtigt Resolution ebenfalls
  * - Movie Cards zeigen Resolution
+ *
+ * UPDATE (Movie Thumbnail):
+ * - Movies haben optional `thumbnail_url` (Hostinger Upload im Dashboard)
+ * - Movie Cards zeigen Thumbnail (nur wenn vorhanden)
  */
 
 /* -------------------------------------------------------------------------- */
@@ -286,7 +290,7 @@ export default function HomePage() {
 
   const [selectedTags, setSelectedTags] = useState([]);
   const [selectedStudio, setSelectedStudio] = useState("");
-  const [selectedResolution, setSelectedResolution] = useState(""); // NEU: single select (Name)
+  const [selectedResolution, setSelectedResolution] = useState(""); // single select (Name)
   const [yearFrom, setYearFrom] = useState("");
   const [yearTo, setYearTo] = useState("");
 
@@ -416,7 +420,7 @@ export default function HomePage() {
         const supportActorById = Object.fromEntries(supportActors.map((a) => [a.id, a]));
         const studioMap = Object.fromEntries(studios.map((s) => [s.id, s.name]));
         const tagMap = Object.fromEntries(tags.map((t) => [t.id, t.name]));
-        const resolutionMap = Object.fromEntries(resolutions.map((r) => [r.id, r.name])); // NEU
+        const resolutionMap = Object.fromEntries(resolutions.map((r) => [r.id, r.name]));
 
         const mappedMovies = (moviesData || []).map((m) => {
           const mainIds = Array.isArray(m.main_actor_ids) ? m.main_actor_ids : [];
@@ -436,7 +440,8 @@ export default function HomePage() {
             year: m.year,
             fileUrl: m.file_url,
             studio: m.studio_id ? studioMap[m.studio_id] || null : null,
-            resolution: resolutionName, // NEU
+            resolution: resolutionName,
+            thumbnailUrl: m.thumbnail_url || null, // NEU
             actors: allActors, // names
             tags: tagNames,
             mainActorIds: mainIds,
@@ -529,7 +534,6 @@ export default function HomePage() {
     let list = baseList;
 
     if (selectedStudio) list = list.filter((m) => (m.studio || "") === selectedStudio);
-
     if (selectedResolution) list = list.filter((m) => (m.resolution || "") === selectedResolution);
 
     const yf = yearFrom ? parseInt(yearFrom, 10) : null;
@@ -1152,6 +1156,26 @@ export default function HomePage() {
           border-color: rgba(229, 9, 20, 0.35);
           background: rgba(255, 255, 255, 0.07);
         }
+
+        /* NEU: Movie Thumbnail */
+        .movieCard__thumb {
+          width: 100%;
+          aspect-ratio: 16 / 9;
+          border-radius: 14px;
+          overflow: hidden;
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          margin-bottom: 12px;
+          box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+        }
+        .movieCard__thumb img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
+          transform: scale(1.01);
+        }
+
         .movieCard__top {
           display: flex;
           justify-content: space-between;
@@ -1701,16 +1725,11 @@ export default function HomePage() {
                 ) : null}
               </div>
 
-              {/* ---------------------------------------------------------------- */}
-              {/* ---------------------- TEIL 7.3: FILTER POPOVER ----------------- */}
-              {/* ---------------------------------------------------------------- */}
-
               {filtersOpen && (
                 <div
                   className="filterPopover"
                   role="dialog"
                   aria-modal="false"
-                  // Wichtig: kein preventDefault → Fokus kann in andere Felder wechseln
                   onMouseDown={(e) => e.stopPropagation()}
                   onTouchStart={(e) => e.stopPropagation()}
                 >
@@ -1731,7 +1750,6 @@ export default function HomePage() {
 
                   <div className="filterPopover__body">
                     <div className="filterGrid">
-                      {/* Left: big multi lists */}
                       <div style={{ display: "grid", gap: 12 }}>
                         <FilterSection
                           title="Tags"
@@ -1779,7 +1797,6 @@ export default function HomePage() {
                         />
                       </div>
 
-                      {/* Right: smaller core filters */}
                       <div style={{ display: "grid", gap: 12 }}>
                         <div className="fsec">
                           <div className="fsec__head" style={{ cursor: "default" }}>
@@ -1880,7 +1897,6 @@ export default function HomePage() {
         <div className="topbar__right">
           {loggedIn ? (
             <>
-              {/* Mobile Lupe */}
               <button type="button" className="iconBtn mOnly" onClick={openMobileSearch} title="Suche">
                 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <path
@@ -1934,13 +1950,7 @@ export default function HomePage() {
       {/* -------------------------------------------------------------------- */}
 
       {loggedIn && mobileSearchOpen ? (
-        <div
-          className="mSearch"
-          role="dialog"
-          aria-modal="true"
-          onMouseDown={closeMobileSearch}
-          onTouchStart={closeMobileSearch}
-        >
+        <div className="mSearch" role="dialog" aria-modal="true" onMouseDown={closeMobileSearch} onTouchStart={closeMobileSearch}>
           <div
             className="mSearch__panel"
             onMouseDown={(e) => e.stopPropagation()}
@@ -1975,12 +1985,7 @@ export default function HomePage() {
                   />
 
                   {search ? (
-                    <button
-                      type="button"
-                      className="btn btn--ghost"
-                      onClick={() => handleSearchChange("")}
-                      title="Suche löschen"
-                    >
+                    <button type="button" className="btn btn--ghost" onClick={() => handleSearchChange("")} title="Suche löschen">
                       Reset
                     </button>
                   ) : null}
@@ -2075,11 +2080,7 @@ export default function HomePage() {
                             <div className="fsec__body">
                               <div>
                                 <div className="fieldLabel">Studio</div>
-                                <select
-                                  className="select"
-                                  value={selectedStudio}
-                                  onChange={(e) => setSelectedStudio(e.target.value)}
-                                >
+                                <select className="select" value={selectedStudio} onChange={(e) => setSelectedStudio(e.target.value)}>
                                   <option value="">Alle Studios</option>
                                   {allStudios.map((s) => (
                                     <option key={`st-${s}`} value={s}>
@@ -2164,7 +2165,6 @@ export default function HomePage() {
       <div className="wrap">
         {/* Logo */}
         <div className="logoSolo">
-          {/* Passe ggf. den Dateinamen an (z.B. /logo.png) */}
           <img className="logoSolo__img" src="/logo.png" alt="Project1337 Logo" />
         </div>
 
@@ -2197,10 +2197,6 @@ export default function HomePage() {
           </>
         ) : showMovies ? (
           <>
-            {/* -------------------------------------------------------------- */}
-            {/* ---------------- TEIL 7.6: MOVIES VIEW ------------------------ */}
-            {/* -------------------------------------------------------------- */}
-
             <div className="sectionHead">
               <div>
                 <div className="sectionTitle">{moviesTitle}</div>
@@ -2215,14 +2211,18 @@ export default function HomePage() {
             </div>
 
             {movieList.length === 0 ? (
-              <EmptyState
-                title="Keine Filme gefunden"
-                subtitle="Passe Suche/Filter an oder gehe zurück zur Darsteller-Ansicht."
-              />
+              <EmptyState title="Keine Filme gefunden" subtitle="Passe Suche/Filter an oder gehe zurück zur Darsteller-Ansicht." />
             ) : (
               <div className="movieGrid">
                 {movieList.map((m) => (
                   <div key={m.id} className="movieCard">
+                    {/* NEU: Thumbnail (optional) */}
+                    {m.thumbnailUrl ? (
+                      <div className="movieCard__thumb" title="Thumbnail">
+                        <img src={m.thumbnailUrl} alt={m.title || "Thumbnail"} loading="lazy" />
+                      </div>
+                    ) : null}
+
                     <div className="movieCard__top">
                       <h3 className="movieCard__title">{m.title || "Unbenannt"}</h3>
                       <div className="movieCard__year">{m.year || ""}</div>
@@ -2256,6 +2256,8 @@ export default function HomePage() {
                         className="btn btn--primary"
                         onClick={() => safeOpen(m.fileUrl)}
                         title="Film starten"
+                        disabled={!m.fileUrl}
+                        style={!m.fileUrl ? { opacity: 0.6, cursor: "not-allowed" } : undefined}
                       >
                         Play
                       </button>
@@ -2270,6 +2272,8 @@ export default function HomePage() {
                           }
                         }}
                         title="Link kopieren"
+                        disabled={!m.fileUrl}
+                        style={!m.fileUrl ? { opacity: 0.6, cursor: "not-allowed" } : undefined}
                       >
                         Copy Link
                       </button>
@@ -2281,10 +2285,6 @@ export default function HomePage() {
           </>
         ) : (
           <>
-            {/* -------------------------------------------------------------------------- */}
-            {/* --------------------------- TEIL 7.7: ACTORS VIEW ------------------------ */}
-            {/* -------------------------------------------------------------------------- */}
-
             <div className="sectionHead">
               <div>
                 <div className="sectionTitle">Hauptdarsteller</div>
@@ -2347,7 +2347,6 @@ export default function HomePage() {
                         </div>
                       )}
 
-                      {/* Badge: NUR die Zahl */}
                       <div className="card__badge">{a.movieCount}</div>
                     </div>
 
