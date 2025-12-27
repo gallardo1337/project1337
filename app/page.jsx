@@ -998,23 +998,29 @@ export default function HomePage() {
           display: block;
           transform: scale(1.02);
         }
-        .card__badge {
-          position: absolute;
-          right: 8px;
-          bottom: 8px;
-          z-index: 2;
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          padding: 6px 8px;
-          border-radius: 999px;
-          border: 1px solid rgba(255, 255, 255, 0.16);
-          background: rgba(0, 0, 0, 0.55);
-          color: rgba(255, 255, 255, 0.9);
-          font-size: 11px;
-          font-weight: 800;
-          backdrop-filter: blur(10px);
-        }
+     .card__badge {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 2;
+
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(0, 0, 0, 0.55);
+  color: rgba(255, 255, 255, 0.92);
+
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+
+  backdrop-filter: blur(10px);
+}
+
         .card__body {
           padding: 8px 10px 10px;
         }
