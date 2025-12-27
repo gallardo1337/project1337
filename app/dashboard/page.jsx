@@ -7,9 +7,7 @@ import dynamic from "next/dynamic";
 // ActorImageUploader nur im Client laden (wegen react-easy-crop / Canvas)
 const ActorImageUploader = dynamic(() => import("./ActorImageUploader.jsx"), {
   ssr: false,
-  loading: () => (
-    <div className="text-xs text-neutral-500">Lade Bild-Uploader…</div>
-  ),
+  loading: () => <div className="text-xs text-neutral-500">Lade Bild-Uploader…</div>,
 });
 
 // -------------------------------
@@ -17,6 +15,15 @@ const ActorImageUploader = dynamic(() => import("./ActorImageUploader.jsx"), {
 // -------------------------------
 
 const CHANGELOG = [
+  {
+    version: "0.4.1",
+    date: "2025-12-27",
+    items: [
+      "Movies: optionales Thumbnail-Feld (thumbnail_url) im Filmformular hinzugefügt",
+      "Thumbnail Upload wie bei Actor/Studio über ActorImageUploader integriert",
+      "Thumbnail wird in Filmestatistik-Details als Preview + URL angezeigt",
+    ],
+  },
   {
     version: "0.4.0",
     date: "2025-12-27",
@@ -88,9 +95,7 @@ function VersionHint() {
                 <div className="text-xs uppercase tracking-[0.18em] text-neutral-400">
                   Version &amp; Changelog
                 </div>
-                <div className="text-lg font-semibold text-neutral-50">
-                  1337 Dashboard
-                </div>
+                <div className="text-lg font-semibold text-neutral-50">1337 Dashboard</div>
               </div>
               <button
                 type="button"
@@ -108,9 +113,7 @@ function VersionHint() {
                   className="rounded-xl border border-neutral-700/80 bg-neutral-900/70 p-4"
                 >
                   <div className="mb-2 flex items-baseline justify-between">
-                    <div className="font-semibold text-base text-neutral-50">
-                      {entry.version}
-                    </div>
+                    <div className="font-semibold text-base text-neutral-50">{entry.version}</div>
                     <div className="text-sm text-neutral-400">{entry.date}</div>
                   </div>
                   <ul className="m-0 list-disc pl-5 text-sm text-neutral-200 space-y-1.5">
@@ -179,6 +182,7 @@ export default function DashboardPage() {
   const [filmStudioId, setFilmStudioId] = useState("");
   const [filmFileUrl, setFilmFileUrl] = useState("");
   const [filmResolutionId, setFilmResolutionId] = useState(""); // NEU (Pflicht)
+  const [filmThumbnailUrl, setFilmThumbnailUrl] = useState(""); // NEU (optional)
   const [selectedMainActorIds, setSelectedMainActorIds] = useState([]);
   const [selectedSupportActorIds, setSelectedSupportActorIds] = useState([]);
   const [selectedTagIds, setSelectedTagIds] = useState([]);
@@ -216,21 +220,15 @@ export default function DashboardPage() {
         setLoading(true);
         setError(null);
 
-        const [
-          actorsRes,
-          actors2Res,
-          studiosRes,
-          tagsRes,
-          moviesRes,
-          resolutionsRes,
-        ] = await Promise.all([
-          supabase.from("actors").select("*").order("name"),
-          supabase.from("actors2").select("*").order("name"),
-          supabase.from("studios").select("*").order("name"),
-          supabase.from("tags").select("*").order("name"),
-          supabase.from("movies").select("*").order("created_at", { ascending: false }),
-          supabase.from("resolutions").select("*").order("name"),
-        ]);
+        const [actorsRes, actors2Res, studiosRes, tagsRes, moviesRes, resolutionsRes] =
+          await Promise.all([
+            supabase.from("actors").select("*").order("name"),
+            supabase.from("actors2").select("*").order("name"),
+            supabase.from("studios").select("*").order("name"),
+            supabase.from("tags").select("*").order("name"),
+            supabase.from("movies").select("*").order("created_at", { ascending: false }),
+            supabase.from("resolutions").select("*").order("name"),
+          ]);
 
         if (actorsRes.error) throw actorsRes.error;
         if (actors2Res.error) throw actors2Res.error;
@@ -438,10 +436,7 @@ export default function DashboardPage() {
   // --------- Darsteller & Tag bearbeiten/löschen ---------
 
   const handleEditActor = async (actor) => {
-    const newName = window.prompt(
-      "Neuer Name für Hauptdarsteller:",
-      actor.name || ""
-    );
+    const newName = window.prompt("Neuer Name für Hauptdarsteller:", actor.name || "");
     if (newName === null) return;
     const trimmedName = newName.trim();
     if (!trimmedName) return;
@@ -469,19 +464,14 @@ export default function DashboardPage() {
       return;
     }
 
-    setHauptdarsteller((prev) =>
-      prev.map((a) => (a.id === actor.id ? data : a))
-    );
+    setHauptdarsteller((prev) => prev.map((a) => (a.id === actor.id ? data : a)));
   };
 
   const handleDeleteActor = async (actorId) => {
     const ok = window.confirm("Diesen Hauptdarsteller wirklich löschen?");
     if (!ok) return;
 
-    const { error: deleteError } = await supabase
-      .from("actors")
-      .delete()
-      .eq("id", actorId);
+    const { error: deleteError } = await supabase.from("actors").delete().eq("id", actorId);
 
     if (deleteError) {
       console.error(deleteError);
@@ -494,10 +484,7 @@ export default function DashboardPage() {
   };
 
   const handleEditSupportActor = async (actor) => {
-    const newName = window.prompt(
-      "Neuer Name für Nebendarsteller:",
-      actor.name || ""
-    );
+    const newName = window.prompt("Neuer Name für Nebendarsteller:", actor.name || "");
     if (newName === null) return;
     const trimmedName = newName.trim();
     if (!trimmedName) return;
@@ -525,19 +512,14 @@ export default function DashboardPage() {
       return;
     }
 
-    setNebendarsteller((prev) =>
-      prev.map((a) => (a.id === actor.id ? data : a))
-    );
+    setNebendarsteller((prev) => prev.map((a) => (a.id === actor.id ? data : a)));
   };
 
   const handleDeleteSupportActor = async (actorId) => {
     const ok = window.confirm("Diesen Nebendarsteller wirklich löschen?");
     if (!ok) return;
 
-    const { error: deleteError } = await supabase
-      .from("actors2")
-      .delete()
-      .eq("id", actorId);
+    const { error: deleteError } = await supabase.from("actors2").delete().eq("id", actorId);
 
     if (deleteError) {
       console.error(deleteError);
@@ -553,10 +535,7 @@ export default function DashboardPage() {
     const ok = window.confirm("Diesen Tag wirklich komplett löschen?");
     if (!ok) return;
 
-    const { error: deleteError } = await supabase
-      .from("tags")
-      .delete()
-      .eq("id", tagId);
+    const { error: deleteError } = await supabase.from("tags").delete().eq("id", tagId);
 
     if (deleteError) {
       console.error(deleteError);
@@ -575,6 +554,7 @@ export default function DashboardPage() {
     setFilmJahr("");
     setFilmStudioId("");
     setFilmFileUrl("");
+    setFilmThumbnailUrl(""); // NEU
     setSelectedMainActorIds([]);
     setSelectedSupportActorIds([]);
     setSelectedTagIds([]);
@@ -616,11 +596,10 @@ export default function DashboardPage() {
       year,
       studio_id: filmStudioId || null,
       file_url: filmFileUrl.trim() || null,
-      resolution_id: filmResolutionId, // NEU (Pflicht)
-      main_actor_ids:
-        selectedMainActorIds.length > 0 ? selectedMainActorIds : null,
-      supporting_actor_ids:
-        selectedSupportActorIds.length > 0 ? selectedSupportActorIds : null,
+      resolution_id: filmResolutionId, // Pflicht
+      thumbnail_url: filmThumbnailUrl.trim() || null, // NEU (optional)
+      main_actor_ids: selectedMainActorIds.length > 0 ? selectedMainActorIds : null,
+      supporting_actor_ids: selectedSupportActorIds.length > 0 ? selectedSupportActorIds : null,
       tag_ids: selectedTagIds.length > 0 ? selectedTagIds : null,
     };
 
@@ -638,9 +617,7 @@ export default function DashboardPage() {
         return;
       }
 
-      setFilme((prev) =>
-        prev.map((f) => (f.id === editingFilmId ? data : f))
-      );
+      setFilme((prev) => prev.map((f) => (f.id === editingFilmId ? data : f)));
       resetFilmForm();
     } else {
       const { data, error: insertError } = await supabase
@@ -666,10 +643,9 @@ export default function DashboardPage() {
     setFilmJahr(film.year ? String(film.year) : "");
     setFilmStudioId(film.studio_id || "");
     setFilmFileUrl(film.file_url || "");
-    setFilmResolutionId(film.resolution_id || ""); // NEU
-    setSelectedMainActorIds(
-      Array.isArray(film.main_actor_ids) ? film.main_actor_ids : []
-    );
+    setFilmResolutionId(film.resolution_id || "");
+    setFilmThumbnailUrl(film.thumbnail_url || ""); // NEU
+    setSelectedMainActorIds(Array.isArray(film.main_actor_ids) ? film.main_actor_ids : []);
     setSelectedSupportActorIds(
       Array.isArray(film.supporting_actor_ids) ? film.supporting_actor_ids : []
     );
@@ -686,10 +662,7 @@ export default function DashboardPage() {
     const ok = window.confirm("Diesen Film wirklich löschen?");
     if (!ok) return;
 
-    const { error: deleteError } = await supabase
-      .from("movies")
-      .delete()
-      .eq("id", filmId);
+    const { error: deleteError } = await supabase.from("movies").delete().eq("id", filmId);
 
     if (deleteError) {
       console.error(deleteError);
@@ -767,15 +740,11 @@ export default function DashboardPage() {
           </div>
           <div className="flex items-center justify-between">
             <span className="text-neutral-300">Hauptdarsteller</span>
-            <span className="font-semibold text-neutral-50">
-              {hauptdarsteller.length}
-            </span>
+            <span className="font-semibold text-neutral-50">{hauptdarsteller.length}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-neutral-300">Nebendarsteller</span>
-            <span className="font-semibold text-neutral-50">
-              {nebendarsteller.length}
-            </span>
+            <span className="font-semibold text-neutral-50">{nebendarsteller.length}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-neutral-300">Studios</span>
@@ -787,9 +756,7 @@ export default function DashboardPage() {
           </div>
           <div className="flex items-center justify-between">
             <span className="text-neutral-300">Resolutions</span>
-            <span className="font-semibold text-neutral-50">
-              {resolutions.length}
-            </span>
+            <span className="font-semibold text-neutral-50">{resolutions.length}</span>
           </div>
         </div>
       </div>
@@ -817,12 +784,8 @@ export default function DashboardPage() {
               1337
             </div>
             <div className="pointer-events-auto flex flex-col leading-tight text-center">
-              <span className="text-lg font-semibold text-neutral-50">
-                1337 Dashboard
-              </span>
-              <span className="text-xs text-neutral-400">
-                Manage Movies, Cast &amp; Tags
-              </span>
+              <span className="text-lg font-semibold text-neutral-50">1337 Dashboard</span>
+              <span className="text-xs text-neutral-400">Manage Movies, Cast &amp; Tags</span>
             </div>
           </div>
 
@@ -885,9 +848,7 @@ export default function DashboardPage() {
             <p className="mb-3 text-base text-neutral-200">
               Bitte oben einloggen, um das Dashboard zu nutzen.
             </p>
-            <p className="text-sm text-neutral-500">
-              Zugang ist nur für den Admin vorgesehen.
-            </p>
+            <p className="text-sm text-neutral-500">Zugang ist nur für den Admin vorgesehen.</p>
             {loginErr && <p className="mt-4 text-sm text-red-400">{loginErr}</p>}
           </section>
         ) : (
@@ -919,7 +880,7 @@ export default function DashboardPage() {
                             {editingFilmId ? "Film bearbeiten" : "Neuen Film hinzufügen"}
                           </h2>
                           <p className="text-sm text-neutral-500">
-                            Titel, Jahr, Studio, Resolution, Cast und Tags festlegen.
+                            Titel, Jahr, Studio, Resolution, Thumbnail, Cast und Tags festlegen.
                           </p>
                         </div>
                         {editingFilmId && (
@@ -957,7 +918,7 @@ export default function DashboardPage() {
                           </div>
                         </div>
 
-                        {/* Studio + Resolution + File URL */}
+                        {/* Studio + Resolution + Thumbnail + File URL */}
                         <div className="grid grid-cols-1 gap-4">
                           <div>
                             <label className="text-sm text-neutral-300">Studio</label>
@@ -997,6 +958,54 @@ export default function DashboardPage() {
                             <div className="mt-1 text-xs text-neutral-500">
                               Pflichtfeld (Datenbank erzwingt NOT NULL).
                             </div>
+                          </div>
+
+                          {/* NEU: Thumbnail Upload */}
+                          <div>
+                            <label className="text-sm text-neutral-300">Thumbnail (optional)</label>
+
+                            {filmThumbnailUrl ? (
+                              <div className="mt-2 flex items-center gap-3">
+                                <img
+                                  src={filmThumbnailUrl}
+                                  alt="Thumbnail Preview"
+                                  className="h-16 w-16 rounded-xl border border-neutral-700 object-cover bg-neutral-900"
+                                  loading="lazy"
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <div className="truncate text-xs text-neutral-400">{filmThumbnailUrl}</div>
+                                  <div className="mt-2 flex gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => setFilmThumbnailUrl("")}
+                                      className="rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-xs text-neutral-200 hover:bg-neutral-900"
+                                    >
+                                      Entfernen
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        try {
+                                          navigator.clipboard.writeText(filmThumbnailUrl);
+                                        } catch {
+                                          // ignore
+                                        }
+                                      }}
+                                      className="rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-xs text-neutral-200 hover:bg-neutral-900"
+                                    >
+                                      Copy URL
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="mt-2">
+                                <ActorImageUploader onUploaded={(url) => setFilmThumbnailUrl(url)} />
+                                <div className="mt-1 text-xs text-neutral-500">
+                                  Upload optional. Wenn leer, bleibt thumbnail_url = NULL.
+                                </div>
+                              </div>
+                            )}
                           </div>
 
                           <div>
@@ -1178,6 +1187,26 @@ export default function DashboardPage() {
                                   </div>
                                 )}
 
+                                {/* NEU: Thumbnail Anzeige */}
+                                {f.thumbnail_url && (
+                                  <div className="mt-2">
+                                    <div className="text-sm text-neutral-400">Thumbnail:</div>
+                                    <div className="mt-2 flex items-center gap-3">
+                                      <img
+                                        src={f.thumbnail_url}
+                                        alt={`${f.title} Thumbnail`}
+                                        className="h-14 w-14 rounded-xl border border-neutral-800 object-cover bg-neutral-900"
+                                        loading="lazy"
+                                      />
+                                      <div className="min-w-0 flex-1">
+                                        <div className="break-all text-xs text-neutral-500">
+                                          {f.thumbnail_url}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+
                                 {Array.isArray(f.main_actor_ids) && f.main_actor_ids.length > 0 && (
                                   <div className="text-sm text-neutral-300">
                                     Hauptdarsteller:{" "}
@@ -1249,9 +1278,7 @@ export default function DashboardPage() {
                       <div className="flex items-center justify-between">
                         <div>
                           <h2 className="text-xl font-semibold text-neutral-50">Stammdaten</h2>
-                          <p className="mt-1 text-sm text-neutral-500">
-                            Darsteller, Studios und Tags verwalten.
-                          </p>
+                          <p className="mt-1 text-sm text-neutral-500">Darsteller, Studios und Tags verwalten.</p>
                         </div>
                       </div>
 
@@ -1259,9 +1286,7 @@ export default function DashboardPage() {
                         {/* Hauptdarsteller */}
                         <div className="space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4">
                           <form onSubmit={handleAddActor} className="space-y-2">
-                            <div className="font-medium text-neutral-50 text-base">
-                              Hauptdarsteller
-                            </div>
+                            <div className="font-medium text-neutral-50 text-base">Hauptdarsteller</div>
                             <input
                               className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
                               placeholder="Name"
@@ -1311,9 +1336,7 @@ export default function DashboardPage() {
                         {/* Nebendarsteller */}
                         <div className="space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4">
                           <form onSubmit={handleAddSupportActor} className="space-y-2">
-                            <div className="font-medium text-neutral-50 text-base">
-                              Nebendarsteller
-                            </div>
+                            <div className="font-medium text-neutral-50 text-base">Nebendarsteller</div>
                             <input
                               className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
                               placeholder="Name"
@@ -1321,9 +1344,7 @@ export default function DashboardPage() {
                               onChange={(e) => setNewSupportName(e.target.value)}
                             />
 
-                            <ActorImageUploader
-                              onUploaded={(url) => setNewSupportImage(url)}
-                            />
+                            <ActorImageUploader onUploaded={(url) => setNewSupportImage(url)} />
 
                             <button
                               type="submit"
@@ -1373,7 +1394,6 @@ export default function DashboardPage() {
                               onChange={(e) => setNewStudioName(e.target.value)}
                             />
 
-                            {/* NEU: Studio Bild wie Actor */}
                             <ActorImageUploader onUploaded={(url) => setNewStudioImage(url)} />
 
                             <button
@@ -1414,9 +1434,7 @@ export default function DashboardPage() {
                             >
                               Speichern
                             </button>
-                            <div className="mt-1 text-xs text-neutral-500">
-                              Vorhanden: {tags.length}
-                            </div>
+                            <div className="mt-1 text-xs text-neutral-500">Vorhanden: {tags.length}</div>
                           </form>
 
                           <div className="mt-2 max-h-44 space-y-1.5 overflow-y-auto">
