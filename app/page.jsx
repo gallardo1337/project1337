@@ -33,6 +33,13 @@ import { supabase } from "../lib/supabaseClient";
  * - Auf Mobile wird die Topbar-Suche durch eine Lupe ersetzt (damit nichts in die Ecke gedrückt wird)
  * - Klick auf die Lupe öffnet ein Overlay mit Suchfeld + erweiterter Suche
  * - Overlay schließt per Klick außerhalb / Schließen-Button / ESC
+ *
+ * UPDATE (Resolution Filter):
+ * - Resolutions werden aus Supabase Tabelle "resolutions" geladen
+ * - Movie Mapping enthält resolution (Name)
+ * - Basis-Filter erweitert: Resolution (Alle / 4K / FullHD / Retro ...)
+ * - Suche berücksichtigt Resolution ebenfalls
+ * - Movie Cards zeigen Resolution
  */
 
 /* -------------------------------------------------------------------------- */
@@ -279,6 +286,7 @@ export default function HomePage() {
 
   const [selectedTags, setSelectedTags] = useState([]);
   const [selectedStudio, setSelectedStudio] = useState("");
+  const [selectedResolution, setSelectedResolution] = useState(""); // NEU: single select (Name)
   const [yearFrom, setYearFrom] = useState("");
   const [yearTo, setYearTo] = useState("");
 
@@ -381,12 +389,13 @@ export default function HomePage() {
         setLoading(true);
         setErr(null);
 
-        const [moviesRes, actorsRes, actors2Res, studiosRes, tagsRes] = await Promise.all([
+        const [moviesRes, actorsRes, actors2Res, studiosRes, tagsRes, resolutionsRes] = await Promise.all([
           supabase.from("movies").select("*"),
           supabase.from("actors").select("*"),
           supabase.from("actors2").select("*"),
           supabase.from("studios").select("*"),
           supabase.from("tags").select("*"),
+          supabase.from("resolutions").select("*"),
         ]);
 
         if (moviesRes.error) throw moviesRes.error;
@@ -394,17 +403,20 @@ export default function HomePage() {
         if (actors2Res.error) throw actors2Res.error;
         if (studiosRes.error) throw studiosRes.error;
         if (tagsRes.error) throw tagsRes.error;
+        if (resolutionsRes.error) throw resolutionsRes.error;
 
         const moviesData = moviesRes.data || [];
         const mainActors = actorsRes.data || [];
         const supportActors = actors2Res.data || [];
         const studios = studiosRes.data || [];
         const tags = tagsRes.data || [];
+        const resolutions = resolutionsRes.data || [];
 
         const mainActorById = Object.fromEntries(mainActors.map((a) => [a.id, a]));
         const supportActorById = Object.fromEntries(supportActors.map((a) => [a.id, a]));
         const studioMap = Object.fromEntries(studios.map((s) => [s.id, s.name]));
         const tagMap = Object.fromEntries(tags.map((t) => [t.id, t.name]));
+        const resolutionMap = Object.fromEntries(resolutions.map((r) => [r.id, r.name])); // NEU
 
         const mappedMovies = (moviesData || []).map((m) => {
           const mainIds = Array.isArray(m.main_actor_ids) ? m.main_actor_ids : [];
@@ -416,12 +428,15 @@ export default function HomePage() {
           const allActors = [...mainNames, ...supportNames];
           const tagNames = Array.isArray(m.tag_ids) ? m.tag_ids.map((id) => tagMap[id]).filter(Boolean) : [];
 
+          const resolutionName = m.resolution_id ? resolutionMap[m.resolution_id] || null : null;
+
           return {
             id: m.id,
             title: m.title,
             year: m.year,
             fileUrl: m.file_url,
             studio: m.studio_id ? studioMap[m.studio_id] || null : null,
+            resolution: resolutionName, // NEU
             actors: allActors, // names
             tags: tagNames,
             mainActorIds: mainIds,
@@ -486,6 +501,14 @@ export default function HomePage() {
     return Array.from(set).sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
   }, [movies]);
 
+  const allResolutions = useMemo(() => {
+    const set = new Set();
+    movies.forEach((m) => {
+      if (m.resolution) set.add(m.resolution);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
+  }, [movies]);
+
   const mainActorOptions = useMemo(() => {
     return (actors || [])
       .map((a) => ({ id: a.id, name: a.name }))
@@ -506,6 +529,8 @@ export default function HomePage() {
     let list = baseList;
 
     if (selectedStudio) list = list.filter((m) => (m.studio || "") === selectedStudio);
+
+    if (selectedResolution) list = list.filter((m) => (m.resolution || "") === selectedResolution);
 
     const yf = yearFrom ? parseInt(yearFrom, 10) : null;
     const yt = yearTo ? parseInt(yearTo, 10) : null;
@@ -546,13 +571,22 @@ export default function HomePage() {
   const hasAnyFilter = useMemo(() => {
     return Boolean(
       selectedStudio ||
+        selectedResolution ||
         selectedTags.length > 0 ||
         yearFrom ||
         yearTo ||
         selectedMainActors.length > 0 ||
         selectedSupportingActors.length > 0
     );
-  }, [selectedStudio, selectedTags.length, yearFrom, yearTo, selectedMainActors.length, selectedSupportingActors.length]);
+  }, [
+    selectedStudio,
+    selectedResolution,
+    selectedTags.length,
+    yearFrom,
+    yearTo,
+    selectedMainActors.length,
+    selectedSupportingActors.length,
+  ]);
 
   const showMovies = viewMode === "movies";
   const movieList = showMovies ? visibleMovies : [];
@@ -600,7 +634,13 @@ export default function HomePage() {
 
     const q = trimmed.toLowerCase();
     const raw = movies.filter((movie) => {
-      const haystack = [movie.title || "", movie.studio || "", movie.actors.join(" "), movie.tags.join(" ")]
+      const haystack = [
+        movie.title || "",
+        movie.studio || "",
+        movie.resolution || "",
+        movie.actors.join(" "),
+        movie.tags.join(" "),
+      ]
         .join(" ")
         .toLowerCase();
       return haystack.includes(q);
@@ -691,6 +731,7 @@ export default function HomePage() {
   const resetFilters = () => {
     setSelectedTags([]);
     setSelectedStudio("");
+    setSelectedResolution("");
     setYearFrom("");
     setYearTo("");
     setSelectedMainActors([]);
@@ -1744,7 +1785,7 @@ export default function HomePage() {
                           <div className="fsec__head" style={{ cursor: "default" }}>
                             <div className="fsec__headL">
                               <div className="fsec__title">Basis</div>
-                              <div className="fsec__sub">Studio & Jahr</div>
+                              <div className="fsec__sub">Studio, Resolution & Jahr</div>
                             </div>
                             <div className="fsec__headR">
                               <span className="fsec__chev" style={{ opacity: 0.35 }}>
@@ -1765,6 +1806,22 @@ export default function HomePage() {
                                 {allStudios.map((s) => (
                                   <option key={`st-${s}`} value={s}>
                                     {s}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div>
+                              <div className="fieldLabel">Resolution</div>
+                              <select
+                                className="select"
+                                value={selectedResolution}
+                                onChange={(e) => setSelectedResolution(e.target.value)}
+                              >
+                                <option value="">Alle Resolutions</option>
+                                {allResolutions.map((r) => (
+                                  <option key={`rs-${r}`} value={r}>
+                                    {r}
                                   </option>
                                 ))}
                               </select>
@@ -1797,6 +1854,7 @@ export default function HomePage() {
                                   <div className="fieldLabel">Aktiv</div>
                                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                                     {selectedStudio ? <Pill>Studio</Pill> : null}
+                                    {selectedResolution ? <Pill>{selectedResolution}</Pill> : null}
                                     {yearFrom ? <Pill>ab {yearFrom}</Pill> : null}
                                     {yearTo ? <Pill>bis {yearTo}</Pill> : null}
                                     {selectedTags.length ? <Pill>{selectedTags.length} Tags</Pill> : null}
@@ -2005,7 +2063,7 @@ export default function HomePage() {
                             <div className="fsec__head" style={{ cursor: "default" }}>
                               <div className="fsec__headL">
                                 <div className="fsec__title">Basis</div>
-                                <div className="fsec__sub">Studio & Jahr</div>
+                                <div className="fsec__sub">Studio, Resolution & Jahr</div>
                               </div>
                               <div className="fsec__headR">
                                 <span className="fsec__chev" style={{ opacity: 0.35 }}>
@@ -2026,6 +2084,22 @@ export default function HomePage() {
                                   {allStudios.map((s) => (
                                     <option key={`st-${s}`} value={s}>
                                       {s}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              <div>
+                                <div className="fieldLabel">Resolution</div>
+                                <select
+                                  className="select"
+                                  value={selectedResolution}
+                                  onChange={(e) => setSelectedResolution(e.target.value)}
+                                >
+                                  <option value="">Alle Resolutions</option>
+                                  {allResolutions.map((r) => (
+                                    <option key={`rs-${r}`} value={r}>
+                                      {r}
                                     </option>
                                   ))}
                                 </select>
@@ -2058,6 +2132,7 @@ export default function HomePage() {
                                     <div className="fieldLabel">Aktiv</div>
                                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                                       {selectedStudio ? <Pill>Studio</Pill> : null}
+                                      {selectedResolution ? <Pill>{selectedResolution}</Pill> : null}
                                       {yearFrom ? <Pill>ab {yearFrom}</Pill> : null}
                                       {yearTo ? <Pill>bis {yearTo}</Pill> : null}
                                       {selectedTags.length ? <Pill>{selectedTags.length} Tags</Pill> : null}
@@ -2157,6 +2232,11 @@ export default function HomePage() {
                       <div className="kv">
                         <div className="kv__k">Studio</div>
                         <div className="kv__v">{m.studio || "-"}</div>
+                      </div>
+
+                      <div className="kv">
+                        <div className="kv__k">Qualität</div>
+                        <div className="kv__v">{m.resolution || "-"}</div>
                       </div>
 
                       <div className="kv">
