@@ -28,6 +28,11 @@ import { supabase } from "../lib/supabaseClient";
  * - Keine Hint-/Tipptexte in den Filtern
  * - Multi-Select Logik bleibt STRICT UND (intern), aber ohne UI-Hinweise
  * - Restliche Funktionalität unverändert
+ *
+ * UPDATE (Mobile Fix):
+ * - Auf Mobile wird die Topbar-Suche durch eine Lupe ersetzt (damit nichts in die Ecke gedrückt wird)
+ * - Klick auf die Lupe öffnet ein Overlay mit Suchfeld + erweiterter Suche
+ * - Overlay schließt per Klick außerhalb / Schließen-Button / ESC
  */
 
 /* -------------------------------------------------------------------------- */
@@ -253,6 +258,9 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
 
+  /* Mobile Search Overlay */
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+
   /* ------------------------------------------------------------------------ */
   /* ----------------------------- TEIL 6.2: LOGIN -------------------------- */
   /* ------------------------------------------------------------------------ */
@@ -291,6 +299,7 @@ export default function HomePage() {
 
   const searchWrapRef = useRef(null);
   const searchInputRef = useRef(null);
+  const mobileSearchInputRef = useRef(null);
 
   /* ------------------------------------------------------------------------ */
   /* ----------------------------- TEIL 6.5: SESSION CHECK ------------------ */
@@ -313,9 +322,19 @@ export default function HomePage() {
   /* ------------------------------------------------------------------------ */
 
   useEffect(() => {
-    if (!filtersOpen) return;
+    if (!filtersOpen && !mobileSearchOpen) return;
 
     const onDown = (e) => {
+      // Wenn Overlay offen: nur Overlay-Panel "durchlassen"
+      if (mobileSearchOpen) {
+        const panel = document.querySelector(".mSearch__panel");
+        if (panel && panel.contains(e.target)) return;
+        setMobileSearchOpen(false);
+        setFiltersOpen(false);
+        return;
+      }
+
+      // Normal: Popover schließt bei Click außerhalb des SearchWrap
       const root = searchWrapRef.current;
       if (!root) return;
       if (!root.contains(e.target)) setFiltersOpen(false);
@@ -328,7 +347,21 @@ export default function HomePage() {
       document.removeEventListener("mousedown", onDown, true);
       document.removeEventListener("touchstart", onDown, true);
     };
-  }, [filtersOpen]);
+  }, [filtersOpen, mobileSearchOpen]);
+
+  /* ESC schließt Mobile-Overlay */
+  useEffect(() => {
+    if (!mobileSearchOpen) return;
+
+    const onKey = (e) => {
+      if (e.key === "Escape") {
+        setMobileSearchOpen(false);
+        setFiltersOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mobileSearchOpen]);
 
   /* ------------------------------------------------------------------------ */
   /* ----------------------------- TEIL 6.7: LOAD DATA ---------------------- */
@@ -640,6 +673,7 @@ export default function HomePage() {
     setMoviesTitle("Filme");
     setMoviesSubtitle("");
     setFiltersOpen(false);
+    setMobileSearchOpen(false);
   };
 
   /* ------------------------------------------------------------------------ */
@@ -677,6 +711,7 @@ export default function HomePage() {
       showAllMovies();
     }
     setFiltersOpen(false);
+    setMobileSearchOpen(false);
   };
 
   const toggleTag = (t) => setSelectedTags((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
@@ -702,6 +737,23 @@ export default function HomePage() {
     [mainActorOptions]
   );
   const suppItems = useMemo(() => supportingActorOptions.map((n) => ({ key: n, label: n })), [supportingActorOptions]);
+
+  /* ------------------------------------------------------------------------ */
+  /* ----------------------------- TEIL 6.15: MOBILE SEARCH OPEN ------------ */
+  /* ------------------------------------------------------------------------ */
+
+  const openMobileSearch = () => {
+    setMobileSearchOpen(true);
+    setFiltersOpen(true);
+    setTimeout(() => {
+      mobileSearchInputRef.current?.focus();
+    }, 0);
+  };
+
+  const closeMobileSearch = () => {
+    setMobileSearchOpen(false);
+    setFiltersOpen(false);
+  };
 
   /* ------------------------------------------------------------------------ */
   /* ------------------------------------------------------------------------ */
@@ -998,28 +1050,29 @@ export default function HomePage() {
           display: block;
           transform: scale(1.02);
         }
-     .card__badge {
-  position: absolute;
-  right: 8px;
-  bottom: 8px;
-  z-index: 2;
 
-  width: 26px;
-  height: 26px;
-  display: grid;
-  place-items: center;
+        .card__badge {
+          position: absolute;
+          right: 8px;
+          bottom: 8px;
+          z-index: 2;
 
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(0, 0, 0, 0.55);
-  color: rgba(255, 255, 255, 0.92);
+          width: 26px;
+          height: 26px;
+          display: grid;
+          place-items: center;
 
-  font-size: 11px;
-  font-weight: 900;
-  line-height: 1;
+          border-radius: 999px;
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          background: rgba(0, 0, 0, 0.55);
+          color: rgba(255, 255, 255, 0.92);
 
-  backdrop-filter: blur(10px);
-}
+          font-size: 11px;
+          font-weight: 900;
+          line-height: 1;
+
+          backdrop-filter: blur(10px);
+        }
 
         .card__body {
           padding: 8px 10px 10px;
@@ -1447,6 +1500,78 @@ export default function HomePage() {
           margin: 10px 0;
         }
 
+        /* ---------------- MOBILE SEARCH (Lupe + Overlay) ---------------- */
+        .mOnly {
+          display: none;
+        }
+        .iconBtn {
+          width: 42px;
+          height: 42px;
+          border-radius: 14px;
+          display: grid;
+          place-items: center;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: rgba(255, 255, 255, 0.06);
+          color: rgba(255, 255, 255, 0.92);
+          cursor: pointer;
+          transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+        }
+        .iconBtn:hover {
+          transform: translateY(-1px);
+          background: rgba(255, 255, 255, 0.09);
+          border-color: rgba(255, 255, 255, 0.18);
+        }
+        .iconBtn svg {
+          width: 18px;
+          height: 18px;
+          opacity: 0.9;
+        }
+
+        .mSearch {
+          position: fixed;
+          inset: 0;
+          z-index: 5000;
+          background: rgba(0, 0, 0, 0.62);
+          backdrop-filter: blur(10px);
+          display: grid;
+          align-items: start;
+          justify-items: center;
+          padding: 14px 12px;
+        }
+        .mSearch__panel {
+          width: min(860px, 100%);
+          border-radius: 18px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: rgba(10, 10, 14, 0.94);
+          box-shadow: 0 50px 140px rgba(0, 0, 0, 0.75);
+          overflow: hidden;
+        }
+        .mSearch__head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          padding: 12px 12px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .mSearch__title {
+          font-weight: 900;
+          letter-spacing: -0.01em;
+        }
+        .mSearch__body {
+          padding: 12px;
+        }
+
+        /* Im Overlay soll der Popover nicht "absolut" hängen, sondern normal fließen */
+        .mSearch .filterPopover {
+          position: static;
+          top: auto;
+          left: auto;
+          right: auto;
+          margin-top: 10px;
+        }
+
+        /* Responsive */
         @media (max-width: 1200px) {
           .row {
             grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -1466,6 +1591,20 @@ export default function HomePage() {
           }
           .movieGrid {
             grid-template-columns: 1fr;
+          }
+
+          /* Topbar wird 2-spaltig: rechts Buttons + Lupe */
+          .topbar {
+            grid-template-columns: 1fr auto;
+          }
+          .topbar__left {
+            display: none;
+          }
+          .topbar__mid {
+            display: none; /* Search im Header weg auf Mobile */
+          }
+          .mOnly {
+            display: inline-grid; /* Lupe anzeigen */
           }
         }
         @media (max-width: 420px) {
@@ -1678,6 +1817,18 @@ export default function HomePage() {
         <div className="topbar__right">
           {loggedIn ? (
             <>
+              {/* Mobile Lupe */}
+              <button type="button" className="iconBtn mOnly" onClick={openMobileSearch} title="Suche">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  />
+                  <path d="M16.5 16.5 21 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </button>
+
               <div className="auth__label">Willkommen, {loginUser}</div>
 
               <button type="button" className="btn" onClick={() => safeOpen("/dashboard")} title="Zum Dashboard">
@@ -1714,6 +1865,211 @@ export default function HomePage() {
           )}
         </div>
       </div>
+
+      {/* -------------------------------------------------------------------- */}
+      {/* ----------------------- TEIL 7.3.5: MOBILE OVERLAY ------------------ */}
+      {/* -------------------------------------------------------------------- */}
+
+      {loggedIn && mobileSearchOpen ? (
+        <div className="mSearch" role="dialog" aria-modal="true" onMouseDown={closeMobileSearch} onTouchStart={closeMobileSearch}>
+          <div
+            className="mSearch__panel"
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+          >
+            <div className="mSearch__head">
+              <div className="mSearch__title">Suche</div>
+              <button type="button" className="btn btn--ghost" onClick={closeMobileSearch}>
+                Schließen
+              </button>
+            </div>
+
+            <div className="mSearch__body">
+              <div className="searchWrap">
+                <div className="input" title="Suche nach Titel, Studio, Darsteller, Tags">
+                  <svg className="input__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path
+                      d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    />
+                    <path d="M16.5 16.5 21 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+
+                  <input
+                    ref={mobileSearchInputRef}
+                    value={search}
+                    onChange={(e) => handleSearchChange(e.target.value)}
+                    onFocus={() => setFiltersOpen(true)}
+                    placeholder="Suchen: Titel, Studio, Darsteller, Tags…"
+                    autoComplete="off"
+                  />
+
+                  {search ? (
+                    <button
+                      type="button"
+                      className="btn btn--ghost"
+                      onClick={() => handleSearchChange("")}
+                      title="Suche löschen"
+                    >
+                      Reset
+                    </button>
+                  ) : null}
+                </div>
+
+                {filtersOpen && (
+                  <div
+                    className="filterPopover"
+                    role="dialog"
+                    aria-modal="false"
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
+                  >
+                    <div className="filterPopover__head">
+                      <div className="filterPopover__title">Filter</div>
+                      <div className="filterPopover__actions">
+                        <button type="button" className="btn" onClick={resetFilters}>
+                          Reset
+                        </button>
+                        <button type="button" className="btn btn--primary" onClick={applyFiltersNow}>
+                          Anwenden
+                        </button>
+                        <button type="button" className="btn btn--ghost" onClick={() => setFiltersOpen(false)}>
+                          Schließen
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="filterPopover__body">
+                      <div className="filterGrid">
+                        <div style={{ display: "grid", gap: 12 }}>
+                          <FilterSection
+                            title="Tags"
+                            subtitle=""
+                            items={tagItems}
+                            selectedKeys={selectedTags}
+                            getKey={(it) => it.key}
+                            getLabel={(it) => it.label}
+                            onToggle={(k) => toggleTag(String(k))}
+                            search={tagSearch}
+                            setSearch={setTagSearch}
+                            showSelectedOnly={tagsSelectedOnly}
+                            setShowSelectedOnly={setTagsSelectedOnly}
+                            defaultOpen={true}
+                          />
+
+                          <FilterSection
+                            title="Hauptdarsteller"
+                            subtitle=""
+                            items={mainItems}
+                            selectedKeys={selectedMainActors}
+                            getKey={(it) => it.key}
+                            getLabel={(it) => it.label}
+                            onToggle={(k) => toggleMainActor(String(k))}
+                            search={mainActorSearch}
+                            setSearch={setMainActorSearch}
+                            showSelectedOnly={mainSelectedOnly}
+                            setShowSelectedOnly={setMainSelectedOnly}
+                            defaultOpen={false}
+                          />
+
+                          <FilterSection
+                            title="Nebendarsteller"
+                            subtitle=""
+                            items={suppItems}
+                            selectedKeys={selectedSupportingActors}
+                            getKey={(it) => it.key}
+                            getLabel={(it) => it.label}
+                            onToggle={(k) => toggleSupportingActor(String(k))}
+                            search={suppActorSearch}
+                            setSearch={setSuppActorSearch}
+                            showSelectedOnly={suppSelectedOnly}
+                            setShowSelectedOnly={setSuppSelectedOnly}
+                            defaultOpen={false}
+                          />
+                        </div>
+
+                        <div style={{ display: "grid", gap: 12 }}>
+                          <div className="fsec">
+                            <div className="fsec__head" style={{ cursor: "default" }}>
+                              <div className="fsec__headL">
+                                <div className="fsec__title">Basis</div>
+                                <div className="fsec__sub">Studio & Jahr</div>
+                              </div>
+                              <div className="fsec__headR">
+                                <span className="fsec__chev" style={{ opacity: 0.35 }}>
+                                  ✓
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="fsec__body">
+                              <div>
+                                <div className="fieldLabel">Studio</div>
+                                <select
+                                  className="select"
+                                  value={selectedStudio}
+                                  onChange={(e) => setSelectedStudio(e.target.value)}
+                                >
+                                  <option value="">Alle Studios</option>
+                                  {allStudios.map((s) => (
+                                    <option key={`st-${s}`} value={s}>
+                                      {s}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              <div>
+                                <div className="fieldLabel">Jahr</div>
+                                <div className="yearRow">
+                                  <input
+                                    className="select"
+                                    value={yearFrom}
+                                    onChange={(e) => setYearFrom(e.target.value)}
+                                    placeholder="von (z.B. 1999)"
+                                    inputMode="numeric"
+                                  />
+                                  <input
+                                    className="select"
+                                    value={yearTo}
+                                    onChange={(e) => setYearTo(e.target.value)}
+                                    placeholder="bis (z.B. 2025)"
+                                    inputMode="numeric"
+                                  />
+                                </div>
+                              </div>
+
+                              {hasAnyFilter ? (
+                                <>
+                                  <div className="divider" />
+                                  <div style={{ display: "grid", gap: 8 }}>
+                                    <div className="fieldLabel">Aktiv</div>
+                                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                      {selectedStudio ? <Pill>Studio</Pill> : null}
+                                      {yearFrom ? <Pill>ab {yearFrom}</Pill> : null}
+                                      {yearTo ? <Pill>bis {yearTo}</Pill> : null}
+                                      {selectedTags.length ? <Pill>{selectedTags.length} Tags</Pill> : null}
+                                      {selectedMainActors.length ? <Pill>{selectedMainActors.length} Haupt</Pill> : null}
+                                      {selectedSupportingActors.length ? (
+                                        <Pill>{selectedSupportingActors.length} Neben</Pill>
+                                      ) : null}
+                                    </div>
+                                  </div>
+                                </>
+                              ) : null}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* -------------------------------------------------------------------- */}
       {/* -------------------------- TEIL 7.4: MAIN WRAP ---------------------- */}
