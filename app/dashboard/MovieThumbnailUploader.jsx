@@ -1,90 +1,187 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
+/**
+ * MovieThumbnailUploader
+ * - KEIN Crop
+ * - Preview bleibt 16:9 (object-fit: contain)
+ * - Upload zu Hostinger upload.php
+ *
+ * Erwartet: upload.php antwortet JSON: { "url": "https://.../uploads/xyz.jpg" }
+ */
 export default function MovieThumbnailUploader({
   onUploaded,
-  label = "Bild auswählen",
+  uploadUrl,
+  maxSizeMb = 15,
   accept = "image/*",
 }) {
   const inputRef = useRef(null);
-  const [uploading, setUploading] = useState(false);
-  const [err, setErr] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [previewUrl, setPreviewUrl] = useState("");
 
-  const pickFile = () => inputRef.current?.click();
+  const resolvedUploadUrl = useMemo(() => {
+    // Priorität: prop uploadUrl -> ENV -> leer (dann Error)
+    return (
+      uploadUrl ||
+      process.env.NEXT_PUBLIC_HOSTINGER_UPLOAD_URL ||
+      ""
+    );
+  }, [uploadUrl]);
 
-  const uploadFile = async (file) => {
+  const pickFile = () => {
+    setErr("");
+    inputRef.current?.click();
+  };
+
+  const clear = () => {
+    setErr("");
+    setBusy(false);
+    if (previewUrl) {
+      try {
+        URL.revokeObjectURL(previewUrl);
+      } catch {
+        // ignore
+      }
+    }
+    setPreviewUrl("");
+    if (inputRef.current) inputRef.current.value = "";
+  };
+
+  const upload = async (file) => {
+    setErr("");
+
+    if (!resolvedUploadUrl) {
+      setErr(
+        "Upload-URL fehlt. Setze NEXT_PUBLIC_HOSTINGER_UPLOAD_URL (oder übergib uploadUrl als Prop)."
+      );
+      return;
+    }
+
     if (!file) return;
 
-    setErr(null);
-    setUploading(true);
+    const maxBytes = maxSizeMb * 1024 * 1024;
+    if (file.size > maxBytes) {
+      setErr(`Datei zu groß. Maximal ${maxSizeMb} MB.`);
+      return;
+    }
+
+    // Optional: sehr grobe Validierung
+    if (!String(file.type || "").startsWith("image/")) {
+      setErr("Bitte eine Bilddatei auswählen.");
+      return;
+    }
+
+    setBusy(true);
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
+      const fd = new FormData();
 
-      // Wichtig: Das ist dieselbe Upload-Route wie bei deinem ActorImageUploader.
-      // Wenn dein upload.php einen anderen Pfad hat, hier anpassen.
-      const res = await fetch("/upload.php", {
+      // WICHTIG: Der Key muss zu upload.php passen. Standard hier: "file"
+      fd.append("file", file);
+
+      const res = await fetch(resolvedUploadUrl, {
         method: "POST",
-        body: formData,
+        body: fd,
       });
 
       if (!res.ok) {
-        throw new Error("Upload fehlgeschlagen.");
+        const t = await res.text().catch(() => "");
+        throw new Error(
+          `Upload fehlgeschlagen (HTTP ${res.status}). ${t ? "Server: " + t : ""}`
+        );
       }
 
-      const data = await res.json();
-
-      // Erwartet: { url: "https://..." } oder ähnlich.
-      // Falls dein upload.php anders antwortet (z.B. { success: true, fileUrl: ... }),
-      // dann hier die Property anpassen.
-      const url = data?.url || data?.fileUrl || data?.file_url;
-
-      if (!url) {
-        throw new Error("Upload OK, aber keine URL zurückbekommen.");
+      const data = await res.json().catch(() => null);
+      if (!data || !data.url) {
+        throw new Error(
+          "Upload fehlgeschlagen: Server hat kein JSON mit { url } zurückgegeben."
+        );
       }
 
-      onUploaded?.(url);
+      onUploaded?.(data.url);
     } catch (e) {
-      setErr(e?.message || "Fehler beim Upload.");
+      setErr(e?.message || "Upload fehlgeschlagen.");
     } finally {
-      setUploading(false);
-      if (inputRef.current) inputRef.current.value = "";
+      setBusy(false);
     }
   };
 
+  const onFileChange = async (e) => {
+    setErr("");
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Preview (16:9 container, Bild wird nicht beschnitten)
+    if (previewUrl) {
+      try {
+        URL.revokeObjectURL(previewUrl);
+      } catch {
+        // ignore
+      }
+    }
+    const localUrl = URL.createObjectURL(file);
+    setPreviewUrl(localUrl);
+
+    // Direkt hochladen (ohne Crop-Dialog)
+    await upload(file);
+  };
+
   return (
-    <div className="rounded-xl border border-neutral-700 bg-neutral-950/60 p-3">
+    <div className="w-full">
       <input
         ref={inputRef}
         type="file"
         accept={accept}
+        onChange={onFileChange}
         className="hidden"
-        onChange={(e) => uploadFile(e.target.files?.[0])}
       />
 
-      <div className="flex items-center justify-between gap-3">
-        <button
-          type="button"
-          onClick={pickFile}
-          disabled={uploading}
-          className={
-            "rounded-lg px-3 py-2 text-sm font-semibold transition-all " +
-            (uploading
-              ? "bg-red-500/50 text-black/80 cursor-default"
-              : "bg-red-500 text-black hover:bg-red-400 hover:shadow-md hover:shadow-red-900/60")
-          }
-        >
-          {uploading ? "Upload…" : label}
-        </button>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={pickFile}
+            disabled={busy}
+            className="rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-100 hover:bg-neutral-900 disabled:opacity-60"
+          >
+            {busy ? "Lade hoch…" : "Thumbnail auswählen"}
+          </button>
 
-        <div className="text-xs text-neutral-500">
-          Kein Crop – Original wird 1:1 hochgeladen.
+          <button
+            type="button"
+            onClick={clear}
+            disabled={busy}
+            className="rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-100 hover:bg-neutral-900 disabled:opacity-60"
+          >
+            Zurücksetzen
+          </button>
         </div>
-      </div>
 
-      {err ? <div className="mt-2 text-xs text-red-400">{err}</div> : null}
+        {previewUrl ? (
+          <div className="overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950">
+            {/* 16:9 Preview-Frame */}
+            <div className="relative w-full" style={{ paddingTop: "56.25%" }}>
+              <img
+                src={previewUrl}
+                alt="Thumbnail Preview"
+                className="absolute inset-0 h-full w-full object-contain"
+              />
+            </div>
+          </div>
+        ) : null}
+
+        {err ? <div className="text-sm text-red-300">{err}</div> : null}
+
+        {!resolvedUploadUrl ? (
+          <div className="text-xs text-neutral-500">
+            Hinweis: Setze NEXT_PUBLIC_HOSTINGER_UPLOAD_URL, z. B.
+            {" "}
+            <span className="font-mono">https://DEINE-DOMAIN.TLD/upload.php</span>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
