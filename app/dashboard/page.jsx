@@ -70,7 +70,7 @@ const CHANGELOG = [
       "Supabase-Anbindung (movies, studios, actors, tags, movie_actors, movie_tags)",
     ],
   },
-];
+]; 
 
 function VersionHint() {
   const [open, setOpen] = useState(false);
