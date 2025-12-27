@@ -1187,7 +1187,7 @@ export default function HomePage() {
         .movieCard__resIcon {
           position: absolute;
           right: 14px;
-          bottom: 8px;
+          bottom: 10px;
           width: 52px;
           height: 52px;
           z-index: 6;
