@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-const UPLOAD_URL = process.env.NEXT_PUBLIC_HOSTINGER_UPLOAD_URL;
+const UPLOAD_URL = process.env.NEXT_PUBLIC_MOVIE_UPLOAD_URL;
 
 /**
  * MovieThumbnailUploader
