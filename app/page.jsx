@@ -55,6 +55,66 @@ function isUuid(v) {
   );
 }
 
+/**
+ * Mobile-only Auto-Fit for actor names:
+ * - Keeps your layout intact (same element, same className)
+ * - Only reduces font size if it would truncate
+ * - Desktop stays exactly as before
+ */
+function AutoFitActorTitle({ text }) {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const isMobile = () =>
+      typeof window !== "undefined" && window.innerWidth <= 700;
+
+    const fit = () => {
+      if (!ref.current) return;
+
+      // Only on mobile; otherwise keep default CSS font-size
+      if (!isMobile()) {
+        el.style.fontSize = "";
+        return;
+      }
+
+      // Start at default (matches your CSS: 14px)
+      let size = 14;
+      const min = 10;
+      const step = 0.5;
+
+      el.style.fontSize = `${size}px`;
+
+      // If it overflows, reduce until it fits (or hits min)
+      // scrollWidth/clientWidth works reliably with white-space: nowrap (added below)
+      while (el.scrollWidth > el.clientWidth + 1 && size > min) {
+        size -= step;
+        el.style.fontSize = `${size}px`;
+      }
+    };
+
+    // Fit after paint to ensure layout is final
+    const raf = requestAnimationFrame(fit);
+
+    // Refit on resize/orientation changes (still mobile-only behavior)
+    const onResize = () => fit();
+    window.addEventListener("resize", onResize);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [text]);
+
+  return (
+    <div ref={ref} className="card__title" title={text}>
+      {text}
+    </div>
+  );
+}
+
 function FilterSection({
   title,
   subtitle,
@@ -1157,6 +1217,9 @@ export default function HomePage() {
           -webkit-box-orient: vertical;
           overflow: hidden;
           min-height: 18px;
+
+          /* IMPORTANT for accurate auto-fit measuring (keeps single line) */
+          white-space: nowrap;
         }
 
         .movieGrid {
@@ -2562,7 +2625,8 @@ export default function HomePage() {
                     </div>
 
                     <div className="card__body">
-                      <div className="card__title">{a.name}</div>
+                      {/* changed: mobile auto-fit so long names don't truncate */}
+                      <AutoFitActorTitle text={a.name} />
                     </div>
                   </div>
                 ))}
