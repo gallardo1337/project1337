@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { supabase } from "../lib/supabaseClient"; // FIX: app/page.jsx -> ../lib/supabaseClient :contentReference[oaicite:0]{index=0}
+import { supabase } from "../lib/supabaseClient"; // FIX: app/page.jsx -> ../lib/supabaseClient
 
 function Pill({ children }) {
   return <span className="pill">{children}</span>;
@@ -169,6 +169,19 @@ function FilterSection({
       )}
     </div>
   );
+}
+
+function getResolutionIcon(resolutionName) {
+  const r = String(resolutionName || "").trim().toLowerCase();
+  if (!r) return null;
+
+  if (r === "4k" || r.includes("4k")) return { src: "/4k.svg", alt: "4K", title: "4K" };
+  if (r === "fullhd" || r === "full hd" || r.includes("fullhd") || r.includes("full hd")) {
+    return { src: "/fullhd.svg", alt: "FullHD", title: "FullHD" };
+  }
+  if (r === "retro" || r.includes("retro")) return { src: "/retro.svg", alt: "Retro", title: "Retro" };
+
+  return null;
 }
 
 export default function HomePage() {
@@ -960,6 +973,7 @@ export default function HomePage() {
         }
 
         .movieCard {
+          position: relative;
           border: 1px solid rgba(255, 255, 255, 0.1);
           background: rgba(255, 255, 255, 0.05);
           border-radius: 18px;
@@ -971,6 +985,30 @@ export default function HomePage() {
           transform: translateY(-2px);
           border-color: rgba(229, 9, 20, 0.35);
           background: rgba(255, 255, 255, 0.07);
+        }
+
+        /* Icon für Qualität unten rechts in der Movie-Box */
+        .movieCard__resIcon {
+          position: absolute;
+          right: 12px;
+          bottom: 12px;
+          width: 34px;
+          height: 34px;
+          display: grid;
+          place-items: center;
+          border-radius: 12px;
+          border: 1px solid rgba(255, 255, 255, 0.16);
+          background: rgba(0, 0, 0, 0.5);
+          backdrop-filter: blur(10px);
+          box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
+          z-index: 5;
+          pointer-events: none;
+        }
+        .movieCard__resIcon img {
+          width: 22px;
+          height: 22px;
+          display: block;
+          opacity: 0.95;
         }
 
         /* THUMBNAIL: 16:9 OHNE CROPPING */
@@ -1957,71 +1995,59 @@ export default function HomePage() {
               <EmptyState title="Keine Filme gefunden" subtitle="Passe Suche/Filter an oder gehe zurück zur Darsteller-Ansicht." />
             ) : (
               <div className="movieGrid">
-                {movieList.map((m) => (
-                  <div key={m.id} className="movieCard">
-                    {m.thumbnailUrl ? (
-                      <div className="movieCard__thumb" title="Thumbnail">
-                        <img src={m.thumbnailUrl} alt={m.title || "Thumbnail"} loading="lazy" />
-                      </div>
-                    ) : null}
+                {movieList.map((m) => {
+                  const icon = getResolutionIcon(m.resolution);
+                  return (
+                    <div key={m.id} className="movieCard">
+                      {icon ? (
+                        <div className="movieCard__resIcon" title={icon.title} aria-label={icon.title}>
+                          <img src={icon.src} alt={icon.alt} />
+                        </div>
+                      ) : null}
 
-                    <div className="movieCard__top">
-                      <h3 className="movieCard__title">{m.title || "Unbenannt"}</h3>
-                      <div className="movieCard__year">{m.year || ""}</div>
+                      {m.thumbnailUrl ? (
+                        <div className="movieCard__thumb" title="Thumbnail">
+                          <img src={m.thumbnailUrl} alt={m.title || "Thumbnail"} loading="lazy" />
+                        </div>
+                      ) : null}
+
+                      <div className="movieCard__top">
+                        <h3 className="movieCard__title">{m.title || "Unbenannt"}</h3>
+                        <div className="movieCard__year">{m.year || ""}</div>
+                      </div>
+
+                      <div className="movieCard__meta">
+                        <div className="kv">
+                          <div className="kv__k">Studio</div>
+                          <div className="kv__v">{m.studio || "-"}</div>
+                        </div>
+
+                        <div className="kv">
+                          <div className="kv__k">Darsteller</div>
+                          <div className="kv__v">{m.actors && m.actors.length ? m.actors.join(", ") : "-"}</div>
+                        </div>
+
+                        <div className="kv">
+                          <div className="kv__k">Tags</div>
+                          <div className="kv__v">{m.tags && m.tags.length ? m.tags.join(", ") : "-"}</div>
+                        </div>
+                      </div>
+
+                      <div className="movieCard__actions">
+                        <button
+                          type="button"
+                          className="btn btn--primary"
+                          onClick={() => safeOpen(m.fileUrl)}
+                          title="Film starten"
+                          disabled={!m.fileUrl}
+                          style={!m.fileUrl ? { opacity: 0.6, cursor: "not-allowed" } : undefined}
+                        >
+                          Play
+                        </button>
+                      </div>
                     </div>
-
-                    <div className="movieCard__meta">
-                      <div className="kv">
-                        <div className="kv__k">Studio</div>
-                        <div className="kv__v">{m.studio || "-"}</div>
-                      </div>
-
-                      <div className="kv">
-                        <div className="kv__k">Qualität</div>
-                        <div className="kv__v">{m.resolution || "-"}</div>
-                      </div>
-
-                      <div className="kv">
-                        <div className="kv__k">Darsteller</div>
-                        <div className="kv__v">{m.actors && m.actors.length ? m.actors.join(", ") : "-"}</div>
-                      </div>
-
-                      <div className="kv">
-                        <div className="kv__k">Tags</div>
-                        <div className="kv__v">{m.tags && m.tags.length ? m.tags.join(", ") : "-"}</div>
-                      </div>
-                    </div>
-
-                    <div className="movieCard__actions">
-                      <button
-                        type="button"
-                        className="btn btn--primary"
-                        onClick={() => safeOpen(m.fileUrl)}
-                        title="Film starten"
-                        disabled={!m.fileUrl}
-                        style={!m.fileUrl ? { opacity: 0.6, cursor: "not-allowed" } : undefined}
-                      >
-                        Play
-                      </button>
-                      <button
-                        type="button"
-                        className="btn"
-                        onClick={() => {
-                          try {
-                            navigator.clipboard.writeText(m.fileUrl || "");
-                          } catch {
-                            // ignore
-                          }
-                        }}
-                        title="Link kopieren"
-                        disabled={!m.fileUrl}
-                        style={!m.fileUrl ? { opacity: 0.6, cursor: "not-allowed" } : undefined}
-                      >
-                        Copy Link
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </>
