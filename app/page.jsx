@@ -1818,92 +1818,84 @@ export default function HomePage() {
               </div>
             )}
           </>
-        ) : (
+         ) : (
           <>
-/* -------------------------------------------------------------------------- */
-/* -------------------------------------------------------------------------- */
-/* -------------------------------------------------------------------------- */
-/* --------------------------- TEIL 7.7: ACTORS VIEW ------------------------ */
-/* -------------------------------------------------------------------------- */
-/* -------------------------------------------------------------------------- */
-/* -------------------------------------------------------------------------- */
+            {/* -------------------------------------------------------------------------- */}
+            {/* --------------------------- TEIL 7.7: ACTORS VIEW ------------------------ */}
+            {/* -------------------------------------------------------------------------- */}
 
-<>
-  <div className="sectionHead">
-    <div>
-      <div className="sectionTitle">Hauptdarsteller</div>
-      <div className="sectionMeta">{actors.length} Darsteller</div>
-    </div>
+            <div className="sectionHead">
+              <div>
+                <div className="sectionTitle">Hauptdarsteller</div>
+                <div className="sectionMeta">{actors.length} Darsteller</div>
+              </div>
 
-    <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-      <button
-        type="button"
-        className="btn"
-        onClick={() => {
-          const filtered = applyAdvancedFilters(movies);
-          setViewMode("movies");
-          setMoviesTitle(hasAnyFilter ? "Gefilterte Filme" : "Filme");
-          setMoviesSubtitle(`${filtered.length} Film(e)`);
-          setVisibleMovies(filtered);
-        }}
-        title="Alle Filme anzeigen"
-      >
-        Filme
-      </button>
-    </div>
-  </div>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => {
+                    const filtered = applyAdvancedFilters(movies);
+                    setViewMode("movies");
+                    setMoviesTitle(hasAnyFilter ? "Gefilterte Filme" : "Filme");
+                    setMoviesSubtitle(`${filtered.length} Film(e)`);
+                    setVisibleMovies(filtered);
+                  }}
+                  title="Alle Filme anzeigen"
+                >
+                  Filme
+                </button>
+              </div>
+            </div>
 
-  {actors.length === 0 ? (
-    <EmptyState
-      title="Keine Hauptdarsteller verfügbar"
-      subtitle="Entweder sind noch keine Filme mit main_actor_ids hinterlegt oder es fehlen Datensätze."
-    />
-  ) : (
-    <div className="row">
-      {actors.map((a) => (
-        <div
-          key={a.id}
-          className="card"
-          onClick={() => handleShowMoviesForActor(a.id, a.name)}
-          title={`${a.name} öffnen`}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") handleShowMoviesForActor(a.id, a.name);
-          }}
-        >
-          <div className="card__img">
-            {a.profileImage ? (
-              <img src={a.profileImage} alt={a.name} />
+            {actors.length === 0 ? (
+              <EmptyState
+                title="Keine Hauptdarsteller verfügbar"
+                subtitle="Entweder sind noch keine Filme mit main_actor_ids hinterlegt oder es fehlen Datensätze."
+              />
             ) : (
-              <div
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  display: "grid",
-                  placeItems: "center",
-                  color: "rgba(255,255,255,0.55)",
-                  fontWeight: 800,
-                  letterSpacing: "0.02em",
-                }}
-              >
-                NO IMAGE
+              <div className="row">
+                {actors.map((a) => (
+                  <div
+                    key={a.id}
+                    className="card"
+                    onClick={() => handleShowMoviesForActor(a.id, a.name)}
+                    title={`${a.name} öffnen`}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") handleShowMoviesForActor(a.id, a.name);
+                    }}
+                  >
+                    <div className="card__img">
+                      {a.profileImage ? (
+                        <img src={a.profileImage} alt={a.name} />
+                      ) : (
+                        <div
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            display: "grid",
+                            placeItems: "center",
+                            color: "rgba(255,255,255,0.55)",
+                            fontWeight: 800,
+                            letterSpacing: "0.02em",
+                          }}
+                        >
+                          NO IMAGE
+                        </div>
+                      )}
+
+                      {/* Badge: NUR die Zahl */}
+                      <div className="card__badge">{a.movieCount}</div>
+                    </div>
+
+                    <div className="card__body">
+                      <div className="card__title">{a.name}</div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
-
-            {/* HIER IST DER FIX: NUR DIE ZAHL */}
-            <div className="card__badge">{a.movieCount}</div>
-          </div>
-
-          <div className="card__body">
-            <div className="card__title">{a.name}</div>
-          </div>
-        </div>
-      ))}
-    </div>
-  )}
-</>
-      )}
-    </div>
-  );
-}
+          </>
+        )}
