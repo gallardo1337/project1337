@@ -128,7 +128,7 @@ function FilterSection({
                   <button
                     key={`sel-${title}-${k}`}
                     type="button"
-                    className="selChip"
+                    className={`selChip`}
                     onClick={() => onToggle(k)}
                     title="Entfernen"
                   >
@@ -339,7 +339,6 @@ export default function HomePage() {
             fileUrl: m.file_url,
             studio: m.studio_id ? studioMap[m.studio_id] || null : null,
             resolution: resolutionName,
-            // IMPORTANT: movies.thumbnail_url (Hostinger URL) wird hier gemappt
             thumbnailUrl: m.thumbnail_url || null,
             actors: allActors,
             tags: tagNames,
@@ -492,14 +491,6 @@ export default function HomePage() {
     setViewMode("movies");
   };
 
-  const showAllMovies = () => {
-    const filtered = applyAdvancedFilters(movies);
-    setMoviesTitle(hasAnyFilter ? "Gefilterte Filme" : "Filme");
-    setMoviesSubtitle(`${filtered.length} Treffer`);
-    setVisibleMovies(filtered);
-    setViewMode("movies");
-  };
-
   const handleSearchChange = (val) => {
     setSearch(val);
     const trimmed = val.trim();
@@ -619,7 +610,13 @@ export default function HomePage() {
 
   const applyFiltersNow = () => {
     if (search.trim()) handleSearchChange(search);
-    else showAllMovies();
+    else {
+      const filtered = applyAdvancedFilters(movies);
+      setViewMode("movies");
+      setMoviesTitle(hasAnyFilter ? "Gefilterte Filme" : "Filme");
+      setMoviesSubtitle(`${filtered.length} Treffer`);
+      setVisibleMovies(filtered);
+    }
 
     setFiltersOpen(false);
     setMobileSearchOpen(false);
@@ -987,28 +984,22 @@ export default function HomePage() {
           background: rgba(255, 255, 255, 0.07);
         }
 
-        /* Icon für Qualität unten rechts in der Movie-Box */
+        /* ICON unten rechts FREI (ohne eigene Box) */
         .movieCard__resIcon {
           position: absolute;
-          right: 12px;
-          bottom: 12px;
-          width: 34px;
-          height: 34px;
-          display: grid;
-          place-items: center;
-          border-radius: 12px;
-          border: 1px solid rgba(255, 255, 255, 0.16);
-          background: rgba(0, 0, 0, 0.5);
-          backdrop-filter: blur(10px);
-          box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
-          z-index: 5;
+          right: 14px;
+          bottom: 14px;
+          width: 52px;
+          height: 52px;
+          z-index: 6;
           pointer-events: none;
+          filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.55));
+          opacity: 0.95;
         }
         .movieCard__resIcon img {
-          width: 22px;
-          height: 22px;
+          width: 100%;
+          height: 100%;
           display: block;
-          opacity: 0.95;
         }
 
         /* THUMBNAIL: 16:9 OHNE CROPPING */
