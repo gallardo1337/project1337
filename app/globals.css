@@ -124,8 +124,14 @@ textarea:focus {
   border: 0;
   padding: 0;
   cursor: pointer;
-  display: inline-flex;
+  display: block;
+  margin: 0 auto;
   line-height: 0;
+}
+
+.logoBtn img {
+  display: block;
+  margin: 0 auto;
 }
 
 .logoBtn:focus-visible {
