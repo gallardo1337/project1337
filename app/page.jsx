@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { supabase } from "../lib/supabaseClient"; // FIX: app/page.jsx -> ../lib/supabaseClient
+import { useRouter } from "next/navigation";
+import { supabase } from "../lib/supabaseClient"; // app/page.jsx -> ../lib/supabaseClient
 
 function Pill({ children }) {
   return <span className="pill">{children}</span>;
@@ -231,7 +231,6 @@ function getResolutionIcon(resolutionName) {
 
 export default function HomePage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const [movies, setMovies] = useState([]);
   const [actors, setActors] = useState([]);
@@ -445,7 +444,13 @@ export default function HomePage() {
 
         setActors(actorList);
 
-        const actorParam = searchParams.get("actor");
+        // Restore view from URL WITHOUT useSearchParams (fixes Suspense/prerender issue)
+        let actorParam = null;
+        if (typeof window !== "undefined") {
+          const sp = new URLSearchParams(window.location.search || "");
+          actorParam = sp.get("actor");
+        }
+
         if (actorParam) {
           const actorId = Number(actorParam);
           const actor = actorList.find((a) => Number(a.id) === actorId);
@@ -482,7 +487,7 @@ export default function HomePage() {
     };
 
     void load();
-  }, [loggedIn, searchParams]);
+  }, [loggedIn]);
 
   const allTags = useMemo(() => {
     const set = new Set();
