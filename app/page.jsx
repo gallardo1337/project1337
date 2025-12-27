@@ -1,58 +1,7 @@
 "use client";
 
-/* -------------------------------------------------------------------------- */
-/* -------------------------------------------------------------------------- */
-/* -------------------------------------------------------------------------- */
-/* ------------------------------ TEIL 1: IMPORTS --------------------------- */
-/* -------------------------------------------------------------------------- */
-/* -------------------------------------------------------------------------- */
-/* -------------------------------------------------------------------------- */
-
 import { useEffect, useMemo, useRef, useState } from "react";
-import { supabase } from "../lib/supabaseClient";
-
-/* -------------------------------------------------------------------------- */
-/* -------------------------------------------------------------------------- */
-/* -------------------------------------------------------------------------- */
-/* --------------------- TEIL 2: HEADER / DOKU KOMMENTAR --------------------- */
-/* -------------------------------------------------------------------------- */
-/* -------------------------------------------------------------------------- */
-/* -------------------------------------------------------------------------- */
-
-/**
- * app/page.jsx
- * - Changelog komplett entfernt
- * - Erweiterte Suche klappt automatisch auf, wenn die Suchleiste fokussiert wird
- * - Fokus-Bug gefixt: In der erweiterten Suche kann man jetzt ganz normal in alle Felder klicken
- *   (kein erzwungener Fokus auf dem Haupt-Suchfeld)
- * - Keine Hint-/Tipptexte in den Filtern
- * - Multi-Select Logik bleibt STRICT UND (intern), aber ohne UI-Hinweise
- * - Restliche Funktionalität unverändert
- *
- * UPDATE (Mobile Fix):
- * - Auf Mobile wird die Topbar-Suche durch eine Lupe ersetzt (damit nichts in die Ecke gedrückt wird)
- * - Klick auf die Lupe öffnet ein Overlay mit Suchfeld + erweiterter Suche
- * - Overlay schließt per Klick außerhalb / Schließen-Button / ESC
- *
- * UPDATE (Resolution Filter):
- * - Resolutions werden aus Supabase Tabelle "resolutions" geladen
- * - Movie Mapping enthält resolution (Name)
- * - Basis-Filter erweitert: Resolution (Alle / 4K / FullHD / Retro ...)
- * - Suche berücksichtigt Resolution ebenfalls
- * - Movie Cards zeigen Resolution
- *
- * UPDATE (Movie Thumbnail):
- * - Movies haben optional `thumbnail_url` (Hostinger Upload im Dashboard)
- * - Movie Cards zeigen Thumbnail (nur wenn vorhanden)
- */
-
-/* -------------------------------------------------------------------------- */
-/* -------------------------------------------------------------------------- */
-/* -------------------------------------------------------------------------- */
-/* ------------------------ TEIL 3: MINI UI HELPERS ------------------------- */
-/* -------------------------------------------------------------------------- */
-/* -------------------------------------------------------------------------- */
-/* -------------------------------------------------------------------------- */
+import { supabase } from "../lib/supabaseClient"; // FIX: app/page.jsx -> ../lib/supabaseClient :contentReference[oaicite:0]{index=0}
 
 function Pill({ children }) {
   return <span className="pill">{children}</span>;
@@ -81,14 +30,6 @@ function SkeletonRow() {
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* -------------------------------------------------------------------------- */
-/* -------------------------------------------------------------------------- */
-/* ----------------------- TEIL 4: UTILS (SAFE / SEARCH) -------------------- */
-/* -------------------------------------------------------------------------- */
-/* -------------------------------------------------------------------------- */
-/* -------------------------------------------------------------------------- */
-
 function safeOpen(url) {
   if (!url) return;
   try {
@@ -103,14 +44,6 @@ function includesLoose(hay, needle) {
     .toLowerCase()
     .includes(String(needle || "").toLowerCase());
 }
-
-/* -------------------------------------------------------------------------- */
-/* -------------------------------------------------------------------------- */
-/* -------------------------------------------------------------------------- */
-/* --------------------- TEIL 5: FILTERSECTION KOMPONENTE ------------------- */
-/* -------------------------------------------------------------------------- */
-/* -------------------------------------------------------------------------- */
-/* -------------------------------------------------------------------------- */
 
 function FilterSection({
   title,
@@ -169,11 +102,7 @@ function FilterSection({
           <div className="fsec__tools">
             <div className="fsearch">
               <svg className="fsearch__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path
-                  d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                />
+                <path d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="currentColor" strokeWidth="2" />
                 <path d="M16.5 16.5 21 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               </svg>
               <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Suchen…" />
@@ -185,11 +114,7 @@ function FilterSection({
             </div>
 
             <label className="toggle">
-              <input
-                type="checkbox"
-                checked={showSelectedOnly}
-                onChange={(e) => setShowSelectedOnly(e.target.checked)}
-              />
+              <input type="checkbox" checked={showSelectedOnly} onChange={(e) => setShowSelectedOnly(e.target.checked)} />
               <span>Nur Auswahl</span>
             </label>
           </div>
@@ -246,21 +171,9 @@ function FilterSection({
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* -------------------------------------------------------------------------- */
-/* -------------------------------------------------------------------------- */
-/* ----------------------- TEIL 6: MAIN COMPONENT START --------------------- */
-/* -------------------------------------------------------------------------- */
-/* -------------------------------------------------------------------------- */
-/* -------------------------------------------------------------------------- */
-
 export default function HomePage() {
-  /* ------------------------------------------------------------------------ */
-  /* ----------------------------- TEIL 6.1: STATE -------------------------- */
-  /* ------------------------------------------------------------------------ */
-
   const [movies, setMovies] = useState([]);
-  const [actors, setActors] = useState([]); // Hauptdarsteller
+  const [actors, setActors] = useState([]);
   const [viewMode, setViewMode] = useState("actors"); // "actors" | "movies"
   const [visibleMovies, setVisibleMovies] = useState([]);
   const [moviesTitle, setMoviesTitle] = useState("Filme");
@@ -269,12 +182,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
 
-  /* Mobile Search Overlay */
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-
-  /* ------------------------------------------------------------------------ */
-  /* ----------------------------- TEIL 6.2: LOGIN -------------------------- */
-  /* ------------------------------------------------------------------------ */
 
   const [loggedIn, setLoggedIn] = useState(false);
   const [loginUser, setLoginUser] = useState("gallardo1337");
@@ -282,20 +190,16 @@ export default function HomePage() {
   const [loginErr, setLoginErr] = useState(null);
   const [loginLoading, setLoginLoading] = useState(false);
 
-  /* ------------------------------------------------------------------------ */
-  /* ----------------------------- TEIL 6.3: FILTER UI ---------------------- */
-  /* ------------------------------------------------------------------------ */
-
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const [selectedTags, setSelectedTags] = useState([]);
   const [selectedStudio, setSelectedStudio] = useState("");
-  const [selectedResolution, setSelectedResolution] = useState(""); // single select (Name)
+  const [selectedResolution, setSelectedResolution] = useState("");
   const [yearFrom, setYearFrom] = useState("");
   const [yearTo, setYearTo] = useState("");
 
-  const [selectedMainActors, setSelectedMainActors] = useState([]); // IDs (string)
-  const [selectedSupportingActors, setSelectedSupportingActors] = useState([]); // names
+  const [selectedMainActors, setSelectedMainActors] = useState([]);
+  const [selectedSupportingActors, setSelectedSupportingActors] = useState([]);
 
   const [tagSearch, setTagSearch] = useState("");
   const [mainActorSearch, setMainActorSearch] = useState("");
@@ -305,17 +209,9 @@ export default function HomePage() {
   const [mainSelectedOnly, setMainSelectedOnly] = useState(false);
   const [suppSelectedOnly, setSuppSelectedOnly] = useState(false);
 
-  /* ------------------------------------------------------------------------ */
-  /* ----------------------------- TEIL 6.4: REFS --------------------------- */
-  /* ------------------------------------------------------------------------ */
-
   const searchWrapRef = useRef(null);
   const searchInputRef = useRef(null);
   const mobileSearchInputRef = useRef(null);
-
-  /* ------------------------------------------------------------------------ */
-  /* ----------------------------- TEIL 6.5: SESSION CHECK ------------------ */
-  /* ------------------------------------------------------------------------ */
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -329,15 +225,10 @@ export default function HomePage() {
     }
   }, []);
 
-  /* ------------------------------------------------------------------------ */
-  /* ----------------------------- TEIL 6.6: OUTSIDE CLICK CLOSE ------------ */
-  /* ------------------------------------------------------------------------ */
-
   useEffect(() => {
     if (!filtersOpen && !mobileSearchOpen) return;
 
     const onDown = (e) => {
-      // Wenn Overlay offen: nur Overlay-Panel "durchlassen"
       if (mobileSearchOpen) {
         const panel = document.querySelector(".mSearch__panel");
         if (panel && panel.contains(e.target)) return;
@@ -346,7 +237,6 @@ export default function HomePage() {
         return;
       }
 
-      // Normal: Popover schließt bei Click außerhalb des SearchWrap
       const root = searchWrapRef.current;
       if (!root) return;
       if (!root.contains(e.target)) setFiltersOpen(false);
@@ -361,7 +251,6 @@ export default function HomePage() {
     };
   }, [filtersOpen, mobileSearchOpen]);
 
-  /* ESC schließt Mobile-Overlay */
   useEffect(() => {
     if (!mobileSearchOpen) return;
 
@@ -374,10 +263,6 @@ export default function HomePage() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [mobileSearchOpen]);
-
-  /* ------------------------------------------------------------------------ */
-  /* ----------------------------- TEIL 6.7: LOAD DATA ---------------------- */
-  /* ------------------------------------------------------------------------ */
 
   useEffect(() => {
     if (!loggedIn) {
@@ -441,8 +326,9 @@ export default function HomePage() {
             fileUrl: m.file_url,
             studio: m.studio_id ? studioMap[m.studio_id] || null : null,
             resolution: resolutionName,
-            thumbnailUrl: m.thumbnail_url || null, // NEU
-            actors: allActors, // names
+            // IMPORTANT: movies.thumbnail_url (Hostinger URL) wird hier gemappt
+            thumbnailUrl: m.thumbnail_url || null,
+            actors: allActors,
             tags: tagNames,
             mainActorIds: mainIds,
             mainActorNames: mainNames,
@@ -452,13 +338,10 @@ export default function HomePage() {
 
         setMovies(mappedMovies);
 
-        // main actor list + counts
         const movieCountByActorId = new Map();
         moviesData.forEach((m) => {
           const arr = Array.isArray(m.main_actor_ids) ? m.main_actor_ids : [];
-          arr.forEach((id) => {
-            movieCountByActorId.set(id, (movieCountByActorId.get(id) || 0) + 1);
-          });
+          arr.forEach((id) => movieCountByActorId.set(id, (movieCountByActorId.get(id) || 0) + 1));
         });
 
         const actorList = mainActors
@@ -487,10 +370,6 @@ export default function HomePage() {
 
     void load();
   }, [loggedIn]);
-
-  /* ------------------------------------------------------------------------ */
-  /* ----------------------------- TEIL 6.8: OPTIONS (DERIVED LISTS) -------- */
-  /* ------------------------------------------------------------------------ */
 
   const allTags = useMemo(() => {
     const set = new Set();
@@ -525,10 +404,6 @@ export default function HomePage() {
     movies.forEach((m) => (m.supportingActorNames || []).forEach((n) => set.add(n)));
     return Array.from(set).sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
   }, [movies]);
-
-  /* ------------------------------------------------------------------------ */
-  /* ----------------------------- TEIL 6.9: FILTER ENGINE ------------------ */
-  /* ------------------------------------------------------------------------ */
 
   const applyAdvancedFilters = (baseList) => {
     let list = baseList;
@@ -595,10 +470,6 @@ export default function HomePage() {
   const showMovies = viewMode === "movies";
   const movieList = showMovies ? visibleMovies : [];
 
-  /* ------------------------------------------------------------------------ */
-  /* ----------------------------- TEIL 6.10: ACTIONS (NAV + SEARCH) -------- */
-  /* ------------------------------------------------------------------------ */
-
   const handleShowMoviesForActor = (actorId, actorName) => {
     const subset = movies.filter((movie) => Array.isArray(movie.mainActorIds) && movie.mainActorIds.includes(actorId));
     const filtered = applyAdvancedFilters(subset);
@@ -664,10 +535,6 @@ export default function HomePage() {
     setMoviesSubtitle("");
   };
 
-  /* ------------------------------------------------------------------------ */
-  /* ----------------------------- TEIL 6.11: AUTH ACTIONS ------------------ */
-  /* ------------------------------------------------------------------------ */
-
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoginErr(null);
@@ -720,18 +587,6 @@ export default function HomePage() {
     setMobileSearchOpen(false);
   };
 
-  /* ------------------------------------------------------------------------ */
-  /* ----------------------------- TEIL 6.12: MISC DERIVED ------------------ */
-  /* ------------------------------------------------------------------------ */
-
-  const heroCounts = useMemo(() => {
-    return { movieCount: movies.length || 0, actorCount: actors.length || 0 };
-  }, [movies.length, actors.length]);
-
-  /* ------------------------------------------------------------------------ */
-  /* ----------------------------- TEIL 6.13: FILTER ACTIONS ---------------- */
-  /* ------------------------------------------------------------------------ */
-
   const resetFilters = () => {
     setSelectedTags([]);
     setSelectedStudio("");
@@ -750,11 +605,9 @@ export default function HomePage() {
   };
 
   const applyFiltersNow = () => {
-    if (search.trim()) {
-      handleSearchChange(search);
-    } else {
-      showAllMovies();
-    }
+    if (search.trim()) handleSearchChange(search);
+    else showAllMovies();
+
     setFiltersOpen(false);
     setMobileSearchOpen(false);
   };
@@ -772,10 +625,6 @@ export default function HomePage() {
   const toggleSupportingActor = (name) =>
     setSelectedSupportingActors((prev) => (prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name]));
 
-  /* ------------------------------------------------------------------------ */
-  /* ----------------------------- TEIL 6.14: ITEMS FOR FILTERSECTION ------- */
-  /* ------------------------------------------------------------------------ */
-
   const tagItems = useMemo(() => allTags.map((t) => ({ key: t, label: t })), [allTags]);
   const mainItems = useMemo(
     () => mainActorOptions.map((a) => ({ key: String(a.id), label: a.name })),
@@ -783,16 +632,10 @@ export default function HomePage() {
   );
   const suppItems = useMemo(() => supportingActorOptions.map((n) => ({ key: n, label: n })), [supportingActorOptions]);
 
-  /* ------------------------------------------------------------------------ */
-  /* ----------------------------- TEIL 6.15: MOBILE SEARCH OPEN ------------ */
-  /* ------------------------------------------------------------------------ */
-
   const openMobileSearch = () => {
     setMobileSearchOpen(true);
     setFiltersOpen(true);
-    setTimeout(() => {
-      mobileSearchInputRef.current?.focus();
-    }, 0);
+    setTimeout(() => mobileSearchInputRef.current?.focus(), 0);
   };
 
   const closeMobileSearch = () => {
@@ -800,18 +643,8 @@ export default function HomePage() {
     setFiltersOpen(false);
   };
 
-  /* ------------------------------------------------------------------------ */
-  /* ------------------------------------------------------------------------ */
-  /* ----------------------------- TEIL 7: RENDER --------------------------- */
-  /* ------------------------------------------------------------------------ */
-  /* ------------------------------------------------------------------------ */
-
   return (
     <div className="nfx">
-      {/* -------------------------------------------------------------------- */}
-      {/* -------------------------- TEIL 7.1: GLOBAL STYLES ------------------ */}
-      {/* -------------------------------------------------------------------- */}
-
       <style jsx global>{`
         :root {
           --bg: #0b0b0f;
@@ -837,14 +670,12 @@ export default function HomePage() {
 
         .nfx {
           min-height: 100vh;
-          background:
-            radial-gradient(1200px 700px at 15% 15%, rgba(229, 9, 20, 0.25), transparent 55%),
+          background: radial-gradient(1200px 700px at 15% 15%, rgba(229, 9, 20, 0.25), transparent 55%),
             radial-gradient(900px 600px at 85% 10%, rgba(255, 255, 255, 0.08), transparent 55%),
             radial-gradient(900px 700px at 60% 80%, rgba(255, 255, 255, 0.06), transparent 60%),
             linear-gradient(180deg, rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0.95));
         }
 
-        /* Topbar */
         .topbar {
           position: sticky;
           top: 0;
@@ -857,9 +688,6 @@ export default function HomePage() {
           background: rgba(0, 0, 0, 0.55);
           backdrop-filter: blur(14px);
           border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-        }
-        .topbar__left {
-          /* spacer only */
         }
         .topbar__mid {
           justify-self: center;
@@ -875,7 +703,6 @@ export default function HomePage() {
           gap: 10px;
         }
 
-        /* Search */
         .input {
           width: 100%;
           display: flex;
@@ -908,7 +735,6 @@ export default function HomePage() {
           color: rgba(255, 255, 255, 0.45);
         }
 
-        /* Buttons */
         .btn {
           appearance: none;
           border: 1px solid rgba(255, 255, 255, 0.12);
@@ -957,7 +783,6 @@ export default function HomePage() {
           font-size: 13px;
         }
 
-        /* Popover anchor */
         .searchWrap {
           position: relative;
           width: 100%;
@@ -1006,7 +831,6 @@ export default function HomePage() {
           overflow: auto;
         }
 
-        /* Layout */
         .wrap {
           width: 100%;
           max-width: 1240px;
@@ -1014,7 +838,6 @@ export default function HomePage() {
           padding: 0 18px 70px;
         }
 
-        /* Logo frei (ohne Box) */
         .logoSolo {
           margin-top: 22px;
           display: flex;
@@ -1058,14 +881,12 @@ export default function HomePage() {
           font-weight: 650;
         }
 
-        /* Actor grid */
         .row {
           display: grid;
           grid-template-columns: repeat(6, minmax(0, 1fr));
           gap: 12px;
         }
 
-        /* Cards */
         .card {
           position: relative;
           border-radius: 16px;
@@ -1101,21 +922,17 @@ export default function HomePage() {
           right: 8px;
           bottom: 8px;
           z-index: 2;
-
           width: 26px;
           height: 26px;
           display: grid;
           place-items: center;
-
           border-radius: 999px;
           border: 1px solid rgba(255, 255, 255, 0.18);
           background: rgba(0, 0, 0, 0.55);
           color: rgba(255, 255, 255, 0.92);
-
           font-size: 11px;
           font-weight: 900;
           line-height: 1;
-
           backdrop-filter: blur(10px);
         }
 
@@ -1136,7 +953,6 @@ export default function HomePage() {
           min-height: 18px;
         }
 
-        /* Movies */
         .movieGrid {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1157,23 +973,25 @@ export default function HomePage() {
           background: rgba(255, 255, 255, 0.07);
         }
 
-        /* NEU: Movie Thumbnail */
+        /* THUMBNAIL: 16:9 OHNE CROPPING */
         .movieCard__thumb {
           width: 100%;
           aspect-ratio: 16 / 9;
           border-radius: 14px;
           overflow: hidden;
-          background: rgba(255, 255, 255, 0.06);
+          background: rgba(0, 0, 0, 0.35);
           border: 1px solid rgba(255, 255, 255, 0.1);
           margin-bottom: 12px;
           box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+          display: grid;
+          place-items: center;
         }
         .movieCard__thumb img {
           width: 100%;
           height: 100%;
-          object-fit: cover;
+          object-fit: contain; /* WICHTIG: kein Schnitt */
           display: block;
-          transform: scale(1.01);
+          transform: none;
         }
 
         .movieCard__top {
@@ -1224,7 +1042,6 @@ export default function HomePage() {
           flex-wrap: wrap;
         }
 
-        /* Auth */
         .authForm {
           display: flex;
           align-items: center;
@@ -1304,7 +1121,6 @@ export default function HomePage() {
           animation: shimmer 1.2s infinite linear;
         }
 
-        /* Filter layout */
         .filterGrid {
           display: grid;
           grid-template-columns: 1.25fr 0.75fr;
@@ -1325,7 +1141,6 @@ export default function HomePage() {
           margin-bottom: 6px;
         }
 
-        /* Select dark dropdown */
         .select {
           width: 100%;
           background: rgba(255, 255, 255, 0.06);
@@ -1346,7 +1161,6 @@ export default function HomePage() {
           gap: 10px;
         }
 
-        /* Sections */
         .fsec {
           border: 1px solid rgba(255, 255, 255, 0.1);
           background: rgba(255, 255, 255, 0.03);
@@ -1394,7 +1208,6 @@ export default function HomePage() {
           gap: 10px;
         }
 
-        /* section tools */
         .fsec__tools {
           display: flex;
           gap: 10px;
@@ -1446,7 +1259,6 @@ export default function HomePage() {
           accent-color: var(--accent);
         }
 
-        /* Selected chips row */
         .chipsRow {
           display: flex;
           gap: 8px;
@@ -1487,7 +1299,6 @@ export default function HomePage() {
           line-height: 1;
         }
 
-        /* Pick list */
         .pickList {
           max-height: 260px;
           overflow: auto;
@@ -1565,8 +1376,6 @@ export default function HomePage() {
           margin: 10px 0;
         }
 
-        /* ---------------- MOBILE SEARCH (Lupe + Overlay) ---------------- */
-
         .iconBtn {
           width: 42px;
           height: 42px;
@@ -1589,8 +1398,6 @@ export default function HomePage() {
           height: 18px;
           opacity: 0.9;
         }
-
-        /* FIX: mOnly darf auf Desktop NICHT sichtbar sein (Spezifität > .iconBtn) */
         .iconBtn.mOnly {
           display: none;
         }
@@ -1629,17 +1436,11 @@ export default function HomePage() {
         .mSearch__body {
           padding: 12px;
         }
-
-        /* Im Overlay soll der Popover nicht "absolut" hängen, sondern normal fließen */
         .mSearch .filterPopover {
           position: static;
-          top: auto;
-          left: auto;
-          right: auto;
           margin-top: 10px;
         }
 
-        /* Responsive */
         @media (max-width: 1200px) {
           .row {
             grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -1661,18 +1462,12 @@ export default function HomePage() {
             grid-template-columns: 1fr;
           }
 
-          /* Topbar wird 2-spaltig: rechts Buttons + Lupe */
           .topbar {
             grid-template-columns: 1fr auto;
           }
-          .topbar__left {
+          .topbar__mid {
             display: none;
           }
-          .topbar__mid {
-            display: none; /* Search im Header weg auf Mobile */
-          }
-
-          /* FIX: nur auf Mobile die Lupe zeigen */
           .iconBtn.mOnly {
             display: inline-grid;
           }
@@ -1684,10 +1479,6 @@ export default function HomePage() {
         }
       `}</style>
 
-      {/* -------------------------------------------------------------------- */}
-      {/* -------------------------- TEIL 7.2: TOPBAR ------------------------- */}
-      {/* -------------------------------------------------------------------- */}
-
       <div className="topbar">
         <div className="topbar__left" />
 
@@ -1696,11 +1487,7 @@ export default function HomePage() {
             <div className="searchWrap" ref={searchWrapRef}>
               <div className="input" title="Suche nach Titel, Studio, Darsteller, Tags">
                 <svg className="input__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path
-                    d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  />
+                  <path d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="currentColor" strokeWidth="2" />
                   <path d="M16.5 16.5 21 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                 </svg>
 
@@ -1714,12 +1501,7 @@ export default function HomePage() {
                 />
 
                 {search ? (
-                  <button
-                    type="button"
-                    className="btn btn--ghost"
-                    onClick={() => handleSearchChange("")}
-                    title="Suche löschen"
-                  >
+                  <button type="button" className="btn btn--ghost" onClick={() => handleSearchChange("")} title="Suche löschen">
                     Reset
                   </button>
                 ) : null}
@@ -1814,11 +1596,7 @@ export default function HomePage() {
                           <div className="fsec__body">
                             <div>
                               <div className="fieldLabel">Studio</div>
-                              <select
-                                className="select"
-                                value={selectedStudio}
-                                onChange={(e) => setSelectedStudio(e.target.value)}
-                              >
+                              <select className="select" value={selectedStudio} onChange={(e) => setSelectedStudio(e.target.value)}>
                                 <option value="">Alle Studios</option>
                                 {allStudios.map((s) => (
                                   <option key={`st-${s}`} value={s}>
@@ -1876,9 +1654,7 @@ export default function HomePage() {
                                     {yearTo ? <Pill>bis {yearTo}</Pill> : null}
                                     {selectedTags.length ? <Pill>{selectedTags.length} Tags</Pill> : null}
                                     {selectedMainActors.length ? <Pill>{selectedMainActors.length} Haupt</Pill> : null}
-                                    {selectedSupportingActors.length ? (
-                                      <Pill>{selectedSupportingActors.length} Neben</Pill>
-                                    ) : null}
+                                    {selectedSupportingActors.length ? <Pill>{selectedSupportingActors.length} Neben</Pill> : null}
                                   </div>
                                 </div>
                               </>
@@ -1899,11 +1675,7 @@ export default function HomePage() {
             <>
               <button type="button" className="iconBtn mOnly" onClick={openMobileSearch} title="Suche">
                 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path
-                    d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  />
+                  <path d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="currentColor" strokeWidth="2" />
                   <path d="M16.5 16.5 21 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                 </svg>
               </button>
@@ -1921,12 +1693,7 @@ export default function HomePage() {
           ) : (
             <form className="authForm" onSubmit={handleLogin}>
               <div className="authField">
-                <input
-                  value={loginUser}
-                  onChange={(e) => setLoginUser(e.target.value)}
-                  placeholder="User"
-                  autoComplete="username"
-                />
+                <input value={loginUser} onChange={(e) => setLoginUser(e.target.value)} placeholder="User" autoComplete="username" />
               </div>
               <div className="authField">
                 <input
@@ -1945,17 +1712,9 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* -------------------------------------------------------------------- */}
-      {/* ----------------------- TEIL 7.3.5: MOBILE OVERLAY ------------------ */}
-      {/* -------------------------------------------------------------------- */}
-
       {loggedIn && mobileSearchOpen ? (
         <div className="mSearch" role="dialog" aria-modal="true" onMouseDown={closeMobileSearch} onTouchStart={closeMobileSearch}>
-          <div
-            className="mSearch__panel"
-            onMouseDown={(e) => e.stopPropagation()}
-            onTouchStart={(e) => e.stopPropagation()}
-          >
+          <div className="mSearch__panel" onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
             <div className="mSearch__head">
               <div className="mSearch__title">Suche</div>
               <button type="button" className="btn btn--ghost" onClick={closeMobileSearch}>
@@ -1967,11 +1726,7 @@ export default function HomePage() {
               <div className="searchWrap">
                 <div className="input" title="Suche nach Titel, Studio, Darsteller, Tags">
                   <svg className="input__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path
-                      d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    />
+                    <path d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="currentColor" strokeWidth="2" />
                     <path d="M16.5 16.5 21 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                   </svg>
 
@@ -2138,9 +1893,7 @@ export default function HomePage() {
                                       {yearTo ? <Pill>bis {yearTo}</Pill> : null}
                                       {selectedTags.length ? <Pill>{selectedTags.length} Tags</Pill> : null}
                                       {selectedMainActors.length ? <Pill>{selectedMainActors.length} Haupt</Pill> : null}
-                                      {selectedSupportingActors.length ? (
-                                        <Pill>{selectedSupportingActors.length} Neben</Pill>
-                                      ) : null}
+                                      {selectedSupportingActors.length ? <Pill>{selectedSupportingActors.length} Neben</Pill> : null}
                                     </div>
                                   </div>
                                 </>
@@ -2158,23 +1911,13 @@ export default function HomePage() {
         </div>
       ) : null}
 
-      {/* -------------------------------------------------------------------- */}
-      {/* -------------------------- TEIL 7.4: MAIN WRAP ---------------------- */}
-      {/* -------------------------------------------------------------------- */}
-
       <div className="wrap">
-        {/* Logo */}
         <div className="logoSolo">
           <img className="logoSolo__img" src="/logo.png" alt="Project1337 Logo" />
         </div>
 
-        {/* Errors */}
         {loginErr ? <div className="errorBanner">{loginErr}</div> : null}
         {err ? <div className="errorBanner">{err}</div> : null}
-
-        {/* ------------------------------------------------------------------ */}
-        {/* ---------------------- TEIL 7.5: CONTENT SWITCH ------------------- */}
-        {/* ------------------------------------------------------------------ */}
 
         {!loggedIn ? (
           <EmptyState
@@ -2216,7 +1959,6 @@ export default function HomePage() {
               <div className="movieGrid">
                 {movieList.map((m) => (
                   <div key={m.id} className="movieCard">
-                    {/* NEU: Thumbnail (optional) */}
                     {m.thumbnailUrl ? (
                       <div className="movieCard__thumb" title="Thumbnail">
                         <img src={m.thumbnailUrl} alt={m.title || "Thumbnail"} loading="lazy" />
