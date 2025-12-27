@@ -10,6 +10,12 @@ const ActorImageUploader = dynamic(() => import("./ActorImageUploader.jsx"), {
   loading: () => <div className="text-xs text-neutral-500">Lade Bild-Uploader…</div>,
 });
 
+// MovieThumbnailUploader nur im Client laden (ohne Crop)
+const MovieThumbnailUploader = dynamic(() => import("./MovieThumbnailUploader.jsx"), {
+  ssr: false,
+  loading: () => <div className="text-xs text-neutral-500">Lade Thumbnail-Uploader…</div>,
+});
+
 // -------------------------------
 // Version / Changelog
 // -------------------------------
@@ -244,9 +250,6 @@ export default function DashboardPage() {
         setFilme(moviesRes.data || []);
         setResolutions(resolutionsRes.data || []);
 
-        // Optional: wenn noch kein Film-Resolution gewählt ist, aber Resolutions existieren,
-        // setze Default im Formular auf "FullHD" falls vorhanden
-        // (nur fürs leere Formular, nicht beim Edit)
         if (!editingFilmId) {
           const fullHd = (resolutionsRes.data || []).find((r) => r.name === "FullHD");
           if (fullHd && !filmResolutionId) {
@@ -960,7 +963,7 @@ export default function DashboardPage() {
                             </div>
                           </div>
 
-                          {/* NEU: Thumbnail Upload */}
+                          {/* Thumbnail Upload: OHNE CROP */}
                           <div>
                             <label className="text-sm text-neutral-300">Thumbnail (optional)</label>
 
@@ -1000,9 +1003,9 @@ export default function DashboardPage() {
                               </div>
                             ) : (
                               <div className="mt-2">
-                                <ActorImageUploader onUploaded={(url) => setFilmThumbnailUrl(url)} />
+                                <MovieThumbnailUploader onUploaded={(url) => setFilmThumbnailUrl(url)} />
                                 <div className="mt-1 text-xs text-neutral-500">
-                                  Upload optional. Wenn leer, bleibt thumbnail_url = NULL.
+                                  Upload optional. Kein Crop. Wenn leer, bleibt thumbnail_url = NULL.
                                 </div>
                               </div>
                             )}
@@ -1187,7 +1190,7 @@ export default function DashboardPage() {
                                   </div>
                                 )}
 
-                                {/* NEU: Thumbnail Anzeige */}
+                                {/* Thumbnail Anzeige */}
                                 {f.thumbnail_url && (
                                   <div className="mt-2">
                                     <div className="text-sm text-neutral-400">Thumbnail:</div>
