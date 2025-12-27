@@ -18,6 +18,16 @@ const ActorImageUploader = dynamic(() => import("./ActorImageUploader.jsx"), {
 
 const CHANGELOG = [
   {
+    version: "0.4.0",
+    date: "2025-12-27",
+    items: [
+      "Neue Pflicht-Auswahl 'Resolution' (4K / FullHD / Retro) beim Film hinzugefügt",
+      "Resolutions aus Supabase-Tabelle 'resolutions' geladen und im Filmformular integriert",
+      "Resolution wird in Filmestatistik-Details angezeigt",
+      "Studio-Bild-Upload wie bei Actor: Studio-Form nutzt jetzt ActorImageUploader (statt manueller URL)",
+    ],
+  },
+  {
     version: "0.3.0",
     date: "2025-11-28",
     items: [
@@ -101,9 +111,7 @@ function VersionHint() {
                     <div className="font-semibold text-base text-neutral-50">
                       {entry.version}
                     </div>
-                    <div className="text-sm text-neutral-400">
-                      {entry.date}
-                    </div>
+                    <div className="text-sm text-neutral-400">{entry.date}</div>
                   </div>
                   <ul className="m-0 list-disc pl-5 text-sm text-neutral-200 space-y-1.5">
                     {entry.items.map((it, idx) => (
@@ -148,6 +156,7 @@ export default function DashboardPage() {
   const [studios, setStudios] = useState([]);
   const [tags, setTags] = useState([]);
   const [filme, setFilme] = useState([]);
+  const [resolutions, setResolutions] = useState([]); // NEU
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -169,6 +178,7 @@ export default function DashboardPage() {
   const [filmJahr, setFilmJahr] = useState("");
   const [filmStudioId, setFilmStudioId] = useState("");
   const [filmFileUrl, setFilmFileUrl] = useState("");
+  const [filmResolutionId, setFilmResolutionId] = useState(""); // NEU (Pflicht)
   const [selectedMainActorIds, setSelectedMainActorIds] = useState([]);
   const [selectedSupportActorIds, setSelectedSupportActorIds] = useState([]);
   const [selectedTagIds, setSelectedTagIds] = useState([]);
@@ -197,6 +207,7 @@ export default function DashboardPage() {
         setStudios([]);
         setTags([]);
         setFilme([]);
+        setResolutions([]);
         setLoading(false);
         return;
       }
@@ -205,29 +216,45 @@ export default function DashboardPage() {
         setLoading(true);
         setError(null);
 
-        const [actorsRes, actors2Res, studiosRes, tagsRes, moviesRes] =
-          await Promise.all([
-            supabase.from("actors").select("*").order("name"),
-            supabase.from("actors2").select("*").order("name"),
-            supabase.from("studios").select("*").order("name"),
-            supabase.from("tags").select("*").order("name"),
-            supabase
-              .from("movies")
-              .select("*")
-              .order("created_at", { ascending: false }),
-          ]);
+        const [
+          actorsRes,
+          actors2Res,
+          studiosRes,
+          tagsRes,
+          moviesRes,
+          resolutionsRes,
+        ] = await Promise.all([
+          supabase.from("actors").select("*").order("name"),
+          supabase.from("actors2").select("*").order("name"),
+          supabase.from("studios").select("*").order("name"),
+          supabase.from("tags").select("*").order("name"),
+          supabase.from("movies").select("*").order("created_at", { ascending: false }),
+          supabase.from("resolutions").select("*").order("name"),
+        ]);
 
         if (actorsRes.error) throw actorsRes.error;
         if (actors2Res.error) throw actors2Res.error;
         if (studiosRes.error) throw studiosRes.error;
         if (tagsRes.error) throw tagsRes.error;
         if (moviesRes.error) throw moviesRes.error;
+        if (resolutionsRes.error) throw resolutionsRes.error;
 
         setHauptdarsteller(actorsRes.data || []);
         setNebendarsteller(actors2Res.data || []);
         setStudios(studiosRes.data || []);
         setTags(tagsRes.data || []);
         setFilme(moviesRes.data || []);
+        setResolutions(resolutionsRes.data || []);
+
+        // Optional: wenn noch kein Film-Resolution gewählt ist, aber Resolutions existieren,
+        // setze Default im Formular auf "FullHD" falls vorhanden
+        // (nur fürs leere Formular, nicht beim Edit)
+        if (!editingFilmId) {
+          const fullHd = (resolutionsRes.data || []).find((r) => r.name === "FullHD");
+          if (fullHd && !filmResolutionId) {
+            setFilmResolutionId(fullHd.id);
+          }
+        }
       } catch (err) {
         console.error(err);
         setError(err.message || "Fehler beim Laden der Daten.");
@@ -237,12 +264,14 @@ export default function DashboardPage() {
     };
 
     loadAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loggedIn]);
 
   const actorMap = Object.fromEntries(hauptdarsteller.map((a) => [a.id, a]));
   const supportMap = Object.fromEntries(nebendarsteller.map((a) => [a.id, a]));
   const studioMap = Object.fromEntries(studios.map((s) => [s.id, s]));
   const tagMap = Object.fromEntries(tags.map((t) => [t.id, t]));
+  const resolutionMap = Object.fromEntries(resolutions.map((r) => [r.id, r])); // NEU
 
   const toggleId = (id, arr, setter) => {
     if (arr.includes(id)) {
@@ -550,6 +579,11 @@ export default function DashboardPage() {
     setSelectedSupportActorIds([]);
     setSelectedTagIds([]);
     setEditingFilmId(null);
+
+    // Resolution Default: FullHD, sonst erstes
+    const fullHd = resolutions.find((r) => r.name === "FullHD");
+    if (fullHd) setFilmResolutionId(fullHd.id);
+    else setFilmResolutionId(resolutions[0]?.id || "");
   };
 
   const handleAddOrUpdateFilm = async (e) => {
@@ -559,6 +593,11 @@ export default function DashboardPage() {
     const title = filmTitel.trim();
     if (!title) {
       setError("Bitte Filmname eingeben.");
+      return;
+    }
+
+    if (!filmResolutionId) {
+      setError("Bitte eine Resolution auswählen (Pflichtfeld).");
       return;
     }
 
@@ -577,6 +616,7 @@ export default function DashboardPage() {
       year,
       studio_id: filmStudioId || null,
       file_url: filmFileUrl.trim() || null,
+      resolution_id: filmResolutionId, // NEU (Pflicht)
       main_actor_ids:
         selectedMainActorIds.length > 0 ? selectedMainActorIds : null,
       supporting_actor_ids:
@@ -626,13 +666,12 @@ export default function DashboardPage() {
     setFilmJahr(film.year ? String(film.year) : "");
     setFilmStudioId(film.studio_id || "");
     setFilmFileUrl(film.file_url || "");
+    setFilmResolutionId(film.resolution_id || ""); // NEU
     setSelectedMainActorIds(
       Array.isArray(film.main_actor_ids) ? film.main_actor_ids : []
     );
     setSelectedSupportActorIds(
-      Array.isArray(film.supporting_actor_ids)
-        ? film.supporting_actor_ids
-        : []
+      Array.isArray(film.supporting_actor_ids) ? film.supporting_actor_ids : []
     );
     setSelectedTagIds(Array.isArray(film.tag_ids) ? film.tag_ids : []);
 
@@ -724,9 +763,7 @@ export default function DashboardPage() {
         <div className="space-y-2 text-sm">
           <div className="flex items-center justify-between">
             <span className="text-neutral-300">Filme</span>
-            <span className="font-semibold text-neutral-50">
-              {filme.length}
-            </span>
+            <span className="font-semibold text-neutral-50">{filme.length}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-neutral-300">Hauptdarsteller</span>
@@ -742,14 +779,16 @@ export default function DashboardPage() {
           </div>
           <div className="flex items-center justify-between">
             <span className="text-neutral-300">Studios</span>
-            <span className="font-semibold text-neutral-50">
-              {studios.length}
-            </span>
+            <span className="font-semibold text-neutral-50">{studios.length}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-neutral-300">Tags</span>
+            <span className="font-semibold text-neutral-50">{tags.length}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-neutral-300">Resolutions</span>
             <span className="font-semibold text-neutral-50">
-              {tags.length}
+              {resolutions.length}
             </span>
           </div>
         </div>
@@ -849,9 +888,7 @@ export default function DashboardPage() {
             <p className="text-sm text-neutral-500">
               Zugang ist nur für den Admin vorgesehen.
             </p>
-            {loginErr && (
-              <p className="mt-4 text-sm text-red-400">{loginErr}</p>
-            )}
+            {loginErr && <p className="mt-4 text-sm text-red-400">{loginErr}</p>}
           </section>
         ) : (
           <section className="mx-auto max-w-6xl space-y-5">
@@ -869,9 +906,7 @@ export default function DashboardPage() {
             ) : (
               <div className="relative">
                 {/* Mobile: Sidebar oberhalb der Hauptbox */}
-                <div className="mb-5 w-full space-y-4 lg:hidden">
-                  {SidebarContent}
-                </div>
+                <div className="mb-5 w-full space-y-4 lg:hidden">{SidebarContent}</div>
 
                 {/* Hauptbox: EXAKT horizontal zentriert */}
                 <section className="space-y-5 max-w-3xl mx-auto w-full">
@@ -881,12 +916,10 @@ export default function DashboardPage() {
                       <div className="mb-4 flex items-center justify-between gap-2">
                         <div>
                           <h2 className="text-xl font-semibold text-neutral-50">
-                            {editingFilmId
-                              ? "Film bearbeiten"
-                              : "Neuen Film hinzufügen"}
+                            {editingFilmId ? "Film bearbeiten" : "Neuen Film hinzufügen"}
                           </h2>
                           <p className="text-sm text-neutral-500">
-                            Titel, Jahr, Studio, Cast und Tags festlegen.
+                            Titel, Jahr, Studio, Resolution, Cast und Tags festlegen.
                           </p>
                         </div>
                         {editingFilmId && (
@@ -900,16 +933,11 @@ export default function DashboardPage() {
                         )}
                       </div>
 
-                      <form
-                        onSubmit={handleAddOrUpdateFilm}
-                        className="space-y-5 text-base"
-                      >
+                      <form onSubmit={handleAddOrUpdateFilm} className="space-y-5 text-base">
                         {/* Titel + Jahr */}
                         <div className="grid grid-cols-[2fr,1fr] gap-4 max-sm:grid-cols-1">
                           <div>
-                            <label className="text-sm text-neutral-300">
-                              Filmname
-                            </label>
+                            <label className="text-sm text-neutral-300">Filmname</label>
                             <input
                               className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
                               value={filmTitel}
@@ -918,9 +946,7 @@ export default function DashboardPage() {
                             />
                           </div>
                           <div>
-                            <label className="text-sm text-neutral-300">
-                              Erscheinungsjahr
-                            </label>
+                            <label className="text-sm text-neutral-300">Erscheinungsjahr</label>
                             <input
                               className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
                               value={filmJahr}
@@ -931,18 +957,14 @@ export default function DashboardPage() {
                           </div>
                         </div>
 
-                        {/* Studio + File URL */}
+                        {/* Studio + Resolution + File URL */}
                         <div className="grid grid-cols-1 gap-4">
                           <div>
-                            <label className="text-sm text-neutral-300">
-                              Studio
-                            </label>
+                            <label className="text-sm text-neutral-300">Studio</label>
                             <select
                               className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 focus:border-red-500 focus:outline-none"
                               value={filmStudioId}
-                              onChange={(e) =>
-                                setFilmStudioId(e.target.value)
-                              }
+                              onChange={(e) => setFilmStudioId(e.target.value)}
                             >
                               <option value="">(kein Studio)</option>
                               {studios.map((s) => (
@@ -955,14 +977,34 @@ export default function DashboardPage() {
 
                           <div>
                             <label className="text-sm text-neutral-300">
-                              File-URL / NAS-Pfad
+                              Resolution <span className="text-red-400">*</span>
                             </label>
+                            <select
+                              className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 focus:border-red-500 focus:outline-none"
+                              value={filmResolutionId}
+                              onChange={(e) => setFilmResolutionId(e.target.value)}
+                              required
+                            >
+                              <option value="" disabled>
+                                Bitte wählen…
+                              </option>
+                              {resolutions.map((r) => (
+                                <option key={r.id} value={r.id}>
+                                  {r.name}
+                                </option>
+                              ))}
+                            </select>
+                            <div className="mt-1 text-xs text-neutral-500">
+                              Pflichtfeld (Datenbank erzwingt NOT NULL).
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="text-sm text-neutral-300">File-URL / NAS-Pfad</label>
                             <input
                               className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
                               value={filmFileUrl}
-                              onChange={(e) =>
-                                setFilmFileUrl(e.target.value)
-                              }
+                              onChange={(e) => setFilmFileUrl(e.target.value)}
                               placeholder="http://192.168.178.72/1337/"
                             />
                           </div>
@@ -980,18 +1022,13 @@ export default function DashboardPage() {
                               </span>
                             ) : (
                               hauptdarsteller.map((a) => {
-                                const active =
-                                  selectedMainActorIds.includes(a.id);
+                                const active = selectedMainActorIds.includes(a.id);
                                 return (
                                   <button
                                     key={a.id}
                                     type="button"
                                     onClick={() =>
-                                      toggleId(
-                                        a.id,
-                                        selectedMainActorIds,
-                                        setSelectedMainActorIds
-                                      )
+                                      toggleId(a.id, selectedMainActorIds, setSelectedMainActorIds)
                                     }
                                     className={chipClass(active)}
                                   >
@@ -1015,18 +1052,13 @@ export default function DashboardPage() {
                               </span>
                             ) : (
                               nebendarsteller.map((a) => {
-                                const active =
-                                  selectedSupportActorIds.includes(a.id);
+                                const active = selectedSupportActorIds.includes(a.id);
                                 return (
                                   <button
                                     key={a.id}
                                     type="button"
                                     onClick={() =>
-                                      toggleId(
-                                        a.id,
-                                        selectedSupportActorIds,
-                                        setSelectedSupportActorIds
-                                      )
+                                      toggleId(a.id, selectedSupportActorIds, setSelectedSupportActorIds)
                                     }
                                     className={chipClass(active)}
                                   >
@@ -1045,9 +1077,7 @@ export default function DashboardPage() {
                           </label>
                           <div className="mt-2 flex flex-wrap gap-2">
                             {tags.length === 0 ? (
-                              <span className="text-sm text-neutral-500">
-                                Noch keine Tags angelegt.
-                              </span>
+                              <span className="text-sm text-neutral-500">Noch keine Tags angelegt.</span>
                             ) : (
                               tags.map((t) => {
                                 const active = selectedTagIds.includes(t.id);
@@ -1055,13 +1085,7 @@ export default function DashboardPage() {
                                   <button
                                     key={t.id}
                                     type="button"
-                                    onClick={() =>
-                                      toggleId(
-                                        t.id,
-                                        selectedTagIds,
-                                        setSelectedTagIds
-                                      )
-                                    }
+                                    onClick={() => toggleId(t.id, selectedTagIds, setSelectedTagIds)}
                                     className={chipClass(active)}
                                   >
                                     {t.name}
@@ -1076,11 +1100,9 @@ export default function DashboardPage() {
                           <button
                             type="submit"
                             className="rounded-xl bg-red-500 px-5 py-2.5 text-sm font-semibold text-black shadow shadow-red-900/70 hover:bg-red-400 hover:shadow-lg hover:shadow-red-900/70 disabled:opacity-60"
-                            disabled={!filmTitel.trim()}
+                            disabled={!filmTitel.trim() || !filmResolutionId}
                           >
-                            {editingFilmId
-                              ? "Film aktualisieren"
-                              : "Film speichern"}
+                            {editingFilmId ? "Film aktualisieren" : "Film speichern"}
                           </button>
                           {editingFilmId && (
                             <button
@@ -1101,23 +1123,17 @@ export default function DashboardPage() {
                     <div className="rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950 to-black/95 p-6 shadow-2xl shadow-black/70 space-y-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <h2 className="text-xl font-semibold text-neutral-50">
-                            Filmestatistik
-                          </h2>
+                          <h2 className="text-xl font-semibold text-neutral-50">Filme</h2>
                           <p className="mt-1 text-sm text-neutral-500">
                             Insgesamt{" "}
-                            <span className="font-semibold text-neutral-100">
-                              {filme.length}
-                            </span>{" "}
+                            <span className="font-semibold text-neutral-100">{filme.length}</span>{" "}
                             Filme in der Bibliothek.
                           </p>
                         </div>
                       </div>
 
                       {filme.length === 0 ? (
-                        <p className="text-sm text-neutral-500">
-                          Noch keine Filme angelegt.
-                        </p>
+                        <p className="text-sm text-neutral-500">Noch keine Filme angelegt.</p>
                       ) : (
                         <div className="space-y-3 text-sm">
                           {filme.map((f) => (
@@ -1127,14 +1143,8 @@ export default function DashboardPage() {
                             >
                               <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
                                 <div className="flex items-center gap-2">
-                                  <span className="text-base font-medium text-neutral-50">
-                                    {f.title}
-                                  </span>
-                                  {f.year && (
-                                    <span className="text-xs text-neutral-400">
-                                      {f.year}
-                                    </span>
-                                  )}
+                                  <span className="text-base font-medium text-neutral-50">{f.title}</span>
+                                  {f.year && <span className="text-xs text-neutral-400">{f.year}</span>}
                                 </div>
                                 <div className="flex items-center gap-1 text-xs text-neutral-500 group-open:text-red-400">
                                   <span>Details</span>
@@ -1162,16 +1172,21 @@ export default function DashboardPage() {
                                   </div>
                                 )}
 
-                                {Array.isArray(f.main_actor_ids) &&
-                                  f.main_actor_ids.length > 0 && (
-                                    <div className="text-sm text-neutral-300">
-                                      Hauptdarsteller:{" "}
-                                      {f.main_actor_ids
-                                        .map((id) => actorMap[id]?.name)
-                                        .filter(Boolean)
-                                        .join(", ")}
-                                    </div>
-                                  )}
+                                {f.resolution_id && resolutionMap[f.resolution_id] && (
+                                  <div className="text-sm text-neutral-400">
+                                    Resolution: {resolutionMap[f.resolution_id].name}
+                                  </div>
+                                )}
+
+                                {Array.isArray(f.main_actor_ids) && f.main_actor_ids.length > 0 && (
+                                  <div className="text-sm text-neutral-300">
+                                    Hauptdarsteller:{" "}
+                                    {f.main_actor_ids
+                                      .map((id) => actorMap[id]?.name)
+                                      .filter(Boolean)
+                                      .join(", ")}
+                                  </div>
+                                )}
 
                                 {Array.isArray(f.supporting_actor_ids) &&
                                   f.supporting_actor_ids.length > 0 && (
@@ -1184,23 +1199,19 @@ export default function DashboardPage() {
                                     </div>
                                   )}
 
-                                {Array.isArray(f.tag_ids) &&
-                                  f.tag_ids.length > 0 && (
-                                    <div className="mt-1 flex flex-wrap gap-2">
-                                      {f.tag_ids.map((id) => {
-                                        const t = tagMap[id];
-                                        if (!t) return null;
-                                        return (
-                                          <span
-                                            key={id}
-                                            className={chipClass(true)}
-                                          >
-                                            {t.name}
-                                          </span>
-                                        );
-                                      })}
-                                    </div>
-                                  )}
+                                {Array.isArray(f.tag_ids) && f.tag_ids.length > 0 && (
+                                  <div className="mt-1 flex flex-wrap gap-2">
+                                    {f.tag_ids.map((id) => {
+                                      const t = tagMap[id];
+                                      if (!t) return null;
+                                      return (
+                                        <span key={id} className={chipClass(true)}>
+                                          {t.name}
+                                        </span>
+                                      );
+                                    })}
+                                  </div>
+                                )}
 
                                 {f.file_url && (
                                   <div className="mt-1 break-all text-sm text-red-400">
@@ -1237,9 +1248,7 @@ export default function DashboardPage() {
                     <section className="rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950 to-black/95 p-6 text-sm text-neutral-100 shadow-2xl shadow-black/70 space-y-5">
                       <div className="flex items-center justify-between">
                         <div>
-                          <h2 className="text-xl font-semibold text-neutral-50">
-                            Stammdaten
-                          </h2>
+                          <h2 className="text-xl font-semibold text-neutral-50">Stammdaten</h2>
                           <p className="mt-1 text-sm text-neutral-500">
                             Darsteller, Studios und Tags verwalten.
                           </p>
@@ -1249,10 +1258,7 @@ export default function DashboardPage() {
                       <div className="grid gap-5 md:grid-cols-2">
                         {/* Hauptdarsteller */}
                         <div className="space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4">
-                          <form
-                            onSubmit={handleAddActor}
-                            className="space-y-2"
-                          >
+                          <form onSubmit={handleAddActor} className="space-y-2">
                             <div className="font-medium text-neutral-50 text-base">
                               Hauptdarsteller
                             </div>
@@ -1260,14 +1266,10 @@ export default function DashboardPage() {
                               className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
                               placeholder="Name"
                               value={newActorName}
-                              onChange={(e) =>
-                                setNewActorName(e.target.value)
-                              }
+                              onChange={(e) => setNewActorName(e.target.value)}
                             />
 
-                            <ActorImageUploader
-                              onUploaded={(url) => setNewActorImage(url)}
-                            />
+                            <ActorImageUploader onUploaded={(url) => setNewActorImage(url)} />
 
                             <button
                               type="submit"
@@ -1308,10 +1310,7 @@ export default function DashboardPage() {
 
                         {/* Nebendarsteller */}
                         <div className="space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4">
-                          <form
-                            onSubmit={handleAddSupportActor}
-                            className="space-y-2"
-                          >
+                          <form onSubmit={handleAddSupportActor} className="space-y-2">
                             <div className="font-medium text-neutral-50 text-base">
                               Nebendarsteller
                             </div>
@@ -1319,15 +1318,11 @@ export default function DashboardPage() {
                               className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
                               placeholder="Name"
                               value={newSupportName}
-                              onChange={(e) =>
-                                setNewSupportName(e.target.value)
-                              }
+                              onChange={(e) => setNewSupportName(e.target.value)}
                             />
 
                             <ActorImageUploader
-                              onUploaded={(url) =>
-                                setNewSupportImage(url)
-                              }
+                              onUploaded={(url) => setNewSupportImage(url)}
                             />
 
                             <button
@@ -1349,18 +1344,14 @@ export default function DashboardPage() {
                                 <div className="flex gap-1.5">
                                   <button
                                     type="button"
-                                    onClick={() =>
-                                      handleEditSupportActor(a)
-                                    }
+                                    onClick={() => handleEditSupportActor(a)}
                                     className="rounded border border-neutral-600 px-2.5 py-1 text-xs text-neutral-100 hover:bg-neutral-800"
                                   >
                                     Edit
                                   </button>
                                   <button
                                     type="button"
-                                    onClick={() =>
-                                      handleDeleteSupportActor(a.id)
-                                    }
+                                    onClick={() => handleDeleteSupportActor(a.id)}
                                     className="rounded border border-red-600 px-2.5 py-1 text-xs text-red-200 hover:bg-red-700/80"
                                   >
                                     X
@@ -1373,29 +1364,18 @@ export default function DashboardPage() {
 
                         {/* Studios */}
                         <div className="space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4">
-                          <form
-                            onSubmit={handleAddStudio}
-                            className="space-y-2"
-                          >
-                            <div className="font-medium text-neutral-50 text-base">
-                              Studios
-                            </div>
+                          <form onSubmit={handleAddStudio} className="space-y-2">
+                            <div className="font-medium text-neutral-50 text-base">Studios</div>
                             <input
                               className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
                               placeholder="Studio"
                               value={newStudioName}
-                              onChange={(e) =>
-                                setNewStudioName(e.target.value)
-                              }
+                              onChange={(e) => setNewStudioName(e.target.value)}
                             />
-                            <input
-                              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
-                              placeholder="Bild-URL (optional)"
-                              value={newStudioImage}
-                              onChange={(e) =>
-                                setNewStudioImage(e.target.value)
-                              }
-                            />
+
+                            {/* NEU: Studio Bild wie Actor */}
+                            <ActorImageUploader onUploaded={(url) => setNewStudioImage(url)} />
+
                             <button
                               type="submit"
                               className="mt-1 rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-black shadow shadow-red-900/70 disabled:opacity-60"
@@ -1419,20 +1399,13 @@ export default function DashboardPage() {
 
                         {/* Tags */}
                         <div className="space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4">
-                          <form
-                            onSubmit={handleAddTag}
-                            className="space-y-2"
-                          >
-                            <div className="font-medium text-neutral-50 text-base">
-                              Tags
-                            </div>
+                          <form onSubmit={handleAddTag} className="space-y-2">
+                            <div className="font-medium text-neutral-50 text-base">Tags</div>
                             <input
                               className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
                               placeholder="Tag-Name"
                               value={newTagName}
-                              onChange={(e) =>
-                                setNewTagName(e.target.value)
-                              }
+                              onChange={(e) => setNewTagName(e.target.value)}
                             />
                             <button
                               type="submit"
@@ -1455,9 +1428,7 @@ export default function DashboardPage() {
                                 <span className="text-sm">{t.name}</span>
                                 <button
                                   type="button"
-                                  onClick={() =>
-                                    handleDeleteTagGlobal(t.id)
-                                  }
+                                  onClick={() => handleDeleteTagGlobal(t.id)}
                                   className="rounded border border-red-600 px-2.5 py-1 text-xs text-red-200 hover:bg-red-700/80"
                                 >
                                   X
