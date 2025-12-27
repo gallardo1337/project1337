@@ -1025,7 +1025,7 @@ export default function HomePage() {
           padding: 8px 10px 10px;
         }
         .card__title {
-          font-weight: 500;
+          font-weight: 600;
           font-size: 14px;
           line-height: 1.4;
           letter-spacing: -0.01em;
