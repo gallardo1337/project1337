@@ -1603,7 +1603,7 @@ export default function HomePage() {
         {/* Logo */}
         <div className="logoSolo">
           {/* Passe ggf. den Dateinamen an (z.B. /logo.png) */}
-          <img className="logoSolo__img" src="/logo.svg" alt="Project1337 Logo" />
+          <img className="logoSolo__img" src="/logo.png" alt="Project1337 Logo" />
         </div>
 
         {/* Errors */}
