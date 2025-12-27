@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../lib/supabaseClient"; // FIX: app/page.jsx -> ../lib/supabaseClient
 
 function Pill({ children }) {
@@ -45,6 +45,69 @@ function includesLoose(hay, needle) {
     .includes(String(needle || "").toLowerCase());
 }
 
+/**
+ * AutoFitTitle
+ * - immer 1 Zeile
+ * - keine Ellipsis / kein Cut
+ * - Schrift wird verkleinert, bis es passt (minSize)
+ * - reagiert auch auf Resizes (ResizeObserver)
+ */
+function AutoFitTitle({
+  text,
+  maxSize = 16,
+  minSize = 11,
+  step = 0.5,
+  className = "",
+}) {
+  const elRef = useRef(null);
+
+  const fit = () => {
+    const el = elRef.current;
+    if (!el) return;
+
+    let size = maxSize;
+    el.style.fontSize = `${size}px`;
+
+    // verkleinern bis es in die Breite passt (1 Zeile)
+    // Achtung: scrollWidth > clientWidth bedeutet "überläuft"
+    while (size > minSize && el.scrollWidth > el.clientWidth) {
+      size -= step;
+      el.style.fontSize = `${size}px`;
+    }
+  };
+
+  useLayoutEffect(() => {
+    fit();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [text, maxSize, minSize, step]);
+
+  useEffect(() => {
+    const el = elRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+
+    const ro = new ResizeObserver(() => fit());
+    ro.observe(el);
+
+    return () => ro.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [text, maxSize, minSize, step]);
+
+  return (
+    <div
+      ref={elRef}
+      className={className}
+      title={text}
+      style={{
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        maxWidth: "100%",
+      }}
+    >
+      {text}
+    </div>
+  );
+}
+
 function FilterSection({
   title,
   subtitle,
@@ -60,13 +123,17 @@ function FilterSection({
   defaultOpen = true,
 }) {
   const [open, setOpen] = useState(defaultOpen);
-  const selectedSet = useMemo(() => new Set(selectedKeys.map(String)), [selectedKeys]);
+  const selectedSet = useMemo(
+    () => new Set(selectedKeys.map(String)),
+    [selectedKeys]
+  );
 
   const filtered = useMemo(() => {
     const base = items || [];
     let list = base;
 
-    if (showSelectedOnly) list = list.filter((it) => selectedSet.has(String(getKey(it))));
+    if (showSelectedOnly)
+      list = list.filter((it) => selectedSet.has(String(getKey(it))));
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       list = list.filter((it) => includesLoose(getLabel(it), q));
@@ -77,13 +144,18 @@ function FilterSection({
 
   return (
     <div className="fsec">
-      <button type="button" className="fsec__head" onClick={() => setOpen((v) => !v)}>
+      <button
+        type="button"
+        className="fsec__head"
+        onClick={() => setOpen((v) => !v)}
+      >
         <div className="fsec__headL">
           <div className="fsec__title">{title}</div>
           <div className="fsec__sub">
             {subtitle ? (
               <>
-                {subtitle} • <span className="mono">{selectedKeys.length}</span> aktiv
+                {subtitle} • <span className="mono">{selectedKeys.length}</span>{" "}
+                aktiv
               </>
             ) : (
               <>
@@ -101,20 +173,46 @@ function FilterSection({
         <div className="fsec__body">
           <div className="fsec__tools">
             <div className="fsearch">
-              <svg className="fsearch__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="currentColor" strokeWidth="2" />
-                <path d="M16.5 16.5 21 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              <svg
+                className="fsearch__icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                />
+                <path
+                  d="M16.5 16.5 21 21"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
               </svg>
-              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Suchen…" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Suchen…"
+              />
               {search ? (
-                <button type="button" className="btn btn--ghost btn--xs" onClick={() => setSearch("")}>
+                <button
+                  type="button"
+                  className="btn btn--ghost btn--xs"
+                  onClick={() => setSearch("")}
+                >
                   Reset
                 </button>
               ) : null}
             </div>
 
             <label className="toggle">
-              <input type="checkbox" checked={showSelectedOnly} onChange={(e) => setShowSelectedOnly(e.target.checked)} />
+              <input
+                type="checkbox"
+                checked={showSelectedOnly}
+                onChange={(e) => setShowSelectedOnly(e.target.checked)}
+              />
               <span>Nur Auswahl</span>
             </label>
           </div>
@@ -138,7 +236,9 @@ function FilterSection({
                   </button>
                 );
               })}
-              {selectedKeys.length > 14 ? <Pill>+{selectedKeys.length - 14}</Pill> : null}
+              {selectedKeys.length > 14 ? (
+                <Pill>+{selectedKeys.length - 14}</Pill>
+              ) : null}
             </div>
           ) : null}
 
@@ -175,11 +275,18 @@ function getResolutionIcon(resolutionName) {
   const r = String(resolutionName || "").trim().toLowerCase();
   if (!r) return null;
 
-  if (r === "4k" || r.includes("4k")) return { src: "/4k.svg", alt: "4K", title: "4K" };
-  if (r === "fullhd" || r === "full hd" || r.includes("fullhd") || r.includes("full hd")) {
+  if (r === "4k" || r.includes("4k"))
+    return { src: "/4k.svg", alt: "4K", title: "4K" };
+  if (
+    r === "fullhd" ||
+    r === "full hd" ||
+    r.includes("fullhd") ||
+    r.includes("full hd")
+  ) {
     return { src: "/fullhd.svg", alt: "FullHD", title: "FullHD" };
   }
-  if (r === "retro" || r.includes("retro")) return { src: "/retro.svg", alt: "Retro", title: "Retro" };
+  if (r === "retro" || r.includes("retro"))
+    return { src: "/retro.svg", alt: "Retro", title: "Retro" };
 
   return null;
 }
@@ -291,7 +398,14 @@ export default function HomePage() {
         setLoading(true);
         setErr(null);
 
-        const [moviesRes, actorsRes, actors2Res, studiosRes, tagsRes, resolutionsRes] = await Promise.all([
+        const [
+          moviesRes,
+          actorsRes,
+          actors2Res,
+          studiosRes,
+          tagsRes,
+          resolutionsRes,
+        ] = await Promise.all([
           supabase.from("movies").select("*"),
           supabase.from("actors").select("*"),
           supabase.from("actors2").select("*"),
@@ -315,22 +429,36 @@ export default function HomePage() {
         const resolutions = resolutionsRes.data || [];
 
         const mainActorById = Object.fromEntries(mainActors.map((a) => [a.id, a]));
-        const supportActorById = Object.fromEntries(supportActors.map((a) => [a.id, a]));
+        const supportActorById = Object.fromEntries(
+          supportActors.map((a) => [a.id, a])
+        );
         const studioMap = Object.fromEntries(studios.map((s) => [s.id, s.name]));
         const tagMap = Object.fromEntries(tags.map((t) => [t.id, t.name]));
-        const resolutionMap = Object.fromEntries(resolutions.map((r) => [r.id, r.name]));
+        const resolutionMap = Object.fromEntries(
+          resolutions.map((r) => [r.id, r.name])
+        );
 
         const mappedMovies = (moviesData || []).map((m) => {
           const mainIds = Array.isArray(m.main_actor_ids) ? m.main_actor_ids : [];
-          const supportIds = Array.isArray(m.supporting_actor_ids) ? m.supporting_actor_ids : [];
+          const supportIds = Array.isArray(m.supporting_actor_ids)
+            ? m.supporting_actor_ids
+            : [];
 
-          const mainNames = mainIds.map((id) => mainActorById[id]?.name).filter(Boolean);
-          const supportNames = supportIds.map((id) => supportActorById[id]?.name).filter(Boolean);
+          const mainNames = mainIds
+            .map((id) => mainActorById[id]?.name)
+            .filter(Boolean);
+          const supportNames = supportIds
+            .map((id) => supportActorById[id]?.name)
+            .filter(Boolean);
 
           const allActors = [...mainNames, ...supportNames];
-          const tagNames = Array.isArray(m.tag_ids) ? m.tag_ids.map((id) => tagMap[id]).filter(Boolean) : [];
+          const tagNames = Array.isArray(m.tag_ids)
+            ? m.tag_ids.map((id) => tagMap[id]).filter(Boolean)
+            : [];
 
-          const resolutionName = m.resolution_id ? resolutionMap[m.resolution_id] || null : null;
+          const resolutionName = m.resolution_id
+            ? resolutionMap[m.resolution_id] || null
+            : null;
 
           return {
             id: m.id,
@@ -353,7 +481,9 @@ export default function HomePage() {
         const movieCountByActorId = new Map();
         moviesData.forEach((m) => {
           const arr = Array.isArray(m.main_actor_ids) ? m.main_actor_ids : [];
-          arr.forEach((id) => movieCountByActorId.set(id, (movieCountByActorId.get(id) || 0) + 1));
+          arr.forEach((id) =>
+            movieCountByActorId.set(id, (movieCountByActorId.get(id) || 0) + 1)
+          );
         });
 
         const actorList = mainActors
@@ -364,7 +494,9 @@ export default function HomePage() {
             movieCount: movieCountByActorId.get(a.id) || 0,
           }))
           .filter((a) => a.movieCount > 0)
-          .sort((a, b) => a.name.localeCompare(b.name, "de", { sensitivity: "base" }));
+          .sort((a, b) =>
+            a.name.localeCompare(b.name, "de", { sensitivity: "base" })
+          );
 
         setActors(actorList);
 
@@ -386,7 +518,9 @@ export default function HomePage() {
   const allTags = useMemo(() => {
     const set = new Set();
     movies.forEach((m) => (m.tags || []).forEach((t) => set.add(t)));
-    return Array.from(set).sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
+    return Array.from(set).sort((a, b) =>
+      a.localeCompare(b, "de", { sensitivity: "base" })
+    );
   }, [movies]);
 
   const allStudios = useMemo(() => {
@@ -394,7 +528,9 @@ export default function HomePage() {
     movies.forEach((m) => {
       if (m.studio) set.add(m.studio);
     });
-    return Array.from(set).sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
+    return Array.from(set).sort((a, b) =>
+      a.localeCompare(b, "de", { sensitivity: "base" })
+    );
   }, [movies]);
 
   const allResolutions = useMemo(() => {
@@ -402,26 +538,33 @@ export default function HomePage() {
     movies.forEach((m) => {
       if (m.resolution) set.add(m.resolution);
     });
-    return Array.from(set).sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
+    return Array.from(set).sort((a, b) =>
+      a.localeCompare(b, "de", { sensitivity: "base" })
+    );
   }, [movies]);
 
   const mainActorOptions = useMemo(() => {
     return (actors || [])
       .map((a) => ({ id: a.id, name: a.name }))
-      .sort((a, b) => a.name.localeCompare(b.name, "de", { sensitivity: "base" }));
+      .sort((a, b) =>
+        a.name.localeCompare(b.name, "de", { sensitivity: "base" })
+      );
   }, [actors]);
 
   const supportingActorOptions = useMemo(() => {
     const set = new Set();
     movies.forEach((m) => (m.supportingActorNames || []).forEach((n) => set.add(n)));
-    return Array.from(set).sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
+    return Array.from(set).sort((a, b) =>
+      a.localeCompare(b, "de", { sensitivity: "base" })
+    );
   }, [movies]);
 
   const applyAdvancedFilters = (baseList) => {
     let list = baseList;
 
     if (selectedStudio) list = list.filter((m) => (m.studio || "") === selectedStudio);
-    if (selectedResolution) list = list.filter((m) => (m.resolution || "") === selectedResolution);
+    if (selectedResolution)
+      list = list.filter((m) => (m.resolution || "") === selectedResolution);
 
     const yf = yearFrom ? parseInt(yearFrom, 10) : null;
     const yt = yearTo ? parseInt(yearTo, 10) : null;
@@ -483,7 +626,10 @@ export default function HomePage() {
   const movieList = showMovies ? visibleMovies : [];
 
   const handleShowMoviesForActor = (actorId, actorName) => {
-    const subset = movies.filter((movie) => Array.isArray(movie.mainActorIds) && movie.mainActorIds.includes(actorId));
+    const subset = movies.filter(
+      (movie) =>
+        Array.isArray(movie.mainActorIds) && movie.mainActorIds.includes(actorId)
+    );
     const filtered = applyAdvancedFilters(subset);
     setMoviesTitle(actorName);
     setMoviesSubtitle(`${filtered.length} Film(e)`);
@@ -552,7 +698,9 @@ export default function HomePage() {
       });
 
       if (!res.ok) {
-        setLoginErr(res.status === 401 ? "User oder Passwort falsch." : "Login fehlgeschlagen.");
+        setLoginErr(
+          res.status === 401 ? "User oder Passwort falsch." : "Login fehlgeschlagen."
+        );
         return;
       }
 
@@ -622,7 +770,10 @@ export default function HomePage() {
     setMobileSearchOpen(false);
   };
 
-  const toggleTag = (t) => setSelectedTags((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
+  const toggleTag = (t) =>
+    setSelectedTags((prev) =>
+      prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]
+    );
 
   const toggleMainActor = (id) => {
     const sid = String(id);
@@ -633,14 +784,22 @@ export default function HomePage() {
   };
 
   const toggleSupportingActor = (name) =>
-    setSelectedSupportingActors((prev) => (prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name]));
+    setSelectedSupportingActors((prev) =>
+      prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name]
+    );
 
-  const tagItems = useMemo(() => allTags.map((t) => ({ key: t, label: t })), [allTags]);
+  const tagItems = useMemo(
+    () => allTags.map((t) => ({ key: t, label: t })),
+    [allTags]
+  );
   const mainItems = useMemo(
     () => mainActorOptions.map((a) => ({ key: String(a.id), label: a.name })),
     [mainActorOptions]
   );
-  const suppItems = useMemo(() => supportingActorOptions.map((n) => ({ key: n, label: n })), [supportingActorOptions]);
+  const suppItems = useMemo(
+    () => supportingActorOptions.map((n) => ({ key: n, label: n })),
+    [supportingActorOptions]
+  );
 
   const openMobileSearch = () => {
     setMobileSearchOpen(true);
@@ -680,10 +839,26 @@ export default function HomePage() {
 
         .nfx {
           min-height: 100vh;
-          background: radial-gradient(1200px 700px at 15% 15%, rgba(229, 9, 20, 0.25), transparent 55%),
-            radial-gradient(900px 600px at 85% 10%, rgba(255, 255, 255, 0.08), transparent 55%),
-            radial-gradient(900px 700px at 60% 80%, rgba(255, 255, 255, 0.06), transparent 60%),
-            linear-gradient(180deg, rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0.95));
+          background: radial-gradient(
+              1200px 700px at 15% 15%,
+              rgba(229, 9, 20, 0.25),
+              transparent 55%
+            ),
+            radial-gradient(
+              900px 600px at 85% 10%,
+              rgba(255, 255, 255, 0.08),
+              transparent 55%
+            ),
+            radial-gradient(
+              900px 700px at 60% 80%,
+              rgba(255, 255, 255, 0.06),
+              transparent 60%
+            ),
+            linear-gradient(
+              180deg,
+              rgba(0, 0, 0, 0.65),
+              rgba(0, 0, 0, 0.95)
+            );
         }
 
         .topbar {
@@ -755,7 +930,8 @@ export default function HomePage() {
           font-size: 13px;
           font-weight: 650;
           cursor: pointer;
-          transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+          transition: transform 0.12s ease, background 0.12s ease,
+            border-color 0.12s ease;
           white-space: nowrap;
         }
         .btn:hover {
@@ -767,12 +943,20 @@ export default function HomePage() {
           transform: translateY(0px);
         }
         .btn--primary {
-          background: linear-gradient(180deg, rgba(229, 9, 20, 0.95), rgba(229, 9, 20, 0.78));
+          background: linear-gradient(
+            180deg,
+            rgba(229, 9, 20, 0.95),
+            rgba(229, 9, 20, 0.78)
+          );
           border-color: rgba(229, 9, 20, 0.6);
           box-shadow: 0 18px 36px rgba(229, 9, 20, 0.22);
         }
         .btn--primary:hover {
-          background: linear-gradient(180deg, rgba(255, 21, 33, 0.95), rgba(229, 9, 20, 0.8));
+          background: linear-gradient(
+            180deg,
+            rgba(255, 21, 33, 0.95),
+            rgba(229, 9, 20, 0.8)
+          );
           border-color: rgba(255, 21, 33, 0.65);
         }
         .btn--ghost {
@@ -905,7 +1089,8 @@ export default function HomePage() {
           background: rgba(255, 255, 255, 0.05);
           box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
           cursor: pointer;
-          transition: transform 0.14s ease, border-color 0.14s ease, background 0.14s ease;
+          transition: transform 0.14s ease, border-color 0.14s ease,
+            background 0.14s ease;
         }
         .card:hover {
           transform: translateY(-3px);
@@ -976,7 +1161,8 @@ export default function HomePage() {
           border-radius: 18px;
           padding: 14px;
           box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
-          transition: transform 0.14s ease, border-color 0.14s ease, background 0.14s ease;
+          transition: transform 0.14s ease, border-color 0.14s ease,
+            background 0.14s ease;
         }
         .movieCard:hover {
           transform: translateY(-2px);
@@ -1029,12 +1215,16 @@ export default function HomePage() {
           align-items: baseline;
           gap: 10px;
         }
+
+        /* WICHTIG: kein font-size hier, AutoFitTitle steuert das */
         .movieCard__title {
           margin: 0;
-          font-size: 16px;
           font-weight: 900;
           letter-spacing: -0.01em;
+          line-height: 1.15;
+          max-width: 100%;
         }
+
         .movieCard__year {
           color: rgba(255, 255, 255, 0.62);
           font-weight: 800;
@@ -1415,7 +1605,8 @@ export default function HomePage() {
           background: rgba(255, 255, 255, 0.06);
           color: rgba(255, 255, 255, 0.92);
           cursor: pointer;
-          transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+          transition: transform 0.12s ease, background 0.12s ease,
+            border-color 0.12s ease;
         }
         .iconBtn:hover {
           transform: translateY(-1px);
@@ -1637,11 +1828,7 @@ export default function HomePage() {
 
                             <div>
                               <div className="fieldLabel">Resolution</div>
-                              <select
-                                className="select"
-                                value={selectedResolution}
-                                onChange={(e) => setSelectedResolution(e.target.value)}
-                              >
+                              <select className="select" value={selectedResolution} onChange={(e) => setSelectedResolution(e.target.value)}>
                                 <option value="">Alle Resolutions</option>
                                 {allResolutions.map((r) => (
                                   <option key={`rs-${r}`} value={r}>
@@ -1876,11 +2063,7 @@ export default function HomePage() {
 
                               <div>
                                 <div className="fieldLabel">Resolution</div>
-                                <select
-                                  className="select"
-                                  value={selectedResolution}
-                                  onChange={(e) => setSelectedResolution(e.target.value)}
-                                >
+                                <select className="select" value={selectedResolution} onChange={(e) => setSelectedResolution(e.target.value)}>
                                   <option value="">Alle Resolutions</option>
                                   {allResolutions.map((r) => (
                                     <option key={`rs-${r}`} value={r}>
@@ -2003,7 +2186,7 @@ export default function HomePage() {
                       ) : null}
 
                       <div className="movieCard__top">
-                        <h3 className="movieCard__title">{m.title || "Unbenannt"}</h3>
+                        <AutoFitTitle text={m.title || "Unbenannt"} className="movieCard__title" maxSize={16} minSize={11} step={0.5} />
                         <div className="movieCard__year">{m.year || ""}</div>
                       </div>
 
