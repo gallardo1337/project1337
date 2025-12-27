@@ -1,7 +1,23 @@
 "use client";
 
+/* -------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+/* ------------------------------ TEIL 1: IMPORTS --------------------------- */
+/* -------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+
+/* -------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+/* --------------------- TEIL 2: HEADER / DOKU KOMMENTAR --------------------- */
+/* -------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
 
 /**
  * app/page.jsx
@@ -13,6 +29,14 @@ import { supabase } from "../lib/supabaseClient";
  * - Multi-Select Logik bleibt STRICT UND (intern), aber ohne UI-Hinweise
  * - Restliche Funktionalität unverändert
  */
+
+/* -------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+/* ------------------------ TEIL 3: MINI UI HELPERS ------------------------- */
+/* -------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
 
 function Pill({ children }) {
   return <span className="pill">{children}</span>;
@@ -41,6 +65,14 @@ function SkeletonRow() {
   );
 }
 
+/* -------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+/* ----------------------- TEIL 4: UTILS (SAFE / SEARCH) -------------------- */
+/* -------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+
 function safeOpen(url) {
   if (!url) return;
   try {
@@ -55,6 +87,14 @@ function includesLoose(hay, needle) {
     .toLowerCase()
     .includes(String(needle || "").toLowerCase());
 }
+
+/* -------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+/* --------------------- TEIL 5: FILTERSECTION KOMPONENTE ------------------- */
+/* -------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
 
 function FilterSection({
   title,
@@ -190,7 +230,19 @@ function FilterSection({
   );
 }
 
+/* -------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+/* ----------------------- TEIL 6: MAIN COMPONENT START --------------------- */
+/* -------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+
 export default function HomePage() {
+  /* ------------------------------------------------------------------------ */
+  /* ----------------------------- TEIL 6.1: STATE -------------------------- */
+  /* ------------------------------------------------------------------------ */
+
   const [movies, setMovies] = useState([]);
   const [actors, setActors] = useState([]); // Hauptdarsteller
   const [viewMode, setViewMode] = useState("actors"); // "actors" | "movies"
@@ -201,27 +253,30 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
 
-  // Login
+  /* ------------------------------------------------------------------------ */
+  /* ----------------------------- TEIL 6.2: LOGIN -------------------------- */
+  /* ------------------------------------------------------------------------ */
+
   const [loggedIn, setLoggedIn] = useState(false);
   const [loginUser, setLoginUser] = useState("gallardo1337");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginErr, setLoginErr] = useState(null);
   const [loginLoading, setLoginLoading] = useState(false);
 
-  // Filter popover open/close
+  /* ------------------------------------------------------------------------ */
+  /* ----------------------------- TEIL 6.3: FILTER UI ---------------------- */
+  /* ------------------------------------------------------------------------ */
+
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  // Filters: core
   const [selectedTags, setSelectedTags] = useState([]);
   const [selectedStudio, setSelectedStudio] = useState("");
   const [yearFrom, setYearFrom] = useState("");
   const [yearTo, setYearTo] = useState("");
 
-  // Actor filters
   const [selectedMainActors, setSelectedMainActors] = useState([]); // IDs (string)
   const [selectedSupportingActors, setSelectedSupportingActors] = useState([]); // names
 
-  // Filter UI state
   const [tagSearch, setTagSearch] = useState("");
   const [mainActorSearch, setMainActorSearch] = useState("");
   const [suppActorSearch, setSuppActorSearch] = useState("");
@@ -230,11 +285,17 @@ export default function HomePage() {
   const [mainSelectedOnly, setMainSelectedOnly] = useState(false);
   const [suppSelectedOnly, setSuppSelectedOnly] = useState(false);
 
-  // Refs
+  /* ------------------------------------------------------------------------ */
+  /* ----------------------------- TEIL 6.4: REFS --------------------------- */
+  /* ------------------------------------------------------------------------ */
+
   const searchWrapRef = useRef(null);
   const searchInputRef = useRef(null);
 
-  // Session check
+  /* ------------------------------------------------------------------------ */
+  /* ----------------------------- TEIL 6.5: SESSION CHECK ------------------ */
+  /* ------------------------------------------------------------------------ */
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const flag = window.localStorage.getItem("auth_1337_flag");
@@ -247,7 +308,10 @@ export default function HomePage() {
     }
   }, []);
 
-  // Close popover on outside click
+  /* ------------------------------------------------------------------------ */
+  /* ----------------------------- TEIL 6.6: OUTSIDE CLICK CLOSE ------------ */
+  /* ------------------------------------------------------------------------ */
+
   useEffect(() => {
     if (!filtersOpen) return;
 
@@ -266,7 +330,10 @@ export default function HomePage() {
     };
   }, [filtersOpen]);
 
-  // Load data
+  /* ------------------------------------------------------------------------ */
+  /* ----------------------------- TEIL 6.7: LOAD DATA ---------------------- */
+  /* ------------------------------------------------------------------------ */
+
   useEffect(() => {
     if (!loggedIn) {
       setMovies([]);
@@ -368,7 +435,10 @@ export default function HomePage() {
     void load();
   }, [loggedIn]);
 
-  // Options
+  /* ------------------------------------------------------------------------ */
+  /* ----------------------------- TEIL 6.8: OPTIONS (DERIVED LISTS) -------- */
+  /* ------------------------------------------------------------------------ */
+
   const allTags = useMemo(() => {
     const set = new Set();
     movies.forEach((m) => (m.tags || []).forEach((t) => set.add(t)));
@@ -395,7 +465,10 @@ export default function HomePage() {
     return Array.from(set).sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
   }, [movies]);
 
-  // Filter engine (STRICT UND)
+  /* ------------------------------------------------------------------------ */
+  /* ----------------------------- TEIL 6.9: FILTER ENGINE ------------------ */
+  /* ------------------------------------------------------------------------ */
+
   const applyAdvancedFilters = (baseList) => {
     let list = baseList;
 
@@ -451,7 +524,10 @@ export default function HomePage() {
   const showMovies = viewMode === "movies";
   const movieList = showMovies ? visibleMovies : [];
 
-  // Actions
+  /* ------------------------------------------------------------------------ */
+  /* ----------------------------- TEIL 6.10: ACTIONS (NAV + SEARCH) -------- */
+  /* ------------------------------------------------------------------------ */
+
   const handleShowMoviesForActor = (actorId, actorName) => {
     const subset = movies.filter((movie) => Array.isArray(movie.mainActorIds) && movie.mainActorIds.includes(actorId));
     const filtered = applyAdvancedFilters(subset);
@@ -511,6 +587,10 @@ export default function HomePage() {
     setMoviesSubtitle("");
   };
 
+  /* ------------------------------------------------------------------------ */
+  /* ----------------------------- TEIL 6.11: AUTH ACTIONS ------------------ */
+  /* ------------------------------------------------------------------------ */
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoginErr(null);
@@ -562,9 +642,17 @@ export default function HomePage() {
     setFiltersOpen(false);
   };
 
+  /* ------------------------------------------------------------------------ */
+  /* ----------------------------- TEIL 6.12: MISC DERIVED ------------------ */
+  /* ------------------------------------------------------------------------ */
+
   const heroCounts = useMemo(() => {
     return { movieCount: movies.length || 0, actorCount: actors.length || 0 };
   }, [movies.length, actors.length]);
+
+  /* ------------------------------------------------------------------------ */
+  /* ----------------------------- TEIL 6.13: FILTER ACTIONS ---------------- */
+  /* ------------------------------------------------------------------------ */
 
   const resetFilters = () => {
     setSelectedTags([]);
@@ -604,6 +692,10 @@ export default function HomePage() {
   const toggleSupportingActor = (name) =>
     setSelectedSupportingActors((prev) => (prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name]));
 
+  /* ------------------------------------------------------------------------ */
+  /* ----------------------------- TEIL 6.14: ITEMS FOR FILTERSECTION ------- */
+  /* ------------------------------------------------------------------------ */
+
   const tagItems = useMemo(() => allTags.map((t) => ({ key: t, label: t })), [allTags]);
   const mainItems = useMemo(
     () => mainActorOptions.map((a) => ({ key: String(a.id), label: a.name })),
@@ -611,8 +703,18 @@ export default function HomePage() {
   );
   const suppItems = useMemo(() => supportingActorOptions.map((n) => ({ key: n, label: n })), [supportingActorOptions]);
 
+  /* ------------------------------------------------------------------------ */
+  /* ------------------------------------------------------------------------ */
+  /* ----------------------------- TEIL 7: RENDER --------------------------- */
+  /* ------------------------------------------------------------------------ */
+  /* ------------------------------------------------------------------------ */
+
   return (
     <div className="nfx">
+      {/* -------------------------------------------------------------------- */}
+      {/* -------------------------- TEIL 7.1: GLOBAL STYLES ------------------ */}
+      {/* -------------------------------------------------------------------- */}
+
       <style jsx global>{`
         :root {
           --bg: #0b0b0f;
@@ -1367,7 +1469,10 @@ export default function HomePage() {
         }
       `}</style>
 
-      {/* Topbar */}
+      {/* -------------------------------------------------------------------- */}
+      {/* -------------------------- TEIL 7.2: TOPBAR ------------------------- */}
+      {/* -------------------------------------------------------------------- */}
+
       <div className="topbar">
         <div className="topbar__left" />
 
@@ -1405,7 +1510,10 @@ export default function HomePage() {
                 ) : null}
               </div>
 
-              {/* Filter Popover (öffnet bei Fokus) */}
+              {/* ---------------------------------------------------------------- */}
+              {/* ---------------------- TEIL 7.3: FILTER POPOVER ----------------- */}
+              {/* ---------------------------------------------------------------- */}
+
               {filtersOpen && (
                 <div
                   className="filterPopover"
@@ -1543,7 +1651,9 @@ export default function HomePage() {
                                     {yearTo ? <Pill>bis {yearTo}</Pill> : null}
                                     {selectedTags.length ? <Pill>{selectedTags.length} Tags</Pill> : null}
                                     {selectedMainActors.length ? <Pill>{selectedMainActors.length} Haupt</Pill> : null}
-                                    {selectedSupportingActors.length ? <Pill>{selectedSupportingActors.length} Neben</Pill> : null}
+                                    {selectedSupportingActors.length ? (
+                                      <Pill>{selectedSupportingActors.length} Neben</Pill>
+                                    ) : null}
                                   </div>
                                 </div>
                               </>
@@ -1599,6 +1709,10 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* -------------------------------------------------------------------- */}
+      {/* -------------------------- TEIL 7.4: MAIN WRAP ---------------------- */}
+      {/* -------------------------------------------------------------------- */}
+
       <div className="wrap">
         {/* Logo */}
         <div className="logoSolo">
@@ -1610,7 +1724,10 @@ export default function HomePage() {
         {loginErr ? <div className="errorBanner">{loginErr}</div> : null}
         {err ? <div className="errorBanner">{err}</div> : null}
 
-        {/* Content */}
+        {/* ------------------------------------------------------------------ */}
+        {/* ---------------------- TEIL 7.5: CONTENT SWITCH ------------------- */}
+        {/* ------------------------------------------------------------------ */}
+
         {!loggedIn ? (
           <EmptyState
             title="Bitte einloggen"
@@ -1632,6 +1749,10 @@ export default function HomePage() {
           </>
         ) : showMovies ? (
           <>
+            {/* -------------------------------------------------------------- */}
+            {/* ---------------- TEIL 7.6: MOVIES VIEW ------------------------ */}
+            {/* -------------------------------------------------------------- */}
+
             <div className="sectionHead">
               <div>
                 <div className="sectionTitle">{moviesTitle}</div>
@@ -1699,12 +1820,14 @@ export default function HomePage() {
           </>
         ) : (
           <>
+            {/* -------------------------------------------------------------- */}
+            {/* ---------------- TEIL 7.7: ACTORS VIEW ------------------------ */}
+            {/* -------------------------------------------------------------- */}
+
             <div className="sectionHead">
               <div>
                 <div className="sectionTitle">Hauptdarsteller</div>
-                <div className="sectionMeta">
-                  {actors.length} Darsteller
-                </div>
+                <div className="sectionMeta">{actors.length} Darsteller</div>
               </div>
 
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
