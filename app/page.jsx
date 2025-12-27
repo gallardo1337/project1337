@@ -1501,9 +1501,7 @@ export default function HomePage() {
         }
 
         /* ---------------- MOBILE SEARCH (Lupe + Overlay) ---------------- */
-        .mOnly {
-          display: none;
-        }
+
         .iconBtn {
           width: 42px;
           height: 42px;
@@ -1525,6 +1523,11 @@ export default function HomePage() {
           width: 18px;
           height: 18px;
           opacity: 0.9;
+        }
+
+        /* FIX: mOnly darf auf Desktop NICHT sichtbar sein (Spezifität > .iconBtn) */
+        .iconBtn.mOnly {
+          display: none;
         }
 
         .mSearch {
@@ -1603,8 +1606,10 @@ export default function HomePage() {
           .topbar__mid {
             display: none; /* Search im Header weg auf Mobile */
           }
-          .mOnly {
-            display: inline-grid; /* Lupe anzeigen */
+
+          /* FIX: nur auf Mobile die Lupe zeigen */
+          .iconBtn.mOnly {
+            display: inline-grid;
           }
         }
         @media (max-width: 420px) {
@@ -1871,7 +1876,13 @@ export default function HomePage() {
       {/* -------------------------------------------------------------------- */}
 
       {loggedIn && mobileSearchOpen ? (
-        <div className="mSearch" role="dialog" aria-modal="true" onMouseDown={closeMobileSearch} onTouchStart={closeMobileSearch}>
+        <div
+          className="mSearch"
+          role="dialog"
+          aria-modal="true"
+          onMouseDown={closeMobileSearch}
+          onTouchStart={closeMobileSearch}
+        >
           <div
             className="mSearch__panel"
             onMouseDown={(e) => e.stopPropagation()}
