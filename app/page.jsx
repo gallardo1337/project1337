@@ -46,6 +46,15 @@ function includesLoose(hay, needle) {
     .includes(String(needle || "").toLowerCase());
 }
 
+function isUuid(v) {
+  return (
+    typeof v === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      v
+    )
+  );
+}
+
 function FilterSection({
   title,
   subtitle,
@@ -433,6 +442,7 @@ export default function HomePage() {
         const actorList = mainActors
           .map((a) => ({
             id: a.id,
+            slug: a.slug || null,
             name: a.name,
             profileImage: a.profile_image || null,
             movieCount: movieCountByActorId.get(a.id) || 0,
@@ -452,15 +462,24 @@ export default function HomePage() {
         }
 
         if (actorParam) {
-          const actorId = Number(actorParam);
-          const actor = actorList.find((a) => Number(a.id) === actorId);
+          const actor =
+            isUuid(actorParam)
+              ? actorList.find((a) => String(a.id) === String(actorParam))
+              : actorList.find((a) => String(a.slug) === String(actorParam));
 
           if (actor) {
             const subset = mappedMovies.filter(
               (movie) =>
                 Array.isArray(movie.mainActorIds) &&
-                movie.mainActorIds.includes(actorId)
+                movie.mainActorIds.includes(actor.id)
             );
+
+            // Auto-rewrite old UUID URL -> slug URL (if available)
+            if (isUuid(actorParam) && actor.slug) {
+              const sp = new URLSearchParams(window.location.search || "");
+              sp.set("actor", actor.slug);
+              router.replace(`/?${sp.toString()}`, { scroll: false });
+            }
 
             setMoviesTitle(actor.name);
             setMoviesSubtitle(`${subset.length} Film(e)`);
@@ -487,7 +506,7 @@ export default function HomePage() {
     };
 
     void load();
-  }, [loggedIn]);
+  }, [loggedIn, router]);
 
   const allTags = useMemo(() => {
     const set = new Set();
@@ -606,8 +625,9 @@ export default function HomePage() {
   const showMovies = viewMode === "movies";
   const movieList = showMovies ? visibleMovies : [];
 
-  const handleShowMoviesForActor = (actorId, actorName) => {
-    router.replace(`/?actor=${encodeURIComponent(actorId)}`, { scroll: false });
+  const handleShowMoviesForActor = (actorId, actorName, actorSlug) => {
+    const urlVal = actorSlug ? actorSlug : actorId;
+    router.replace(`/?actor=${encodeURIComponent(urlVal)}`, { scroll: false });
 
     const subset = movies.filter(
       (movie) =>
@@ -1943,7 +1963,9 @@ export default function HomePage() {
                                     {selectedResolution ? (
                                       <Pill>{selectedResolution}</Pill>
                                     ) : null}
-                                    {yearFrom ? <Pill>ab {yearFrom}</Pill> : null}
+                                    {yearFrom ? (
+                                      <Pill>ab {yearFrom}</Pill>
+                                    ) : null}
                                     {yearTo ? <Pill>bis {yearTo}</Pill> : null}
                                     {selectedTags.length ? (
                                       <Pill>{selectedTags.length} Tags</Pill>
@@ -2502,13 +2524,15 @@ export default function HomePage() {
                   <div
                     key={a.id}
                     className="card"
-                    onClick={() => handleShowMoviesForActor(a.id, a.name)}
+                    onClick={() =>
+                      handleShowMoviesForActor(a.id, a.name, a.slug)
+                    }
                     title={`${a.name} öffnen`}
                     role="button"
                     tabIndex={0}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ")
-                        handleShowMoviesForActor(a.id, a.name);
+                        handleShowMoviesForActor(a.id, a.name, a.slug);
                     }}
                   >
                     <div className="card__img">
