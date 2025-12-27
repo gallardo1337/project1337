@@ -1767,7 +1767,10 @@ export default function HomePage() {
             </div>
 
             {movieList.length === 0 ? (
-              <EmptyState title="Keine Filme gefunden" subtitle="Passe Suche/Filter an oder gehe zurück zur Darsteller-Ansicht." />
+              <EmptyState
+                title="Keine Filme gefunden"
+                subtitle="Passe Suche/Filter an oder gehe zurück zur Darsteller-Ansicht."
+              />
             ) : (
               <div className="movieGrid">
                 {movieList.map((m) => (
@@ -1795,7 +1798,12 @@ export default function HomePage() {
                     </div>
 
                     <div className="movieCard__actions">
-                      <button type="button" className="btn btn--primary" onClick={() => safeOpen(m.fileUrl)} title="Film starten">
+                      <button
+                        type="button"
+                        className="btn btn--primary"
+                        onClick={() => safeOpen(m.fileUrl)}
+                        title="Film starten"
+                      >
                         Play
                       </button>
                       <button
@@ -1818,7 +1826,7 @@ export default function HomePage() {
               </div>
             )}
           </>
-         ) : (
+        ) : (
           <>
             {/* -------------------------------------------------------------------------- */}
             {/* --------------------------- TEIL 7.7: ACTORS VIEW ------------------------ */}
@@ -1899,3 +1907,7 @@ export default function HomePage() {
             )}
           </>
         )}
+      </div>
+    </div>
+  );
+}
