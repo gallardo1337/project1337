@@ -2422,9 +2422,22 @@ export default function HomePage() {
       ) : null}
 
       <div className="wrap">
-        <div className="logoSolo">
-          <img className="logoSolo__img" src="/logo.png" alt="Project1337 Logo" />
-        </div>
+<div className="logoSolo">
+  <button
+    type="button"
+    className="logoBtn"
+    onClick={() => {
+      router.replace("/", { scroll: false });
+      setViewMode("actors");
+      setVisibleMovies([]);
+      setSearch("");
+    }}
+    title="Zur Hauptseite"
+    aria-label="Zur Hauptseite"
+  >
+    <img className="logoSolo__img" src="/logo.png" alt="Project1337 Logo" />
+  </button>
+</div>
 
         {loginErr ? <div className="errorBanner">{loginErr}</div> : null}
         {err ? <div className="errorBanner">{err}</div> : null}
