@@ -37,14 +37,13 @@ import { supabase } from "../lib/supabaseClient";
  * UPDATE (Resolution Filter):
  * - Resolutions werden aus Supabase Tabelle "resolutions" geladen
  * - Movie Mapping enthält resolution (Name)
- * - Basis-Filter erweitert: Resolution (Alle / 4K / FullHD / Retro .)
+ * - Basis-Filter erweitert: Resolution (Alle / 4K / FullHD / Retro ...)
  * - Suche berücksichtigt Resolution ebenfalls
  * - Movie Cards zeigen Resolution
  *
- * UPDATE (Movie Thumbnails):
- * - Movie Mapping enthält thumbnailUrl (aus movies.thumbnail_url)
- * - Movie Cards zeigen Thumbnail im 16:9 Container
- * - Kein Crop: object-fit: contain (16:9 bleibt vollständig erhalten)
+ * UPDATE (Movie Thumbnail):
+ * - Movies haben optional `thumbnail_url` (Hostinger Upload im Dashboard)
+ * - Movie Cards zeigen Thumbnail (nur wenn vorhanden)
  */
 
 /* -------------------------------------------------------------------------- */
@@ -161,28 +160,64 @@ function FilterSection({
           </div>
         </div>
         <div className="fsec__headR">
-          <span className="fsec__chev">{open ? "▾" : "▸"}</span>
+          <span className="fsec__chev">{open ? "—" : "+"}</span>
         </div>
       </button>
 
-      {open ? (
+      {open && (
         <div className="fsec__body">
           <div className="fsec__tools">
-            <div className="fsec__search">
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Suchen…"
-                className="fsec__searchInput"
-              />
+            <div className="fsearch">
+              <svg className="fsearch__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path
+                  d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                />
+                <path d="M16.5 16.5 21 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Suchen…" />
+              {search ? (
+                <button type="button" className="btn btn--ghost btn--xs" onClick={() => setSearch("")}>
+                  Reset
+                </button>
+              ) : null}
             </div>
-            <label className="fsec__toggle">
-              <input type="checkbox" checked={showSelectedOnly} onChange={(e) => setShowSelectedOnly(e.target.checked)} />
-              <span>Nur aktiv</span>
+
+            <label className="toggle">
+              <input
+                type="checkbox"
+                checked={showSelectedOnly}
+                onChange={(e) => setShowSelectedOnly(e.target.checked)}
+              />
+              <span>Nur Auswahl</span>
             </label>
           </div>
 
-          <div className="fsec__list">
+          {selectedKeys.length > 0 ? (
+            <div className="chipsRow">
+              {selectedKeys.slice(0, 14).map((k) => {
+                const it = items.find((x) => String(getKey(x)) === String(k));
+                const label = it ? getLabel(it) : String(k);
+                return (
+                  <button
+                    key={`sel-${title}-${k}`}
+                    type="button"
+                    className="selChip"
+                    onClick={() => onToggle(k)}
+                    title="Entfernen"
+                  >
+                    <span className="selChip__dot" />
+                    <span className="selChip__txt">{label}</span>
+                    <span className="selChip__x">×</span>
+                  </button>
+                );
+              })}
+              {selectedKeys.length > 14 ? <Pill>+{selectedKeys.length - 14}</Pill> : null}
+            </div>
+          ) : null}
+
+          <div className="pickList">
             {filtered.length === 0 ? (
               <div className="pickEmpty">Keine Treffer</div>
             ) : (
@@ -191,22 +226,22 @@ function FilterSection({
                 const active = selectedSet.has(key);
                 return (
                   <button
-                    key={key}
+                    key={`${title}-${key}`}
                     type="button"
                     className={`pick ${active ? "pick--on" : ""}`}
-                    onClick={() => onToggle(getKey(it))}
+                    onClick={() => onToggle(key)}
                     title={getLabel(it)}
                   >
                     <span className="pick__dot" />
                     <span className="pick__txt">{getLabel(it)}</span>
-                    <span className="pick__state">{active ? "AN" : "AUS"}</span>
+                    <span className="pick__state">{active ? "ON" : ""}</span>
                   </button>
                 );
               })
             )}
           </div>
         </div>
-      ) : null}
+      )}
     </div>
   );
 }
@@ -214,43 +249,53 @@ function FilterSection({
 /* -------------------------------------------------------------------------- */
 /* -------------------------------------------------------------------------- */
 /* -------------------------------------------------------------------------- */
-/* ----------------------------- TEIL 6: PAGE ------------------------------- */
+/* ----------------------- TEIL 6: MAIN COMPONENT START --------------------- */
 /* -------------------------------------------------------------------------- */
 /* -------------------------------------------------------------------------- */
 /* -------------------------------------------------------------------------- */
 
-export default function Page() {
-  const [mounted, setMounted] = useState(false);
-
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState(null);
+export default function HomePage() {
+  /* ------------------------------------------------------------------------ */
+  /* ----------------------------- TEIL 6.1: STATE -------------------------- */
+  /* ------------------------------------------------------------------------ */
 
   const [movies, setMovies] = useState([]);
-  const [actors, setActors] = useState([]);
-  const [studios, setStudios] = useState([]);
-  const [tags, setTags] = useState([]);
-  const [resolutions, setResolutions] = useState([]);
-
+  const [actors, setActors] = useState([]); // Hauptdarsteller
   const [viewMode, setViewMode] = useState("actors"); // "actors" | "movies"
   const [visibleMovies, setVisibleMovies] = useState([]);
   const [moviesTitle, setMoviesTitle] = useState("Filme");
   const [moviesSubtitle, setMoviesSubtitle] = useState("");
-
-  // Search
   const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState(null);
 
-  // Advanced filters
+  /* Mobile Search Overlay */
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+
+  /* ------------------------------------------------------------------------ */
+  /* ----------------------------- TEIL 6.2: LOGIN -------------------------- */
+  /* ------------------------------------------------------------------------ */
+
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [loginUser, setLoginUser] = useState("gallardo1337");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginErr, setLoginErr] = useState(null);
+  const [loginLoading, setLoginLoading] = useState(false);
+
+  /* ------------------------------------------------------------------------ */
+  /* ----------------------------- TEIL 6.3: FILTER UI ---------------------- */
+  /* ------------------------------------------------------------------------ */
+
   const [filtersOpen, setFiltersOpen] = useState(false);
 
+  const [selectedTags, setSelectedTags] = useState([]);
   const [selectedStudio, setSelectedStudio] = useState("");
-  const [selectedResolution, setSelectedResolution] = useState("");
-
+  const [selectedResolution, setSelectedResolution] = useState(""); // single select (Name)
   const [yearFrom, setYearFrom] = useState("");
   const [yearTo, setYearTo] = useState("");
 
-  const [selectedTags, setSelectedTags] = useState([]);
-  const [selectedMainActors, setSelectedMainActors] = useState([]);
-  const [selectedSupportingActors, setSelectedSupportingActors] = useState([]);
+  const [selectedMainActors, setSelectedMainActors] = useState([]); // IDs (string)
+  const [selectedSupportingActors, setSelectedSupportingActors] = useState([]); // names
 
   const [tagSearch, setTagSearch] = useState("");
   const [mainActorSearch, setMainActorSearch] = useState("");
@@ -260,14 +305,88 @@ export default function Page() {
   const [mainSelectedOnly, setMainSelectedOnly] = useState(false);
   const [suppSelectedOnly, setSuppSelectedOnly] = useState(false);
 
-  // Mobile search overlay
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  /* ------------------------------------------------------------------------ */
+  /* ----------------------------- TEIL 6.4: REFS --------------------------- */
+  /* ------------------------------------------------------------------------ */
+
+  const searchWrapRef = useRef(null);
+  const searchInputRef = useRef(null);
   const mobileSearchInputRef = useRef(null);
 
-  useEffect(() => setMounted(true), []);
+  /* ------------------------------------------------------------------------ */
+  /* ----------------------------- TEIL 6.5: SESSION CHECK ------------------ */
+  /* ------------------------------------------------------------------------ */
 
   useEffect(() => {
-    if (!mounted) return;
+    if (typeof window === "undefined") return;
+    const flag = window.localStorage.getItem("auth_1337_flag");
+    const user = window.localStorage.getItem("auth_1337_user");
+    if (flag === "1" && user) {
+      setLoggedIn(true);
+      setLoginUser(user);
+    } else {
+      setLoggedIn(false);
+    }
+  }, []);
+
+  /* ------------------------------------------------------------------------ */
+  /* ----------------------------- TEIL 6.6: OUTSIDE CLICK CLOSE ------------ */
+  /* ------------------------------------------------------------------------ */
+
+  useEffect(() => {
+    if (!filtersOpen && !mobileSearchOpen) return;
+
+    const onDown = (e) => {
+      // Wenn Overlay offen: nur Overlay-Panel "durchlassen"
+      if (mobileSearchOpen) {
+        const panel = document.querySelector(".mSearch__panel");
+        if (panel && panel.contains(e.target)) return;
+        setMobileSearchOpen(false);
+        setFiltersOpen(false);
+        return;
+      }
+
+      // Normal: Popover schließt bei Click außerhalb des SearchWrap
+      const root = searchWrapRef.current;
+      if (!root) return;
+      if (!root.contains(e.target)) setFiltersOpen(false);
+    };
+
+    document.addEventListener("mousedown", onDown, true);
+    document.addEventListener("touchstart", onDown, true);
+
+    return () => {
+      document.removeEventListener("mousedown", onDown, true);
+      document.removeEventListener("touchstart", onDown, true);
+    };
+  }, [filtersOpen, mobileSearchOpen]);
+
+  /* ESC schließt Mobile-Overlay */
+  useEffect(() => {
+    if (!mobileSearchOpen) return;
+
+    const onKey = (e) => {
+      if (e.key === "Escape") {
+        setMobileSearchOpen(false);
+        setFiltersOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mobileSearchOpen]);
+
+  /* ------------------------------------------------------------------------ */
+  /* ----------------------------- TEIL 6.7: LOAD DATA ---------------------- */
+  /* ------------------------------------------------------------------------ */
+
+  useEffect(() => {
+    if (!loggedIn) {
+      setMovies([]);
+      setActors([]);
+      setVisibleMovies([]);
+      setLoading(false);
+      return;
+    }
 
     const load = async () => {
       try {
@@ -320,10 +439,10 @@ export default function Page() {
             title: m.title,
             year: m.year,
             fileUrl: m.file_url,
-            thumbnailUrl: m.thumbnail_url || null,
             studio: m.studio_id ? studioMap[m.studio_id] || null : null,
             resolution: resolutionName,
-            actors: allActors,
+            thumbnailUrl: m.thumbnail_url || null, // NEU
+            actors: allActors, // names
             tags: tagNames,
             mainActorIds: mainIds,
             mainActorNames: mainNames,
@@ -331,39 +450,46 @@ export default function Page() {
           };
         });
 
-        // Actors view uses only main actors (actors table)
-        const mainActorsMapped = (mainActors || []).map((a) => ({
-          id: a.id,
-          name: a.name,
-          image: a.profile_image || null,
-        }));
-
-        // Sort stable
-        mainActorsMapped.sort((a, b) => (a.name || "").localeCompare(b.name || "", "de", { sensitivity: "base" }));
-
         setMovies(mappedMovies);
-        setActors(mainActorsMapped);
-        setStudios(studios.map((s) => s.name).filter(Boolean).sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" })));
-        setTags(tags.map((t) => t.name).filter(Boolean).sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" })));
-        setResolutions(resolutions.map((r) => r.name).filter(Boolean).sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" })));
 
-        setVisibleMovies([]);
+        // main actor list + counts
+        const movieCountByActorId = new Map();
+        moviesData.forEach((m) => {
+          const arr = Array.isArray(m.main_actor_ids) ? m.main_actor_ids : [];
+          arr.forEach((id) => {
+            movieCountByActorId.set(id, (movieCountByActorId.get(id) || 0) + 1);
+          });
+        });
+
+        const actorList = mainActors
+          .map((a) => ({
+            id: a.id,
+            name: a.name,
+            profileImage: a.profile_image || null,
+            movieCount: movieCountByActorId.get(a.id) || 0,
+          }))
+          .filter((a) => a.movieCount > 0)
+          .sort((a, b) => a.name.localeCompare(b.name, "de", { sensitivity: "base" }));
+
+        setActors(actorList);
+
         setViewMode("actors");
+        setVisibleMovies([]);
         setMoviesTitle("Filme");
         setMoviesSubtitle("");
       } catch (e) {
         console.error(e);
-        setErr(e?.message || "Fehler beim Laden.");
+        setErr("Fehler beim Laden der Daten.");
       } finally {
         setLoading(false);
       }
     };
 
-    load();
-  }, [mounted]);
+    void load();
+  }, [loggedIn]);
 
   /* ------------------------------------------------------------------------ */
-  /* ----------------------------- TEIL 6.1: FILTER DATA -------------------- */
+  /* ----------------------------- TEIL 6.8: OPTIONS (DERIVED LISTS) -------- */
   /* ------------------------------------------------------------------------ */
 
   const allTags = useMemo(() => {
@@ -372,9 +498,26 @@ export default function Page() {
     return Array.from(set).sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
   }, [movies]);
 
+  const allStudios = useMemo(() => {
+    const set = new Set();
+    movies.forEach((m) => {
+      if (m.studio) set.add(m.studio);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
+  }, [movies]);
+
+  const allResolutions = useMemo(() => {
+    const set = new Set();
+    movies.forEach((m) => {
+      if (m.resolution) set.add(m.resolution);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
+  }, [movies]);
+
   const mainActorOptions = useMemo(() => {
-    // main actors are from actors[] (actors table)
-    return (actors || []).map((a) => ({ id: a.id, name: a.name }));
+    return (actors || [])
+      .map((a) => ({ id: a.id, name: a.name }))
+      .sort((a, b) => a.name.localeCompare(b.name, "de", { sensitivity: "base" }));
   }, [actors]);
 
   const supportingActorOptions = useMemo(() => {
@@ -384,14 +527,13 @@ export default function Page() {
   }, [movies]);
 
   /* ------------------------------------------------------------------------ */
-  /* ----------------------------- TEIL 6.2: FILTER ENGINE ------------------ */
+  /* ----------------------------- TEIL 6.9: FILTER ENGINE ------------------ */
   /* ------------------------------------------------------------------------ */
 
   const applyAdvancedFilters = (baseList) => {
     let list = baseList;
 
     if (selectedStudio) list = list.filter((m) => (m.studio || "") === selectedStudio);
-
     if (selectedResolution) list = list.filter((m) => (m.resolution || "") === selectedResolution);
 
     const yf = yearFrom ? parseInt(yearFrom, 10) : null;
@@ -454,7 +596,7 @@ export default function Page() {
   const movieList = showMovies ? visibleMovies : [];
 
   /* ------------------------------------------------------------------------ */
-  /* ----------------------------- TEIL 6.3: ACTIONS (NAV + SEARCH) --------- */
+  /* ----------------------------- TEIL 6.10: ACTIONS (NAV + SEARCH) -------- */
   /* ------------------------------------------------------------------------ */
 
   const handleShowMoviesForActor = (actorId, actorName) => {
@@ -500,8 +642,8 @@ export default function Page() {
         movie.title || "",
         movie.studio || "",
         movie.resolution || "",
-        (movie.actors || []).join(" "),
-        (movie.tags || []).join(" "),
+        movie.actors.join(" "),
+        movie.tags.join(" "),
       ]
         .join(" ")
         .toLowerCase();
@@ -523,7 +665,71 @@ export default function Page() {
   };
 
   /* ------------------------------------------------------------------------ */
-  /* ----------------------------- TEIL 6.4: FILTER ACTIONS ----------------- */
+  /* ----------------------------- TEIL 6.11: AUTH ACTIONS ------------------ */
+  /* ------------------------------------------------------------------------ */
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoginErr(null);
+    setLoginLoading(true);
+
+    try {
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: loginUser, password: loginPassword }),
+      });
+
+      if (!res.ok) {
+        setLoginErr(res.status === 401 ? "User oder Passwort falsch." : "Login fehlgeschlagen.");
+        return;
+      }
+
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("auth_1337_flag", "1");
+        window.localStorage.setItem("auth_1337_user", loginUser);
+      }
+      setLoggedIn(true);
+      setLoginErr(null);
+      setLoginPassword("");
+    } catch (error) {
+      console.error(error);
+      setLoginErr("Netzwerkfehler beim Login.");
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/logout", { method: "POST" });
+    } catch {
+      // ignore
+    }
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem("auth_1337_flag");
+      window.localStorage.removeItem("auth_1337_user");
+    }
+    setLoggedIn(false);
+    setSearch("");
+    setViewMode("actors");
+    setVisibleMovies([]);
+    setMoviesTitle("Filme");
+    setMoviesSubtitle("");
+    setFiltersOpen(false);
+    setMobileSearchOpen(false);
+  };
+
+  /* ------------------------------------------------------------------------ */
+  /* ----------------------------- TEIL 6.12: MISC DERIVED ------------------ */
+  /* ------------------------------------------------------------------------ */
+
+  const heroCounts = useMemo(() => {
+    return { movieCount: movies.length || 0, actorCount: actors.length || 0 };
+  }, [movies.length, actors.length]);
+
+  /* ------------------------------------------------------------------------ */
+  /* ----------------------------- TEIL 6.13: FILTER ACTIONS ---------------- */
   /* ------------------------------------------------------------------------ */
 
   const resetFilters = () => {
@@ -567,7 +773,7 @@ export default function Page() {
     setSelectedSupportingActors((prev) => (prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name]));
 
   /* ------------------------------------------------------------------------ */
-  /* ----------------------------- TEIL 6.5: ITEMS FOR FILTERSECTION -------- */
+  /* ----------------------------- TEIL 6.14: ITEMS FOR FILTERSECTION ------- */
   /* ------------------------------------------------------------------------ */
 
   const tagItems = useMemo(() => allTags.map((t) => ({ key: t, label: t })), [allTags]);
@@ -578,7 +784,7 @@ export default function Page() {
   const suppItems = useMemo(() => supportingActorOptions.map((n) => ({ key: n, label: n })), [supportingActorOptions]);
 
   /* ------------------------------------------------------------------------ */
-  /* ----------------------------- TEIL 6.6: MOBILE SEARCH OPEN ------------- */
+  /* ----------------------------- TEIL 6.15: MOBILE SEARCH OPEN ------------ */
   /* ------------------------------------------------------------------------ */
 
   const openMobileSearch = () => {
@@ -631,59 +837,50 @@ export default function Page() {
 
         .nfx {
           min-height: 100vh;
-          background: radial-gradient(1200px 700px at 15% 15%, rgba(229, 9, 20, 0.22), transparent 60%),
-            radial-gradient(1200px 700px at 80% 85%, rgba(229, 9, 20, 0.16), transparent 55%),
-            linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 28%);
-          padding: 22px 14px 40px;
+          background:
+            radial-gradient(1200px 700px at 15% 15%, rgba(229, 9, 20, 0.25), transparent 55%),
+            radial-gradient(900px 600px at 85% 10%, rgba(255, 255, 255, 0.08), transparent 55%),
+            radial-gradient(900px 700px at 60% 80%, rgba(255, 255, 255, 0.06), transparent 60%),
+            linear-gradient(180deg, rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0.95));
         }
 
+        /* Topbar */
         .topbar {
-          width: 100%;
-          max-width: 1280px;
-          margin: 0 auto 16px;
-          display: flex;
+          position: sticky;
+          top: 0;
+          z-index: 50;
+          padding: 10px 18px;
+          display: grid;
+          grid-template-columns: 1fr minmax(0, 860px) 1fr;
           align-items: center;
-          justify-content: space-between;
           gap: 12px;
+          background: rgba(0, 0, 0, 0.55);
+          backdrop-filter: blur(14px);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
         }
-        .brand {
-          display: flex;
-          align-items: baseline;
-          gap: 10px;
-          user-select: none;
+        .topbar__left {
+          /* spacer only */
         }
-        .brand__logo {
-          font-weight: 1000;
-          letter-spacing: -0.02em;
-          font-size: 20px;
-        }
-        .brand__tag {
-          font-size: 12px;
-          font-weight: 900;
-          color: rgba(255, 255, 255, 0.62);
-          text-transform: uppercase;
-          letter-spacing: 0.12em;
-        }
-
-        .pill {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          border-radius: 999px;
-          padding: 4px 10px;
-          background: rgba(255, 255, 255, 0.06);
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          color: rgba(255, 255, 255, 0.78);
-          font-size: 12px;
-          font-weight: 800;
-        }
-
-        /* Input */
-        .input {
-          display: flex;
-          align-items: center;
-          gap: 10px;
+        .topbar__mid {
+          justify-self: center;
           width: 100%;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+        .topbar__right {
+          justify-self: end;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        /* Search */
+        .input {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          gap: 10px;
           background: rgba(255, 255, 255, 0.06);
           border: 1px solid rgba(255, 255, 255, 0.12);
           border-radius: 999px;
@@ -754,6 +951,12 @@ export default function Page() {
           font-size: 12px;
         }
 
+        .auth__label {
+          color: rgba(255, 255, 255, 0.72);
+          font-weight: 700;
+          font-size: 13px;
+        }
+
         /* Popover anchor */
         .searchWrap {
           position: relative;
@@ -806,120 +1009,105 @@ export default function Page() {
         /* Layout */
         .wrap {
           width: 100%;
-          max-width: 1280px;
+          max-width: 1240px;
           margin: 0 auto;
-          display: grid;
-          gap: 16px;
+          padding: 0 18px 70px;
+        }
+
+        /* Logo frei (ohne Box) */
+        .logoSolo {
+          margin-top: 22px;
+          display: flex;
+          justify-content: center;
+        }
+        .logoSolo__img {
+          width: min(260px, 65%);
+          height: auto;
+          display: block;
+          opacity: 0.95;
+          filter: drop-shadow(0 18px 55px rgba(0, 0, 0, 0.55));
         }
 
         .sectionHead {
           display: flex;
-          align-items: flex-end;
+          align-items: baseline;
           justify-content: space-between;
-          gap: 14px;
-          flex-wrap: wrap;
-          margin-top: 6px;
+          gap: 12px;
+          margin: 22px 2px 12px;
         }
         .sectionTitle {
-          font-size: 24px;
-          font-weight: 1000;
-          letter-spacing: -0.02em;
-          margin: 0;
+          font-size: 18px;
+          font-weight: 850;
+          letter-spacing: -0.01em;
         }
         .sectionMeta {
-          margin-top: 2px;
-          color: rgba(255, 255, 255, 0.6);
+          color: var(--muted2);
           font-size: 13px;
-          font-weight: 700;
         }
 
-        /* Empty state */
-        .empty {
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          background: rgba(255, 255, 255, 0.04);
-          border-radius: 18px;
-          padding: 18px;
-          text-align: center;
-          box-shadow: 0 20px 70px rgba(0, 0, 0, 0.35);
-        }
-        .empty__title {
-          font-weight: 950;
-          letter-spacing: -0.01em;
-          font-size: 16px;
-        }
-        .empty__sub {
-          margin-top: 6px;
-          color: rgba(255, 255, 255, 0.65);
-          font-size: 13px;
-          line-height: 1.4;
-        }
-        .empty__cta {
-          margin-top: 12px;
+        .pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 4px 8px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          color: rgba(255, 255, 255, 0.72);
+          font-size: 11px;
+          font-weight: 650;
         }
 
-        /* Skeletons */
-        .skRow {
+        /* Actor grid */
+        .row {
           display: grid;
           grid-template-columns: repeat(6, minmax(0, 1fr));
-          gap: 10px;
-        }
-        .skCard {
-          height: 110px;
-          border-radius: 18px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          background: linear-gradient(90deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.04));
-          background-size: 200% 100%;
-          animation: shimmer 1.2s infinite linear;
-        }
-        @keyframes shimmer {
-          0% {
-            background-position: 0% 0%;
-          }
-          100% {
-            background-position: -200% 0%;
-          }
+          gap: 12px;
         }
 
-        /* Cards grid (Actors) */
-        .grid {
-          display: grid;
-          grid-template-columns: repeat(6, minmax(0, 1fr));
-          gap: 10px;
-        }
+        /* Cards */
         .card {
-          border-radius: 18px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          background: rgba(255, 255, 255, 0.04);
+          position: relative;
+          border-radius: 16px;
           overflow: hidden;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: rgba(255, 255, 255, 0.05);
+          box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
           cursor: pointer;
           transition: transform 0.14s ease, border-color 0.14s ease, background 0.14s ease;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
         }
         .card:hover {
-          transform: translateY(-2px);
+          transform: translateY(-3px);
           border-color: rgba(229, 9, 20, 0.35);
-          background: rgba(255, 255, 255, 0.06);
+          background: rgba(255, 255, 255, 0.07);
         }
         .card__img {
+          position: relative;
           width: 100%;
-          aspect-ratio: 3 / 4;
-          background: rgba(255, 255, 255, 0.04);
-          display: grid;
-          place-items: center;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          aspect-ratio: 3/4;
+          background: rgba(255, 255, 255, 0.06);
+          overflow: hidden;
         }
         .card__img img {
           width: 100%;
           height: 100%;
           object-fit: cover;
           display: block;
+          transform: scale(1.02);
         }
+
         .card__badge {
           position: absolute;
-          top: 10px;
-          left: 10px;
+          right: 8px;
+          bottom: 8px;
+          z-index: 2;
+
+          width: 26px;
+          height: 26px;
+          display: grid;
+          place-items: center;
+
           border-radius: 999px;
-          padding: 6px 10px;
           border: 1px solid rgba(255, 255, 255, 0.18);
           background: rgba(0, 0, 0, 0.55);
           color: rgba(255, 255, 255, 0.92);
@@ -960,7 +1148,6 @@ export default function Page() {
           background: rgba(255, 255, 255, 0.05);
           border-radius: 18px;
           padding: 14px;
-          overflow: hidden;
           box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
           transition: transform 0.14s ease, border-color 0.14s ease, background 0.14s ease;
         }
@@ -969,22 +1156,26 @@ export default function Page() {
           border-color: rgba(229, 9, 20, 0.35);
           background: rgba(255, 255, 255, 0.07);
         }
+
+        /* NEU: Movie Thumbnail */
         .movieCard__thumb {
           width: 100%;
           aspect-ratio: 16 / 9;
           border-radius: 14px;
           overflow: hidden;
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          margin-bottom: 10px;
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          margin-bottom: 12px;
+          box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
         }
         .movieCard__thumb img {
           width: 100%;
           height: 100%;
+          object-fit: cover;
           display: block;
-          object-fit: contain; /* WICHTIG: kein Crop, 16:9 bleibt erhalten */
-          background: rgba(0, 0, 0, 0.35);
+          transform: scale(1.01);
         }
+
         .movieCard__top {
           display: flex;
           justify-content: space-between;
@@ -1033,97 +1224,303 @@ export default function Page() {
           flex-wrap: wrap;
         }
 
-        /* Filter Section */
-        .fsec {
+        /* Auth */
+        .authForm {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .authField {
+          display: flex;
+          align-items: center;
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 12px;
+          padding: 8px 10px;
+        }
+        .authField input {
+          width: 130px;
+          outline: none;
+          border: none;
+          background: transparent;
+          color: var(--text);
+          font-size: 13px;
+        }
+
+        .errorBanner {
+          margin-top: 14px;
           border-radius: 16px;
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          padding: 12px 14px;
+          border: 1px solid rgba(229, 9, 20, 0.35);
+          background: rgba(229, 9, 20, 0.1);
+          color: rgba(255, 255, 255, 0.88);
+        }
+
+        .empty {
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: rgba(255, 255, 255, 0.04);
+          border-radius: 18px;
+          padding: 22px;
+          box-shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
+        }
+        .empty__title {
+          font-weight: 900;
+          font-size: 16px;
+          margin-bottom: 6px;
+        }
+        .empty__sub {
+          color: rgba(255, 255, 255, 0.68);
+          font-size: 13px;
+          line-height: 1.45;
+        }
+        .empty__cta {
+          margin-top: 12px;
+        }
+
+        .skRow {
+          display: grid;
+          grid-template-columns: repeat(6, minmax(0, 1fr));
+          gap: 12px;
+        }
+        @keyframes shimmer {
+          0% {
+            background-position: 200% 0;
+          }
+          100% {
+            background-position: -200% 0;
+          }
+        }
+        .skCard {
+          border-radius: 16px;
+          aspect-ratio: 3/4;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0.05),
+            rgba(255, 255, 255, 0.08),
+            rgba(255, 255, 255, 0.05)
+          );
+          background-size: 200% 100%;
+          animation: shimmer 1.2s infinite linear;
+        }
+
+        /* Filter layout */
+        .filterGrid {
+          display: grid;
+          grid-template-columns: 1.25fr 0.75fr;
+          gap: 12px;
+          align-items: start;
+        }
+        @media (max-width: 900px) {
+          .filterGrid {
+            grid-template-columns: 1fr;
+          }
+        }
+        .fieldLabel {
+          color: rgba(255, 255, 255, 0.72);
+          font-weight: 800;
+          font-size: 12px;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+          margin-bottom: 6px;
+        }
+
+        /* Select dark dropdown */
+        .select {
+          width: 100%;
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          color: rgba(255, 255, 255, 0.92);
+          border-radius: 12px;
+          padding: 10px 12px;
+          outline: none;
+        }
+        .select option {
+          background: var(--menuBg);
+          color: rgba(255, 255, 255, 0.92);
+        }
+
+        .yearRow {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
+        }
+
+        /* Sections */
+        .fsec {
+          border: 1px solid rgba(255, 255, 255, 0.1);
           background: rgba(255, 255, 255, 0.03);
+          border-radius: 16px;
           overflow: hidden;
         }
         .fsec__head {
           width: 100%;
-          padding: 10px 12px;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          background: rgba(255, 255, 255, 0.02);
+          gap: 10px;
+          padding: 12px 12px;
+          background: rgba(0, 0, 0, 0.25);
           border: none;
           color: var(--text);
           cursor: pointer;
+          text-align: left;
+        }
+        .fsec__head:hover {
+          background: rgba(0, 0, 0, 0.32);
         }
         .fsec__title {
-          font-weight: 950;
+          font-weight: 900;
           letter-spacing: -0.01em;
         }
         .fsec__sub {
           margin-top: 2px;
+          color: rgba(255, 255, 255, 0.62);
           font-size: 12px;
-          color: rgba(255, 255, 255, 0.6);
-          font-weight: 700;
         }
         .fsec__chev {
-          opacity: 0.75;
+          width: 34px;
+          height: 34px;
+          display: grid;
+          place-items: center;
+          border-radius: 12px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: rgba(255, 255, 255, 0.04);
           font-weight: 900;
         }
         .fsec__body {
-          padding: 10px 12px 12px;
+          padding: 12px;
           display: grid;
           gap: 10px;
         }
+
+        /* section tools */
         .fsec__tools {
           display: flex;
           gap: 10px;
           align-items: center;
-          justify-content: space-between;
           flex-wrap: wrap;
         }
-        .fsec__searchInput {
-          width: 260px;
-          max-width: 100%;
+        .fsearch {
+          flex: 1;
+          min-width: 220px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
           border-radius: 12px;
-          border: 1px solid rgba(255, 255, 255, 0.12);
           background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.12);
           padding: 8px 10px;
-          color: rgba(255, 255, 255, 0.9);
+        }
+        .fsearch__icon {
+          width: 16px;
+          height: 16px;
+          opacity: 0.75;
+        }
+        .fsearch input {
+          width: 100%;
           outline: none;
+          border: none;
+          background: transparent;
+          color: var(--text);
+          font-size: 13px;
         }
-        .fsec__searchInput:focus {
-          border-color: rgba(229, 9, 20, 0.55);
+        .fsearch input::placeholder {
+          color: rgba(255, 255, 255, 0.45);
         }
-        .fsec__toggle {
+
+        .toggle {
           display: inline-flex;
           align-items: center;
           gap: 8px;
-          color: rgba(255, 255, 255, 0.78);
-          font-weight: 800;
+          color: rgba(255, 255, 255, 0.72);
           font-size: 12px;
+          font-weight: 700;
           user-select: none;
+          padding: 8px 10px;
+          border-radius: 12px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: rgba(255, 255, 255, 0.03);
         }
-        .fsec__toggle input {
-          width: 14px;
-          height: 14px;
+        .toggle input {
+          accent-color: var(--accent);
         }
 
-        .fsec__list {
-          display: grid;
+        /* Selected chips row */
+        .chipsRow {
+          display: flex;
           gap: 8px;
+          flex-wrap: wrap;
+        }
+        .selChip {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 10px;
+          border-radius: 999px;
+          border: 1px solid rgba(229, 9, 20, 0.28);
+          background: rgba(229, 9, 20, 0.1);
+          color: rgba(255, 255, 255, 0.88);
+          cursor: pointer;
+          font-size: 12px;
+          font-weight: 750;
+        }
+        .selChip:hover {
+          border-color: rgba(229, 9, 20, 0.4);
+          background: rgba(229, 9, 20, 0.14);
+        }
+        .selChip__dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 99px;
+          background: var(--accent);
+        }
+        .selChip__txt {
+          max-width: 220px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .selChip__x {
+          opacity: 0.9;
+          font-size: 14px;
+          line-height: 1;
+        }
+
+        /* Pick list */
+        .pickList {
+          max-height: 260px;
+          overflow: auto;
+          border-radius: 14px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: rgba(0, 0, 0, 0.22);
+          padding: 6px;
+        }
+        .pickList::-webkit-scrollbar {
+          height: 10px;
+          width: 10px;
+        }
+        .pickList::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.12);
+          border-radius: 999px;
         }
         .pick {
           width: 100%;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          background: rgba(255, 255, 255, 0.04);
-          border-radius: 12px;
-          padding: 10px 10px;
           display: grid;
-          grid-template-columns: 10px 1fr auto;
+          grid-template-columns: 14px 1fr auto;
           align-items: center;
           gap: 10px;
-          color: rgba(255, 255, 255, 0.92);
+          padding: 10px 10px;
+          border-radius: 12px;
+          border: 1px solid transparent;
+          background: transparent;
+          color: var(--text);
           cursor: pointer;
+          text-align: left;
         }
         .pick:hover {
-          background: rgba(255, 255, 255, 0.06);
-          border-color: rgba(255, 255, 255, 0.14);
+          background: rgba(255, 255, 255, 0.04);
+          border-color: rgba(255, 255, 255, 0.08);
         }
         .pick--on {
           background: rgba(229, 9, 20, 0.1);
@@ -1210,37 +1607,41 @@ export default function Page() {
           padding: 14px 12px;
         }
         .mSearch__panel {
-          width: 100%;
-          max-width: 920px;
+          width: min(860px, 100%);
           border-radius: 18px;
           border: 1px solid rgba(255, 255, 255, 0.1);
-          background: rgba(10, 10, 14, 0.92);
-          box-shadow: 0 40px 120px rgba(0, 0, 0, 0.75);
+          background: rgba(10, 10, 14, 0.94);
+          box-shadow: 0 50px 140px rgba(0, 0, 0, 0.75);
           overflow: hidden;
         }
         .mSearch__head {
-          padding: 12px 12px;
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 10px;
+          padding: 12px 12px;
           border-bottom: 1px solid rgba(255, 255, 255, 0.06);
         }
         .mSearch__title {
-          font-weight: 950;
+          font-weight: 900;
           letter-spacing: -0.01em;
         }
         .mSearch__body {
           padding: 12px;
-          display: grid;
-          gap: 12px;
-          max-height: min(78vh, 720px);
-          overflow: auto;
+        }
+
+        /* Im Overlay soll der Popover nicht "absolut" hängen, sondern normal fließen */
+        .mSearch .filterPopover {
+          position: static;
+          top: auto;
+          left: auto;
+          right: auto;
+          margin-top: 10px;
         }
 
         /* Responsive */
-        @media (max-width: 1100px) {
-          .grid {
+        @media (max-width: 1200px) {
+          .row {
             grid-template-columns: repeat(5, minmax(0, 1fr));
           }
           .movieGrid {
@@ -1248,32 +1649,37 @@ export default function Page() {
           }
         }
         @media (max-width: 900px) {
-          .grid {
+          .row {
             grid-template-columns: repeat(4, minmax(0, 1fr));
           }
         }
-        @media (max-width: 720px) {
-          .grid {
+        @media (max-width: 700px) {
+          .row {
             grid-template-columns: repeat(3, minmax(0, 1fr));
-          }
-        }
-        @media (max-width: 560px) {
-          .grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
           }
           .movieGrid {
             grid-template-columns: 1fr;
           }
-          .searchWrap {
-            max-width: 100%;
-          }
 
-          /* Mobile: Suche ausblenden, Lupe zeigen */
-          .searchWrap .input {
+          /* Topbar wird 2-spaltig: rechts Buttons + Lupe */
+          .topbar {
+            grid-template-columns: 1fr auto;
+          }
+          .topbar__left {
             display: none;
           }
+          .topbar__mid {
+            display: none; /* Search im Header weg auf Mobile */
+          }
+
+          /* FIX: nur auf Mobile die Lupe zeigen */
           .iconBtn.mOnly {
-            display: grid;
+            display: inline-grid;
+          }
+        }
+        @media (max-width: 420px) {
+          .row {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
           }
         }
       `}</style>
@@ -1283,346 +1689,469 @@ export default function Page() {
       {/* -------------------------------------------------------------------- */}
 
       <div className="topbar">
-        <div className="brand">
-          <div className="brand__logo">1337</div>
-          <div className="brand__tag">Library</div>
-        </div>
+        <div className="topbar__left" />
 
-        <div className="searchWrap">
-          {/* Desktop Search */}
-          <div className="input">
-            <svg className="input__icon" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M10.5 3a7.5 7.5 0 105.03 13.06l3.2 3.2a1 1 0 001.42-1.42l-3.2-3.2A7.5 7.5 0 0010.5 3zm0 2a5.5 5.5 0 110 11 5.5 5.5 0 010-11z"
-                fill="currentColor"
-              />
-            </svg>
-            <input
-              value={search}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              onFocus={() => setFiltersOpen(true)}
-              placeholder="Suche…"
-              aria-label="Suche"
-            />
-          </div>
+        <div className="topbar__mid">
+          {loggedIn ? (
+            <div className="searchWrap" ref={searchWrapRef}>
+              <div className="input" title="Suche nach Titel, Studio, Darsteller, Tags">
+                <svg className="input__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  />
+                  <path d="M16.5 16.5 21 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
 
-          {/* Mobile: Lupe */}
-          <button type="button" className="iconBtn mOnly" onClick={openMobileSearch} aria-label="Suche öffnen">
-            <svg viewBox="0 0 24 24" fill="none">
-              <path
-                d="M10.5 3a7.5 7.5 0 105.03 13.06l3.2 3.2a1 1 0 001.42-1.42l-3.2-3.2A7.5 7.5 0 0010.5 3zm0 2a5.5 5.5 0 110 11 5.5 5.5 0 010-11z"
-                fill="currentColor"
-              />
-            </svg>
-          </button>
+                <input
+                  ref={searchInputRef}
+                  value={search}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  onFocus={() => setFiltersOpen(true)}
+                  placeholder="Suchen: Titel, Studio, Darsteller, Tags…"
+                  autoComplete="off"
+                />
 
-          {/* Popover (Desktop) */}
-          {filtersOpen && !mobileSearchOpen ? (
-            <div className="filterPopover" onMouseDown={(e) => e.stopPropagation()}>
-              <div className="filterPopover__head">
-                <div className="filterPopover__title">Erweiterte Suche</div>
-                <div className="filterPopover__actions">
-                  <button type="button" className="btn btn--xs" onClick={resetFilters}>
+                {search ? (
+                  <button
+                    type="button"
+                    className="btn btn--ghost"
+                    onClick={() => handleSearchChange("")}
+                    title="Suche löschen"
+                  >
                     Reset
                   </button>
-                  <button type="button" className="btn btn--primary btn--xs" onClick={applyFiltersNow}>
-                    Anwenden
-                  </button>
-                  <button type="button" className="btn btn--xs" onClick={() => setFiltersOpen(false)}>
-                    Schließen
-                  </button>
-                </div>
+                ) : null}
               </div>
 
-              <div className="filterPopover__body">
-                <div style={{ display: "grid", gap: 12 }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                    <div>
-                      <div className="kv__k" style={{ marginBottom: 6 }}>
-                        Studio
-                      </div>
-                      <select
-                        value={selectedStudio}
-                        onChange={(e) => setSelectedStudio(e.target.value)}
-                        className="fsec__searchInput"
-                        style={{ width: "100%" }}
-                      >
-                        <option value="">Alle</option>
-                        {studios.map((s) => (
-                          <option key={s} value={s}>
-                            {s}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <div className="kv__k" style={{ marginBottom: 6 }}>
-                        Resolution
-                      </div>
-                      <select
-                        value={selectedResolution}
-                        onChange={(e) => setSelectedResolution(e.target.value)}
-                        className="fsec__searchInput"
-                        style={{ width: "100%" }}
-                      >
-                        <option value="">Alle</option>
-                        {resolutions.map((r) => (
-                          <option key={r} value={r}>
-                            {r}
-                          </option>
-                        ))}
-                      </select>
+              {filtersOpen && (
+                <div
+                  className="filterPopover"
+                  role="dialog"
+                  aria-modal="false"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
+                >
+                  <div className="filterPopover__head">
+                    <div className="filterPopover__title">Filter</div>
+                    <div className="filterPopover__actions">
+                      <button type="button" className="btn" onClick={resetFilters}>
+                        Reset
+                      </button>
+                      <button type="button" className="btn btn--primary" onClick={applyFiltersNow}>
+                        Anwenden
+                      </button>
+                      <button type="button" className="btn btn--ghost" onClick={() => setFiltersOpen(false)}>
+                        Schließen
+                      </button>
                     </div>
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                    <div>
-                      <div className="kv__k" style={{ marginBottom: 6 }}>
-                        Jahr von
+                  <div className="filterPopover__body">
+                    <div className="filterGrid">
+                      <div style={{ display: "grid", gap: 12 }}>
+                        <FilterSection
+                          title="Tags"
+                          subtitle=""
+                          items={tagItems}
+                          selectedKeys={selectedTags}
+                          getKey={(it) => it.key}
+                          getLabel={(it) => it.label}
+                          onToggle={(k) => toggleTag(String(k))}
+                          search={tagSearch}
+                          setSearch={setTagSearch}
+                          showSelectedOnly={tagsSelectedOnly}
+                          setShowSelectedOnly={setTagsSelectedOnly}
+                          defaultOpen={true}
+                        />
+
+                        <FilterSection
+                          title="Hauptdarsteller"
+                          subtitle=""
+                          items={mainItems}
+                          selectedKeys={selectedMainActors}
+                          getKey={(it) => it.key}
+                          getLabel={(it) => it.label}
+                          onToggle={(k) => toggleMainActor(String(k))}
+                          search={mainActorSearch}
+                          setSearch={setMainActorSearch}
+                          showSelectedOnly={mainSelectedOnly}
+                          setShowSelectedOnly={setMainSelectedOnly}
+                          defaultOpen={false}
+                        />
+
+                        <FilterSection
+                          title="Nebendarsteller"
+                          subtitle=""
+                          items={suppItems}
+                          selectedKeys={selectedSupportingActors}
+                          getKey={(it) => it.key}
+                          getLabel={(it) => it.label}
+                          onToggle={(k) => toggleSupportingActor(String(k))}
+                          search={suppActorSearch}
+                          setSearch={setSuppActorSearch}
+                          showSelectedOnly={suppSelectedOnly}
+                          setShowSelectedOnly={setSuppSelectedOnly}
+                          defaultOpen={false}
+                        />
                       </div>
-                      <input
-                        value={yearFrom}
-                        onChange={(e) => setYearFrom(e.target.value)}
-                        type="number"
-                        placeholder="1990"
-                        className="fsec__searchInput"
-                        style={{ width: "100%" }}
-                      />
-                    </div>
-                    <div>
-                      <div className="kv__k" style={{ marginBottom: 6 }}>
-                        Jahr bis
+
+                      <div style={{ display: "grid", gap: 12 }}>
+                        <div className="fsec">
+                          <div className="fsec__head" style={{ cursor: "default" }}>
+                            <div className="fsec__headL">
+                              <div className="fsec__title">Basis</div>
+                              <div className="fsec__sub">Studio, Resolution & Jahr</div>
+                            </div>
+                            <div className="fsec__headR">
+                              <span className="fsec__chev" style={{ opacity: 0.35 }}>
+                                ✓
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="fsec__body">
+                            <div>
+                              <div className="fieldLabel">Studio</div>
+                              <select
+                                className="select"
+                                value={selectedStudio}
+                                onChange={(e) => setSelectedStudio(e.target.value)}
+                              >
+                                <option value="">Alle Studios</option>
+                                {allStudios.map((s) => (
+                                  <option key={`st-${s}`} value={s}>
+                                    {s}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div>
+                              <div className="fieldLabel">Resolution</div>
+                              <select
+                                className="select"
+                                value={selectedResolution}
+                                onChange={(e) => setSelectedResolution(e.target.value)}
+                              >
+                                <option value="">Alle Resolutions</option>
+                                {allResolutions.map((r) => (
+                                  <option key={`rs-${r}`} value={r}>
+                                    {r}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div>
+                              <div className="fieldLabel">Jahr</div>
+                              <div className="yearRow">
+                                <input
+                                  className="select"
+                                  value={yearFrom}
+                                  onChange={(e) => setYearFrom(e.target.value)}
+                                  placeholder="von (z.B. 1999)"
+                                  inputMode="numeric"
+                                />
+                                <input
+                                  className="select"
+                                  value={yearTo}
+                                  onChange={(e) => setYearTo(e.target.value)}
+                                  placeholder="bis (z.B. 2025)"
+                                  inputMode="numeric"
+                                />
+                              </div>
+                            </div>
+
+                            {hasAnyFilter ? (
+                              <>
+                                <div className="divider" />
+                                <div style={{ display: "grid", gap: 8 }}>
+                                  <div className="fieldLabel">Aktiv</div>
+                                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                    {selectedStudio ? <Pill>Studio</Pill> : null}
+                                    {selectedResolution ? <Pill>{selectedResolution}</Pill> : null}
+                                    {yearFrom ? <Pill>ab {yearFrom}</Pill> : null}
+                                    {yearTo ? <Pill>bis {yearTo}</Pill> : null}
+                                    {selectedTags.length ? <Pill>{selectedTags.length} Tags</Pill> : null}
+                                    {selectedMainActors.length ? <Pill>{selectedMainActors.length} Haupt</Pill> : null}
+                                    {selectedSupportingActors.length ? (
+                                      <Pill>{selectedSupportingActors.length} Neben</Pill>
+                                    ) : null}
+                                  </div>
+                                </div>
+                              </>
+                            ) : null}
+                          </div>
+                        </div>
                       </div>
-                      <input
-                        value={yearTo}
-                        onChange={(e) => setYearTo(e.target.value)}
-                        type="number"
-                        placeholder="2025"
-                        className="fsec__searchInput"
-                        style={{ width: "100%" }}
-                      />
                     </div>
                   </div>
-
-                  <FilterSection
-                    title="Tags"
-                    subtitle={`${allTags.length} verfügbar`}
-                    items={tagItems}
-                    selectedKeys={selectedTags}
-                    getKey={(it) => it.key}
-                    getLabel={(it) => it.label}
-                    onToggle={toggleTag}
-                    search={tagSearch}
-                    setSearch={setTagSearch}
-                    showSelectedOnly={tagsSelectedOnly}
-                    setShowSelectedOnly={setTagsSelectedOnly}
-                    defaultOpen={true}
-                  />
-
-                  <FilterSection
-                    title="Hauptdarsteller"
-                    subtitle={`${mainItems.length} verfügbar`}
-                    items={mainItems}
-                    selectedKeys={selectedMainActors}
-                    getKey={(it) => it.key}
-                    getLabel={(it) => it.label}
-                    onToggle={toggleMainActor}
-                    search={mainActorSearch}
-                    setSearch={setMainActorSearch}
-                    showSelectedOnly={mainSelectedOnly}
-                    setShowSelectedOnly={setMainSelectedOnly}
-                    defaultOpen={false}
-                  />
-
-                  <FilterSection
-                    title="Nebendarsteller"
-                    subtitle={`${suppItems.length} verfügbar`}
-                    items={suppItems}
-                    selectedKeys={selectedSupportingActors}
-                    getKey={(it) => it.key}
-                    getLabel={(it) => it.label}
-                    onToggle={toggleSupportingActor}
-                    search={suppActorSearch}
-                    setSearch={setSuppActorSearch}
-                    showSelectedOnly={suppSelectedOnly}
-                    setShowSelectedOnly={setSuppSelectedOnly}
-                    defaultOpen={false}
-                  />
                 </div>
-              </div>
+              )}
             </div>
           ) : null}
         </div>
 
-        {/* Right side actions */}
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          {showMovies ? (
-            <button type="button" className="btn" onClick={handleBackToActors} title="Zurück zur Darsteller-Ansicht">
-              Darsteller
-            </button>
-          ) : null}
-          <Pill>
-            <span className="mono">{movies.length}</span> Movies
-          </Pill>
+        <div className="topbar__right">
+          {loggedIn ? (
+            <>
+              <button type="button" className="iconBtn mOnly" onClick={openMobileSearch} title="Suche">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  />
+                  <path d="M16.5 16.5 21 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </button>
+
+              <div className="auth__label">Willkommen, {loginUser}</div>
+
+              <button type="button" className="btn" onClick={() => safeOpen("/dashboard")} title="Zum Dashboard">
+                Dashboard
+              </button>
+
+              <button type="button" className="btn btn--danger" onClick={handleLogout}>
+                Logout
+              </button>
+            </>
+          ) : (
+            <form className="authForm" onSubmit={handleLogin}>
+              <div className="authField">
+                <input
+                  value={loginUser}
+                  onChange={(e) => setLoginUser(e.target.value)}
+                  placeholder="User"
+                  autoComplete="username"
+                />
+              </div>
+              <div className="authField">
+                <input
+                  type="password"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  placeholder="Passwort"
+                  autoComplete="current-password"
+                />
+              </div>
+              <button type="submit" className="btn btn--primary" disabled={loginLoading}>
+                {loginLoading ? "Login…" : "Login"}
+              </button>
+            </form>
+          )}
         </div>
       </div>
 
-      {/* Mobile Search Overlay */}
-      {mobileSearchOpen ? (
-        <div
-          className="mSearch"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) closeMobileSearch();
-          }}
-        >
-          <div className="mSearch__panel">
+      {/* -------------------------------------------------------------------- */}
+      {/* ----------------------- TEIL 7.3.5: MOBILE OVERLAY ------------------ */}
+      {/* -------------------------------------------------------------------- */}
+
+      {loggedIn && mobileSearchOpen ? (
+        <div className="mSearch" role="dialog" aria-modal="true" onMouseDown={closeMobileSearch} onTouchStart={closeMobileSearch}>
+          <div
+            className="mSearch__panel"
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+          >
             <div className="mSearch__head">
               <div className="mSearch__title">Suche</div>
-              <div style={{ display: "flex", gap: 10 }}>
-                <button type="button" className="btn btn--xs" onClick={resetFilters}>
-                  Reset
-                </button>
-                <button type="button" className="btn btn--primary btn--xs" onClick={applyFiltersNow}>
-                  Anwenden
-                </button>
-                <button type="button" className="btn btn--xs" onClick={closeMobileSearch}>
-                  Schließen
-                </button>
-              </div>
+              <button type="button" className="btn btn--ghost" onClick={closeMobileSearch}>
+                Schließen
+              </button>
             </div>
 
             <div className="mSearch__body">
-              <div className="input" style={{ display: "flex" }}>
-                <svg className="input__icon" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M10.5 3a7.5 7.5 0 105.03 13.06l3.2 3.2a1 1 0 001.42-1.42l-3.2-3.2A7.5 7.5 0 0010.5 3zm0 2a5.5 5.5 0 110 11 5.5 5.5 0 010-11z"
-                    fill="currentColor"
+              <div className="searchWrap">
+                <div className="input" title="Suche nach Titel, Studio, Darsteller, Tags">
+                  <svg className="input__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path
+                      d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    />
+                    <path d="M16.5 16.5 21 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+
+                  <input
+                    ref={mobileSearchInputRef}
+                    value={search}
+                    onChange={(e) => handleSearchChange(e.target.value)}
+                    onFocus={() => setFiltersOpen(true)}
+                    placeholder="Suchen: Titel, Studio, Darsteller, Tags…"
+                    autoComplete="off"
                   />
-                </svg>
-                <input
-                  ref={mobileSearchInputRef}
-                  value={search}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                  placeholder="Suche…"
-                  aria-label="Suche"
-                />
-              </div>
 
-              <div style={{ display: "grid", gap: 12 }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div>
-                    <div className="kv__k" style={{ marginBottom: 6 }}>
-                      Studio
-                    </div>
-                    <select
-                      value={selectedStudio}
-                      onChange={(e) => setSelectedStudio(e.target.value)}
-                      className="fsec__searchInput"
-                      style={{ width: "100%" }}
-                    >
-                      <option value="">Alle</option>
-                      {studios.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <div className="kv__k" style={{ marginBottom: 6 }}>
-                      Resolution
-                    </div>
-                    <select
-                      value={selectedResolution}
-                      onChange={(e) => setSelectedResolution(e.target.value)}
-                      className="fsec__searchInput"
-                      style={{ width: "100%" }}
-                    >
-                      <option value="">Alle</option>
-                      {resolutions.map((r) => (
-                        <option key={r} value={r}>
-                          {r}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  {search ? (
+                    <button type="button" className="btn btn--ghost" onClick={() => handleSearchChange("")} title="Suche löschen">
+                      Reset
+                    </button>
+                  ) : null}
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div>
-                    <div className="kv__k" style={{ marginBottom: 6 }}>
-                      Jahr von
+                {filtersOpen && (
+                  <div
+                    className="filterPopover"
+                    role="dialog"
+                    aria-modal="false"
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
+                  >
+                    <div className="filterPopover__head">
+                      <div className="filterPopover__title">Filter</div>
+                      <div className="filterPopover__actions">
+                        <button type="button" className="btn" onClick={resetFilters}>
+                          Reset
+                        </button>
+                        <button type="button" className="btn btn--primary" onClick={applyFiltersNow}>
+                          Anwenden
+                        </button>
+                        <button type="button" className="btn btn--ghost" onClick={() => setFiltersOpen(false)}>
+                          Schließen
+                        </button>
+                      </div>
                     </div>
-                    <input
-                      value={yearFrom}
-                      onChange={(e) => setYearFrom(e.target.value)}
-                      type="number"
-                      placeholder="1990"
-                      className="fsec__searchInput"
-                      style={{ width: "100%" }}
-                    />
-                  </div>
-                  <div>
-                    <div className="kv__k" style={{ marginBottom: 6 }}>
-                      Jahr bis
+
+                    <div className="filterPopover__body">
+                      <div className="filterGrid">
+                        <div style={{ display: "grid", gap: 12 }}>
+                          <FilterSection
+                            title="Tags"
+                            subtitle=""
+                            items={tagItems}
+                            selectedKeys={selectedTags}
+                            getKey={(it) => it.key}
+                            getLabel={(it) => it.label}
+                            onToggle={(k) => toggleTag(String(k))}
+                            search={tagSearch}
+                            setSearch={setTagSearch}
+                            showSelectedOnly={tagsSelectedOnly}
+                            setShowSelectedOnly={setTagsSelectedOnly}
+                            defaultOpen={true}
+                          />
+
+                          <FilterSection
+                            title="Hauptdarsteller"
+                            subtitle=""
+                            items={mainItems}
+                            selectedKeys={selectedMainActors}
+                            getKey={(it) => it.key}
+                            getLabel={(it) => it.label}
+                            onToggle={(k) => toggleMainActor(String(k))}
+                            search={mainActorSearch}
+                            setSearch={setMainActorSearch}
+                            showSelectedOnly={mainSelectedOnly}
+                            setShowSelectedOnly={setMainSelectedOnly}
+                            defaultOpen={false}
+                          />
+
+                          <FilterSection
+                            title="Nebendarsteller"
+                            subtitle=""
+                            items={suppItems}
+                            selectedKeys={selectedSupportingActors}
+                            getKey={(it) => it.key}
+                            getLabel={(it) => it.label}
+                            onToggle={(k) => toggleSupportingActor(String(k))}
+                            search={suppActorSearch}
+                            setSearch={setSuppActorSearch}
+                            showSelectedOnly={suppSelectedOnly}
+                            setShowSelectedOnly={setSuppSelectedOnly}
+                            defaultOpen={false}
+                          />
+                        </div>
+
+                        <div style={{ display: "grid", gap: 12 }}>
+                          <div className="fsec">
+                            <div className="fsec__head" style={{ cursor: "default" }}>
+                              <div className="fsec__headL">
+                                <div className="fsec__title">Basis</div>
+                                <div className="fsec__sub">Studio, Resolution & Jahr</div>
+                              </div>
+                              <div className="fsec__headR">
+                                <span className="fsec__chev" style={{ opacity: 0.35 }}>
+                                  ✓
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="fsec__body">
+                              <div>
+                                <div className="fieldLabel">Studio</div>
+                                <select className="select" value={selectedStudio} onChange={(e) => setSelectedStudio(e.target.value)}>
+                                  <option value="">Alle Studios</option>
+                                  {allStudios.map((s) => (
+                                    <option key={`st-${s}`} value={s}>
+                                      {s}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              <div>
+                                <div className="fieldLabel">Resolution</div>
+                                <select
+                                  className="select"
+                                  value={selectedResolution}
+                                  onChange={(e) => setSelectedResolution(e.target.value)}
+                                >
+                                  <option value="">Alle Resolutions</option>
+                                  {allResolutions.map((r) => (
+                                    <option key={`rs-${r}`} value={r}>
+                                      {r}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              <div>
+                                <div className="fieldLabel">Jahr</div>
+                                <div className="yearRow">
+                                  <input
+                                    className="select"
+                                    value={yearFrom}
+                                    onChange={(e) => setYearFrom(e.target.value)}
+                                    placeholder="von (z.B. 1999)"
+                                    inputMode="numeric"
+                                  />
+                                  <input
+                                    className="select"
+                                    value={yearTo}
+                                    onChange={(e) => setYearTo(e.target.value)}
+                                    placeholder="bis (z.B. 2025)"
+                                    inputMode="numeric"
+                                  />
+                                </div>
+                              </div>
+
+                              {hasAnyFilter ? (
+                                <>
+                                  <div className="divider" />
+                                  <div style={{ display: "grid", gap: 8 }}>
+                                    <div className="fieldLabel">Aktiv</div>
+                                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                      {selectedStudio ? <Pill>Studio</Pill> : null}
+                                      {selectedResolution ? <Pill>{selectedResolution}</Pill> : null}
+                                      {yearFrom ? <Pill>ab {yearFrom}</Pill> : null}
+                                      {yearTo ? <Pill>bis {yearTo}</Pill> : null}
+                                      {selectedTags.length ? <Pill>{selectedTags.length} Tags</Pill> : null}
+                                      {selectedMainActors.length ? <Pill>{selectedMainActors.length} Haupt</Pill> : null}
+                                      {selectedSupportingActors.length ? (
+                                        <Pill>{selectedSupportingActors.length} Neben</Pill>
+                                      ) : null}
+                                    </div>
+                                  </div>
+                                </>
+                              ) : null}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <input
-                      value={yearTo}
-                      onChange={(e) => setYearTo(e.target.value)}
-                      type="number"
-                      placeholder="2025"
-                      className="fsec__searchInput"
-                      style={{ width: "100%" }}
-                    />
                   </div>
-                </div>
-
-                <FilterSection
-                  title="Tags"
-                  subtitle={`${allTags.length} verfügbar`}
-                  items={tagItems}
-                  selectedKeys={selectedTags}
-                  getKey={(it) => it.key}
-                  getLabel={(it) => it.label}
-                  onToggle={toggleTag}
-                  search={tagSearch}
-                  setSearch={setTagSearch}
-                  showSelectedOnly={tagsSelectedOnly}
-                  setShowSelectedOnly={setTagsSelectedOnly}
-                  defaultOpen={true}
-                />
-
-                <FilterSection
-                  title="Hauptdarsteller"
-                  subtitle={`${mainItems.length} verfügbar`}
-                  items={mainItems}
-                  selectedKeys={selectedMainActors}
-                  getKey={(it) => it.key}
-                  getLabel={(it) => it.label}
-                  onToggle={toggleMainActor}
-                  search={mainActorSearch}
-                  setSearch={setMainActorSearch}
-                  showSelectedOnly={mainSelectedOnly}
-                  setShowSelectedOnly={setMainSelectedOnly}
-                  defaultOpen={false}
-                />
-
-                <FilterSection
-                  title="Nebendarsteller"
-                  subtitle={`${suppItems.length} verfügbar`}
-                  items={suppItems}
-                  selectedKeys={selectedSupportingActors}
-                  getKey={(it) => it.key}
-                  getLabel={(it) => it.label}
-                  onToggle={toggleSupportingActor}
-                  search={suppActorSearch}
-                  setSearch={setSuppActorSearch}
-                  showSelectedOnly={suppSelectedOnly}
-                  setShowSelectedOnly={setSuppSelectedOnly}
-                  defaultOpen={false}
-                />
+                )}
               </div>
             </div>
           </div>
@@ -1630,42 +2159,66 @@ export default function Page() {
       ) : null}
 
       {/* -------------------------------------------------------------------- */}
-      {/* -------------------------- TEIL 7.3: CONTENT ------------------------ */}
+      {/* -------------------------- TEIL 7.4: MAIN WRAP ---------------------- */}
       {/* -------------------------------------------------------------------- */}
 
       <div className="wrap">
-        {loading ? (
+        {/* Logo */}
+        <div className="logoSolo">
+          <img className="logoSolo__img" src="/logo.png" alt="Project1337 Logo" />
+        </div>
+
+        {/* Errors */}
+        {loginErr ? <div className="errorBanner">{loginErr}</div> : null}
+        {err ? <div className="errorBanner">{err}</div> : null}
+
+        {/* ------------------------------------------------------------------ */}
+        {/* ---------------------- TEIL 7.5: CONTENT SWITCH ------------------- */}
+        {/* ------------------------------------------------------------------ */}
+
+        {!loggedIn ? (
+          <EmptyState
+            title="Bitte einloggen"
+            subtitle="Ohne Login werden keine Inhalte geladen. Logge dich oben rechts ein, um Darsteller und Filme zu sehen."
+            action={<Pill>Project1337 • Private Library</Pill>}
+          />
+        ) : loading ? (
           <>
+            <div className="sectionHead">
+              <div>
+                <div className="sectionTitle">Lade Inhalte…</div>
+                <div className="sectionMeta">Supabase-Abfragen werden ausgeführt.</div>
+              </div>
+              <Pill>Bitte warten</Pill>
+            </div>
             <SkeletonRow />
+            <div style={{ height: 16 }} />
             <SkeletonRow />
           </>
-        ) : err ? (
-          <EmptyState title="Fehler" subtitle={err} />
         ) : showMovies ? (
           <>
             <div className="sectionHead">
               <div>
                 <div className="sectionTitle">{moviesTitle}</div>
-                <div className="sectionMeta">{moviesSubtitle}</div>
+                <div className="sectionMeta">{moviesSubtitle || `${movieList.length} Film(e)`}</div>
               </div>
+
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <button type="button" className="btn" onClick={handleBackToActors} title="Zur Darsteller-Ansicht">
+                <button type="button" className="btn" onClick={handleBackToActors}>
                   Darsteller
                 </button>
               </div>
             </div>
 
             {movieList.length === 0 ? (
-              <EmptyState
-                title="Keine Filme gefunden"
-                subtitle="Passe Suche/Filter an oder gehe zurück zur Darsteller-Ansicht."
-              />
+              <EmptyState title="Keine Filme gefunden" subtitle="Passe Suche/Filter an oder gehe zurück zur Darsteller-Ansicht." />
             ) : (
               <div className="movieGrid">
                 {movieList.map((m) => (
                   <div key={m.id} className="movieCard">
+                    {/* NEU: Thumbnail (optional) */}
                     {m.thumbnailUrl ? (
-                      <div className="movieCard__thumb">
+                      <div className="movieCard__thumb" title="Thumbnail">
                         <img src={m.thumbnailUrl} alt={m.title || "Thumbnail"} loading="lazy" />
                       </div>
                     ) : null}
@@ -1682,7 +2235,7 @@ export default function Page() {
                       </div>
 
                       <div className="kv">
-                        <div className="kv__k">Res</div>
+                        <div className="kv__k">Qualität</div>
                         <div className="kv__v">{m.resolution || "-"}</div>
                       </div>
 
@@ -1698,7 +2251,14 @@ export default function Page() {
                     </div>
 
                     <div className="movieCard__actions">
-                      <button type="button" className="btn btn--primary" onClick={() => safeOpen(m.fileUrl)} title="Film starten">
+                      <button
+                        type="button"
+                        className="btn btn--primary"
+                        onClick={() => safeOpen(m.fileUrl)}
+                        title="Film starten"
+                        disabled={!m.fileUrl}
+                        style={!m.fileUrl ? { opacity: 0.6, cursor: "not-allowed" } : undefined}
+                      >
                         Play
                       </button>
                       <button
@@ -1712,6 +2272,8 @@ export default function Page() {
                           }
                         }}
                         title="Link kopieren"
+                        disabled={!m.fileUrl}
+                        style={!m.fileUrl ? { opacity: 0.6, cursor: "not-allowed" } : undefined}
                       >
                         Copy Link
                       </button>
@@ -1753,23 +2315,41 @@ export default function Page() {
                 subtitle="Entweder sind noch keine Filme mit main_actor_ids hinterlegt oder es fehlen Datensätze."
               />
             ) : (
-              <div className="grid">
+              <div className="row">
                 {actors.map((a) => (
                   <div
                     key={a.id}
                     className="card"
-                    onClick={() => handleShowMoviesForActor(a.id, a.name || "Filme")}
+                    onClick={() => handleShowMoviesForActor(a.id, a.name)}
+                    title={`${a.name} öffnen`}
                     role="button"
                     tabIndex={0}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") handleShowMoviesForActor(a.id, a.name || "Filme");
+                      if (e.key === "Enter" || e.key === " ") handleShowMoviesForActor(a.id, a.name);
                     }}
-                    title={`${a.name} – Filme anzeigen`}
                   >
-                    <div className="card__img" style={{ position: "relative" }}>
-                      {a.image ? <img src={a.image} alt={a.name || "Actor"} loading="lazy" /> : null}
-                      <div className="card__badge">FILME</div>
+                    <div className="card__img">
+                      {a.profileImage ? (
+                        <img src={a.profileImage} alt={a.name} />
+                      ) : (
+                        <div
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            display: "grid",
+                            placeItems: "center",
+                            color: "rgba(255,255,255,0.55)",
+                            fontWeight: 800,
+                            letterSpacing: "0.02em",
+                          }}
+                        >
+                          NO IMAGE
+                        </div>
+                      )}
+
+                      <div className="card__badge">{a.movieCount}</div>
                     </div>
+
                     <div className="card__body">
                       <div className="card__title">{a.name}</div>
                     </div>
