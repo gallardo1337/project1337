@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "../lib/supabaseClient"; // FIX: app/page.jsx -> ../lib/supabaseClient
 
 function Pill({ children }) {
@@ -229,6 +230,9 @@ function getResolutionIcon(resolutionName) {
 }
 
 export default function HomePage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [movies, setMovies] = useState([]);
   const [actors, setActors] = useState([]);
   const [viewMode, setViewMode] = useState("actors"); // "actors" | "movies"
@@ -441,10 +445,34 @@ export default function HomePage() {
 
         setActors(actorList);
 
-        setViewMode("actors");
-        setVisibleMovies([]);
-        setMoviesTitle("Filme");
-        setMoviesSubtitle("");
+        const actorParam = searchParams.get("actor");
+        if (actorParam) {
+          const actorId = Number(actorParam);
+          const actor = actorList.find((a) => Number(a.id) === actorId);
+
+          if (actor) {
+            const subset = mappedMovies.filter(
+              (movie) =>
+                Array.isArray(movie.mainActorIds) &&
+                movie.mainActorIds.includes(actorId)
+            );
+
+            setMoviesTitle(actor.name);
+            setMoviesSubtitle(`${subset.length} Film(e)`);
+            setVisibleMovies(subset);
+            setViewMode("movies");
+          } else {
+            setViewMode("actors");
+            setVisibleMovies([]);
+            setMoviesTitle("Filme");
+            setMoviesSubtitle("");
+          }
+        } else {
+          setViewMode("actors");
+          setVisibleMovies([]);
+          setMoviesTitle("Filme");
+          setMoviesSubtitle("");
+        }
       } catch (e) {
         console.error(e);
         setErr("Fehler beim Laden der Daten.");
@@ -454,7 +482,7 @@ export default function HomePage() {
     };
 
     void load();
-  }, [loggedIn]);
+  }, [loggedIn, searchParams]);
 
   const allTags = useMemo(() => {
     const set = new Set();
@@ -574,6 +602,8 @@ export default function HomePage() {
   const movieList = showMovies ? visibleMovies : [];
 
   const handleShowMoviesForActor = (actorId, actorName) => {
+    router.replace(`/?actor=${encodeURIComponent(actorId)}`, { scroll: false });
+
     const subset = movies.filter(
       (movie) =>
         Array.isArray(movie.mainActorIds) && movie.mainActorIds.includes(actorId)
@@ -597,6 +627,7 @@ export default function HomePage() {
         setVisibleMovies(filtered);
         setViewMode("movies");
       } else {
+        router.replace("/", { scroll: false });
         setViewMode("actors");
         setVisibleMovies([]);
         setMoviesTitle("Filme");
@@ -604,6 +635,8 @@ export default function HomePage() {
       }
       return;
     }
+
+    router.replace("/", { scroll: false });
 
     const q = trimmed.toLowerCase();
     const raw = movies.filter((movie) => {
@@ -627,6 +660,7 @@ export default function HomePage() {
   };
 
   const handleBackToActors = () => {
+    router.replace("/", { scroll: false });
     setViewMode("actors");
     setVisibleMovies([]);
     setMoviesTitle("Filme");
@@ -679,6 +713,7 @@ export default function HomePage() {
       window.localStorage.removeItem("auth_1337_flag");
       window.localStorage.removeItem("auth_1337_user");
     }
+    router.replace("/", { scroll: false });
     setLoggedIn(false);
     setSearch("");
     setViewMode("actors");
@@ -709,6 +744,7 @@ export default function HomePage() {
   const applyFiltersNow = () => {
     if (search.trim()) handleSearchChange(search);
     else {
+      router.replace("/", { scroll: false });
       const filtered = applyAdvancedFilters(movies);
       setViewMode("movies");
       setMoviesTitle(hasAnyFilter ? "Gefilterte Filme" : "Filme");
@@ -1114,7 +1150,6 @@ export default function HomePage() {
           transition: transform 0.14s ease, border-color 0.14s ease,
             background 0.14s ease;
 
-          /* NEU: stabiler Aufbau */
           display: flex;
           flex-direction: column;
         }
@@ -1124,7 +1159,6 @@ export default function HomePage() {
           background: rgba(255, 255, 255, 0.07);
         }
 
-        /* ICON unten rechts FREI (ohne eigene Box) */
         .movieCard__resIcon {
           position: absolute;
           right: 14px;
@@ -1142,7 +1176,6 @@ export default function HomePage() {
           display: block;
         }
 
-        /* THUMBNAIL: 16:9 OHNE CROPPING */
         .movieCard__thumb {
           width: 100%;
           aspect-ratio: 16 / 9;
@@ -1159,7 +1192,7 @@ export default function HomePage() {
         .movieCard__thumb img {
           width: 100%;
           height: 100%;
-          object-fit: contain; /* WICHTIG: kein Schnitt */
+          object-fit: contain;
           display: block;
           transform: none;
         }
@@ -1172,7 +1205,6 @@ export default function HomePage() {
           flex: 0 0 auto;
         }
 
-        /* TITEL: IMMER 3 ZEILEN PLATZ (Clamp 3 + feste Mindesthöhe) */
         .movieCard__title {
           margin: 0;
           font-weight: 900;
@@ -1186,7 +1218,7 @@ export default function HomePage() {
           -webkit-box-orient: vertical;
           overflow: hidden;
 
-          min-height: 56px; /* ~ 16px * 1.15 * 3 = 55.2 */
+          min-height: 56px;
         }
 
         .movieCard__year {
@@ -1223,17 +1255,16 @@ export default function HomePage() {
           line-height: 1.35;
         }
 
-        /* TAGS: IMMER 3 ZEILEN PLATZ (damit Play nicht hochrutscht) */
         .movieCard__tags {
           display: -webkit-box;
           -webkit-line-clamp: 3;
           -webkit-box-orient: vertical;
           overflow: hidden;
-          min-height: 53px; /* ~ 13px * 1.35 * 3 = 52.65 */
+          min-height: 53px;
         }
 
         .movieCard__actions {
-          margin-top: auto; /* NEU: Button bleibt unten */
+          margin-top: auto;
           display: flex;
           gap: 10px;
           flex-wrap: wrap;
@@ -1684,10 +1715,27 @@ export default function HomePage() {
         <div className="topbar__mid">
           {loggedIn ? (
             <div className="searchWrap" ref={searchWrapRef}>
-              <div className="input" title="Suche nach Titel, Studio, Darsteller, Tags">
-                <svg className="input__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="currentColor" strokeWidth="2" />
-                  <path d="M16.5 16.5 21 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              <div
+                className="input"
+                title="Suche nach Titel, Studio, Darsteller, Tags"
+              >
+                <svg
+                  className="input__icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  />
+                  <path
+                    d="M16.5 16.5 21 21"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
                 </svg>
 
                 <input
@@ -1700,7 +1748,12 @@ export default function HomePage() {
                 />
 
                 {search ? (
-                  <button type="button" className="btn btn--ghost" onClick={() => handleSearchChange("")} title="Suche löschen">
+                  <button
+                    type="button"
+                    className="btn btn--ghost"
+                    onClick={() => handleSearchChange("")}
+                    title="Suche löschen"
+                  >
                     Reset
                   </button>
                 ) : null}
@@ -1717,13 +1770,25 @@ export default function HomePage() {
                   <div className="filterPopover__head">
                     <div className="filterPopover__title">Filter</div>
                     <div className="filterPopover__actions">
-                      <button type="button" className="btn" onClick={resetFilters}>
+                      <button
+                        type="button"
+                        className="btn"
+                        onClick={resetFilters}
+                      >
                         Reset
                       </button>
-                      <button type="button" className="btn btn--primary" onClick={applyFiltersNow}>
+                      <button
+                        type="button"
+                        className="btn btn--primary"
+                        onClick={applyFiltersNow}
+                      >
                         Anwenden
                       </button>
-                      <button type="button" className="btn btn--ghost" onClick={() => setFiltersOpen(false)}>
+                      <button
+                        type="button"
+                        className="btn btn--ghost"
+                        onClick={() => setFiltersOpen(false)}
+                      >
                         Schließen
                       </button>
                     </div>
@@ -1780,13 +1845,21 @@ export default function HomePage() {
 
                       <div style={{ display: "grid", gap: 12 }}>
                         <div className="fsec">
-                          <div className="fsec__head" style={{ cursor: "default" }}>
+                          <div
+                            className="fsec__head"
+                            style={{ cursor: "default" }}
+                          >
                             <div className="fsec__headL">
                               <div className="fsec__title">Basis</div>
-                              <div className="fsec__sub">Studio, Resolution & Jahr</div>
+                              <div className="fsec__sub">
+                                Studio, Resolution & Jahr
+                              </div>
                             </div>
                             <div className="fsec__headR">
-                              <span className="fsec__chev" style={{ opacity: 0.35 }}>
+                              <span
+                                className="fsec__chev"
+                                style={{ opacity: 0.35 }}
+                              >
                                 ✓
                               </span>
                             </div>
@@ -1795,7 +1868,13 @@ export default function HomePage() {
                           <div className="fsec__body">
                             <div>
                               <div className="fieldLabel">Studio</div>
-                              <select className="select" value={selectedStudio} onChange={(e) => setSelectedStudio(e.target.value)}>
+                              <select
+                                className="select"
+                                value={selectedStudio}
+                                onChange={(e) =>
+                                  setSelectedStudio(e.target.value)
+                                }
+                              >
                                 <option value="">Alle Studios</option>
                                 {allStudios.map((s) => (
                                   <option key={`st-${s}`} value={s}>
@@ -1807,7 +1886,13 @@ export default function HomePage() {
 
                             <div>
                               <div className="fieldLabel">Resolution</div>
-                              <select className="select" value={selectedResolution} onChange={(e) => setSelectedResolution(e.target.value)}>
+                              <select
+                                className="select"
+                                value={selectedResolution}
+                                onChange={(e) =>
+                                  setSelectedResolution(e.target.value)
+                                }
+                              >
                                 <option value="">Alle Resolutions</option>
                                 {allResolutions.map((r) => (
                                   <option key={`rs-${r}`} value={r}>
@@ -1842,14 +1927,28 @@ export default function HomePage() {
                                 <div className="divider" />
                                 <div style={{ display: "grid", gap: 8 }}>
                                   <div className="fieldLabel">Aktiv</div>
-                                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      gap: 8,
+                                      flexWrap: "wrap",
+                                    }}
+                                  >
                                     {selectedStudio ? <Pill>Studio</Pill> : null}
-                                    {selectedResolution ? <Pill>{selectedResolution}</Pill> : null}
+                                    {selectedResolution ? (
+                                      <Pill>{selectedResolution}</Pill>
+                                    ) : null}
                                     {yearFrom ? <Pill>ab {yearFrom}</Pill> : null}
                                     {yearTo ? <Pill>bis {yearTo}</Pill> : null}
-                                    {selectedTags.length ? <Pill>{selectedTags.length} Tags</Pill> : null}
-                                    {selectedMainActors.length ? <Pill>{selectedMainActors.length} Haupt</Pill> : null}
-                                    {selectedSupportingActors.length ? <Pill>{selectedSupportingActors.length} Neben</Pill> : null}
+                                    {selectedTags.length ? (
+                                      <Pill>{selectedTags.length} Tags</Pill>
+                                    ) : null}
+                                    {selectedMainActors.length ? (
+                                      <Pill>{selectedMainActors.length} Haupt</Pill>
+                                    ) : null}
+                                    {selectedSupportingActors.length ? (
+                                      <Pill>{selectedSupportingActors.length} Neben</Pill>
+                                    ) : null}
                                   </div>
                                 </div>
                               </>
@@ -1868,27 +1967,55 @@ export default function HomePage() {
         <div className="topbar__right">
           {loggedIn ? (
             <>
-              <button type="button" className="iconBtn mOnly" onClick={openMobileSearch} title="Suche">
+              <button
+                type="button"
+                className="iconBtn mOnly"
+                onClick={openMobileSearch}
+                title="Suche"
+              >
                 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="currentColor" strokeWidth="2" />
-                  <path d="M16.5 16.5 21 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  <path
+                    d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  />
+                  <path
+                    d="M16.5 16.5 21 21"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
                 </svg>
               </button>
 
               <div className="auth__label">Willkommen, {loginUser}</div>
 
-              <button type="button" className="btn" onClick={() => safeOpen("/dashboard")} title="Zum Dashboard">
+              <button
+                type="button"
+                className="btn"
+                onClick={() => safeOpen("/dashboard")}
+                title="Zum Dashboard"
+              >
                 Dashboard
               </button>
 
-              <button type="button" className="btn btn--danger" onClick={handleLogout}>
+              <button
+                type="button"
+                className="btn btn--danger"
+                onClick={handleLogout}
+              >
                 Logout
               </button>
             </>
           ) : (
             <form className="authForm" onSubmit={handleLogin}>
               <div className="authField">
-                <input value={loginUser} onChange={(e) => setLoginUser(e.target.value)} placeholder="User" autoComplete="username" />
+                <input
+                  value={loginUser}
+                  onChange={(e) => setLoginUser(e.target.value)}
+                  placeholder="User"
+                  autoComplete="username"
+                />
               </div>
               <div className="authField">
                 <input
@@ -1899,7 +2026,11 @@ export default function HomePage() {
                   autoComplete="current-password"
                 />
               </div>
-              <button type="submit" className="btn btn--primary" disabled={loginLoading}>
+              <button
+                type="submit"
+                className="btn btn--primary"
+                disabled={loginLoading}
+              >
                 {loginLoading ? "Login…" : "Login"}
               </button>
             </form>
@@ -1908,21 +2039,52 @@ export default function HomePage() {
       </div>
 
       {loggedIn && mobileSearchOpen ? (
-        <div className="mSearch" role="dialog" aria-modal="true" onMouseDown={closeMobileSearch} onTouchStart={closeMobileSearch}>
-          <div className="mSearch__panel" onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
+        <div
+          className="mSearch"
+          role="dialog"
+          aria-modal="true"
+          onMouseDown={closeMobileSearch}
+          onTouchStart={closeMobileSearch}
+        >
+          <div
+            className="mSearch__panel"
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+          >
             <div className="mSearch__head">
               <div className="mSearch__title">Suche</div>
-              <button type="button" className="btn btn--ghost" onClick={closeMobileSearch}>
+              <button
+                type="button"
+                className="btn btn--ghost"
+                onClick={closeMobileSearch}
+              >
                 Schließen
               </button>
             </div>
 
             <div className="mSearch__body">
               <div className="searchWrap">
-                <div className="input" title="Suche nach Titel, Studio, Darsteller, Tags">
-                  <svg className="input__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="currentColor" strokeWidth="2" />
-                    <path d="M16.5 16.5 21 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                <div
+                  className="input"
+                  title="Suche nach Titel, Studio, Darsteller, Tags"
+                >
+                  <svg
+                    className="input__icon"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    />
+                    <path
+                      d="M16.5 16.5 21 21"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
                   </svg>
 
                   <input
@@ -1935,7 +2097,12 @@ export default function HomePage() {
                   />
 
                   {search ? (
-                    <button type="button" className="btn btn--ghost" onClick={() => handleSearchChange("")} title="Suche löschen">
+                    <button
+                      type="button"
+                      className="btn btn--ghost"
+                      onClick={() => handleSearchChange("")}
+                      title="Suche löschen"
+                    >
                       Reset
                     </button>
                   ) : null}
@@ -1952,13 +2119,25 @@ export default function HomePage() {
                     <div className="filterPopover__head">
                       <div className="filterPopover__title">Filter</div>
                       <div className="filterPopover__actions">
-                        <button type="button" className="btn" onClick={resetFilters}>
+                        <button
+                          type="button"
+                          className="btn"
+                          onClick={resetFilters}
+                        >
                           Reset
                         </button>
-                        <button type="button" className="btn btn--primary" onClick={applyFiltersNow}>
+                        <button
+                          type="button"
+                          className="btn btn--primary"
+                          onClick={applyFiltersNow}
+                        >
                           Anwenden
                         </button>
-                        <button type="button" className="btn btn--ghost" onClick={() => setFiltersOpen(false)}>
+                        <button
+                          type="button"
+                          className="btn btn--ghost"
+                          onClick={() => setFiltersOpen(false)}
+                        >
                           Schließen
                         </button>
                       </div>
@@ -2015,13 +2194,21 @@ export default function HomePage() {
 
                         <div style={{ display: "grid", gap: 12 }}>
                           <div className="fsec">
-                            <div className="fsec__head" style={{ cursor: "default" }}>
+                            <div
+                              className="fsec__head"
+                              style={{ cursor: "default" }}
+                            >
                               <div className="fsec__headL">
                                 <div className="fsec__title">Basis</div>
-                                <div className="fsec__sub">Studio, Resolution & Jahr</div>
+                                <div className="fsec__sub">
+                                  Studio, Resolution & Jahr
+                                </div>
                               </div>
                               <div className="fsec__headR">
-                                <span className="fsec__chev" style={{ opacity: 0.35 }}>
+                                <span
+                                  className="fsec__chev"
+                                  style={{ opacity: 0.35 }}
+                                >
                                   ✓
                                 </span>
                               </div>
@@ -2030,7 +2217,13 @@ export default function HomePage() {
                             <div className="fsec__body">
                               <div>
                                 <div className="fieldLabel">Studio</div>
-                                <select className="select" value={selectedStudio} onChange={(e) => setSelectedStudio(e.target.value)}>
+                                <select
+                                  className="select"
+                                  value={selectedStudio}
+                                  onChange={(e) =>
+                                    setSelectedStudio(e.target.value)
+                                  }
+                                >
                                   <option value="">Alle Studios</option>
                                   {allStudios.map((s) => (
                                     <option key={`st-${s}`} value={s}>
@@ -2042,7 +2235,13 @@ export default function HomePage() {
 
                               <div>
                                 <div className="fieldLabel">Resolution</div>
-                                <select className="select" value={selectedResolution} onChange={(e) => setSelectedResolution(e.target.value)}>
+                                <select
+                                  className="select"
+                                  value={selectedResolution}
+                                  onChange={(e) =>
+                                    setSelectedResolution(e.target.value)
+                                  }
+                                >
                                   <option value="">Alle Resolutions</option>
                                   {allResolutions.map((r) => (
                                     <option key={`rs-${r}`} value={r}>
@@ -2058,7 +2257,9 @@ export default function HomePage() {
                                   <input
                                     className="select"
                                     value={yearFrom}
-                                    onChange={(e) => setYearFrom(e.target.value)}
+                                    onChange={(e) =>
+                                      setYearFrom(e.target.value)
+                                    }
                                     placeholder="von (z.B. 1999)"
                                     inputMode="numeric"
                                   />
@@ -2077,14 +2278,38 @@ export default function HomePage() {
                                   <div className="divider" />
                                   <div style={{ display: "grid", gap: 8 }}>
                                     <div className="fieldLabel">Aktiv</div>
-                                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                                      {selectedStudio ? <Pill>Studio</Pill> : null}
-                                      {selectedResolution ? <Pill>{selectedResolution}</Pill> : null}
-                                      {yearFrom ? <Pill>ab {yearFrom}</Pill> : null}
-                                      {yearTo ? <Pill>bis {yearTo}</Pill> : null}
-                                      {selectedTags.length ? <Pill>{selectedTags.length} Tags</Pill> : null}
-                                      {selectedMainActors.length ? <Pill>{selectedMainActors.length} Haupt</Pill> : null}
-                                      {selectedSupportingActors.length ? <Pill>{selectedSupportingActors.length} Neben</Pill> : null}
+                                    <div
+                                      style={{
+                                        display: "flex",
+                                        gap: 8,
+                                        flexWrap: "wrap",
+                                      }}
+                                    >
+                                      {selectedStudio ? (
+                                        <Pill>Studio</Pill>
+                                      ) : null}
+                                      {selectedResolution ? (
+                                        <Pill>{selectedResolution}</Pill>
+                                      ) : null}
+                                      {yearFrom ? (
+                                        <Pill>ab {yearFrom}</Pill>
+                                      ) : null}
+                                      {yearTo ? (
+                                        <Pill>bis {yearTo}</Pill>
+                                      ) : null}
+                                      {selectedTags.length ? (
+                                        <Pill>{selectedTags.length} Tags</Pill>
+                                      ) : null}
+                                      {selectedMainActors.length ? (
+                                        <Pill>
+                                          {selectedMainActors.length} Haupt
+                                        </Pill>
+                                      ) : null}
+                                      {selectedSupportingActors.length ? (
+                                        <Pill>
+                                          {selectedSupportingActors.length} Neben
+                                        </Pill>
+                                      ) : null}
                                     </div>
                                   </div>
                                 </>
@@ -2121,7 +2346,9 @@ export default function HomePage() {
             <div className="sectionHead">
               <div>
                 <div className="sectionTitle">Lade Inhalte…</div>
-                <div className="sectionMeta">Supabase-Abfragen werden ausgeführt.</div>
+                <div className="sectionMeta">
+                  Supabase-Abfragen werden ausgeführt.
+                </div>
               </div>
               <Pill>Bitte warten</Pill>
             </div>
@@ -2134,7 +2361,9 @@ export default function HomePage() {
             <div className="sectionHead">
               <div>
                 <div className="sectionTitle">{moviesTitle}</div>
-                <div className="sectionMeta">{moviesSubtitle || `${movieList.length} Film(e)`}</div>
+                <div className="sectionMeta">
+                  {moviesSubtitle || `${movieList.length} Film(e)`}
+                </div>
               </div>
 
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -2145,7 +2374,10 @@ export default function HomePage() {
             </div>
 
             {movieList.length === 0 ? (
-              <EmptyState title="Keine Filme gefunden" subtitle="Passe Suche/Filter an oder gehe zurück zur Darsteller-Ansicht." />
+              <EmptyState
+                title="Keine Filme gefunden"
+                subtitle="Passe Suche/Filter an oder gehe zurück zur Darsteller-Ansicht."
+              />
             ) : (
               <div className="movieGrid">
                 {movieList.map((m) => {
@@ -2153,19 +2385,30 @@ export default function HomePage() {
                   return (
                     <div key={m.id} className="movieCard">
                       {icon ? (
-                        <div className="movieCard__resIcon" title={icon.title} aria-label={icon.title}>
+                        <div
+                          className="movieCard__resIcon"
+                          title={icon.title}
+                          aria-label={icon.title}
+                        >
                           <img src={icon.src} alt={icon.alt} />
                         </div>
                       ) : null}
 
                       {m.thumbnailUrl ? (
                         <div className="movieCard__thumb" title="Thumbnail">
-                          <img src={m.thumbnailUrl} alt={m.title || "Thumbnail"} loading="lazy" />
+                          <img
+                            src={m.thumbnailUrl}
+                            alt={m.title || "Thumbnail"}
+                            loading="lazy"
+                          />
                         </div>
                       ) : null}
 
                       <div className="movieCard__top">
-                        <div className="movieCard__title" title={m.title || "Unbenannt"}>
+                        <div
+                          className="movieCard__title"
+                          title={m.title || "Unbenannt"}
+                        >
                           {m.title || "Unbenannt"}
                         </div>
                         <div className="movieCard__year">{m.year || ""}</div>
@@ -2179,7 +2422,11 @@ export default function HomePage() {
 
                         <div className="kv">
                           <div className="kv__k">Darsteller</div>
-                          <div className="kv__v">{m.actors && m.actors.length ? m.actors.join(", ") : "-"}</div>
+                          <div className="kv__v">
+                            {m.actors && m.actors.length
+                              ? m.actors.join(", ")
+                              : "-"}
+                          </div>
                         </div>
 
                         <div className="kv">
@@ -2197,7 +2444,11 @@ export default function HomePage() {
                           onClick={() => safeOpen(m.fileUrl)}
                           title="Film starten"
                           disabled={!m.fileUrl}
-                          style={!m.fileUrl ? { opacity: 0.6, cursor: "not-allowed" } : undefined}
+                          style={
+                            !m.fileUrl
+                              ? { opacity: 0.6, cursor: "not-allowed" }
+                              : undefined
+                          }
                         >
                           Play
                         </button>
@@ -2221,6 +2472,7 @@ export default function HomePage() {
                   type="button"
                   className="btn"
                   onClick={() => {
+                    router.replace("/", { scroll: false });
                     const filtered = applyAdvancedFilters(movies);
                     setViewMode("movies");
                     setMoviesTitle(hasAnyFilter ? "Gefilterte Filme" : "Filme");
@@ -2250,7 +2502,8 @@ export default function HomePage() {
                     role="button"
                     tabIndex={0}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") handleShowMoviesForActor(a.id, a.name);
+                      if (e.key === "Enter" || e.key === " ")
+                        handleShowMoviesForActor(a.id, a.name);
                     }}
                   >
                     <div className="card__img">
