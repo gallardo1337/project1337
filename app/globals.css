@@ -69,7 +69,6 @@ textarea:focus {
   outline: none;
 }
 
-
 /* =========================================
    LAYOUT: HEADER / PAGE
 ========================================= */
@@ -96,7 +95,6 @@ textarea:focus {
   color: white;
 }
 
-
 /* =========================================
    HERO SECTION (SUCHLEISTE + LOGO)
 ========================================= */
@@ -120,6 +118,26 @@ textarea:focus {
   height: auto;
 }
 
+/* Logo klickbar (Button Wrapper fürs Logo) */
+.logoBtn {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  line-height: 0;
+}
+
+.logoBtn:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.35);
+  outline-offset: 6px;
+  border-radius: 16px;
+}
+
+.logoBtn:hover {
+  opacity: 0.95;
+}
+
 .search-wrapper {
   width: 100%;
   max-width: 700px;
@@ -138,7 +156,6 @@ textarea:focus {
 .search-wrapper input::placeholder {
   color: #777;
 }
-
 
 /* =========================================
    ACTOR GRID
@@ -203,7 +220,6 @@ textarea:focus {
   font-size: 0.85rem;
   color: #aaa;
 }
-
 
 /* =========================================
    MOVIE GRID & DETAILS
@@ -295,7 +311,6 @@ textarea:focus {
 .play-btn:hover {
   background: #e5e5e5;
 }
-
 
 /* =========================================
    ADMIN PANEL
@@ -485,7 +500,6 @@ textarea:focus {
   background: #b91c1c;
 }
 
-
 /* =========================================
    ADMIN RIGHT-SIDE MOVIE LIST
 ========================================= */
@@ -528,7 +542,6 @@ textarea:focus {
   font-size: 0.75rem;
   color: #a7a7a7;
 }
-
 
 /* =========================================
    RESPONSIVE ADJUSTMENTS
