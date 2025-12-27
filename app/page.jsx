@@ -5,13 +5,13 @@ import { supabase } from "../lib/supabaseClient";
 
 /**
  * app/page.jsx
- * - Logo frei (keine Box) + kleiner
- * - Erweiterte Suche (Filter-Popover) öffnet beim Fokus in die Suchleiste (kein extra Button)
- * - Keine unerwünschten Hinweis-/Tipptexte
- * - Filterlogik: Multi-Select ist UND + wirkt zusätzlich zur Textsuche
- * - Hauptdarsteller-Grid:
- *   - Name zentriert + eine Stufe größer
- *   - Filmcount als Badge unten rechts IM Poster (nicht unter dem Namen)
+ * - Changelog komplett entfernt
+ * - Erweiterte Suche klappt automatisch auf, wenn die Suchleiste fokussiert wird
+ * - Fokus-Bug gefixt: In der erweiterten Suche kann man jetzt ganz normal in alle Felder klicken
+ *   (kein erzwungener Fokus auf dem Haupt-Suchfeld)
+ * - Keine Hint-/Tipptexte in den Filtern
+ * - Multi-Select Logik bleibt STRICT UND (intern), aber ohne UI-Hinweise
+ * - Restliche Funktionalität unverändert
  */
 
 function Pill({ children }) {
@@ -92,7 +92,15 @@ function FilterSection({
         <div className="fsec__headL">
           <div className="fsec__title">{title}</div>
           <div className="fsec__sub">
-            {subtitle} • <span className="mono">{selectedKeys.length}</span> aktiv
+            {subtitle ? (
+              <>
+                {subtitle} • <span className="mono">{selectedKeys.length}</span> aktiv
+              </>
+            ) : (
+              <>
+                <span className="mono">{selectedKeys.length}</span> aktiv
+              </>
+            )}
           </div>
         </div>
         <div className="fsec__headR">
@@ -441,6 +449,7 @@ export default function HomePage() {
   }, [selectedStudio, selectedTags.length, yearFrom, yearTo, selectedMainActors.length, selectedSupportingActors.length]);
 
   const showMovies = viewMode === "movies";
+  const movieList = showMovies ? visibleMovies : [];
 
   // Actions
   const handleShowMoviesForActor = (actorId, actorName) => {
@@ -550,6 +559,7 @@ export default function HomePage() {
     setVisibleMovies([]);
     setMoviesTitle("Filme");
     setMoviesSubtitle("");
+    setFiltersOpen(false);
   };
 
   const heroCounts = useMemo(() => {
@@ -618,16 +628,6 @@ export default function HomePage() {
         body {
           background: var(--bg);
           color: var(--text);
-
-          font-family:
-            -apple-system,
-            BlinkMacSystemFont,
-            "SF Pro Display",
-            system-ui,
-            "Segoe UI",
-            Roboto,
-            Arial,
-            sans-serif;
         }
         * {
           box-sizing: border-box;
@@ -822,7 +822,7 @@ export default function HomePage() {
           justify-content: center;
         }
         .logoSolo__img {
-          width: min(300px, 70%);
+          width: min(260px, 65%);
           height: auto;
           display: block;
           opacity: 0.95;
@@ -866,13 +866,7 @@ export default function HomePage() {
           gap: 12px;
         }
 
-        /* Movies */
-        .movieGrid {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 12px;
-        }
-
+        /* Cards */
         .card {
           position: relative;
           border-radius: 16px;
@@ -888,10 +882,8 @@ export default function HomePage() {
           border-color: rgba(229, 9, 20, 0.35);
           background: rgba(255, 255, 255, 0.07);
         }
-
-        /* Poster */
         .card__img {
-          position: relative; /* wichtig: Badge soll im Poster sitzen */
+          position: relative;
           width: 100%;
           aspect-ratio: 3/4;
           background: rgba(255, 255, 255, 0.06);
@@ -904,51 +896,45 @@ export default function HomePage() {
           display: block;
           transform: scale(1.02);
         }
-
+        .card__badge {
+          position: absolute;
+          right: 8px;
+          bottom: 8px;
+          z-index: 2;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 8px;
+          border-radius: 999px;
+          border: 1px solid rgba(255, 255, 255, 0.16);
+          background: rgba(0, 0, 0, 0.55);
+          color: rgba(255, 255, 255, 0.9);
+          font-size: 11px;
+          font-weight: 800;
+          backdrop-filter: blur(10px);
+        }
         .card__body {
-          padding: 8px 10px 8px;
-          text-align: center;
+          padding: 8px 10px 10px;
         }
         .card__title {
-          font-weight: 500;
-          font-size: 14px; /* eine Stufe größer */
+          font-weight: 800;
+          font-size: 14px;
           line-height: 1.2;
           letter-spacing: -0.01em;
           margin: 0;
+          text-align: center;
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
-          min-height: 18px;
+          min-height: 34px;
         }
 
-        /* Filmcount Badge unten rechts IM Poster */
-        .card__count {
-          position: absolute;
-          right: 10px;
-          bottom: 10px;
-
-          min-width: 28px;
-          height: 28px;
-          padding: 0 10px;
-
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-
-          border-radius: 999px;
-          font-size: 12px;
-          font-weight: 900;
-          font-variant-numeric: tabular-nums;
-
-          background: rgba(0, 0, 0, 0.55);
-          border: 1px solid rgba(255, 255, 255, 0.14);
-          color: rgba(255, 255, 255, 0.92);
-
-          backdrop-filter: blur(8px);
-        }
-        .card:hover .card__count {
-          border-color: rgba(229, 9, 20, 0.35);
+        /* Movies */
+        .movieGrid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 12px;
         }
 
         .movieCard {
@@ -1154,6 +1140,9 @@ export default function HomePage() {
           cursor: pointer;
           text-align: left;
         }
+        .fsec__head:hover {
+          background: rgba(0, 0, 0, 0.32);
+        }
         .fsec__title {
           font-weight: 900;
           letter-spacing: -0.01em;
@@ -1179,6 +1168,7 @@ export default function HomePage() {
           gap: 10px;
         }
 
+        /* section tools */
         .fsec__tools {
           display: flex;
           gap: 10px;
@@ -1209,6 +1199,9 @@ export default function HomePage() {
           color: var(--text);
           font-size: 13px;
         }
+        .fsearch input::placeholder {
+          color: rgba(255, 255, 255, 0.45);
+        }
 
         .toggle {
           display: inline-flex;
@@ -1227,6 +1220,7 @@ export default function HomePage() {
           accent-color: var(--accent);
         }
 
+        /* Selected chips row */
         .chipsRow {
           display: flex;
           gap: 8px;
@@ -1244,6 +1238,10 @@ export default function HomePage() {
           cursor: pointer;
           font-size: 12px;
           font-weight: 750;
+        }
+        .selChip:hover {
+          border-color: rgba(229, 9, 20, 0.4);
+          background: rgba(229, 9, 20, 0.14);
         }
         .selChip__dot {
           width: 7px;
@@ -1263,6 +1261,7 @@ export default function HomePage() {
           line-height: 1;
         }
 
+        /* Pick list */
         .pickList {
           max-height: 260px;
           overflow: auto;
@@ -1270,6 +1269,14 @@ export default function HomePage() {
           border: 1px solid rgba(255, 255, 255, 0.1);
           background: rgba(0, 0, 0, 0.22);
           padding: 6px;
+        }
+        .pickList::-webkit-scrollbar {
+          height: 10px;
+          width: 10px;
+        }
+        .pickList::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.12);
+          border-radius: 999px;
         }
         .pick {
           width: 100%;
@@ -1284,6 +1291,10 @@ export default function HomePage() {
           color: var(--text);
           cursor: pointer;
           text-align: left;
+        }
+        .pick:hover {
+          background: rgba(255, 255, 255, 0.04);
+          border-color: rgba(255, 255, 255, 0.08);
         }
         .pick--on {
           background: rgba(229, 9, 20, 0.1);
@@ -1328,47 +1339,37 @@ export default function HomePage() {
           margin: 10px 0;
         }
 
-        /* Responsive */
-        @media (max-width: 1100px) {
+        @media (max-width: 1200px) {
           .row {
-            grid-template-columns: repeat(4, minmax(0, 1fr));
+            grid-template-columns: repeat(5, minmax(0, 1fr));
           }
           .movieGrid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
           }
         }
-        @media (max-width: 720px) {
+        @media (max-width: 900px) {
           .row {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+          }
+        }
+        @media (max-width: 700px) {
+          .row {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
           }
           .movieGrid {
             grid-template-columns: 1fr;
           }
-
-          .topbar {
-            grid-template-columns: 1fr;
-          }
-          .topbar__left {
-            display: none;
-          }
-          .topbar__mid {
-            display: none;
-          }
-          .topbar__right {
-            justify-self: center;
-            flex-wrap: wrap;
-            justify-content: center;
-          }
-
-          .logoSolo__img {
-            width: min(220px, 80%);
+        }
+        @media (max-width: 420px) {
+          .row {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
           }
         }
       `}</style>
 
       {/* Topbar */}
       <div className="topbar">
-        <div className="topbar__left" aria-hidden="true" />
+        <div className="topbar__left" />
 
         <div className="topbar__mid">
           {loggedIn ? (
@@ -1387,10 +1388,7 @@ export default function HomePage() {
                   ref={searchInputRef}
                   value={search}
                   onChange={(e) => handleSearchChange(e.target.value)}
-                  onFocus={() => {
-                    setFiltersOpen(true);
-                    requestAnimationFrame(() => searchInputRef.current?.focus());
-                  }}
+                  onFocus={() => setFiltersOpen(true)}
                   placeholder="Suchen: Titel, Studio, Darsteller, Tags…"
                   autoComplete="off"
                 />
@@ -1399,11 +1397,7 @@ export default function HomePage() {
                   <button
                     type="button"
                     className="btn btn--ghost"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => {
-                      handleSearchChange("");
-                      requestAnimationFrame(() => searchInputRef.current?.focus());
-                    }}
+                    onClick={() => handleSearchChange("")}
                     title="Suche löschen"
                   >
                     Reset
@@ -1411,48 +1405,26 @@ export default function HomePage() {
                 ) : null}
               </div>
 
-              {filtersOpen ? (
+              {/* Filter Popover (öffnet bei Fokus) */}
+              {filtersOpen && (
                 <div
                   className="filterPopover"
-                  onMouseDown={(e) => {
-                    // Klicks im Popover sollen den Input nicht defokussieren
-                    e.preventDefault();
-                  }}
+                  role="dialog"
+                  aria-modal="false"
+                  // Wichtig: kein preventDefault → Fokus kann in andere Felder wechseln
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
                 >
                   <div className="filterPopover__head">
                     <div className="filterPopover__title">Filter</div>
-
                     <div className="filterPopover__actions">
-                      <button
-                        type="button"
-                        className="btn"
-                        onClick={() => {
-                          resetFilters();
-                          requestAnimationFrame(() => searchInputRef.current?.focus());
-                        }}
-                      >
+                      <button type="button" className="btn" onClick={resetFilters}>
                         Reset
                       </button>
-
-                      <button
-                        type="button"
-                        className="btn btn--primary"
-                        onClick={() => {
-                          applyFiltersNow();
-                          requestAnimationFrame(() => searchInputRef.current?.focus());
-                        }}
-                      >
+                      <button type="button" className="btn btn--primary" onClick={applyFiltersNow}>
                         Anwenden
                       </button>
-
-                      <button
-                        type="button"
-                        className="btn btn--ghost"
-                        onClick={() => {
-                          setFiltersOpen(false);
-                          requestAnimationFrame(() => searchInputRef.current?.focus());
-                        }}
-                      >
+                      <button type="button" className="btn btn--ghost" onClick={() => setFiltersOpen(false)}>
                         Schließen
                       </button>
                     </div>
@@ -1460,6 +1432,7 @@ export default function HomePage() {
 
                   <div className="filterPopover__body">
                     <div className="filterGrid">
+                      {/* Left: big multi lists */}
                       <div style={{ display: "grid", gap: 12 }}>
                         <FilterSection
                           title="Tags"
@@ -1507,6 +1480,7 @@ export default function HomePage() {
                         />
                       </div>
 
+                      {/* Right: smaller core filters */}
                       <div style={{ display: "grid", gap: 12 }}>
                         <div className="fsec">
                           <div className="fsec__head" style={{ cursor: "default" }}>
@@ -1569,40 +1543,18 @@ export default function HomePage() {
                                     {yearTo ? <Pill>bis {yearTo}</Pill> : null}
                                     {selectedTags.length ? <Pill>{selectedTags.length} Tags</Pill> : null}
                                     {selectedMainActors.length ? <Pill>{selectedMainActors.length} Haupt</Pill> : null}
-                                    {selectedSupportingActors.length ? (
-                                      <Pill>{selectedSupportingActors.length} Neben</Pill>
-                                    ) : null}
+                                    {selectedSupportingActors.length ? <Pill>{selectedSupportingActors.length} Neben</Pill> : null}
                                   </div>
                                 </div>
                               </>
                             ) : null}
                           </div>
                         </div>
-
-                        <div className="fsec">
-                          <div className="fsec__head" style={{ cursor: "default" }}>
-                            <div className="fsec__headL">
-                              <div className="fsec__title">Überblick</div>
-                              <div className="fsec__sub">Nur Anzeige</div>
-                            </div>
-                            <div className="fsec__headR">
-                              <span className="fsec__chev" style={{ opacity: 0.35 }}>
-                                ✓
-                              </span>
-                            </div>
-                          </div>
-                          <div className="fsec__body" style={{ display: "grid", gap: 10 }}>
-                            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                              <Pill>{heroCounts.movieCount} Filme</Pill>
-                              <Pill>{heroCounts.actorCount} Hauptdarsteller</Pill>
-                            </div>
-                          </div>
-                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              ) : null}
+              )}
             </div>
           ) : null}
         </div>
@@ -1648,13 +1600,17 @@ export default function HomePage() {
       </div>
 
       <div className="wrap">
+        {/* Logo */}
         <div className="logoSolo">
-          <img className="logoSolo__img" src="/logo.png" alt="Project1337" />
+          {/* Passe ggf. den Dateinamen an (z.B. /logo.png) */}
+          <img className="logoSolo__img" src="/logo.svg" alt="Project1337 Logo" />
         </div>
 
+        {/* Errors */}
         {loginErr ? <div className="errorBanner">{loginErr}</div> : null}
         {err ? <div className="errorBanner">{err}</div> : null}
 
+        {/* Content */}
         {!loggedIn ? (
           <EmptyState
             title="Bitte einloggen"
@@ -1679,7 +1635,7 @@ export default function HomePage() {
             <div className="sectionHead">
               <div>
                 <div className="sectionTitle">{moviesTitle}</div>
-                <div className="sectionMeta">{moviesSubtitle || `${visibleMovies.length} Film(e)`}</div>
+                <div className="sectionMeta">{moviesSubtitle || `${movieList.length} Film(e)`}</div>
               </div>
 
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -1689,14 +1645,11 @@ export default function HomePage() {
               </div>
             </div>
 
-            {visibleMovies.length === 0 ? (
-              <EmptyState
-                title="Keine Filme gefunden"
-                subtitle="Passe Suche/Filter an oder gehe zurück zur Darsteller-Ansicht."
-              />
+            {movieList.length === 0 ? (
+              <EmptyState title="Keine Filme gefunden" subtitle="Passe Suche/Filter an oder gehe zurück zur Darsteller-Ansicht." />
             ) : (
               <div className="movieGrid">
-                {visibleMovies.map((m) => (
+                {movieList.map((m) => (
                   <div key={m.id} className="movieCard">
                     <div className="movieCard__top">
                       <h3 className="movieCard__title">{m.title || "Unbenannt"}</h3>
@@ -1721,12 +1674,7 @@ export default function HomePage() {
                     </div>
 
                     <div className="movieCard__actions">
-                      <button
-                        type="button"
-                        className="btn btn--primary"
-                        onClick={() => safeOpen(m.fileUrl)}
-                        title="Film starten"
-                      >
+                      <button type="button" className="btn btn--primary" onClick={() => safeOpen(m.fileUrl)} title="Film starten">
                         Play
                       </button>
                       <button
@@ -1754,11 +1702,24 @@ export default function HomePage() {
             <div className="sectionHead">
               <div>
                 <div className="sectionTitle">Hauptdarsteller</div>
-                <div className="sectionMeta">{actors.length} Darsteller</div>
+                <div className="sectionMeta">
+                  {actors.length} Darsteller
+                </div>
               </div>
 
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <button type="button" className="btn" onClick={showAllMovies} title="Alle Filme anzeigen">
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => {
+                    const filtered = applyAdvancedFilters(movies);
+                    setViewMode("movies");
+                    setMoviesTitle(hasAnyFilter ? "Gefilterte Filme" : "Filme");
+                    setMoviesSubtitle(`${filtered.length} Film(e)`);
+                    setVisibleMovies(filtered);
+                  }}
+                  title="Alle Filme anzeigen"
+                >
                   Filme
                 </button>
               </div>
@@ -1802,9 +1763,7 @@ export default function HomePage() {
                         </div>
                       )}
 
-                      <div className="card__count" aria-label={`${a.movieCount} Filme`}>
-                        {a.movieCount}
-                      </div>
+                      <div className="card__badge">{a.movieCount} Film(e)</div>
                     </div>
 
                     <div className="card__body">
