@@ -342,6 +342,10 @@ export default function HomePage() {
   const searchInputRef = useRef(null);
   const mobileSearchInputRef = useRef(null);
 
+  // NEW: User dropdown (Dashboard/Logout)
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef(null);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const flag = window.localStorage.getItem("auth_1337_flag");
@@ -355,7 +359,7 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    if (!filtersOpen && !mobileSearchOpen) return;
+    if (!filtersOpen && !mobileSearchOpen && !userMenuOpen) return;
 
     const onDown = (e) => {
       if (mobileSearchOpen) {
@@ -363,12 +367,15 @@ export default function HomePage() {
         if (panel && panel.contains(e.target)) return;
         setMobileSearchOpen(false);
         setFiltersOpen(false);
+        setUserMenuOpen(false);
         return;
       }
 
       const root = searchWrapRef.current;
-      if (!root) return;
-      if (!root.contains(e.target)) setFiltersOpen(false);
+      if (root && !root.contains(e.target)) setFiltersOpen(false);
+
+      const um = userMenuRef.current;
+      if (um && !um.contains(e.target)) setUserMenuOpen(false);
     };
 
     document.addEventListener("mousedown", onDown, true);
@@ -378,20 +385,21 @@ export default function HomePage() {
       document.removeEventListener("mousedown", onDown, true);
       document.removeEventListener("touchstart", onDown, true);
     };
-  }, [filtersOpen, mobileSearchOpen]);
+  }, [filtersOpen, mobileSearchOpen, userMenuOpen]);
 
   useEffect(() => {
-    if (!mobileSearchOpen) return;
+    if (!mobileSearchOpen && ! km && !userMenuOpen && !filtersOpen) return;
 
     const onKey = (e) => {
       if (e.key === "Escape") {
         setMobileSearchOpen(false);
         setFiltersOpen(false);
+        setUserMenuOpen(false);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [mobileSearchOpen]);
+  }, [mobileSearchOpen, userMenuOpen, filtersOpen]);
 
   useEffect(() => {
     if (!loggedIn) {
@@ -807,6 +815,7 @@ export default function HomePage() {
     setMoviesSubtitle("");
     setFiltersOpen(false);
     setMobileSearchOpen(false);
+    setUserMenuOpen(false);
   };
 
   const resetFilters = () => {
@@ -875,6 +884,7 @@ export default function HomePage() {
   const openMobileSearch = () => {
     setMobileSearchOpen(true);
     setFiltersOpen(true);
+    setUserMenuOpen(false);
     setTimeout(() => mobileSearchInputRef.current?.focus(), 0);
   };
 
@@ -1046,6 +1056,79 @@ export default function HomePage() {
           color: rgba(255, 255, 255, 0.72);
           font-weight: 700;
           font-size: 13px;
+        }
+
+        /* NEW: User dropdown */
+        .userMenu {
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .userMenu__btn {
+          width: 38px;
+          height: 38px;
+          border-radius: 14px;
+          display: grid;
+          place-items: center;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: rgba(255, 255, 255, 0.06);
+          color: rgba(255, 255, 255, 0.92);
+          cursor: pointer;
+          transition: transform 0.12s ease, background 0.12s ease,
+            border-color 0.12s ease;
+        }
+        .userMenu__btn:hover {
+          transform: translateY(-1px);
+          background: rgba(255, 255, 255, 0.09);
+          border-color: rgba(255, 255, 255, 0.18);
+        }
+        .userMenu__btn svg {
+          width: 18px;
+          height: 18px;
+          opacity: 0.9;
+        }
+        .userMenu__panel {
+          position: absolute;
+          right: 0;
+          top: calc(100% + 10px);
+          z-index: 2200;
+          width: 190px;
+          border-radius: 16px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: rgba(10, 10, 14, 0.92);
+          box-shadow: 0 40px 120px rgba(0, 0, 0, 0.75);
+          overflow: hidden;
+          padding: 8px;
+        }
+        .userMenu__item {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          padding: 10px 12px;
+          border-radius: 12px;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: rgba(255, 255, 255, 0.06);
+          color: var(--text);
+          font-size: 13px;
+          font-weight: 750;
+          cursor: pointer;
+          transition: transform 0.12s ease, background 0.12s ease,
+            border-color 0.12s ease;
+          text-align: left;
+        }
+        .userMenu__item:hover {
+          transform: translateY(-1px);
+          background: rgba(255, 255, 255, 0.09);
+          border-color: rgba(255, 255, 255, 0.18);
+        }
+        .userMenu__item:active {
+          transform: translateY(0px);
+        }
+        .userMenu__item--danger {
+          border-color: rgba(229, 9, 20, 0.35);
         }
 
         .searchWrap {
@@ -1830,7 +1913,10 @@ export default function HomePage() {
                   ref={searchInputRef}
                   value={search}
                   onChange={(e) => handleSearchChange(e.target.value)}
-                  onFocus={() => setFiltersOpen(true)}
+                  onFocus={() => {
+                    setFiltersOpen(true);
+                    setUserMenuOpen(false);
+                  }}
                   placeholder="Suchen: Titel, Studio, Darsteller, Tags…"
                   autoComplete="off"
                 />
@@ -2082,24 +2168,63 @@ export default function HomePage() {
                 </svg>
               </button>
 
-              <div className="auth__label">Willkommen, {loginUser}</div>
+              <div className="userMenu" ref={userMenuRef}>
+                <div className="auth__label">Willkommen, {loginUser}</div>
 
-              <button
-                type="button"
-                className="btn"
-                onClick={() => safeOpen("/dashboard")}
-                title="Zum Dashboard"
-              >
-                Dashboard
-              </button>
+                <button
+                  type="button"
+                  className="userMenu__btn"
+                  aria-haspopup="menu"
+                  aria-expanded={userMenuOpen ? "true" : "false"}
+                  title="Menü"
+                  onClick={() => {
+                    setUserMenuOpen((v) => !v);
+                    setFiltersOpen(false);
+                    setMobileSearchOpen(false);
+                  }}
+                >
+                  {/* inverted pyramid */}
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path
+                      d="M6 9l6 6 6-6"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
 
-              <button
-                type="button"
-                className="btn btn--danger"
-                onClick={handleLogout}
-              >
-                Logout
-              </button>
+                {userMenuOpen ? (
+                  <div className="userMenu__panel" role="menu">
+                    <button
+                      type="button"
+                      className="userMenu__item"
+                      role="menuitem"
+                      onClick={() => {
+                        setUserMenuOpen(false);
+                        safeOpen("/dashboard");
+                      }}
+                      title="Zum Dashboard"
+                    >
+                      Dashboard
+                    </button>
+                    <div style={{ height: 8 }} />
+                    <button
+                      type="button"
+                      className="userMenu__item userMenu__item--danger"
+                      role="menuitem"
+                      onClick={() => {
+                        setUserMenuOpen(false);
+                        handleLogout();
+                      }}
+                      title="Logout"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                ) : null}
+              </div>
             </>
           ) : (
             <form className="authForm" onSubmit={handleLogin}>
@@ -2185,7 +2310,10 @@ export default function HomePage() {
                     ref={mobileSearchInputRef}
                     value={search}
                     onChange={(e) => handleSearchChange(e.target.value)}
-                    onFocus={() => setFiltersOpen(true)}
+                    onFocus={() => {
+                      setFiltersOpen(true);
+                      setUserMenuOpen(false);
+                    }}
                     placeholder="Suchen: Titel, Studio, Darsteller, Tags…"
                     autoComplete="off"
                   />
@@ -2422,22 +2550,22 @@ export default function HomePage() {
       ) : null}
 
       <div className="wrap">
-<div className="logoSolo">
-  <button
-    type="button"
-    className="logoBtn"
-    onClick={() => {
-      router.replace("/", { scroll: false });
-      setViewMode("actors");
-      setVisibleMovies([]);
-      setSearch("");
-    }}
-    title="Zur Hauptseite"
-    aria-label="Zur Hauptseite"
-  >
-    <img className="logoSolo__img" src="/logo.png" alt="Project1337 Logo" />
-  </button>
-</div>
+        <div className="logoSolo">
+          <button
+            type="button"
+            className="logoBtn"
+            onClick={() => {
+              router.replace("/", { scroll: false });
+              setViewMode("actors");
+              setVisibleMovies([]);
+              setSearch("");
+            }}
+            title="Zur Hauptseite"
+            aria-label="Zur Hauptseite"
+          >
+            <img className="logoSolo__img" src="/logo.png" alt="Project1337 Logo" />
+          </button>
+        </div>
 
         {loginErr ? <div className="errorBanner">{loginErr}</div> : null}
         {err ? <div className="errorBanner">{err}</div> : null}
