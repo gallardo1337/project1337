@@ -342,7 +342,7 @@ export default function HomePage() {
   const searchInputRef = useRef(null);
   const mobileSearchInputRef = useRef(null);
 
-  // NEW: User dropdown (Dashboard/Logout)
+  // User dropdown (Dashboard/Logout)
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
 
@@ -387,8 +387,9 @@ export default function HomePage() {
     };
   }, [filtersOpen, mobileSearchOpen, userMenuOpen]);
 
+  // FIX: removed undefined "km" that caused client-side exception
   useEffect(() => {
-    if (!mobileSearchOpen && ! km && !userMenuOpen && !filtersOpen) return;
+    if (!mobileSearchOpen && !userMenuOpen && !filtersOpen) return;
 
     const onKey = (e) => {
       if (e.key === "Escape") {
@@ -1058,7 +1059,7 @@ export default function HomePage() {
           font-size: 13px;
         }
 
-        /* NEW: User dropdown */
+        /* User dropdown */
         .userMenu {
           position: relative;
           display: inline-flex;
@@ -1878,6 +1879,14 @@ export default function HomePage() {
             grid-template-columns: repeat(2, minmax(0, 1fr));
           }
         }
+
+        /* Small helper: logo button (so button has no default styles) */
+        .logoBtn {
+          background: transparent;
+          border: none;
+          padding: 0;
+          cursor: pointer;
+        }
       `}</style>
 
       <div className="topbar">
@@ -2602,7 +2611,11 @@ export default function HomePage() {
               </div>
 
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <button type="button" className="btn" onClick={handleBackToActors}>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={handleBackToActors}
+                >
                   Darsteller
                 </button>
               </div>
@@ -2766,7 +2779,6 @@ export default function HomePage() {
                     </div>
 
                     <div className="card__body">
-                      {/* changed: mobile auto-fit so long names don't truncate */}
                       <AutoFitActorTitle text={a.name} />
                     </div>
                   </div>
