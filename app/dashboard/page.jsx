@@ -70,7 +70,7 @@ const CHANGELOG = [
       "Supabase-Anbindung (movies, studios, actors, tags, movie_actors, movie_tags)",
     ],
   },
-]; 
+];
 
 function VersionHint() {
   const [open, setOpen] = useState(false);
@@ -183,10 +183,11 @@ export default function DashboardPage() {
   const [newTagName, setNewTagName] = useState("");
 
   // Film Inputs
+  const DEFAULT_FILE_BASE = "http://192.168.178.72/1337/";
   const [filmTitel, setFilmTitel] = useState("");
   const [filmJahr, setFilmJahr] = useState("");
   const [filmStudioId, setFilmStudioId] = useState("");
-  const [filmFileUrl, setFilmFileUrl] = useState("");
+  const [filmFileUrl, setFilmFileUrl] = useState(DEFAULT_FILE_BASE);
   const [filmResolutionId, setFilmResolutionId] = useState(""); // NEU (Pflicht)
   const [filmThumbnailUrl, setFilmThumbnailUrl] = useState(""); // NEU (optional)
   const [selectedMainActorIds, setSelectedMainActorIds] = useState([]);
@@ -556,7 +557,7 @@ export default function DashboardPage() {
     setFilmTitel("");
     setFilmJahr("");
     setFilmStudioId("");
-    setFilmFileUrl("");
+    setFilmFileUrl(DEFAULT_FILE_BASE);
     setFilmThumbnailUrl(""); // NEU
     setSelectedMainActorIds([]);
     setSelectedSupportActorIds([]);
@@ -976,7 +977,9 @@ export default function DashboardPage() {
                                   loading="lazy"
                                 />
                                 <div className="min-w-0 flex-1">
-                                  <div className="truncate text-xs text-neutral-400">{filmThumbnailUrl}</div>
+                                  <div className="truncate text-xs text-neutral-400">
+                                    {filmThumbnailUrl}
+                                  </div>
                                   <div className="mt-2 flex gap-2">
                                     <button
                                       type="button"
