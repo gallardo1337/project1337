@@ -22,6 +22,15 @@ const MovieThumbnailUploader = dynamic(() => import("./MovieThumbnailUploader.js
 
 const CHANGELOG = [
   {
+    version: "0.5.0",
+    date: "2026-06-05",
+    items: [
+      "File-URL wird beim Auswählen eines Hauptdarstellers automatisch auf den passenden Darsteller-Ordner gesetzt",
+      "Bei Resolution 4K wird automatisch der Unterordner /4K/ in die File-URL eingefügt",
+      "Bei FullHD oder Retro bleibt die File-URL direkt im Darsteller-Ordner",
+    ],
+  },
+  {
     version: "0.4.1",
     date: "2025-12-27",
     items: [
@@ -184,10 +193,6 @@ export default function DashboardPage() {
 
   // Film Inputs
   const DEFAULT_FILE_BASE = "http://192.168.178.58:8080/";
-  const buildActorFolderUrl = (actorName) => {
-    if (!actorName) return DEFAULT_FILE_BASE;
-    return `${DEFAULT_FILE_BASE}${encodeURIComponent(actorName.trim())}/`;
-  };
 
   const [filmTitel, setFilmTitel] = useState("");
   const [filmJahr, setFilmJahr] = useState("");
@@ -280,6 +285,28 @@ export default function DashboardPage() {
   const tagMap = Object.fromEntries(tags.map((t) => [t.id, t]));
   const resolutionMap = Object.fromEntries(resolutions.map((r) => [r.id, r])); // NEU
 
+  const getResolutionNameById = (resolutionId) => {
+    return resolutions.find((r) => r.id === resolutionId)?.name || "";
+  };
+
+  const getFirstSelectedMainActor = (ids = selectedMainActorIds) => {
+    if (!Array.isArray(ids) || ids.length === 0) return null;
+    return hauptdarsteller.find((a) => a.id === ids[0]) || null;
+  };
+
+  const buildMovieFolderUrl = (actorName, resolutionId = filmResolutionId) => {
+    if (!actorName) return DEFAULT_FILE_BASE;
+
+    const actorFolder = encodeURIComponent(actorName.trim());
+    const resolutionName = getResolutionNameById(resolutionId);
+
+    if (resolutionName === "4K") {
+      return `${DEFAULT_FILE_BASE}${actorFolder}/4K/`;
+    }
+
+    return `${DEFAULT_FILE_BASE}${actorFolder}/`;
+  };
+
   const toggleId = (id, arr, setter) => {
     if (arr.includes(id)) {
       setter(arr.filter((x) => x !== id));
@@ -294,22 +321,32 @@ export default function DashboardPage() {
 
       if (alreadySelected) {
         const next = prev.filter((id) => id !== actor.id);
+        const firstRemainingActor = getFirstSelectedMainActor(next);
 
-        if (next.length === 0) {
-          setFilmFileUrl(DEFAULT_FILE_BASE);
+        if (firstRemainingActor) {
+          setFilmFileUrl(buildMovieFolderUrl(firstRemainingActor.name, filmResolutionId));
         } else {
-          const firstRemainingActor = hauptdarsteller.find((a) => a.id === next[0]);
-          if (firstRemainingActor) {
-            setFilmFileUrl(buildActorFolderUrl(firstRemainingActor.name));
-          }
+          setFilmFileUrl(DEFAULT_FILE_BASE);
         }
 
         return next;
       }
 
-      setFilmFileUrl(buildActorFolderUrl(actor.name));
+      setFilmFileUrl(buildMovieFolderUrl(actor.name, filmResolutionId));
       return [...prev, actor.id];
     });
+  };
+
+  const handleResolutionChange = (resolutionId) => {
+    setFilmResolutionId(resolutionId);
+
+    const firstSelectedActor = getFirstSelectedMainActor();
+
+    if (firstSelectedActor) {
+      setFilmFileUrl(buildMovieFolderUrl(firstSelectedActor.name, resolutionId));
+    } else {
+      setFilmFileUrl(DEFAULT_FILE_BASE);
+    }
   };
 
   // ---------------- Login / Logout ----------------
@@ -976,7 +1013,7 @@ export default function DashboardPage() {
                             <select
                               className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 focus:border-red-500 focus:outline-none"
                               value={filmResolutionId}
-                              onChange={(e) => setFilmResolutionId(e.target.value)}
+                              onChange={(e) => handleResolutionChange(e.target.value)}
                               required
                             >
                               <option value="" disabled>
