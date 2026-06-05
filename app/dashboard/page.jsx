@@ -1025,9 +1025,6 @@ export default function DashboardPage() {
                                 </option>
                               ))}
                             </select>
-                            <div className="mt-1 text-xs text-neutral-500">
-                              Pflichtfeld (Datenbank erzwingt NOT NULL).
-                            </div>
                           </div>
 
                           {/* Thumbnail Upload: OHNE CROP */}
@@ -1073,9 +1070,6 @@ export default function DashboardPage() {
                             ) : (
                               <div className="mt-2">
                                 <MovieThumbnailUploader onUploaded={(url) => setFilmThumbnailUrl(url)} />
-                                <div className="mt-1 text-xs text-neutral-500">
-                                  Upload optional. Kein Crop. Wenn leer, bleibt thumbnail_url = NULL.
-                                </div>
                               </div>
                             )}
                           </div>
