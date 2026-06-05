@@ -185,9 +185,10 @@ export default function DashboardPage() {
   // Film Inputs
   const DEFAULT_FILE_BASE = "http://192.168.178.58:8080/";
   const buildActorFolderUrl = (actorName) => {
-  if (!actorName) return DEFAULT_FILE_BASE;
-  return `${DEFAULT_FILE_BASE}${encodeURIComponent(actorName.trim())}/`;
+    if (!actorName) return DEFAULT_FILE_BASE;
+    return `${DEFAULT_FILE_BASE}${encodeURIComponent(actorName.trim())}/`;
   };
+
   const [filmTitel, setFilmTitel] = useState("");
   const [filmJahr, setFilmJahr] = useState("");
   const [filmStudioId, setFilmStudioId] = useState("");
@@ -285,6 +286,30 @@ export default function DashboardPage() {
     } else {
       setter([...arr, id]);
     }
+  };
+
+  const handleToggleMainActor = (actor) => {
+    setSelectedMainActorIds((prev) => {
+      const alreadySelected = prev.includes(actor.id);
+
+      if (alreadySelected) {
+        const next = prev.filter((id) => id !== actor.id);
+
+        if (next.length === 0) {
+          setFilmFileUrl(DEFAULT_FILE_BASE);
+        } else {
+          const firstRemainingActor = hauptdarsteller.find((a) => a.id === next[0]);
+          if (firstRemainingActor) {
+            setFilmFileUrl(buildActorFolderUrl(firstRemainingActor.name));
+          }
+        }
+
+        return next;
+      }
+
+      setFilmFileUrl(buildActorFolderUrl(actor.name));
+      return [...prev, actor.id];
+    });
   };
 
   // ---------------- Login / Logout ----------------
@@ -1046,9 +1071,7 @@ export default function DashboardPage() {
                                   <button
                                     key={a.id}
                                     type="button"
-                                    onClick={() =>
-                                      toggleId(a.id, selectedMainActorIds, setSelectedMainActorIds)
-                                    }
+                                    onClick={() => handleToggleMainActor(a)}
                                     className={chipClass(active)}
                                   >
                                     {a.name}
