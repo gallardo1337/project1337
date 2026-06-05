@@ -184,6 +184,10 @@ export default function DashboardPage() {
 
   // Film Inputs
   const DEFAULT_FILE_BASE = "http://192.168.178.58:8080/";
+  const buildActorFolderUrl = (actorName) => {
+  if (!actorName) return DEFAULT_FILE_BASE;
+  return `${DEFAULT_FILE_BASE}${encodeURIComponent(actorName.trim())}/`;
+  };
   const [filmTitel, setFilmTitel] = useState("");
   const [filmJahr, setFilmJahr] = useState("");
   const [filmStudioId, setFilmStudioId] = useState("");
