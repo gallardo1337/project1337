@@ -1020,7 +1020,7 @@ export default function DashboardPage() {
                               className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
                               value={filmFileUrl}
                               onChange={(e) => setFilmFileUrl(e.target.value)}
-                              placeholder="http://192.168.178.72/1337/"
+                              placeholder="http://192.168.178.58:8080/"
                             />
                           </div>
                         </div>
