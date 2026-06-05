@@ -183,7 +183,7 @@ export default function DashboardPage() {
   const [newTagName, setNewTagName] = useState("");
 
   // Film Inputs
-  const DEFAULT_FILE_BASE = "http://192.168.178.72/1337/";
+  const DEFAULT_FILE_BASE = "http://192.168.178.58:8080/";
   const [filmTitel, setFilmTitel] = useState("");
   const [filmJahr, setFilmJahr] = useState("");
   const [filmStudioId, setFilmStudioId] = useState("");
