@@ -140,7 +140,7 @@ function VersionHint() {
                 onClick={() => setOpen(false)}
                 className="rounded-full border border-neutral-600 bg-neutral-900 px-4 py-1.5 text-sm text-neutral-100 hover:bg-neutral-800 transition-colors"
               >
-                Schließen
+                x
               </button>
             </div>
 
