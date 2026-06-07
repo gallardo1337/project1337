@@ -1051,7 +1051,14 @@ export default function DashboardPage() {
           --dash-text: rgba(255, 255, 255, 0.92);
           --dash-accent: #e50914;
         }
+.changelogPanel {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
 
+.changelogPanel::-webkit-scrollbar {
+  display: none;
+}
         .dashTopbar {
           position: sticky;
           top: 0;
