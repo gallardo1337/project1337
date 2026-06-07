@@ -1,20 +1,30 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 
 // ActorImageUploader nur im Client laden (wegen react-easy-crop / Canvas)
 const ActorImageUploader = dynamic(() => import("./ActorImageUploader.jsx"), {
   ssr: false,
-  loading: () => <div className="text-xs text-neutral-500">Lade Bild-Uploader…</div>,
+  loading: () => (
+    <div className="text-xs text-neutral-500">Lade Bild-Uploader…</div>
+  ),
 });
 
 // MovieThumbnailUploader nur im Client laden (ohne Crop)
-const MovieThumbnailUploader = dynamic(() => import("./MovieThumbnailUploader.jsx"), {
-  ssr: false,
-  loading: () => <div className="text-xs text-neutral-500">Lade Thumbnail-Uploader…</div>,
-});
+const MovieThumbnailUploader = dynamic(
+  () => import("./MovieThumbnailUploader.jsx"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="text-xs text-neutral-500">
+        Lade Thumbnail-Uploader…
+      </div>
+    ),
+  }
+);
 
 // -------------------------------
 // Version / Changelog
@@ -110,7 +120,9 @@ function VersionHint() {
                 <div className="text-xs uppercase tracking-[0.18em] text-neutral-400">
                   Version &amp; Changelog
                 </div>
-                <div className="text-lg font-semibold text-neutral-50">1337 Dashboard</div>
+                <div className="text-lg font-semibold text-neutral-50">
+                  1337 Dashboard
+                </div>
               </div>
               <button
                 type="button"
@@ -128,8 +140,12 @@ function VersionHint() {
                   className="rounded-xl border border-neutral-700/80 bg-neutral-900/70 p-4"
                 >
                   <div className="mb-2 flex items-baseline justify-between">
-                    <div className="font-semibold text-base text-neutral-50">{entry.version}</div>
-                    <div className="text-sm text-neutral-400">{entry.date}</div>
+                    <div className="font-semibold text-base text-neutral-50">
+                      {entry.version}
+                    </div>
+                    <div className="text-sm text-neutral-400">
+                      {entry.date}
+                    </div>
                   </div>
                   <ul className="m-0 list-disc pl-5 text-sm text-neutral-200 space-y-1.5">
                     {entry.items.map((it, idx) => (
@@ -158,6 +174,18 @@ const chipClass = (active) =>
 // -------------------------------
 
 export default function DashboardPage() {
+  const router = useRouter();
+
+  // Header / Suche
+  const [dashboardSearch, setDashboardSearch] = useState("");
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  const searchWrapRef = useRef(null);
+  const searchInputRef = useRef(null);
+  const mobileSearchInputRef = useRef(null);
+  const userMenuRef = useRef(null);
+
   // Login-Status
   const [loggedIn, setLoggedIn] = useState(false);
   const [loginUser, setLoginUser] = useState("gallardo1337");
@@ -174,7 +202,7 @@ export default function DashboardPage() {
   const [studios, setStudios] = useState([]);
   const [tags, setTags] = useState([]);
   const [filme, setFilme] = useState([]);
-  const [resolutions, setResolutions] = useState([]); // NEU
+  const [resolutions, setResolutions] = useState([]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -198,8 +226,8 @@ export default function DashboardPage() {
   const [filmJahr, setFilmJahr] = useState("");
   const [filmStudioId, setFilmStudioId] = useState("");
   const [filmFileUrl, setFilmFileUrl] = useState(DEFAULT_FILE_BASE);
-  const [filmResolutionId, setFilmResolutionId] = useState(""); // NEU (Pflicht)
-  const [filmThumbnailUrl, setFilmThumbnailUrl] = useState(""); // NEU (optional)
+  const [filmResolutionId, setFilmResolutionId] = useState("");
+  const [filmThumbnailUrl, setFilmThumbnailUrl] = useState("");
   const [selectedMainActorIds, setSelectedMainActorIds] = useState([]);
   const [selectedSupportActorIds, setSelectedSupportActorIds] = useState([]);
   const [selectedTagIds, setSelectedTagIds] = useState([]);
@@ -219,6 +247,49 @@ export default function DashboardPage() {
     }
   }, []);
 
+  // Header: Klick außerhalb / Mobile Search / User Menu schließen
+  useEffect(() => {
+    if (!mobileSearchOpen && !userMenuOpen) return;
+
+    const onDown = (e) => {
+      if (mobileSearchOpen) {
+        const panel = document.querySelector(".dashMSearch__panel");
+        if (panel && panel.contains(e.target)) return;
+        setMobileSearchOpen(false);
+        setUserMenuOpen(false);
+        return;
+      }
+
+      const sw = searchWrapRef.current;
+      if (sw && sw.contains(e.target)) return;
+
+      const um = userMenuRef.current;
+      if (um && !um.contains(e.target)) setUserMenuOpen(false);
+    };
+
+    document.addEventListener("mousedown", onDown, true);
+    document.addEventListener("touchstart", onDown, true);
+
+    return () => {
+      document.removeEventListener("mousedown", onDown, true);
+      document.removeEventListener("touchstart", onDown, true);
+    };
+  }, [mobileSearchOpen, userMenuOpen]);
+
+  useEffect(() => {
+    if (!mobileSearchOpen && !userMenuOpen) return;
+
+    const onKey = (e) => {
+      if (e.key === "Escape") {
+        setMobileSearchOpen(false);
+        setUserMenuOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mobileSearchOpen, userMenuOpen]);
+
   // Daten laden, wenn eingeloggt
   useEffect(() => {
     const loadAll = async () => {
@@ -237,15 +308,24 @@ export default function DashboardPage() {
         setLoading(true);
         setError(null);
 
-        const [actorsRes, actors2Res, studiosRes, tagsRes, moviesRes, resolutionsRes] =
-          await Promise.all([
-            supabase.from("actors").select("*").order("name"),
-            supabase.from("actors2").select("*").order("name"),
-            supabase.from("studios").select("*").order("name"),
-            supabase.from("tags").select("*").order("name"),
-            supabase.from("movies").select("*").order("created_at", { ascending: false }),
-            supabase.from("resolutions").select("*").order("name"),
-          ]);
+        const [
+          actorsRes,
+          actors2Res,
+          studiosRes,
+          tagsRes,
+          moviesRes,
+          resolutionsRes,
+        ] = await Promise.all([
+          supabase.from("actors").select("*").order("name"),
+          supabase.from("actors2").select("*").order("name"),
+          supabase.from("studios").select("*").order("name"),
+          supabase.from("tags").select("*").order("name"),
+          supabase
+            .from("movies")
+            .select("*")
+            .order("created_at", { ascending: false }),
+          supabase.from("resolutions").select("*").order("name"),
+        ]);
 
         if (actorsRes.error) throw actorsRes.error;
         if (actors2Res.error) throw actors2Res.error;
@@ -262,7 +342,9 @@ export default function DashboardPage() {
         setResolutions(resolutionsRes.data || []);
 
         if (!editingFilmId) {
-          const fullHd = (resolutionsRes.data || []).find((r) => r.name === "FullHD");
+          const fullHd = (resolutionsRes.data || []).find(
+            (r) => r.name === "FullHD"
+          );
           if (fullHd && !filmResolutionId) {
             setFilmResolutionId(fullHd.id);
           }
@@ -279,11 +361,75 @@ export default function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loggedIn]);
 
-  const actorMap = Object.fromEntries(hauptdarsteller.map((a) => [a.id, a]));
-  const supportMap = Object.fromEntries(nebendarsteller.map((a) => [a.id, a]));
-  const studioMap = Object.fromEntries(studios.map((s) => [s.id, s]));
-  const tagMap = Object.fromEntries(tags.map((t) => [t.id, t]));
-  const resolutionMap = Object.fromEntries(resolutions.map((r) => [r.id, r])); // NEU
+  const actorMap = useMemo(
+    () => Object.fromEntries(hauptdarsteller.map((a) => [a.id, a])),
+    [hauptdarsteller]
+  );
+
+  const supportMap = useMemo(
+    () => Object.fromEntries(nebendarsteller.map((a) => [a.id, a])),
+    [nebendarsteller]
+  );
+
+  const studioMap = useMemo(
+    () => Object.fromEntries(studios.map((s) => [s.id, s])),
+    [studios]
+  );
+
+  const tagMap = useMemo(
+    () => Object.fromEntries(tags.map((t) => [t.id, t])),
+    [tags]
+  );
+
+  const resolutionMap = useMemo(
+    () => Object.fromEntries(resolutions.map((r) => [r.id, r])),
+    [resolutions]
+  );
+
+  const filteredFilme = useMemo(() => {
+    const q = dashboardSearch.trim().toLowerCase();
+    if (!q) return filme;
+
+    return filme.filter((f) => {
+      const mainActors = Array.isArray(f.main_actor_ids)
+        ? f.main_actor_ids.map((id) => actorMap[id]?.name).filter(Boolean)
+        : [];
+
+      const supportActors = Array.isArray(f.supporting_actor_ids)
+        ? f.supporting_actor_ids
+            .map((id) => supportMap[id]?.name)
+            .filter(Boolean)
+        : [];
+
+      const tagNames = Array.isArray(f.tag_ids)
+        ? f.tag_ids.map((id) => tagMap[id]?.name).filter(Boolean)
+        : [];
+
+      const haystack = [
+        f.title || "",
+        f.year || "",
+        f.file_url || "",
+        f.thumbnail_url || "",
+        studioMap[f.studio_id]?.name || "",
+        resolutionMap[f.resolution_id]?.name || "",
+        mainActors.join(" "),
+        supportActors.join(" "),
+        tagNames.join(" "),
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      return haystack.includes(q);
+    });
+  }, [
+    dashboardSearch,
+    filme,
+    actorMap,
+    supportMap,
+    studioMap,
+    tagMap,
+    resolutionMap,
+  ]);
 
   const getResolutionNameById = (resolutionId) => {
     return resolutions.find((r) => r.id === resolutionId)?.name || "";
@@ -324,7 +470,9 @@ export default function DashboardPage() {
         const firstRemainingActor = getFirstSelectedMainActor(next);
 
         if (firstRemainingActor) {
-          setFilmFileUrl(buildMovieFolderUrl(firstRemainingActor.name, filmResolutionId));
+          setFilmFileUrl(
+            buildMovieFolderUrl(firstRemainingActor.name, filmResolutionId)
+          );
         } else {
           setFilmFileUrl(DEFAULT_FILE_BASE);
         }
@@ -347,6 +495,16 @@ export default function DashboardPage() {
     } else {
       setFilmFileUrl(DEFAULT_FILE_BASE);
     }
+  };
+
+  const openMobileSearch = () => {
+    setMobileSearchOpen(true);
+    setUserMenuOpen(false);
+    setTimeout(() => mobileSearchInputRef.current?.focus(), 0);
+  };
+
+  const closeMobileSearch = () => {
+    setMobileSearchOpen(false);
   };
 
   // ---------------- Login / Logout ----------------
@@ -403,6 +561,10 @@ export default function DashboardPage() {
     setLoggedIn(false);
     setLoginPassword("");
     setEditingFilmId(null);
+    setDashboardSearch("");
+    setMobileSearchOpen(false);
+    setUserMenuOpen(false);
+    router.replace("/", { scroll: false });
   };
 
   // ---------------- Stammdaten anlegen ----------------
@@ -506,7 +668,10 @@ export default function DashboardPage() {
   // --------- Darsteller & Tag bearbeiten/löschen ---------
 
   const handleEditActor = async (actor) => {
-    const newName = window.prompt("Neuer Name für Hauptdarsteller:", actor.name || "");
+    const newName = window.prompt(
+      "Neuer Name für Hauptdarsteller:",
+      actor.name || ""
+    );
     if (newName === null) return;
     const trimmedName = newName.trim();
     if (!trimmedName) return;
@@ -534,14 +699,19 @@ export default function DashboardPage() {
       return;
     }
 
-    setHauptdarsteller((prev) => prev.map((a) => (a.id === actor.id ? data : a)));
+    setHauptdarsteller((prev) =>
+      prev.map((a) => (a.id === actor.id ? data : a))
+    );
   };
 
   const handleDeleteActor = async (actorId) => {
     const ok = window.confirm("Diesen Hauptdarsteller wirklich löschen?");
     if (!ok) return;
 
-    const { error: deleteError } = await supabase.from("actors").delete().eq("id", actorId);
+    const { error: deleteError } = await supabase
+      .from("actors")
+      .delete()
+      .eq("id", actorId);
 
     if (deleteError) {
       console.error(deleteError);
@@ -554,7 +724,10 @@ export default function DashboardPage() {
   };
 
   const handleEditSupportActor = async (actor) => {
-    const newName = window.prompt("Neuer Name für Nebendarsteller:", actor.name || "");
+    const newName = window.prompt(
+      "Neuer Name für Nebendarsteller:",
+      actor.name || ""
+    );
     if (newName === null) return;
     const trimmedName = newName.trim();
     if (!trimmedName) return;
@@ -582,14 +755,19 @@ export default function DashboardPage() {
       return;
     }
 
-    setNebendarsteller((prev) => prev.map((a) => (a.id === actor.id ? data : a)));
+    setNebendarsteller((prev) =>
+      prev.map((a) => (a.id === actor.id ? data : a))
+    );
   };
 
   const handleDeleteSupportActor = async (actorId) => {
     const ok = window.confirm("Diesen Nebendarsteller wirklich löschen?");
     if (!ok) return;
 
-    const { error: deleteError } = await supabase.from("actors2").delete().eq("id", actorId);
+    const { error: deleteError } = await supabase
+      .from("actors2")
+      .delete()
+      .eq("id", actorId);
 
     if (deleteError) {
       console.error(deleteError);
@@ -605,7 +783,10 @@ export default function DashboardPage() {
     const ok = window.confirm("Diesen Tag wirklich komplett löschen?");
     if (!ok) return;
 
-    const { error: deleteError } = await supabase.from("tags").delete().eq("id", tagId);
+    const { error: deleteError } = await supabase
+      .from("tags")
+      .delete()
+      .eq("id", tagId);
 
     if (deleteError) {
       console.error(deleteError);
@@ -624,7 +805,7 @@ export default function DashboardPage() {
     setFilmJahr("");
     setFilmStudioId("");
     setFilmFileUrl(DEFAULT_FILE_BASE);
-    setFilmThumbnailUrl(""); // NEU
+    setFilmThumbnailUrl("");
     setSelectedMainActorIds([]);
     setSelectedSupportActorIds([]);
     setSelectedTagIds([]);
@@ -666,10 +847,12 @@ export default function DashboardPage() {
       year,
       studio_id: filmStudioId || null,
       file_url: filmFileUrl.trim() || null,
-      resolution_id: filmResolutionId, // Pflicht
-      thumbnail_url: filmThumbnailUrl.trim() || null, // NEU (optional)
-      main_actor_ids: selectedMainActorIds.length > 0 ? selectedMainActorIds : null,
-      supporting_actor_ids: selectedSupportActorIds.length > 0 ? selectedSupportActorIds : null,
+      resolution_id: filmResolutionId,
+      thumbnail_url: filmThumbnailUrl.trim() || null,
+      main_actor_ids:
+        selectedMainActorIds.length > 0 ? selectedMainActorIds : null,
+      supporting_actor_ids:
+        selectedSupportActorIds.length > 0 ? selectedSupportActorIds : null,
       tag_ids: selectedTagIds.length > 0 ? selectedTagIds : null,
     };
 
@@ -714,10 +897,14 @@ export default function DashboardPage() {
     setFilmStudioId(film.studio_id || "");
     setFilmFileUrl(film.file_url || "");
     setFilmResolutionId(film.resolution_id || "");
-    setFilmThumbnailUrl(film.thumbnail_url || ""); // NEU
-    setSelectedMainActorIds(Array.isArray(film.main_actor_ids) ? film.main_actor_ids : []);
+    setFilmThumbnailUrl(film.thumbnail_url || "");
+    setSelectedMainActorIds(
+      Array.isArray(film.main_actor_ids) ? film.main_actor_ids : []
+    );
     setSelectedSupportActorIds(
-      Array.isArray(film.supporting_actor_ids) ? film.supporting_actor_ids : []
+      Array.isArray(film.supporting_actor_ids)
+        ? film.supporting_actor_ids
+        : []
     );
     setSelectedTagIds(Array.isArray(film.tag_ids) ? film.tag_ids : []);
 
@@ -732,7 +919,10 @@ export default function DashboardPage() {
     const ok = window.confirm("Diesen Film wirklich löschen?");
     if (!ok) return;
 
-    const { error: deleteError } = await supabase.from("movies").delete().eq("id", filmId);
+    const { error: deleteError } = await supabase
+      .from("movies")
+      .delete()
+      .eq("id", filmId);
 
     if (deleteError) {
       console.error(deleteError);
@@ -806,19 +996,27 @@ export default function DashboardPage() {
         <div className="space-y-2 text-sm">
           <div className="flex items-center justify-between">
             <span className="text-neutral-300">Filme</span>
-            <span className="font-semibold text-neutral-50">{filme.length}</span>
+            <span className="font-semibold text-neutral-50">
+              {filme.length}
+            </span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-neutral-300">Hauptdarsteller</span>
-            <span className="font-semibold text-neutral-50">{hauptdarsteller.length}</span>
+            <span className="font-semibold text-neutral-50">
+              {hauptdarsteller.length}
+            </span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-neutral-300">Nebendarsteller</span>
-            <span className="font-semibold text-neutral-50">{nebendarsteller.length}</span>
+            <span className="font-semibold text-neutral-50">
+              {nebendarsteller.length}
+            </span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-neutral-300">Studios</span>
-            <span className="font-semibold text-neutral-50">{studios.length}</span>
+            <span className="font-semibold text-neutral-50">
+              {studios.length}
+            </span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-neutral-300">Tags</span>
@@ -826,7 +1024,9 @@ export default function DashboardPage() {
           </div>
           <div className="flex items-center justify-between">
             <span className="text-neutral-300">Resolutions</span>
-            <span className="font-semibold text-neutral-50">{resolutions.length}</span>
+            <span className="font-semibold text-neutral-50">
+              {resolutions.length}
+            </span>
           </div>
         </div>
       </div>
@@ -835,82 +1035,596 @@ export default function DashboardPage() {
 
   return (
     <div className="page min-h-screen bg-gradient-to-br from-neutral-950 via-black to-neutral-900 text-neutral-100 text-[15px]">
+      <style jsx global>{`
+        :root {
+          --dash-text: rgba(255, 255, 255, 0.92);
+          --dash-accent: #e50914;
+        }
+
+        .dashTopbar {
+          position: sticky;
+          top: 0;
+          z-index: 50;
+          padding: 10px 18px;
+          display: grid;
+          grid-template-columns: 1fr minmax(0, 860px) 1fr;
+          align-items: center;
+          gap: 12px;
+          background: rgba(0, 0, 0, 0.55);
+          backdrop-filter: blur(14px);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .dashTopbar__left,
+        .dashTopbar__right {
+          display: flex;
+          align-items: center;
+        }
+
+        .dashTopbar__left {
+          justify-self: start;
+        }
+
+        .dashTopbar__mid {
+          justify-self: center;
+          width: 100%;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+
+        .dashTopbar__right {
+          justify-self: end;
+          gap: 10px;
+        }
+
+        .dashSearchWrap {
+          position: relative;
+          width: 100%;
+          max-width: 860px;
+          display: grid;
+          gap: 10px;
+        }
+
+        .dashInput {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 999px;
+          padding: 10px 14px;
+          transition: border-color 0.18s ease, background 0.18s ease;
+        }
+
+        .dashInput:focus-within {
+          border-color: rgba(229, 9, 20, 0.55);
+          background: rgba(255, 255, 255, 0.08);
+        }
+
+        .dashInput__icon {
+          width: 16px;
+          height: 16px;
+          opacity: 0.8;
+          flex: 0 0 auto;
+        }
+
+        .dashInput input {
+          width: 100%;
+          outline: none;
+          border: none;
+          background: transparent;
+          color: var(--dash-text);
+          font-size: 14px;
+        }
+
+        .dashInput input::placeholder {
+          color: rgba(255, 255, 255, 0.45);
+        }
+
+        .dashBtn {
+          appearance: none;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: rgba(255, 255, 255, 0.06);
+          color: var(--dash-text);
+          border-radius: 12px;
+          padding: 10px 12px;
+          font-size: 13px;
+          font-weight: 650;
+          cursor: pointer;
+          transition: transform 0.12s ease, background 0.12s ease,
+            border-color 0.12s ease;
+          white-space: nowrap;
+        }
+
+        .dashBtn:hover {
+          transform: translateY(-1px);
+          background: rgba(255, 255, 255, 0.09);
+          border-color: rgba(255, 255, 255, 0.18);
+        }
+
+        .dashBtn:active {
+          transform: translateY(0px);
+        }
+
+        .dashBtn--primary {
+          background: linear-gradient(
+            180deg,
+            rgba(229, 9, 20, 0.95),
+            rgba(229, 9, 20, 0.78)
+          );
+          border-color: rgba(229, 9, 20, 0.6);
+          box-shadow: 0 18px 36px rgba(229, 9, 20, 0.22);
+        }
+
+        .dashBtn--primary:hover {
+          background: linear-gradient(
+            180deg,
+            rgba(255, 21, 33, 0.95),
+            rgba(229, 9, 20, 0.8)
+          );
+          border-color: rgba(255, 21, 33, 0.65);
+        }
+
+        .dashBtn--ghost {
+          background: transparent;
+        }
+
+        .dashAuthForm {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .dashAuthField {
+          display: flex;
+          align-items: center;
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 12px;
+          padding: 8px 10px;
+        }
+
+        .dashAuthField input {
+          width: 130px;
+          outline: none;
+          border: none;
+          background: transparent;
+          color: var(--dash-text);
+          font-size: 13px;
+        }
+
+        .dashAuthField input::placeholder {
+          color: rgba(255, 255, 255, 0.45);
+        }
+
+        .dashAuth__label {
+          color: rgba(255, 255, 255, 0.72);
+          font-weight: 700;
+          font-size: 13px;
+        }
+
+        .dashUserMenu {
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .dashUserMenu__btn,
+        .dashIconBtn {
+          width: 38px;
+          height: 38px;
+          border-radius: 14px;
+          display: grid;
+          place-items: center;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: rgba(255, 255, 255, 0.06);
+          color: rgba(255, 255, 255, 0.92);
+          cursor: pointer;
+          transition: transform 0.12s ease, background 0.12s ease,
+            border-color 0.12s ease;
+        }
+
+        .dashIconBtn {
+          width: 42px;
+          height: 42px;
+        }
+
+        .dashUserMenu__btn:hover,
+        .dashIconBtn:hover {
+          transform: translateY(-1px);
+          background: rgba(255, 255, 255, 0.09);
+          border-color: rgba(255, 255, 255, 0.18);
+        }
+
+        .dashUserMenu__btn svg,
+        .dashIconBtn svg {
+          width: 18px;
+          height: 18px;
+          opacity: 0.9;
+        }
+
+        .dashUserMenu__panel {
+          position: absolute;
+          right: 0;
+          top: calc(100% + 10px);
+          z-index: 2200;
+          width: 190px;
+          border-radius: 16px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: rgba(10, 10, 14, 0.92);
+          box-shadow: 0 40px 120px rgba(0, 0, 0, 0.75);
+          overflow: hidden;
+          padding: 8px;
+        }
+
+        .dashUserMenu__item {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          padding: 10px 12px;
+          border-radius: 12px;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: rgba(255, 255, 255, 0.06);
+          color: var(--dash-text);
+          font-size: 13px;
+          font-weight: 750;
+          cursor: pointer;
+          transition: transform 0.12s ease, background 0.12s ease,
+            border-color 0.12s ease;
+          text-align: left;
+        }
+
+        .dashUserMenu__item:hover {
+          transform: translateY(-1px);
+          background: rgba(255, 255, 255, 0.09);
+          border-color: rgba(255, 255, 255, 0.18);
+        }
+
+        .dashUserMenu__item--danger {
+          border-color: rgba(229, 9, 20, 0.35);
+        }
+
+        .dashMSearch {
+          position: fixed;
+          inset: 0;
+          z-index: 5000;
+          background: rgba(0, 0, 0, 0.62);
+          backdrop-filter: blur(10px);
+          display: grid;
+          align-items: start;
+          justify-items: center;
+          padding: 14px 12px;
+        }
+
+        .dashMSearch__panel {
+          width: min(860px, 100%);
+          border-radius: 18px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: rgba(10, 10, 14, 0.94);
+          box-shadow: 0 50px 140px rgba(0, 0, 0, 0.75);
+          overflow: hidden;
+        }
+
+        .dashMSearch__head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          padding: 12px 12px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .dashMSearch__title {
+          font-weight: 900;
+          letter-spacing: -0.01em;
+        }
+
+        .dashMSearch__body {
+          padding: 12px;
+        }
+
+        .dashIconBtn.dashMOnly {
+          display: none;
+        }
+
+        @media (max-width: 700px) {
+          .dashTopbar {
+            grid-template-columns: 1fr auto;
+          }
+
+          .dashTopbar__mid {
+            display: none;
+          }
+
+          .dashIconBtn.dashMOnly {
+            display: inline-grid;
+          }
+
+          .dashAuth__label {
+            display: none;
+          }
+
+          .dashAuthForm {
+            gap: 6px;
+          }
+
+          .dashAuthField input {
+            width: 92px;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .dashAuthField {
+            padding: 7px 8px;
+          }
+
+          .dashAuthField input {
+            width: 74px;
+            font-size: 12px;
+          }
+
+          .dashBtn {
+            padding: 9px 10px;
+          }
+        }
+      `}</style>
+
       {/* Header */}
-      <header className="topbar sticky top-0 z-40 border-b border-neutral-800/70 bg-black/80 backdrop-blur-lg">
-        <div className="flex w-full items-center justify-between px-4 py-4 md:px-6 relative">
-          {/* Links: Hauptseite GANZ LINKS */}
-          <div className="flex items-center">
-            <a
-              href="/"
-              className="rounded-full border border-neutral-600 bg-neutral-900/80 px-4 py-1.5 text-sm text-neutral-100 hover:bg-neutral-800 hover:border-neutral-400 transition-all"
-            >
-              Hauptseite
-            </a>
-          </div>
+      <div className="dashTopbar">
+        <div className="dashTopbar__left">
+          <button
+            type="button"
+            className="dashBtn dashBtn--ghost"
+            onClick={() => router.push("/")}
+            title="Zur Hauptseite"
+          >
+            Hauptseite
+          </button>
+        </div>
 
-          {/* Mitte: 1337 Dashboard absolut zentriert */}
-          <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-2">
-            <div className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-xl bg-red-600 text-sm font-semibold tracking-tight shadow-lg shadow-red-900/60">
-              1337
-            </div>
-            <div className="pointer-events-auto flex flex-col leading-tight text-center">
-              <span className="text-lg font-semibold text-neutral-50">1337 Dashboard</span>
-              <span className="text-xs text-neutral-400">Manage Movies, Cast &amp; Tags</span>
-            </div>
-          </div>
-
-          {/* Rechts: Login oder User + Logout GANZ RECHTS */}
-          <div className="flex items-center justify-end gap-3">
-            {!loggedIn ? (
-              <form
-                onSubmit={handleLogin}
-                className="flex items-center gap-3 rounded-full border border-neutral-700 bg-neutral-950/90 px-4 py-2 text-sm shadow-sm shadow-black/60"
-              >
-                <input
-                  type="text"
-                  placeholder="User"
-                  value={loginUser}
-                  onChange={(e) => setLoginUser(e.target.value)}
-                  className="w-[120px] rounded-full border border-transparent bg-transparent px-2 py-1.5 text-sm text-neutral-100 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
-                />
-                <input
-                  type="password"
-                  placeholder="Passwort"
-                  value={loginPassword}
-                  onChange={(e) => setLoginPassword(e.target.value)}
-                  className="w-[110px] rounded-full border border-transparent bg-transparent px-2 py-1.5 text-sm text-neutral-100 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
-                />
-                <button
-                  type="submit"
-                  disabled={loginLoading || !loginPassword}
-                  className={
-                    "rounded-full px-4 py-1.5 text-sm font-semibold transition-all " +
-                    (loginLoading || !loginPassword
-                      ? "bg-red-500/50 text-black/80 cursor-default"
-                      : "bg-red-500 text-black hover:bg-red-400 hover:shadow-md hover:shadow-red-900/60")
-                  }
+        <div className="dashTopbar__mid">
+          {loggedIn ? (
+            <div className="dashSearchWrap" ref={searchWrapRef}>
+              <div className="dashInput" title="Dashboard-Filme suchen">
+                <svg
+                  className="dashInput__icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
                 >
-                  {loginLoading ? "…" : "Login"}
-                </button>
-              </form>
-            ) : (
-              <div className="flex items-center gap-3 text-sm text-neutral-300">
-                <span className="flex items-center gap-1 rounded-full bg-red-500/10 px-3 py-1 text-red-300 border border-red-600/60">
-                  <span className="inline-block h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                  {loginUser}
-                </span>
+                  <path
+                    d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  />
+                  <path
+                    d="M16.5 16.5 21 21"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+
+                <input
+                  ref={searchInputRef}
+                  value={dashboardSearch}
+                  onChange={(e) => {
+                    setDashboardSearch(e.target.value);
+                    setActiveFilmSection("stats");
+                  }}
+                  placeholder="Suchen: Titel, Studio, Darsteller, Tags…"
+                  autoComplete="off"
+                />
+
+                {dashboardSearch ? (
+                  <button
+                    type="button"
+                    className="dashBtn dashBtn--ghost"
+                    onClick={() => setDashboardSearch("")}
+                    title="Suche löschen"
+                  >
+                    Reset
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="dashTopbar__right">
+          {loggedIn ? (
+            <>
+              <button
+                type="button"
+                className="dashIconBtn dashMOnly"
+                onClick={openMobileSearch}
+                title="Suche"
+              >
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  />
+                  <path
+                    d="M16.5 16.5 21 21"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </button>
+
+              <div className="dashUserMenu" ref={userMenuRef}>
+                <div className="dashAuth__label">Willkommen, {loginUser}</div>
+
                 <button
                   type="button"
-                  onClick={handleLogout}
-                  className="rounded-full border border-neutral-600 bg-transparent px-4 py-1.5 text-sm text-neutral-200 hover:bg-neutral-900 hover:border-neutral-400 transition-all"
+                  className="dashUserMenu__btn"
+                  aria-haspopup="menu"
+                  aria-expanded={userMenuOpen ? "true" : "false"}
+                  title="Menü"
+                  onClick={() => {
+                    setUserMenuOpen((v) => !v);
+                    setMobileSearchOpen(false);
+                  }}
                 >
-                  Logout
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path
+                      d="M6 9l6 6 6-6"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
                 </button>
+
+                {userMenuOpen ? (
+                  <div className="dashUserMenu__panel" role="menu">
+                    <button
+                      type="button"
+                      className="dashUserMenu__item"
+                      role="menuitem"
+                      onClick={() => {
+                        setUserMenuOpen(false);
+                        router.push("/");
+                      }}
+                      title="Zur Hauptseite"
+                    >
+                      Hauptseite
+                    </button>
+
+                    <div style={{ height: 8 }} />
+
+                    <button
+                      type="button"
+                      className="dashUserMenu__item dashUserMenu__item--danger"
+                      role="menuitem"
+                      onClick={() => {
+                        setUserMenuOpen(false);
+                        handleLogout();
+                      }}
+                      title="Logout"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                ) : null}
               </div>
-            )}
+            </>
+          ) : (
+            <form className="dashAuthForm" onSubmit={handleLogin}>
+              <div className="dashAuthField">
+                <input
+                  value={loginUser}
+                  onChange={(e) => setLoginUser(e.target.value)}
+                  placeholder="User"
+                  autoComplete="username"
+                />
+              </div>
+
+              <div className="dashAuthField">
+                <input
+                  type="password"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  placeholder="Passwort"
+                  autoComplete="current-password"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="dashBtn dashBtn--primary"
+                disabled={loginLoading}
+              >
+                {loginLoading ? "Login…" : "Login"}
+              </button>
+            </form>
+          )}
+        </div>
+      </div>
+
+      {loggedIn && mobileSearchOpen ? (
+        <div
+          className="dashMSearch"
+          role="dialog"
+          aria-modal="true"
+          onMouseDown={closeMobileSearch}
+          onTouchStart={closeMobileSearch}
+        >
+          <div
+            className="dashMSearch__panel"
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+          >
+            <div className="dashMSearch__head">
+              <div className="dashMSearch__title">Suche</div>
+
+              <button
+                type="button"
+                className="dashBtn dashBtn--ghost"
+                onClick={closeMobileSearch}
+              >
+                Schließen
+              </button>
+            </div>
+
+            <div className="dashMSearch__body">
+              <div className="dashSearchWrap">
+                <div className="dashInput" title="Dashboard-Filme suchen">
+                  <svg
+                    className="dashInput__icon"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    />
+                    <path
+                      d="M16.5 16.5 21 21"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+
+                  <input
+                    ref={mobileSearchInputRef}
+                    value={dashboardSearch}
+                    onChange={(e) => {
+                      setDashboardSearch(e.target.value);
+                      setActiveFilmSection("stats");
+                    }}
+                    placeholder="Suchen: Titel, Studio, Darsteller, Tags…"
+                    autoComplete="off"
+                  />
+
+                  {dashboardSearch ? (
+                    <button
+                      type="button"
+                      className="dashBtn dashBtn--ghost"
+                      onClick={() => setDashboardSearch("")}
+                      title="Suche löschen"
+                    >
+                      Reset
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </header>
+      ) : null}
 
       <main className="px-4 pb-10 pt-6 md:px-6">
         {!loggedIn ? (
@@ -918,8 +1632,12 @@ export default function DashboardPage() {
             <p className="mb-3 text-base text-neutral-200">
               Bitte oben einloggen, um das Dashboard zu nutzen.
             </p>
-            <p className="text-sm text-neutral-500">Zugang ist nur für den Admin vorgesehen.</p>
-            {loginErr && <p className="mt-4 text-sm text-red-400">{loginErr}</p>}
+            <p className="text-sm text-neutral-500">
+              Zugang ist nur für den Admin vorgesehen.
+            </p>
+            {loginErr && (
+              <p className="mt-4 text-sm text-red-400">{loginErr}</p>
+            )}
           </section>
         ) : (
           <section className="mx-auto max-w-6xl space-y-5">
@@ -937,7 +1655,9 @@ export default function DashboardPage() {
             ) : (
               <div className="relative">
                 {/* Mobile: Sidebar oberhalb der Hauptbox */}
-                <div className="mb-5 w-full space-y-4 lg:hidden">{SidebarContent}</div>
+                <div className="mb-5 w-full space-y-4 lg:hidden">
+                  {SidebarContent}
+                </div>
 
                 {/* Hauptbox: EXAKT horizontal zentriert */}
                 <section className="space-y-5 max-w-3xl mx-auto w-full">
@@ -947,10 +1667,13 @@ export default function DashboardPage() {
                       <div className="mb-4 flex items-center justify-between gap-2">
                         <div>
                           <h2 className="text-xl font-semibold text-neutral-50">
-                            {editingFilmId ? "Film bearbeiten" : "Neuen Film hinzufügen"}
+                            {editingFilmId
+                              ? "Film bearbeiten"
+                              : "Neuen Film hinzufügen"}
                           </h2>
                           <p className="text-sm text-neutral-500">
-                            Titel, Jahr, Studio, Resolution, Thumbnail, Cast und Tags festlegen.
+                            Titel, Jahr, Studio, Resolution, Thumbnail, Cast und
+                            Tags festlegen.
                           </p>
                         </div>
                         {editingFilmId && (
@@ -964,11 +1687,16 @@ export default function DashboardPage() {
                         )}
                       </div>
 
-                      <form onSubmit={handleAddOrUpdateFilm} className="space-y-5 text-base">
+                      <form
+                        onSubmit={handleAddOrUpdateFilm}
+                        className="space-y-5 text-base"
+                      >
                         {/* Titel + Jahr */}
                         <div className="grid grid-cols-[2fr,1fr] gap-4 max-sm:grid-cols-1">
                           <div>
-                            <label className="text-sm text-neutral-300">Filmname</label>
+                            <label className="text-sm text-neutral-300">
+                              Filmname
+                            </label>
                             <input
                               className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
                               value={filmTitel}
@@ -977,7 +1705,9 @@ export default function DashboardPage() {
                             />
                           </div>
                           <div>
-                            <label className="text-sm text-neutral-300">Erscheinungsjahr</label>
+                            <label className="text-sm text-neutral-300">
+                              Erscheinungsjahr
+                            </label>
                             <input
                               className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
                               value={filmJahr}
@@ -991,7 +1721,9 @@ export default function DashboardPage() {
                         {/* Studio + Resolution + Thumbnail + File URL */}
                         <div className="grid grid-cols-1 gap-4">
                           <div>
-                            <label className="text-sm text-neutral-300">Studio</label>
+                            <label className="text-sm text-neutral-300">
+                              Studio
+                            </label>
                             <select
                               className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 focus:border-red-500 focus:outline-none"
                               value={filmStudioId}
@@ -1013,7 +1745,9 @@ export default function DashboardPage() {
                             <select
                               className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 focus:border-red-500 focus:outline-none"
                               value={filmResolutionId}
-                              onChange={(e) => handleResolutionChange(e.target.value)}
+                              onChange={(e) =>
+                                handleResolutionChange(e.target.value)
+                              }
                               required
                             >
                               <option value="" disabled>
@@ -1029,7 +1763,9 @@ export default function DashboardPage() {
 
                           {/* Thumbnail Upload: OHNE CROP */}
                           <div>
-                            <label className="text-sm text-neutral-300">Thumbnail (optional)</label>
+                            <label className="text-sm text-neutral-300">
+                              Thumbnail (optional)
+                            </label>
 
                             {filmThumbnailUrl ? (
                               <div className="mt-2 flex items-center gap-3">
@@ -1055,7 +1791,9 @@ export default function DashboardPage() {
                                       type="button"
                                       onClick={() => {
                                         try {
-                                          navigator.clipboard.writeText(filmThumbnailUrl);
+                                          navigator.clipboard.writeText(
+                                            filmThumbnailUrl
+                                          );
                                         } catch {
                                           // ignore
                                         }
@@ -1069,13 +1807,19 @@ export default function DashboardPage() {
                               </div>
                             ) : (
                               <div className="mt-2">
-                                <MovieThumbnailUploader onUploaded={(url) => setFilmThumbnailUrl(url)} />
+                                <MovieThumbnailUploader
+                                  onUploaded={(url) =>
+                                    setFilmThumbnailUrl(url)
+                                  }
+                                />
                               </div>
                             )}
                           </div>
 
                           <div>
-                            <label className="text-sm text-neutral-300">File-URL / NAS-Pfad</label>
+                            <label className="text-sm text-neutral-300">
+                              File-URL / NAS-Pfad
+                            </label>
                             <input
                               className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
                               value={filmFileUrl}
@@ -1097,7 +1841,9 @@ export default function DashboardPage() {
                               </span>
                             ) : (
                               hauptdarsteller.map((a) => {
-                                const active = selectedMainActorIds.includes(a.id);
+                                const active = selectedMainActorIds.includes(
+                                  a.id
+                                );
                                 return (
                                   <button
                                     key={a.id}
@@ -1125,13 +1871,19 @@ export default function DashboardPage() {
                               </span>
                             ) : (
                               nebendarsteller.map((a) => {
-                                const active = selectedSupportActorIds.includes(a.id);
+                                const active = selectedSupportActorIds.includes(
+                                  a.id
+                                );
                                 return (
                                   <button
                                     key={a.id}
                                     type="button"
                                     onClick={() =>
-                                      toggleId(a.id, selectedSupportActorIds, setSelectedSupportActorIds)
+                                      toggleId(
+                                        a.id,
+                                        selectedSupportActorIds,
+                                        setSelectedSupportActorIds
+                                      )
                                     }
                                     className={chipClass(active)}
                                   >
@@ -1150,7 +1902,9 @@ export default function DashboardPage() {
                           </label>
                           <div className="mt-2 flex flex-wrap gap-2">
                             {tags.length === 0 ? (
-                              <span className="text-sm text-neutral-500">Noch keine Tags angelegt.</span>
+                              <span className="text-sm text-neutral-500">
+                                Noch keine Tags angelegt.
+                              </span>
                             ) : (
                               tags.map((t) => {
                                 const active = selectedTagIds.includes(t.id);
@@ -1158,7 +1912,13 @@ export default function DashboardPage() {
                                   <button
                                     key={t.id}
                                     type="button"
-                                    onClick={() => toggleId(t.id, selectedTagIds, setSelectedTagIds)}
+                                    onClick={() =>
+                                      toggleId(
+                                        t.id,
+                                        selectedTagIds,
+                                        setSelectedTagIds
+                                      )
+                                    }
                                     className={chipClass(active)}
                                   >
                                     {t.name}
@@ -1175,7 +1935,9 @@ export default function DashboardPage() {
                             className="rounded-xl bg-red-500 px-5 py-2.5 text-sm font-semibold text-black shadow shadow-red-900/70 hover:bg-red-400 hover:shadow-lg hover:shadow-red-900/70 disabled:opacity-60"
                             disabled={!filmTitel.trim() || !filmResolutionId}
                           >
-                            {editingFilmId ? "Film aktualisieren" : "Film speichern"}
+                            {editingFilmId
+                              ? "Film aktualisieren"
+                              : "Film speichern"}
                           </button>
                           {editingFilmId && (
                             <button
@@ -1196,28 +1958,45 @@ export default function DashboardPage() {
                     <div className="rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950 to-black/95 p-6 shadow-2xl shadow-black/70 space-y-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <h2 className="text-xl font-semibold text-neutral-50">Filme</h2>
+                          <h2 className="text-xl font-semibold text-neutral-50">
+                            Filme
+                          </h2>
                           <p className="mt-1 text-sm text-neutral-500">
                             Insgesamt{" "}
-                            <span className="font-semibold text-neutral-100">{filme.length}</span>{" "}
-                            Filme in der Bibliothek.
+                            <span className="font-semibold text-neutral-100">
+                              {filteredFilme.length}
+                            </span>{" "}
+                            {dashboardSearch.trim()
+                              ? "Treffer"
+                              : "Filme"}{" "}
+                            in der Bibliothek.
                           </p>
                         </div>
                       </div>
 
-                      {filme.length === 0 ? (
-                        <p className="text-sm text-neutral-500">Noch keine Filme angelegt.</p>
+                      {filteredFilme.length === 0 ? (
+                        <p className="text-sm text-neutral-500">
+                          {dashboardSearch.trim()
+                            ? "Keine Filme zur Suche gefunden."
+                            : "Noch keine Filme angelegt."}
+                        </p>
                       ) : (
                         <div className="space-y-3 text-sm">
-                          {filme.map((f) => (
+                          {filteredFilme.map((f) => (
                             <details
                               key={f.id}
                               className="group rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4 shadow-sm shadow-black/60 transition-all hover:border-red-500/70"
                             >
                               <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
                                 <div className="flex items-center gap-2">
-                                  <span className="text-base font-medium text-neutral-50">{f.title}</span>
-                                  {f.year && <span className="text-xs text-neutral-400">{f.year}</span>}
+                                  <span className="text-base font-medium text-neutral-50">
+                                    {f.title}
+                                  </span>
+                                  {f.year && (
+                                    <span className="text-xs text-neutral-400">
+                                      {f.year}
+                                    </span>
+                                  )}
                                 </div>
                                 <div className="flex items-center gap-1 text-xs text-neutral-500 group-open:text-red-400">
                                   <span>Details</span>
@@ -1245,16 +2024,20 @@ export default function DashboardPage() {
                                   </div>
                                 )}
 
-                                {f.resolution_id && resolutionMap[f.resolution_id] && (
-                                  <div className="text-sm text-neutral-400">
-                                    Resolution: {resolutionMap[f.resolution_id].name}
-                                  </div>
-                                )}
+                                {f.resolution_id &&
+                                  resolutionMap[f.resolution_id] && (
+                                    <div className="text-sm text-neutral-400">
+                                      Resolution:{" "}
+                                      {resolutionMap[f.resolution_id].name}
+                                    </div>
+                                  )}
 
                                 {/* Thumbnail Anzeige */}
                                 {f.thumbnail_url && (
                                   <div className="mt-2">
-                                    <div className="text-sm text-neutral-400">Thumbnail:</div>
+                                    <div className="text-sm text-neutral-400">
+                                      Thumbnail:
+                                    </div>
                                     <div className="mt-2 flex items-center gap-3">
                                       <img
                                         src={f.thumbnail_url}
@@ -1271,15 +2054,16 @@ export default function DashboardPage() {
                                   </div>
                                 )}
 
-                                {Array.isArray(f.main_actor_ids) && f.main_actor_ids.length > 0 && (
-                                  <div className="text-sm text-neutral-300">
-                                    Hauptdarsteller:{" "}
-                                    {f.main_actor_ids
-                                      .map((id) => actorMap[id]?.name)
-                                      .filter(Boolean)
-                                      .join(", ")}
-                                  </div>
-                                )}
+                                {Array.isArray(f.main_actor_ids) &&
+                                  f.main_actor_ids.length > 0 && (
+                                    <div className="text-sm text-neutral-300">
+                                      Hauptdarsteller:{" "}
+                                      {f.main_actor_ids
+                                        .map((id) => actorMap[id]?.name)
+                                        .filter(Boolean)
+                                        .join(", ")}
+                                    </div>
+                                  )}
 
                                 {Array.isArray(f.supporting_actor_ids) &&
                                   f.supporting_actor_ids.length > 0 && (
@@ -1292,19 +2076,23 @@ export default function DashboardPage() {
                                     </div>
                                   )}
 
-                                {Array.isArray(f.tag_ids) && f.tag_ids.length > 0 && (
-                                  <div className="mt-1 flex flex-wrap gap-2">
-                                    {f.tag_ids.map((id) => {
-                                      const t = tagMap[id];
-                                      if (!t) return null;
-                                      return (
-                                        <span key={id} className={chipClass(true)}>
-                                          {t.name}
-                                        </span>
-                                      );
-                                    })}
-                                  </div>
-                                )}
+                                {Array.isArray(f.tag_ids) &&
+                                  f.tag_ids.length > 0 && (
+                                    <div className="mt-1 flex flex-wrap gap-2">
+                                      {f.tag_ids.map((id) => {
+                                        const t = tagMap[id];
+                                        if (!t) return null;
+                                        return (
+                                          <span
+                                            key={id}
+                                            className={chipClass(true)}
+                                          >
+                                            {t.name}
+                                          </span>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
 
                                 {f.file_url && (
                                   <div className="mt-1 break-all text-sm text-red-400">
@@ -1341,8 +2129,12 @@ export default function DashboardPage() {
                     <section className="rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950 to-black/95 p-6 text-sm text-neutral-100 shadow-2xl shadow-black/70 space-y-5">
                       <div className="flex items-center justify-between">
                         <div>
-                          <h2 className="text-xl font-semibold text-neutral-50">Stammdaten</h2>
-                          <p className="mt-1 text-sm text-neutral-500">Darsteller, Studios und Tags verwalten.</p>
+                          <h2 className="text-xl font-semibold text-neutral-50">
+                            Stammdaten
+                          </h2>
+                          <p className="mt-1 text-sm text-neutral-500">
+                            Darsteller, Studios und Tags verwalten.
+                          </p>
                         </div>
                       </div>
 
@@ -1350,7 +2142,9 @@ export default function DashboardPage() {
                         {/* Hauptdarsteller */}
                         <div className="space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4">
                           <form onSubmit={handleAddActor} className="space-y-2">
-                            <div className="font-medium text-neutral-50 text-base">Hauptdarsteller</div>
+                            <div className="font-medium text-neutral-50 text-base">
+                              Hauptdarsteller
+                            </div>
                             <input
                               className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
                               placeholder="Name"
@@ -1358,7 +2152,9 @@ export default function DashboardPage() {
                               onChange={(e) => setNewActorName(e.target.value)}
                             />
 
-                            <ActorImageUploader onUploaded={(url) => setNewActorImage(url)} />
+                            <ActorImageUploader
+                              onUploaded={(url) => setNewActorImage(url)}
+                            />
 
                             <button
                               type="submit"
@@ -1399,16 +2195,25 @@ export default function DashboardPage() {
 
                         {/* Nebendarsteller */}
                         <div className="space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4">
-                          <form onSubmit={handleAddSupportActor} className="space-y-2">
-                            <div className="font-medium text-neutral-50 text-base">Nebendarsteller</div>
+                          <form
+                            onSubmit={handleAddSupportActor}
+                            className="space-y-2"
+                          >
+                            <div className="font-medium text-neutral-50 text-base">
+                              Nebendarsteller
+                            </div>
                             <input
                               className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
                               placeholder="Name"
                               value={newSupportName}
-                              onChange={(e) => setNewSupportName(e.target.value)}
+                              onChange={(e) =>
+                                setNewSupportName(e.target.value)
+                              }
                             />
 
-                            <ActorImageUploader onUploaded={(url) => setNewSupportImage(url)} />
+                            <ActorImageUploader
+                              onUploaded={(url) => setNewSupportImage(url)}
+                            />
 
                             <button
                               type="submit"
@@ -1436,7 +2241,9 @@ export default function DashboardPage() {
                                   </button>
                                   <button
                                     type="button"
-                                    onClick={() => handleDeleteSupportActor(a.id)}
+                                    onClick={() =>
+                                      handleDeleteSupportActor(a.id)
+                                    }
                                     className="rounded border border-red-600 px-2.5 py-1 text-xs text-red-200 hover:bg-red-700/80"
                                   >
                                     X
@@ -1449,16 +2256,25 @@ export default function DashboardPage() {
 
                         {/* Studios */}
                         <div className="space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4">
-                          <form onSubmit={handleAddStudio} className="space-y-2">
-                            <div className="font-medium text-neutral-50 text-base">Studios</div>
+                          <form
+                            onSubmit={handleAddStudio}
+                            className="space-y-2"
+                          >
+                            <div className="font-medium text-neutral-50 text-base">
+                              Studios
+                            </div>
                             <input
                               className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
                               placeholder="Studio"
                               value={newStudioName}
-                              onChange={(e) => setNewStudioName(e.target.value)}
+                              onChange={(e) =>
+                                setNewStudioName(e.target.value)
+                              }
                             />
 
-                            <ActorImageUploader onUploaded={(url) => setNewStudioImage(url)} />
+                            <ActorImageUploader
+                              onUploaded={(url) => setNewStudioImage(url)}
+                            />
 
                             <button
                               type="submit"
@@ -1484,7 +2300,9 @@ export default function DashboardPage() {
                         {/* Tags */}
                         <div className="space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4">
                           <form onSubmit={handleAddTag} className="space-y-2">
-                            <div className="font-medium text-neutral-50 text-base">Tags</div>
+                            <div className="font-medium text-neutral-50 text-base">
+                              Tags
+                            </div>
                             <input
                               className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
                               placeholder="Tag-Name"
@@ -1498,7 +2316,9 @@ export default function DashboardPage() {
                             >
                               Speichern
                             </button>
-                            <div className="mt-1 text-xs text-neutral-500">Vorhanden: {tags.length}</div>
+                            <div className="mt-1 text-xs text-neutral-500">
+                              Vorhanden: {tags.length}
+                            </div>
                           </form>
 
                           <div className="mt-2 max-h-44 space-y-1.5 overflow-y-auto">
