@@ -1375,17 +1375,7 @@ export default function DashboardPage() {
       `}</style>
 
       {/* Header */}
-      <div className="dashTopbar">
-        <div className="dashTopbar__left">
-          <button
-            type="button"
-            className="dashBtn dashBtn--ghost"
-            onClick={() => router.push("/")}
-            title="Zur Hauptseite"
-          >
-            Hauptseite
-          </button>
-        </div>
+        <div className="dashTopbar__left" />
 
         <div className="dashTopbar__mid">
           {loggedIn ? (
