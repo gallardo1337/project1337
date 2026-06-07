@@ -55,12 +55,6 @@ function isUuid(v) {
   );
 }
 
-/**
- * Mobile-only Auto-Fit for actor names:
- * - Keeps your layout intact (same element, same className)
- * - Only reduces font size if it would truncate
- * - Desktop stays exactly as before
- */
 function AutoFitActorTitle({ text }) {
   const ref = useRef(null);
 
@@ -74,31 +68,25 @@ function AutoFitActorTitle({ text }) {
     const fit = () => {
       if (!ref.current) return;
 
-      // Only on mobile; otherwise keep default CSS font-size
       if (!isMobile()) {
         el.style.fontSize = "";
         return;
       }
 
-      // Start at default (matches your CSS: 14px)
       let size = 14;
       const min = 10;
       const step = 0.5;
 
       el.style.fontSize = `${size}px`;
 
-      // If it overflows, reduce until it fits (or hits min)
-      // scrollWidth/clientWidth works reliably with white-space: nowrap (added below)
       while (el.scrollWidth > el.clientWidth + 1 && size > min) {
         size -= step;
         el.style.fontSize = `${size}px`;
       }
     };
 
-    // Fit after paint to ensure layout is final
     const raf = requestAnimationFrame(fit);
 
-    // Refit on resize/orientation changes (still mobile-only behavior)
     const onResize = () => fit();
     window.addEventListener("resize", onResize);
 
@@ -342,7 +330,6 @@ export default function HomePage() {
   const searchInputRef = useRef(null);
   const mobileSearchInputRef = useRef(null);
 
-  // User dropdown (Dashboard/Logout)
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
 
@@ -387,7 +374,6 @@ export default function HomePage() {
     };
   }, [filtersOpen, mobileSearchOpen, userMenuOpen]);
 
-  // FIX: removed undefined "km" that caused client-side exception
   useEffect(() => {
     if (!mobileSearchOpen && !userMenuOpen && !filtersOpen) return;
 
@@ -523,7 +509,6 @@ export default function HomePage() {
 
         setActors(actorList);
 
-        // Restore view from URL WITHOUT useSearchParams (fixes Suspense/prerender issue)
         let actorParam = null;
         if (typeof window !== "undefined") {
           const sp = new URLSearchParams(window.location.search || "");
@@ -543,7 +528,6 @@ export default function HomePage() {
                 movie.mainActorIds.includes(actor.id)
             );
 
-            // Auto-rewrite old UUID URL -> slug URL (if available)
             if (isUuid(actorParam) && actor.slug) {
               const sp = new URLSearchParams(window.location.search || "");
               sp.set("actor", actor.slug);
@@ -761,6 +745,15 @@ export default function HomePage() {
     setMoviesSubtitle("");
   };
 
+  const handleSwitchToMovies = () => {
+    router.replace("/", { scroll: false });
+    const filtered = applyAdvancedFilters(movies);
+    setViewMode("movies");
+    setMoviesTitle(hasAnyFilter ? "Gefilterte Filme" : "Filme");
+    setMoviesSubtitle(`${filtered.length} Film(e)`);
+    setVisibleMovies(filtered);
+  };
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoginErr(null);
@@ -893,6 +886,26 @@ export default function HomePage() {
     setMobileSearchOpen(false);
     setFiltersOpen(false);
   };
+
+  // Reusable ViewToggle component
+  const ViewToggle = () => (
+    <div className="viewToggle">
+      <button
+        type="button"
+        className={`viewToggle__btn ${viewMode === "actors" ? "viewToggle__btn--active" : ""}`}
+        onClick={handleBackToActors}
+      >
+        Darsteller
+      </button>
+      <button
+        type="button"
+        className={`viewToggle__btn ${viewMode === "movies" ? "viewToggle__btn--active" : ""}`}
+        onClick={handleSwitchToMovies}
+      >
+        Filme
+      </button>
+    </div>
+  );
 
   return (
     <div className="nfx">
@@ -1051,6 +1064,39 @@ export default function HomePage() {
           padding: 6px 10px;
           border-radius: 10px;
           font-size: 12px;
+        }
+
+        /* View Toggle */
+        .viewToggle {
+          display: inline-flex;
+          border-radius: 14px;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: rgba(255, 255, 255, 0.04);
+          padding: 4px;
+          gap: 4px;
+        }
+        .viewToggle__btn {
+          appearance: none;
+          border: 1px solid transparent;
+          background: transparent;
+          color: rgba(255, 255, 255, 0.62);
+          border-radius: 10px;
+          padding: 8px 16px;
+          font-size: 13px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: background 0.15s ease, color 0.15s ease,
+            border-color 0.15s ease;
+          white-space: nowrap;
+        }
+        .viewToggle__btn:hover {
+          color: rgba(255, 255, 255, 0.9);
+          background: rgba(255, 255, 255, 0.06);
+        }
+        .viewToggle__btn--active {
+          background: rgba(229, 9, 20, 0.18);
+          border-color: rgba(229, 9, 20, 0.35);
+          color: rgba(255, 255, 255, 0.95);
         }
 
         .auth__label {
@@ -1301,8 +1347,6 @@ export default function HomePage() {
           -webkit-box-orient: vertical;
           overflow: hidden;
           min-height: 18px;
-
-          /* IMPORTANT for accurate auto-fit measuring (keeps single line) */
           white-space: nowrap;
         }
 
@@ -1880,7 +1924,6 @@ export default function HomePage() {
           }
         }
 
-        /* Small helper: logo button (so button has no default styles) */
         .logoBtn {
           background: transparent;
           border: none;
@@ -1994,7 +2037,6 @@ export default function HomePage() {
                           setShowSelectedOnly={setTagsSelectedOnly}
                           defaultOpen={true}
                         />
-
                         <FilterSection
                           title="Hauptdarsteller"
                           subtitle=""
@@ -2009,7 +2051,6 @@ export default function HomePage() {
                           setShowSelectedOnly={setMainSelectedOnly}
                           defaultOpen={false}
                         />
-
                         <FilterSection
                           title="Nebendarsteller"
                           subtitle=""
@@ -2192,7 +2233,6 @@ export default function HomePage() {
                     setMobileSearchOpen(false);
                   }}
                 >
-                  {/* inverted pyramid */}
                   <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <path
                       d="M6 9l6 6 6-6"
@@ -2391,7 +2431,6 @@ export default function HomePage() {
                             setShowSelectedOnly={setTagsSelectedOnly}
                             defaultOpen={true}
                           />
-
                           <FilterSection
                             title="Hauptdarsteller"
                             subtitle=""
@@ -2406,7 +2445,6 @@ export default function HomePage() {
                             setShowSelectedOnly={setMainSelectedOnly}
                             defaultOpen={false}
                           />
-
                           <FilterSection
                             title="Nebendarsteller"
                             subtitle=""
@@ -2609,16 +2647,7 @@ export default function HomePage() {
                   {moviesSubtitle || `${movieList.length} Film(e)`}
                 </div>
               </div>
-
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={handleBackToActors}
-                >
-                  Darsteller
-                </button>
-              </div>
+              <ViewToggle />
             </div>
 
             {movieList.length === 0 ? (
@@ -2714,36 +2743,8 @@ export default function HomePage() {
                 <div className="sectionTitle">Hauptdarsteller</div>
                 <div className="sectionMeta">{actors.length} Darsteller</div>
               </div>
-
-<div className="viewToggle">
-  <button
-    type="button"
-    className={`viewToggle__btn ${viewMode === "actors" ? "viewToggle__btn--active" : ""}`}
-    onClick={() => {
-      router.replace("/", { scroll: false });
-      setViewMode("actors");
-      setVisibleMovies([]);
-      setMoviesTitle("Filme");
-      setMoviesSubtitle("");
-    }}
-  >
-    Darsteller
-  </button>
-  <button
-    type="button"
-    className={`viewToggle__btn ${viewMode === "movies" ? "viewToggle__btn--active" : ""}`}
-    onClick={() => {
-      router.replace("/", { scroll: false });
-      const filtered = applyAdvancedFilters(movies);
-      setViewMode("movies");
-      setMoviesTitle(hasAnyFilter ? "Gefilterte Filme" : "Filme");
-      setMoviesSubtitle(`${filtered.length} Film(e)`);
-      setVisibleMovies(filtered);
-    }}
-  >
-    Filme
-  </button>
-</div>
+              <ViewToggle />
+            </div>
 
             {actors.length === 0 ? (
               <EmptyState
