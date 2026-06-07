@@ -2715,24 +2715,35 @@ export default function HomePage() {
                 <div className="sectionMeta">{actors.length} Darsteller</div>
               </div>
 
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={() => {
-                    router.replace("/", { scroll: false });
-                    const filtered = applyAdvancedFilters(movies);
-                    setViewMode("movies");
-                    setMoviesTitle(hasAnyFilter ? "Gefilterte Filme" : "Filme");
-                    setMoviesSubtitle(`${filtered.length} Film(e)`);
-                    setVisibleMovies(filtered);
-                  }}
-                  title="Alle Filme anzeigen"
-                >
-                  Filme
-                </button>
-              </div>
-            </div>
+<div className="viewToggle">
+  <button
+    type="button"
+    className={`viewToggle__btn ${viewMode === "actors" ? "viewToggle__btn--active" : ""}`}
+    onClick={() => {
+      router.replace("/", { scroll: false });
+      setViewMode("actors");
+      setVisibleMovies([]);
+      setMoviesTitle("Filme");
+      setMoviesSubtitle("");
+    }}
+  >
+    Darsteller
+  </button>
+  <button
+    type="button"
+    className={`viewToggle__btn ${viewMode === "movies" ? "viewToggle__btn--active" : ""}`}
+    onClick={() => {
+      router.replace("/", { scroll: false });
+      const filtered = applyAdvancedFilters(movies);
+      setViewMode("movies");
+      setMoviesTitle(hasAnyFilter ? "Gefilterte Filme" : "Filme");
+      setMoviesSubtitle(`${filtered.length} Film(e)`);
+      setVisibleMovies(filtered);
+    }}
+  >
+    Filme
+  </button>
+</div>
 
             {actors.length === 0 ? (
               <EmptyState
