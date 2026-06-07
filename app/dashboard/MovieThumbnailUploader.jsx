@@ -69,9 +69,6 @@ export default function MovieThumbnailUploader({ onUploaded }) {
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm font-medium mb-1">
-          Movie-Thumbnail hochladen (16:9, ohne Crop)
-        </label>
         <input
           type="file"
           accept="image/*"
