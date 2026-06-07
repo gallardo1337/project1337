@@ -31,6 +31,17 @@ const MovieThumbnailUploader = dynamic(
 // -------------------------------
 
 const CHANGELOG = [
+    {
+    version: "0.5.1",
+    date: "2026-06-07",
+    items: [
+      "Dashboard-Header an die Hauptseite angepasst",
+      "Suche im Dashboard-Header hinzugefügt",
+      "Dashboard-Filmliste kann jetzt nach Titel, Studio, Darsteller, Tags, Resolution, Jahr und URLs durchsucht werden",
+      "Doppelten Hauptseite-Button links im Dashboard-Header entfernt",
+      "Changelog-Fenster optisch bereinigt",
+    ],
+  },
   {
     version: "0.5.0",
     date: "2026-06-05",
