@@ -123,9 +123,9 @@ function VersionHint() {
           onClick={() => setOpen(false)}
         >
           <div
-            className="w-full max-w-xl max-height-[80vh] max-h-[80vh] overflow-y-auto rounded-2xl border border-neutral-700/80 bg-neutral-950/95 p-6 shadow-2xl shadow-black/80"
-            onClick={(e) => e.stopPropagation()}
-          >
+            className="changelogPanel w-full max-w-xl max-h-[80vh] overflow-y-auto rounded-2xl border border-neutral-700/80 bg-neutral-950/95 p-6 shadow-2xl shadow-black/80"
+          onClick={(e) => e.stopPropagation()}
+            >
             <div className="mb-4 flex items-center justify-between gap-4">
               <div>
                 <div className="text-xs uppercase tracking-[0.18em] text-neutral-400">
