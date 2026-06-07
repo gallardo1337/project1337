@@ -135,13 +135,6 @@ function VersionHint() {
                   1337 Dashboard
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="rounded-full border border-neutral-600 bg-neutral-900 px-4 py-1.5 text-sm text-neutral-100 hover:bg-neutral-800 transition-colors"
-              >
-                x
-              </button>
             </div>
 
             <div className="flex flex-col gap-4">
