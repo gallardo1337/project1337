@@ -1375,9 +1375,10 @@ export default function DashboardPage() {
       `}</style>
 
       {/* Header */}
-        <div className="dashTopbar__left" />
+        <div className="dashTopbar">
+            <div className="dashTopbar__left" />
 
-        <div className="dashTopbar__mid">
+          <div className="dashTopbar__mid">
           {loggedIn ? (
             <div className="dashSearchWrap" ref={searchWrapRef}>
               <div className="dashInput" title="Dashboard-Filme suchen">
