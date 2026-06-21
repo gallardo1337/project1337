@@ -1454,7 +1454,7 @@ export default function HomePage() {
 
   const SortControl = () => (
     <label className="sortBox">
-      <span className="sortBox__label">Sortieren</span>
+      
       <select
         className="sortBox__select"
         value={movieSort}
@@ -2968,11 +2968,10 @@ export default function HomePage() {
         }
 
 
-        .actorSortPlain {
-          display: flex;
-          align-items: center;
-          justify-content: flex-end;
+        @media (max-width: 700px) {
+
         }
+
 
         .actorSortSelect {
           min-width: 190px;
@@ -2999,11 +2998,6 @@ export default function HomePage() {
         }
 
         @media (max-width: 700px) {
-          .actorSortPlain {
-            width: 100%;
-            justify-content: stretch;
-          }
-
           .actorSortSelect {
             width: 100%;
             min-width: 0;
