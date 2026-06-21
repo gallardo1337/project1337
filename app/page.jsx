@@ -2861,6 +2861,45 @@ export default function HomePage() {
           }
         }
         @media (max-width: 700px) {
+
+          .actorHero__content {
+            align-items: center;
+            text-align: center;
+          }
+
+          .actorHero__name {
+            text-align: center;
+            margin-left: auto;
+            margin-right: auto;
+          }
+
+          .actorHero__count {
+            text-align: center;
+          }
+
+          .actorHero__info {
+            align-items: center;
+            text-align: center;
+          }
+
+          .actorHero__meta {
+            justify-content: center;
+            text-align: center;
+          }
+
+          .actorHero__metaItem {
+            text-align: center;
+          }
+
+          .actorHero__links {
+            justify-content: center;
+          }
+
+          .actorHero__statsToggle {
+            justify-content: center;
+            text-align: center;
+          }
+
           .row {
             grid-template-columns: repeat(3, minmax(0, 1fr));
           }
