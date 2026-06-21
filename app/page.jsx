@@ -2689,59 +2689,52 @@ export default function HomePage() {
           pointer-events: none;
         }
 
+        
         .actorHero__stats {
           width: 100%;
           min-width: 0;
           align-self: center;
           justify-self: stretch;
-          overflow-x: auto;
-          scrollbar-width: thin;
-          border-radius: 20px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          background: rgba(0, 0, 0, 0.2);
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
-          padding: 18px;
-        }
-
-        .actorHero__statsToggle {
-          width: 100%;
-          margin: 0 0 12px;
-          padding: 0;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 10px;
+          overflow-x: visible;
+          border-radius: 0;
           border: none;
           background: transparent;
-          color: rgba(255, 255, 255, 0.58);
-          font-size: 11px;
-          font-weight: 950;
-          letter-spacing: 0.14em;
-          text-transform: uppercase;
-          text-align: left;
-          cursor: default;
+          box-shadow: none;
+          padding: 0;
         }
+
+
+        
+        .actorHero__statsToggle {
+          display: none;
+        }
+
 
         .actorHero__statsToggleIcon {
           display: none;
         }
 
+        
         .actorHero__statsGrid {
           display: grid;
-          grid-template-columns: repeat(6, minmax(132px, 1fr));
-          gap: 10px;
+          grid-template-columns: repeat(6, minmax(150px, 1fr));
+          gap: 12px;
         }
 
+
+        
         .actorHero__statsBlock {
           min-width: 0;
           display: grid;
           align-content: start;
-          gap: 9px;
-          border-radius: 16px;
-          background: rgba(255, 255, 255, 0.035);
-          border: 1px solid rgba(255, 255, 255, 0.07);
-          padding: 12px;
+          gap: 10px;
+          border-radius: 18px;
+          background: rgba(0, 0, 0, 0.22);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.055);
+          padding: 14px;
         }
+
 
         .actorHero__statsLabel {
           color: rgba(255, 255, 255, 0.48);
