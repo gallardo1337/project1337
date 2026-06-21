@@ -214,6 +214,10 @@ export default function DashboardPage() {
   // Stammdaten Inputs
   const [newActorName, setNewActorName] = useState("");
   const [newActorImage, setNewActorImage] = useState("");
+  const [newActorOrigin, setNewActorOrigin] = useState("");
+  const [newActorBirthDate, setNewActorBirthDate] = useState("");
+  const [newActorIafdUrl, setNewActorIafdUrl] = useState("");
+  const [newActorPlanetsuzyUrl, setNewActorPlanetsuzyUrl] = useState("");
 
   const [newSupportName, setNewSupportName] = useState("");
   const [newSupportImage, setNewSupportImage] = useState("");
@@ -583,6 +587,10 @@ export default function DashboardPage() {
       .insert({
         name,
         profile_image: newActorImage.trim() || null,
+        origin: newActorOrigin.trim() || null,
+        birth_date: newActorBirthDate || null,
+        iafd_url: newActorIafdUrl.trim() || null,
+        planetsuzy_url: newActorPlanetsuzyUrl.trim() || null,
       })
       .select("*")
       .single();
@@ -596,6 +604,10 @@ export default function DashboardPage() {
     setHauptdarsteller((prev) => [...prev, data]);
     setNewActorName("");
     setNewActorImage("");
+    setNewActorOrigin("");
+    setNewActorBirthDate("");
+    setNewActorIafdUrl("");
+    setNewActorPlanetsuzyUrl("");
   };
 
   const handleAddSupportActor = async (e) => {
@@ -690,9 +702,56 @@ export default function DashboardPage() {
       profile_image = t === "" ? null : t;
     }
 
+    const newOrigin = window.prompt(
+      "Herkunft (leer lassen zum Löschen):",
+      actor.origin || ""
+    );
+    let origin = actor.origin || null;
+    if (newOrigin !== null) {
+      const t = newOrigin.trim();
+      origin = t === "" ? null : t;
+    }
+
+    const newBirthDate = window.prompt(
+      "Geburtsdatum im Format YYYY-MM-DD (leer lassen zum Löschen):",
+      actor.birth_date || ""
+    );
+    let birth_date = actor.birth_date || null;
+    if (newBirthDate !== null) {
+      const t = newBirthDate.trim();
+      birth_date = t === "" ? null : t;
+    }
+
+    const newIafdUrl = window.prompt(
+      "IAFD URL (leer lassen zum Löschen):",
+      actor.iafd_url || ""
+    );
+    let iafd_url = actor.iafd_url || null;
+    if (newIafdUrl !== null) {
+      const t = newIafdUrl.trim();
+      iafd_url = t === "" ? null : t;
+    }
+
+    const newPlanetsuzyUrl = window.prompt(
+      "PlanetSuzy URL (leer lassen zum Löschen):",
+      actor.planetsuzy_url || ""
+    );
+    let planetsuzy_url = actor.planetsuzy_url || null;
+    if (newPlanetsuzyUrl !== null) {
+      const t = newPlanetsuzyUrl.trim();
+      planetsuzy_url = t === "" ? null : t;
+    }
+
     const { data, error: updateError } = await supabase
       .from("actors")
-      .update({ name: trimmedName, profile_image })
+      .update({
+        name: trimmedName,
+        profile_image,
+        origin,
+        birth_date,
+        iafd_url,
+        planetsuzy_url,
+      })
       .eq("id", actor.id)
       .select("*")
       .single();
@@ -2146,6 +2205,43 @@ export default function DashboardPage() {
                               onChange={(e) => setNewActorName(e.target.value)}
                             />
 
+                            <input
+                              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                              placeholder="Herkunft"
+                              value={newActorOrigin}
+                              onChange={(e) =>
+                                setNewActorOrigin(e.target.value)
+                              }
+                            />
+
+                            <input
+                              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                              placeholder="Geburtsdatum"
+                              type="date"
+                              value={newActorBirthDate}
+                              onChange={(e) =>
+                                setNewActorBirthDate(e.target.value)
+                              }
+                            />
+
+                            <input
+                              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                              placeholder="IAFD URL"
+                              value={newActorIafdUrl}
+                              onChange={(e) =>
+                                setNewActorIafdUrl(e.target.value)
+                              }
+                            />
+
+                            <input
+                              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                              placeholder="PlanetSuzy URL"
+                              value={newActorPlanetsuzyUrl}
+                              onChange={(e) =>
+                                setNewActorPlanetsuzyUrl(e.target.value)
+                              }
+                            />
+
                             <ActorImageUploader
                               onUploaded={(url) => setNewActorImage(url)}
                             />
@@ -2165,7 +2261,30 @@ export default function DashboardPage() {
                                 key={a.id}
                                 className="flex items-center justify-between gap-2 rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2"
                               >
-                                <span className="text-sm">{a.name}</span>
+                                <div className="min-w-0">
+                                  <div className="text-sm">{a.name}</div>
+                                  {(a.origin ||
+                                    a.birth_date ||
+                                    a.iafd_url ||
+                                    a.planetsuzy_url) && (
+                                    <div className="mt-1 flex flex-wrap gap-1.5 text-xs text-neutral-500">
+                                      {a.origin ? <span>{a.origin}</span> : null}
+                                      {a.birth_date ? (
+                                        <span>{a.birth_date}</span>
+                                      ) : null}
+                                      {a.iafd_url ? (
+                                        <span className="text-red-400">
+                                          IAFD
+                                        </span>
+                                      ) : null}
+                                      {a.planetsuzy_url ? (
+                                        <span className="text-red-400">
+                                          PlanetSuzy
+                                        </span>
+                                      ) : null}
+                                    </div>
+                                  )}
+                                </div>
                                 <div className="flex gap-1.5">
                                   <button
                                     type="button"
