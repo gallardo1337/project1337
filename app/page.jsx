@@ -35,6 +35,67 @@ function MovieCastCard({ person }) {
   );
 }
 
+function AutoFitMovieDetailTitle({ title, icon }) {
+  const rowRef = useRef(null);
+  const titleRef = useRef(null);
+
+  useEffect(() => {
+    const row = rowRef.current;
+    const titleEl = titleRef.current;
+    if (!row || !titleEl) return;
+
+    const fit = () => {
+      if (!rowRef.current || !titleRef.current) return;
+
+      const rowEl = rowRef.current;
+      const h1 = titleRef.current;
+      const isMobile =
+        typeof window !== "undefined" && window.innerWidth <= 700;
+
+      let size = isMobile ? 32 : 62;
+      const min = isMobile ? 18 : 26;
+      const step = 1;
+
+      h1.style.fontSize = `${size}px`;
+      h1.style.whiteSpace = "nowrap";
+      h1.style.overflow = "visible";
+      h1.style.textOverflow = "clip";
+
+      while (rowEl.scrollWidth > rowEl.clientWidth + 1 && size > min) {
+        size -= step;
+        h1.style.fontSize = `${size}px`;
+      }
+    };
+
+    const raf = requestAnimationFrame(fit);
+    const onResize = () => fit();
+
+    window.addEventListener("resize", onResize);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [title, icon?.src]);
+
+  return (
+    <div ref={rowRef} className="movieDetail__titleRow">
+      <h1 ref={titleRef} className="movieDetail__title" title={title}>
+        {title || "Unbenannt"}
+      </h1>
+
+      {icon ? (
+        <img
+          className="movieDetail__titleIcon"
+          src={icon.src}
+          alt={icon.alt}
+          title={icon.title}
+        />
+      ) : null}
+    </div>
+  );
+}
+
 function MovieDetailView({ movie, onBack }) {
   if (!movie) return null;
 
@@ -79,18 +140,10 @@ function MovieDetailView({ movie, onBack }) {
       </div>
 
       <div className="movieDetail__titleBlock">
-        <div className="movieDetail__titleRow">
-          <h1 className="movieDetail__title">{movie.title || "Unbenannt"}</h1>
-
-          {resolutionIcon ? (
-            <img
-              className="movieDetail__titleIcon"
-              src={resolutionIcon.src}
-              alt={resolutionIcon.alt}
-              title={resolutionIcon.title}
-            />
-          ) : null}
-        </div>
+        <AutoFitMovieDetailTitle
+          title={movie.title || "Unbenannt"}
+          icon={resolutionIcon}
+        />
 
         <div className="movieDetail__infoLine">
           {movie.studio ? (
@@ -640,7 +693,6 @@ const HAIR_COLOR_TAGS = [
 ].map(normalizeStatValue);
 
 const FINISH_TAGS = [
-  "Anal Creampie",
   "Creampie",
   "Cum in Mouth",
   "Cum on Ass",
@@ -2819,21 +2871,27 @@ export default function HomePage() {
         .movieDetail__title {
           margin: 0;
           min-width: 0;
+          flex: 0 1 auto;
           color: rgba(255, 255, 255, 0.96);
           font-size: clamp(34px, 4.2vw, 62px);
           font-weight: 950;
           line-height: 0.96;
           letter-spacing: -0.05em;
+          white-space: nowrap;
         }
 
 
 
 
         .movieDetail__titleRow {
+          width: 100%;
           min-width: 0;
+          max-width: 100%;
           display: flex;
           align-items: center;
           gap: 14px;
+          overflow: hidden;
+          white-space: nowrap;
         }
 
         .movieDetail__titleIcon {
