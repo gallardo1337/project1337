@@ -344,7 +344,13 @@ function ActorHero({ actor, movieCount }) {
                 className="actorHero__link"
                 onClick={() => safeOpen(actor.iafdUrl)}
               >
-                IAFD
+                <img
+                  className="actorHero__linkIcon"
+                  src="/dbgpt.ico"
+                  alt=""
+                  aria-hidden="true"
+                />
+                <span>IAFD</span>
               </button>
             ) : null}
 
@@ -354,7 +360,13 @@ function ActorHero({ actor, movieCount }) {
                 className="actorHero__link"
                 onClick={() => safeOpen(actor.planetsuzyUrl)}
               >
-                PlanetSuzy
+                <img
+                  className="actorHero__linkIcon"
+                  src="/palmgpt.ico"
+                  alt=""
+                  aria-hidden="true"
+                />
+                <span>PlanetSuzy</span>
               </button>
             ) : null}
           </div>
@@ -2116,11 +2128,14 @@ export default function HomePage() {
 
         .actorHero__link {
           appearance: none;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
           border: 1px solid rgba(229, 9, 20, 0.38);
           background: rgba(229, 9, 20, 0.12);
           color: rgba(255, 255, 255, 0.92);
           border-radius: 999px;
-          padding: 9px 14px;
+          padding: 8px 13px;
           font-size: 13px;
           font-weight: 850;
           cursor: pointer;
@@ -2132,6 +2147,14 @@ export default function HomePage() {
           transform: translateY(-1px);
           background: rgba(229, 9, 20, 0.18);
           border-color: rgba(229, 9, 20, 0.55);
+        }
+
+        .actorHero__linkIcon {
+          width: 18px;
+          height: 18px;
+          object-fit: contain;
+          display: block;
+          flex: 0 0 auto;
         }
 
         @media (max-width: 1200px) {
