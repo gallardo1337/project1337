@@ -2758,9 +2758,14 @@ export default function HomePage() {
           }
 
           .actorHero {
-            grid-template-columns: 120px minmax(0, 1fr);
+            grid-template-columns: 1fr;
             gap: 14px;
             padding: 12px;
+          }
+
+          .actorHero__media {
+            width: min(240px, 72vw);
+            justify-self: center;
           }
 
           .actorHero__content {
@@ -2768,6 +2773,10 @@ export default function HomePage() {
             gap: 14px;
             align-items: start;
             padding: 4px 0;
+          }
+
+          .actorHero__main {
+            width: 100%;
           }
 
           .actorHero__stats {
