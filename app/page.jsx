@@ -1501,10 +1501,8 @@ export default function HomePage() {
   );
 
   const SortControl = () => (
-    <label className="sortBox">
-      
-      <select
-        className="sortBox__select"
+    <select
+        className="actorSortSelect"
         value={movieSort}
         onChange={(e) => setMovieSort(e.target.value)}
       >
@@ -1512,7 +1510,6 @@ export default function HomePage() {
         <option value="year_desc">Erscheinungsdatum</option>
         <option value="quality_desc">Qualität</option>
       </select>
-    </label>
   );
 
   return (
@@ -1718,43 +1715,6 @@ export default function HomePage() {
           color: rgba(255, 255, 255, 0.95);
         }
 
-        .sortBox {
-          display: inline-flex;
-          align-items: center;
-          gap: 10px;
-          border-radius: 14px;
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          background: rgba(255, 255, 255, 0.05);
-          padding: 4px 4px 4px 12px;
-        }
-
-        .sortBox__label {
-          color: rgba(255, 255, 255, 0.62);
-          font-size: 12px;
-          font-weight: 900;
-          letter-spacing: 0.06em;
-          text-transform: uppercase;
-          white-space: nowrap;
-        }
-
-        .sortBox__select {
-          appearance: none;
-          min-width: 190px;
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          background: rgba(0, 0, 0, 0.24);
-          color: rgba(255, 255, 255, 0.92);
-          border-radius: 10px;
-          padding: 8px 34px 8px 12px;
-          outline: none;
-          cursor: pointer;
-          font-size: 13px;
-          font-weight: 800;
-          background-image: linear-gradient(45deg, transparent 50%, rgba(255,255,255,0.78) 50%),
-            linear-gradient(135deg, rgba(255,255,255,0.78) 50%, transparent 50%);
-          background-position: calc(100% - 18px) 50%, calc(100% - 12px) 50%;
-          background-size: 6px 6px, 6px 6px;
-          background-repeat: no-repeat;
-        }
 
         .sortBox__select option {
           background: var(--menuBg);
@@ -3004,15 +2964,6 @@ export default function HomePage() {
             display: inline-grid;
           }
 
-          .sortBox {
-            width: 100%;
-            justify-content: space-between;
-          }
-
-          .sortBox__select {
-            min-width: 0;
-            flex: 1;
-          }
         }
         @media (max-width: 420px) {
           .row {
@@ -3024,7 +2975,6 @@ export default function HomePage() {
         @media (max-width: 700px) {
 
         }
-
         .actorSortSelect {
           min-width: 190px;
           height: 40px;
@@ -3038,6 +2988,7 @@ export default function HomePage() {
           font-weight: 750;
           cursor: pointer;
         }
+
         .actorSortSelect:focus {
           background: transparent;
           border: none;
