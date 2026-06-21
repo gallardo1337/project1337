@@ -2442,8 +2442,8 @@ export default function HomePage() {
         .actorHero__content {
           min-width: 0;
           display: grid;
-          grid-template-columns: minmax(300px, 0.52fr) minmax(820px, 1fr);
-          gap: 24px;
+          grid-template-columns: minmax(250px, 0.34fr) minmax(0, 1.66fr);
+          gap: 18px;
           align-items: center;
           padding: 8px 4px;
         }
@@ -2582,7 +2582,7 @@ export default function HomePage() {
 
         .actorHero__statsGrid {
           display: grid;
-          grid-template-columns: repeat(6, minmax(108px, 1fr));
+          grid-template-columns: repeat(6, minmax(132px, 1fr));
           gap: 10px;
         }
 
@@ -2702,8 +2702,8 @@ export default function HomePage() {
             grid-template-columns: repeat(4, minmax(0, 1fr));
           }
           .actorHero__content {
-            grid-template-columns: minmax(280px, 0.5fr) minmax(680px, 1fr);
-            gap: 18px;
+            grid-template-columns: minmax(240px, 0.38fr) minmax(0, 1.62fr);
+            gap: 16px;
           }
         }
         @media (max-width: 1050px) {
