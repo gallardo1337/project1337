@@ -2618,7 +2618,7 @@ export default function DashboardPage() {
                                 >
                                   {editingActorMetaId === a.id ? (
                                     <div className="space-y-3">
-                                      <div className="grid gap-3 md:grid-cols-2">
+                                      <div className="grid gap-3">
                                         <input
                                           className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
                                           placeholder="Name"
@@ -2858,7 +2858,7 @@ export default function DashboardPage() {
                                 >
                                   {editingSupportMetaId === a.id ? (
                                     <div className="space-y-3">
-                                      <div className="grid gap-3 md:grid-cols-2">
+                                      <div className="grid gap-3">
                                         <input
                                           className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
                                           placeholder="Name"
@@ -3033,7 +3033,7 @@ export default function DashboardPage() {
                                 >
                                   {editingStudioMetaId === s.id ? (
                                     <div className="space-y-3">
-                                      <div className="grid gap-3 md:grid-cols-2">
+                                      <div className="grid gap-3">
                                         <input
                                           className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
                                           placeholder="Studio"
