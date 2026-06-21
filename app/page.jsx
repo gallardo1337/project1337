@@ -66,7 +66,7 @@ function MovieDetailView({ movie, onBack }) {
           <video
             className="movieDetail__player"
             src={movie.fileUrl}
-            poster={getPlayerPosterUrl(movie.thumbnailUrl)}
+            poster={movie.thumbnailUrl || undefined}
             controls
             playsInline
             preload="metadata"
@@ -466,23 +466,6 @@ function getResolutionIcon(resolutionName) {
 
   return null;
 }
-
-function getPlayerPosterUrl(thumbnailUrl) {
-  if (!thumbnailUrl) return undefined;
-
-  const value = String(thumbnailUrl).trim();
-  if (!value) return undefined;
-
-  const withoutQuery = value.split("?")[0];
-  const query = value.includes("?") ? `?${value.split("?").slice(1).join("?")}` : "";
-
-  if (/\.(webm|mp4|mov|m4v)$/i.test(withoutQuery)) {
-    return `${withoutQuery.replace(/\.(webm|mp4|mov|m4v)$/i, ".png")}${query}`;
-  }
-
-  return value;
-}
-
 
 function getAgeFromBirthDate(value) {
   if (!value) return null;
