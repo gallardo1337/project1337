@@ -77,12 +77,6 @@ function MovieDetailView({ movie, onBack }) {
             Für diesen Film ist keine Datei hinterlegt.
           </div>
         )}
-
-        {resolutionIcon ? (
-          <div className="movieDetail__resIcon" title={resolutionIcon.title}>
-            <img src={resolutionIcon.src} alt={resolutionIcon.alt} />
-          </div>
-        ) : null}
       </div>
 
       <div className="movieDetail__titleBlock">
@@ -2745,7 +2739,7 @@ export default function HomePage() {
         
         .movieDetail__playerShell {
           position: relative;
-          width: min(100%, 1160px);
+          width: min(100%, 1280px);
           margin: 0 auto;
           aspect-ratio: 16 / 9;
           border-radius: 24px;
@@ -2787,29 +2781,10 @@ export default function HomePage() {
         }
 
 
-
-
-        .movieDetail__resIcon {
-          position: absolute;
-          right: 14px;
-          bottom: 14px;
-          width: 62px;
-          height: 62px;
-          z-index: 4;
-          pointer-events: none;
-          filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.65));
-        }
-
-        .movieDetail__resIcon img {
-          width: 100%;
-          height: 100%;
-          display: block;
-        }
-
         
         
         .movieDetail__titleBlock {
-          width: min(100%, 1160px);
+          width: min(100%, 1280px);
           margin: 16px auto 0;
           display: grid;
           gap: 10px;
@@ -2873,7 +2848,7 @@ export default function HomePage() {
         
         
         .movieDetail__cast {
-          width: min(100%, 1160px);
+          width: min(100%, 1280px);
           margin: 18px auto 0;
         }
 
@@ -3006,12 +2981,6 @@ export default function HomePage() {
             font-size: 16px;
           }
 
-          .movieDetail__resIcon {
-            width: 48px;
-            height: 48px;
-            right: 10px;
-            bottom: 10px;
-          }
 
           .movieCastGrid {
             grid-template-columns: repeat(3, minmax(0, 1fr));
