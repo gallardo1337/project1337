@@ -18,6 +18,120 @@ function EmptyState({ title, subtitle, action }) {
   );
 }
 
+function MovieCastCard({ person, type }) {
+  return (
+    <div className="movieCastCard" title={person.name}>
+      <div className="movieCastCard__img">
+        {person.profileImage ? (
+          <img src={person.profileImage} alt={person.name} loading="lazy" />
+        ) : (
+          <div className="movieCastCard__placeholder">NO IMAGE</div>
+        )}
+      </div>
+      <div className="movieCastCard__body">
+        <div className="movieCastCard__name">{person.name}</div>
+        <div className="movieCastCard__type">{type}</div>
+      </div>
+    </div>
+  );
+}
+
+function MovieDetailView({ movie, onBack }) {
+  if (!movie) return null;
+
+  const resolutionIcon = getResolutionIcon(movie.resolution);
+  const mainCast = Array.isArray(movie.mainCast) ? movie.mainCast : [];
+  const supportCast = Array.isArray(movie.supportCast) ? movie.supportCast : [];
+  const castCount = mainCast.length + supportCast.length;
+
+  return (
+    <div className="movieDetail">
+      <div className="movieDetail__top">
+        <button type="button" className="btn btn--ghost" onClick={onBack}>
+          Zurück
+        </button>
+
+        {movie.fileUrl ? (
+          <button
+            type="button"
+            className="btn"
+            onClick={() => safeOpen(movie.fileUrl)}
+          >
+            Extern öffnen
+          </button>
+        ) : null}
+      </div>
+
+      <div className="movieDetail__playerShell">
+        {movie.fileUrl ? (
+          <video
+            className="movieDetail__player"
+            src={movie.fileUrl}
+            poster={movie.thumbnailUrl || undefined}
+            controls
+            playsInline
+            preload="metadata"
+          />
+        ) : (
+          <div className="movieDetail__fallback">
+            Für diesen Film ist keine Datei hinterlegt.
+          </div>
+        )}
+
+        {resolutionIcon ? (
+          <div className="movieDetail__resIcon" title={resolutionIcon.title}>
+            <img src={resolutionIcon.src} alt={resolutionIcon.alt} />
+          </div>
+        ) : null}
+      </div>
+
+      <div className="movieDetail__titleBlock">
+        <h1 className="movieDetail__title">{movie.title || "Unbenannt"}</h1>
+        <div className="movieDetail__meta">
+          {movie.year ? <Pill>{movie.year}</Pill> : null}
+          {movie.studio ? <Pill>{movie.studio}</Pill> : null}
+          {movie.resolution ? <Pill>{movie.resolution}</Pill> : null}
+          {movie.tags && movie.tags.length ? <Pill>{movie.tags.length} Tags</Pill> : null}
+        </div>
+      </div>
+
+      <section className="movieDetail__cast">
+        <div className="sectionHead movieDetail__castHead">
+          <div>
+            <div className="sectionTitle">Darsteller</div>
+            <div className="sectionMeta">{castCount} Person(en)</div>
+          </div>
+        </div>
+
+        {castCount === 0 ? (
+          <EmptyState
+            title="Keine Darsteller hinterlegt"
+            subtitle="Für diesen Film sind aktuell keine Haupt- oder Nebendarsteller verknüpft."
+          />
+        ) : (
+          <div className="movieCastGrid">
+            {mainCast.map((person) => (
+              <MovieCastCard
+                key={`main-${person.id}`}
+                person={person}
+                type="Hauptdarsteller"
+              />
+            ))}
+            {supportCast.map((person) => (
+              <MovieCastCard
+                key={`support-${person.id}`}
+                person={person}
+                type="Nebendarsteller"
+              />
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+
 function SkeletonRow() {
   return (
     <div className="skRow" aria-hidden="true">
@@ -823,6 +937,7 @@ export default function HomePage() {
   const [movies, setMovies] = useState([]);
   const [actors, setActors] = useState([]);
   const [selectedActor, setSelectedActor] = useState(null);
+  const [selectedMovieId, setSelectedMovieId] = useState(null);
   const [viewMode, setViewMode] = useState("actors"); // "actors" | "movies"
   const [visibleMovies, setVisibleMovies] = useState([]);
   const [movieSort, setMovieSort] = useState("added_desc");
@@ -926,6 +1041,7 @@ export default function HomePage() {
       setMovies([]);
       setActors([]);
       setSelectedActor(null);
+      setSelectedMovieId(null);
       setVisibleMovies([]);
       setLoading(false);
       return;
@@ -1014,8 +1130,25 @@ export default function HomePage() {
             actors: allActors,
             tags: tagNames,
             mainActorIds: mainIds,
+            supportingActorIds: supportIds,
             mainActorNames: mainNames,
             supportingActorNames: supportNames,
+            mainCast: mainIds
+              .map((id) => mainActorById[id])
+              .filter(Boolean)
+              .map((a) => ({
+                id: a.id,
+                name: a.name,
+                profileImage: a.profile_image || null,
+              })),
+            supportCast: supportIds
+              .map((id) => supportActorById[id])
+              .filter(Boolean)
+              .map((a) => ({
+                id: a.id,
+                name: a.name,
+                profileImage: a.profile_image || null,
+              })),
           };
         });
 
@@ -1049,12 +1182,21 @@ export default function HomePage() {
         setActors(actorList);
 
         let actorParam = null;
+        let movieParam = null;
         if (typeof window !== "undefined") {
           const sp = new URLSearchParams(window.location.search || "");
           actorParam = sp.get("actor");
+          movieParam = sp.get("movie");
         }
 
-        if (actorParam) {
+        if (movieParam && mappedMovies.some((movie) => String(movie.id) === String(movieParam))) {
+          setSelectedMovieId(movieParam);
+          setViewMode("movies");
+          setSelectedActor(null);
+          setVisibleMovies([]);
+          setMoviesTitle("Filme");
+          setMoviesSubtitle("");
+        } else if (actorParam) {
           const actor =
             isUuid(actorParam)
               ? actorList.find((a) => String(a.id) === String(actorParam))
@@ -1074,6 +1216,7 @@ export default function HomePage() {
             }
 
             setSelectedActor(actor);
+            setSelectedMovieId(null);
             setMoviesTitle(actor.name);
             setMoviesSubtitle(`${subset.length} Film(e)`);
             setVisibleMovies(subset);
@@ -1081,6 +1224,7 @@ export default function HomePage() {
           } else {
             setViewMode("actors");
             setSelectedActor(null);
+            setSelectedMovieId(null);
             setVisibleMovies([]);
             setMoviesTitle("Filme");
             setMoviesSubtitle("");
@@ -1088,6 +1232,7 @@ export default function HomePage() {
         } else {
           setViewMode("actors");
           setSelectedActor(null);
+          setSelectedMovieId(null);
           setVisibleMovies([]);
           setMoviesTitle("Filme");
           setMoviesSubtitle("");
@@ -1273,6 +1418,7 @@ export default function HomePage() {
     );
     const filtered = applyAdvancedFilters(subset);
     setSelectedActor(actor);
+    setSelectedMovieId(null);
     setMoviesTitle(actorName);
     setMoviesSubtitle(`${filtered.length} Film(e)`);
     setVisibleMovies(filtered);
@@ -1290,10 +1436,12 @@ export default function HomePage() {
         setMoviesSubtitle(`${filtered.length} Treffer`);
         setVisibleMovies(filtered);
         setSelectedActor(null);
+        setSelectedMovieId(null);
         setViewMode("movies");
       } else {
         router.replace("/", { scroll: false });
         setSelectedActor(null);
+        setSelectedMovieId(null);
         setViewMode("actors");
         setVisibleMovies([]);
         setMoviesTitle("Filme");
@@ -1320,6 +1468,7 @@ export default function HomePage() {
 
     const filtered = applyAdvancedFilters(raw);
     setSelectedActor(null);
+    setSelectedMovieId(null);
     setMoviesTitle(`Suchergebnis für "${trimmed}"`);
     setMoviesSubtitle(`${filtered.length} Treffer`);
     setVisibleMovies(filtered);
@@ -1330,6 +1479,7 @@ export default function HomePage() {
     router.replace("/", { scroll: false });
     setViewMode("actors");
     setSelectedActor(null);
+    setSelectedMovieId(null);
     setVisibleMovies([]);
     setMoviesTitle("Filme");
     setMoviesSubtitle("");
@@ -1339,6 +1489,7 @@ export default function HomePage() {
     router.replace("/", { scroll: false });
     const filtered = applyAdvancedFilters(movies);
     setSelectedActor(null);
+    setSelectedMovieId(null);
     setViewMode("movies");
     setMoviesTitle(hasAnyFilter ? "Gefilterte Filme" : "Filme");
     setMoviesSubtitle(`${filtered.length} Film(e)`);
@@ -1395,6 +1546,7 @@ export default function HomePage() {
     setLoggedIn(false);
     setSearch("");
     setSelectedActor(null);
+    setSelectedMovieId(null);
     setViewMode("actors");
     setVisibleMovies([]);
     setMoviesTitle("Filme");
@@ -1478,6 +1630,39 @@ export default function HomePage() {
   const closeMobileSearch = () => {
     setMobileSearchOpen(false);
     setFiltersOpen(false);
+  };
+
+  const selectedMovie = useMemo(() => {
+    if (!selectedMovieId) return null;
+    return movies.find((movie) => String(movie.id) === String(selectedMovieId)) || null;
+  }, [movies, selectedMovieId]);
+
+  const handleOpenMovie = (movie) => {
+    if (!movie?.id) return;
+
+    const sp = new URLSearchParams();
+    sp.set("movie", String(movie.id));
+    router.replace(`/?${sp.toString()}`, { scroll: false });
+    setSelectedMovieId(String(movie.id));
+
+    requestAnimationFrame(() => {
+      window.scrollTo(0, 0);
+    });
+  };
+
+  const handleCloseMovie = () => {
+    setSelectedMovieId(null);
+
+    if (selectedActor) {
+      const urlVal = selectedActor.slug ? selectedActor.slug : selectedActor.id;
+      router.replace(`/?actor=${encodeURIComponent(urlVal)}`, { scroll: false });
+    } else {
+      router.replace("/", { scroll: false });
+    }
+
+    requestAnimationFrame(() => {
+      window.scrollTo(0, 0);
+    });
   };
 
   // Reusable ViewToggle component
@@ -2519,6 +2704,212 @@ export default function HomePage() {
           margin-top: 10px;
         }
 
+
+        .movieDetail {
+          margin-top: 22px;
+        }
+
+        .movieDetail__top {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 14px;
+        }
+
+        .movieDetail__playerShell {
+          position: relative;
+          border-radius: 24px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: rgba(255, 255, 255, 0.045);
+          box-shadow: 0 28px 90px rgba(0, 0, 0, 0.45);
+          overflow: hidden;
+        }
+
+        .movieDetail__player {
+          width: 100%;
+          aspect-ratio: 16 / 9;
+          display: block;
+          background: #000;
+        }
+
+        .movieDetail__fallback {
+          width: 100%;
+          aspect-ratio: 16 / 9;
+          display: grid;
+          place-items: center;
+          padding: 24px;
+          background: rgba(0, 0, 0, 0.55);
+          color: rgba(255, 255, 255, 0.72);
+          text-align: center;
+          font-weight: 850;
+        }
+
+        .movieDetail__resIcon {
+          position: absolute;
+          right: 14px;
+          bottom: 14px;
+          width: 62px;
+          height: 62px;
+          z-index: 4;
+          pointer-events: none;
+          filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.65));
+        }
+
+        .movieDetail__resIcon img {
+          width: 100%;
+          height: 100%;
+          display: block;
+        }
+
+        .movieDetail__titleBlock {
+          margin: 22px 0 0;
+          display: grid;
+          gap: 10px;
+        }
+
+        .movieDetail__title {
+          margin: 0;
+          color: rgba(255, 255, 255, 0.96);
+          font-size: clamp(28px, 4vw, 54px);
+          font-weight: 950;
+          line-height: 1;
+          letter-spacing: -0.045em;
+        }
+
+        .movieDetail__meta {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .movieDetail__cast {
+          margin-top: 26px;
+        }
+
+        .movieDetail__castHead {
+          margin-top: 0;
+        }
+
+        .movieCastGrid {
+          display: grid;
+          grid-template-columns: repeat(8, minmax(0, 1fr));
+          gap: 12px;
+        }
+
+        .movieCastCard {
+          min-width: 0;
+          border-radius: 16px;
+          overflow: hidden;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: rgba(255, 255, 255, 0.05);
+          box-shadow: 0 18px 50px rgba(0, 0, 0, 0.32);
+        }
+
+        .movieCastCard__img {
+          width: 100%;
+          aspect-ratio: 3 / 4;
+          background: rgba(0, 0, 0, 0.32);
+          overflow: hidden;
+        }
+
+        .movieCastCard__img img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
+        }
+
+        .movieCastCard__placeholder {
+          width: 100%;
+          height: 100%;
+          display: grid;
+          place-items: center;
+          color: rgba(255, 255, 255, 0.5);
+          font-size: 11px;
+          font-weight: 900;
+          letter-spacing: 0.04em;
+        }
+
+        .movieCastCard__body {
+          padding: 9px 10px 10px;
+        }
+
+        .movieCastCard__name {
+          color: rgba(255, 255, 255, 0.9);
+          font-size: 13px;
+          font-weight: 850;
+          line-height: 1.15;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .movieCastCard__type {
+          margin-top: 4px;
+          color: rgba(255, 255, 255, 0.48);
+          font-size: 11px;
+          font-weight: 850;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+        }
+
+        @media (max-width: 1200px) {
+          .movieCastGrid {
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+          }
+        }
+
+        @media (max-width: 900px) {
+          .movieCastGrid {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+          }
+        }
+
+        @media (max-width: 700px) {
+          .movieDetail {
+            margin-top: 14px;
+          }
+
+          .movieDetail__top {
+            margin-bottom: 12px;
+          }
+
+          .movieDetail__playerShell {
+            border-radius: 18px;
+          }
+
+          .movieDetail__title {
+            font-size: 30px;
+          }
+
+          .movieDetail__resIcon {
+            width: 48px;
+            height: 48px;
+            right: 10px;
+            bottom: 10px;
+          }
+
+          .movieCastGrid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+          }
+
+          .movieCastCard__body {
+            padding: 8px;
+          }
+
+          .movieCastCard__name {
+            font-size: 12px;
+          }
+        }
+
+        @media (max-width: 420px) {
+          .movieCastGrid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+        }
+
         .actorHero {
           margin: 22px 0 18px;
           display: grid;
@@ -2689,52 +3080,59 @@ export default function HomePage() {
           pointer-events: none;
         }
 
-        
         .actorHero__stats {
           width: 100%;
           min-width: 0;
           align-self: center;
           justify-self: stretch;
-          overflow-x: visible;
-          border-radius: 0;
+          overflow-x: auto;
+          scrollbar-width: thin;
+          border-radius: 20px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: rgba(0, 0, 0, 0.2);
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+          padding: 18px;
+        }
+
+        .actorHero__statsToggle {
+          width: 100%;
+          margin: 0 0 12px;
+          padding: 0;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
           border: none;
           background: transparent;
-          box-shadow: none;
-          padding: 0;
+          color: rgba(255, 255, 255, 0.58);
+          font-size: 11px;
+          font-weight: 950;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+          text-align: left;
+          cursor: default;
         }
-
-
-        
-        .actorHero__statsToggle {
-          display: none;
-        }
-
 
         .actorHero__statsToggleIcon {
           display: none;
         }
 
-        
         .actorHero__statsGrid {
           display: grid;
-          grid-template-columns: repeat(6, minmax(150px, 1fr));
-          gap: 12px;
+          grid-template-columns: repeat(6, minmax(132px, 1fr));
+          gap: 10px;
         }
 
-
-        
         .actorHero__statsBlock {
           min-width: 0;
           display: grid;
           align-content: start;
-          gap: 10px;
-          border-radius: 18px;
-          background: rgba(0, 0, 0, 0.22);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.055);
-          padding: 14px;
+          gap: 9px;
+          border-radius: 16px;
+          background: rgba(255, 255, 255, 0.035);
+          border: 1px solid rgba(255, 255, 255, 0.07);
+          padding: 12px;
         }
-
 
         .actorHero__statsLabel {
           color: rgba(255, 255, 255, 0.48);
@@ -3708,6 +4106,7 @@ export default function HomePage() {
               router.replace("/", { scroll: false });
               setViewMode("actors");
               setSelectedActor(null);
+              setSelectedMovieId(null);
               setVisibleMovies([]);
               setSearch("");
             }}
@@ -3742,6 +4141,20 @@ export default function HomePage() {
             <div style={{ height: 16 }} />
             <SkeletonRow />
           </>
+        ) : selectedMovieId ? (
+          selectedMovie ? (
+            <MovieDetailView movie={selectedMovie} onBack={handleCloseMovie} />
+          ) : (
+            <EmptyState
+              title="Film nicht gefunden"
+              subtitle="Der Film konnte nicht geladen werden oder existiert nicht mehr."
+              action={
+                <button type="button" className="btn" onClick={handleCloseMovie}>
+                  Zurück
+                </button>
+              }
+            />
+          )
         ) : showMovies ? (
           <>
             {selectedActor ? (
@@ -3779,17 +4192,14 @@ export default function HomePage() {
                   return (
                     <div
                       key={m.id}
-                      className={`movieCard ${m.fileUrl ? "movieCard--clickable" : ""}`}
-                      onClick={() => {
-                        if (m.fileUrl) safeOpen(m.fileUrl);
-                      }}
-                      role={m.fileUrl ? "button" : undefined}
-                      tabIndex={m.fileUrl ? 0 : undefined}
+                      className="movieCard movieCard--clickable"
+                      onClick={() => handleOpenMovie(m)}
+                      role="button"
+                      tabIndex={0}
                       onKeyDown={(e) => {
-                        if (!m.fileUrl) return;
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
-                          safeOpen(m.fileUrl);
+                          handleOpenMovie(m);
                         }
                       }}
                     >
