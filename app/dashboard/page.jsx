@@ -1,1065 +1,275 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { supabase } from "../../lib/supabaseClient";
 import { useRouter } from "next/navigation";
-import { supabase } from "../lib/supabaseClient"; // app/page.jsx -> ../lib/supabaseClient
+import dynamic from "next/dynamic";
 
-function Pill({ children }) {
-  return <span className="pill">{children}</span>;
-}
+// ActorImageUploader nur im Client laden (wegen react-easy-crop / Canvas)
+const ActorImageUploader = dynamic(() => import("./ActorImageUploader.jsx"), {
+  ssr: false,
+  loading: () => (
+    <div className="text-xs text-neutral-500">Lade Bild-Uploader…</div>
+  ),
+});
 
-function EmptyState({ title, subtitle, action }) {
-  return (
-    <div className="empty">
-      <div className="empty__title">{title}</div>
-      {subtitle ? <div className="empty__sub">{subtitle}</div> : null}
-      {action ? <div className="empty__cta">{action}</div> : null}
-    </div>
-  );
-}
-
-function MovieCastCard({ person }) {
-  return (
-    <div className="movieCastCard" title={person.name}>
-      <div className="movieCastCard__img">
-        {person.profileImage ? (
-          <img src={person.profileImage} alt={person.name} loading="lazy" />
-        ) : (
-          <div className="movieCastCard__placeholder">NO IMAGE</div>
-        )}
+// MovieThumbnailUploader nur im Client laden (ohne Crop)
+const MovieThumbnailUploader = dynamic(
+  () => import("./MovieThumbnailUploader.jsx"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="text-xs text-neutral-500">
+        Lade Thumbnail-Uploader…
       </div>
-      <div className="movieCastCard__body">
-        <div className="movieCastCard__name">{person.name}</div>
-      </div>
-    </div>
-  );
-}
-
-function AutoFitMovieDetailTitle({ title, icon }) {
-  const rowRef = useRef(null);
-  const titleRef = useRef(null);
-
-  useEffect(() => {
-    const row = rowRef.current;
-    const titleEl = titleRef.current;
-    if (!row || !titleEl) return;
-
-    const fit = () => {
-      if (!rowRef.current || !titleRef.current) return;
-
-      const rowEl = rowRef.current;
-      const h1 = titleRef.current;
-      const isMobile =
-        typeof window !== "undefined" && window.innerWidth <= 700;
-
-      let size = isMobile ? 32 : 62;
-      const min = isMobile ? 18 : 26;
-      const step = 1;
-
-      h1.style.fontSize = `${size}px`;
-      h1.style.whiteSpace = "nowrap";
-      h1.style.overflow = "visible";
-      h1.style.textOverflow = "clip";
-
-      while (rowEl.scrollWidth > rowEl.clientWidth + 1 && size > min) {
-        size -= step;
-        h1.style.fontSize = `${size}px`;
-      }
-    };
-
-    const raf = requestAnimationFrame(fit);
-    const onResize = () => fit();
-
-    window.addEventListener("resize", onResize);
-
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener("resize", onResize);
-    };
-  }, [title, icon?.src]);
-
-  return (
-    <div ref={rowRef} className="movieDetail__titleRow">
-      <h1 ref={titleRef} className="movieDetail__title" title={title}>
-        {title || "Unbenannt"}
-      </h1>
-
-      {icon ? (
-        <img
-          className="movieDetail__titleIcon"
-          src={icon.src}
-          alt={icon.alt}
-          title={icon.title}
-        />
-      ) : null}
-    </div>
-  );
-}
-
-function MovieDetailView({ movie, onBack }) {
-  if (!movie) return null;
-
-  const resolutionIcon = getResolutionIcon(movie.resolution);
-  const mainCast = Array.isArray(movie.mainCast) ? movie.mainCast : [];
-  const supportCast = Array.isArray(movie.supportCast) ? movie.supportCast : [];
-  const castCount = mainCast.length + supportCast.length;
-
-  return (
-    <div className="movieDetail">
-      <div className="movieDetail__top">
-        <button type="button" className="btn btn--ghost" onClick={onBack}>
-          Zurück
-        </button>
-
-        {movie.fileUrl ? (
-          <button
-            type="button"
-            className="btn"
-            onClick={() => safeOpen(movie.fileUrl)}
-          >
-            Extern öffnen
-          </button>
-        ) : null}
-      </div>
-
-      <div className="movieDetail__playerShell">
-        {movie.fileUrl ? (
-          <video
-            className="movieDetail__player"
-            src={movie.fileUrl}
-            poster={movie.thumbnailUrl || undefined}
-            controls
-            playsInline
-            preload="metadata"
-          />
-        ) : (
-          <div className="movieDetail__fallback">
-            Für diesen Film ist keine Datei hinterlegt.
-          </div>
-        )}
-      </div>
-
-      <div className="movieDetail__titleBlock">
-        <AutoFitMovieDetailTitle
-          title={movie.title || "Unbenannt"}
-          icon={resolutionIcon}
-        />
-
-        <div className="movieDetail__infoLine">
-          {movie.studio ? (
-            <span className="movieDetail__studio">{movie.studio}</span>
-          ) : null}
-
-          {movie.studio && movie.year ? (
-            <span className="movieDetail__dot">•</span>
-          ) : null}
-
-          {movie.year ? (
-            <span className="movieDetail__year">{movie.year}</span>
-          ) : null}
-
-          {(movie.studio || movie.year) && movie.tags && movie.tags.length ? (
-            <span className="movieDetail__dot">•</span>
-          ) : null}
-
-          {movie.tags && movie.tags.length ? (
-            <span className="movieDetail__tags">
-              {[...movie.tags]
-                .sort((a, b) =>
-                  a.localeCompare(b, "de", { sensitivity: "base" })
-                )
-                .join(", ")}
-            </span>
-          ) : null}
-        </div>
-      </div>
-
-      <section className="movieDetail__cast">
-        {castCount === 0 ? (
-          <EmptyState
-            title="Keine Darsteller hinterlegt"
-            subtitle="Für diesen Film sind aktuell keine Haupt- oder Nebendarsteller verknüpft."
-          />
-        ) : (
-          <div className="movieCastGrid">
-            {mainCast.map((person) => (
-              <MovieCastCard
-                key={`main-${person.id}`}
-                person={person}
-                type="Hauptdarsteller"
-              />
-            ))}
-            {supportCast.map((person) => (
-              <MovieCastCard
-                key={`support-${person.id}`}
-                person={person}
-                type="Nebendarsteller"
-              />
-            ))}
-          </div>
-        )}
-      </section>
-    </div>
-  );
-}
-
-
-function SkeletonRow() {
-  return (
-    <div className="skRow" aria-hidden="true">
-      <div className="skCard" />
-      <div className="skCard" />
-      <div className="skCard" />
-      <div className="skCard" />
-      <div className="skCard" />
-      <div className="skCard" />
-    </div>
-  );
-}
-
-function safeOpen(url) {
-  if (!url) return;
-  try {
-    window.open(url, "_blank", "noopener,noreferrer");
-  } catch {
-    // ignore
+    ),
   }
-}
+);
 
-function includesLoose(hay, needle) {
-  return String(hay || "")
-    .toLowerCase()
-    .includes(String(needle || "").toLowerCase());
-}
+// -------------------------------
+// Version / Changelog
+// -------------------------------
 
-function isUuid(v) {
-  return (
-    typeof v === "string" &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-      v
-    )
-  );
-}
+const CHANGELOG = [
+    {
+    version: "0.5.1",
+    date: "2026-06-07",
+    items: [
+      "Dashboard-Header an die Hauptseite angepasst",
+      "Suche im Dashboard-Header hinzugefügt",
+      "Dashboard-Filmliste kann jetzt nach Titel, Studio, Darsteller, Tags, Resolution, Jahr und URLs durchsucht werden",
+      "Doppelten Hauptseite-Button links im Dashboard-Header entfernt",
+      "Changelog-Fenster optisch bereinigt",
+    ],
+  },
+  {
+    version: "0.5.0",
+    date: "2026-06-05",
+    items: [
+      "File-URL wird beim Auswählen eines Hauptdarstellers automatisch auf den passenden Darsteller-Ordner gesetzt",
+      "Bei Resolution 4K wird automatisch der Unterordner /4K/ in die File-URL eingefügt",
+      "Bei FullHD oder Retro bleibt die File-URL direkt im Darsteller-Ordner",
+    ],
+  },
+  {
+    version: "0.4.1",
+    date: "2025-12-27",
+    items: [
+      "Movies: optionales Thumbnail-Feld (thumbnail_url) im Filmformular hinzugefügt",
+      "Thumbnail Upload wie bei Actor/Studio über ActorImageUploader integriert",
+      "Thumbnail wird in Filmestatistik-Details als Preview + URL angezeigt",
+    ],
+  },
+  {
+    version: "0.4.0",
+    date: "2025-12-27",
+    items: [
+      "Neue Pflicht-Auswahl 'Resolution' (4K / FullHD / Retro) beim Film hinzugefügt",
+      "Resolutions aus Supabase-Tabelle 'resolutions' geladen und im Filmformular integriert",
+      "Resolution wird in Filmestatistik-Details angezeigt",
+      "Studio-Bild-Upload wie bei Actor: Studio-Form nutzt jetzt ActorImageUploader (statt manueller URL)",
+    ],
+  },
+  {
+    version: "0.3.0",
+    date: "2025-11-28",
+    items: [
+      "Dashboard neu strukturiert: Tabs für Filme, Neuen Film hinzufügen und Stammdaten",
+      "Stammdaten-Bereich aus Filmformular ausgelagert (Übersicht + Bearbeiten/Löschen jeder Kategorie)",
+      "Hauptdarsteller- und Nebendarsteller-Formulare mit integriertem Upload & Crop (ActorImageUploader) statt manueller Bild-URL",
+      "Bild-Upload via Hostinger (upload.php) integriert",
+      "Nur noch eine Kategorie gleichzeitig sichtbar – übersichtlicheres UI",
+      "Dynamic Import für ActorImageUploader (kein SSR-Fehler mehr)",
+      "UI-Redesign mit dunklem Layout und roten Akzenten",
+    ],
+  },
+  {
+    version: "0.2.0",
+    date: "2025-11-27",
+    items: [
+      "HTTP-Streaming über NAS-Symlink (/1337) vorbereitet",
+      "Play-Button öffnet direkte NAS-Links (fileUrl) im neuen Tab",
+      "Version-Hinweis & Login-Leiste integriert",
+    ],
+  },
+  {
+    version: "0.1.0",
+    date: "2025-11-26",
+    items: [
+      "Erste Version der 1337 Film-Bibliothek mit Darsteller-/Film-Ansicht",
+      "Supabase-Anbindung (movies, studios, actors, tags, movie_actors, movie_tags)",
+    ],
+  },
+];
 
-function AutoFitActorTitle({ text }) {
-  const ref = useRef(null);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-
-    const isMobile = () =>
-      typeof window !== "undefined" && window.innerWidth <= 700;
-
-    const fit = () => {
-      if (!ref.current) return;
-
-      if (!isMobile()) {
-        el.style.fontSize = "";
-        return;
-      }
-
-      let size = 14;
-      const min = 10;
-      const step = 0.5;
-
-      el.style.fontSize = `${size}px`;
-
-      while (el.scrollWidth > el.clientWidth + 1 && size > min) {
-        size -= step;
-        el.style.fontSize = `${size}px`;
-      }
-    };
-
-    const raf = requestAnimationFrame(fit);
-
-    const onResize = () => fit();
-    window.addEventListener("resize", onResize);
-
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener("resize", onResize);
-    };
-  }, [text]);
-
-  return (
-    <div ref={ref} className="card__title" title={text}>
-      {text}
-    </div>
-  );
-}
-
-
-function AutoFitActorHeroName({ text }) {
-  const ref = useRef(null);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-
-    const fit = () => {
-      if (!ref.current) return;
-
-      const width = el.clientWidth;
-      if (!width) return;
-
-      const isMobile =
-        typeof window !== "undefined" && window.innerWidth <= 700;
-
-      let size = isMobile ? 34 : 58;
-      const min = isMobile ? 22 : 30;
-      const step = 1;
-
-      el.style.fontSize = `${size}px`;
-      el.style.whiteSpace = "nowrap";
-
-      while (el.scrollWidth > el.clientWidth + 1 && size > min) {
-        size -= step;
-        el.style.fontSize = `${size}px`;
-      }
-    };
-
-    const raf = requestAnimationFrame(fit);
-    const onResize = () => fit();
-
-    window.addEventListener("resize", onResize);
-
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener("resize", onResize);
-    };
-  }, [text]);
+function VersionHint() {
+  const [open, setOpen] = useState(false);
+  const current = CHANGELOG[0];
 
   return (
-    <h1 ref={ref} className="actorHero__name" title={text}>
-      {text}
-    </h1>
-  );
-}
-
-function FilterSection({
-  title,
-  subtitle,
-  items,
-  selectedKeys,
-  getKey,
-  getLabel,
-  onToggle,
-  search,
-  setSearch,
-  showSelectedOnly,
-  setShowSelectedOnly,
-  defaultOpen = true,
-}) {
-  const [open, setOpen] = useState(defaultOpen);
-  const selectedSet = useMemo(
-    () => new Set(selectedKeys.map(String)),
-    [selectedKeys]
-  );
-
-  const filtered = useMemo(() => {
-    const base = items || [];
-    let list = base;
-
-    if (showSelectedOnly)
-      list = list.filter((it) => selectedSet.has(String(getKey(it))));
-    if (search.trim()) {
-      const q = search.trim().toLowerCase();
-      list = list.filter((it) => includesLoose(getLabel(it), q));
-    }
-
-    return list;
-  }, [items, showSelectedOnly, selectedSet, search, getKey, getLabel]);
-
-  return (
-    <div className="fsec">
+    <>
       <button
         type="button"
-        className="fsec__head"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => setOpen(true)}
+        className="inline-flex items-center gap-1 rounded-full border border-neutral-600/70 bg-neutral-900/80 px-4 py-1.5 text-sm text-neutral-100 shadow-sm shadow-black/40 hover:border-neutral-400 hover:bg-neutral-800 transition-colors"
       >
-        <div className="fsec__headL">
-          <div className="fsec__title">{title}</div>
-          <div className="fsec__sub">
-            {subtitle ? (
-              <>
-                {subtitle} • <span className="mono">{selectedKeys.length}</span>{" "}
-                aktiv
-              </>
-            ) : (
-              <>
-                <span className="mono">{selectedKeys.length}</span> aktiv
-              </>
-            )}
-          </div>
-        </div>
-        <div className="fsec__headR">
-          <span className="fsec__chev">{open ? "—" : "+"}</span>
-        </div>
+        <span className="font-mono">{current.version}</span>
+        <span className="opacity-70">Changelog</span>
       </button>
 
       {open && (
-        <div className="fsec__body">
-          <div className="fsec__tools">
-            <div className="fsearch">
-              <svg
-                className="fsearch__icon"
-                viewBox="0 0 24 24"
-                fill="none"
-                aria-hidden="true"
-              >
-                <path
-                  d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                />
-                <path
-                  d="M16.5 16.5 21 21"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-              </svg>
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Suchen…"
-              />
-              {search ? (
-                <button
-                  type="button"
-                  className="btn btn--ghost btn--xs"
-                  onClick={() => setSearch("")}
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+          onClick={() => setOpen(false)}
+        >
+          <div
+            className="changelogPanel w-full max-w-xl max-h-[80vh] overflow-y-auto rounded-2xl border border-neutral-700/80 bg-neutral-950/95 p-6 shadow-2xl shadow-black/80"
+          onClick={(e) => e.stopPropagation()}
+            >
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <div>
+                <div className="text-xs uppercase tracking-[0.18em] text-neutral-400">
+                  Version &amp; Changelog
+                </div>
+                <div className="text-lg font-semibold text-neutral-50">
+                  1337 Dashboard
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-4">
+              {CHANGELOG.map((entry) => (
+                <div
+                  key={entry.version}
+                  className="rounded-xl border border-neutral-700/80 bg-neutral-900/70 p-4"
                 >
-                  Reset
-                </button>
-              ) : null}
+                  <div className="mb-2 flex items-baseline justify-between">
+                    <div className="font-semibold text-base text-neutral-50">
+                      {entry.version}
+                    </div>
+                    <div className="text-sm text-neutral-400">
+                      {entry.date}
+                    </div>
+                  </div>
+                  <ul className="m-0 list-disc pl-5 text-sm text-neutral-200 space-y-1.5">
+                    {entry.items.map((it, idx) => (
+                      <li key={idx}>{it}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
             </div>
-
-            <label className="toggle">
-              <input
-                type="checkbox"
-                checked={showSelectedOnly}
-                onChange={(e) => setShowSelectedOnly(e.target.checked)}
-              />
-              <span>Nur Auswahl</span>
-            </label>
-          </div>
-
-          {selectedKeys.length > 0 ? (
-            <div className="chipsRow">
-              {selectedKeys.slice(0, 14).map((k) => {
-                const it = items.find((x) => String(getKey(x)) === String(k));
-                const label = it ? getLabel(it) : String(k);
-                return (
-                  <button
-                    key={`sel-${title}-${k}`}
-                    type="button"
-                    className={`selChip`}
-                    onClick={() => onToggle(k)}
-                    title="Entfernen"
-                  >
-                    <span className="selChip__dot" />
-                    <span className="selChip__txt">{label}</span>
-                    <span className="selChip__x">×</span>
-                  </button>
-                );
-              })}
-              {selectedKeys.length > 14 ? (
-                <Pill>+{selectedKeys.length - 14}</Pill>
-              ) : null}
-            </div>
-          ) : null}
-
-          <div className="pickList">
-            {filtered.length === 0 ? (
-              <div className="pickEmpty">Keine Treffer</div>
-            ) : (
-              filtered.map((it) => {
-                const key = String(getKey(it));
-                const active = selectedSet.has(key);
-                return (
-                  <button
-                    key={`${title}-${key}`}
-                    type="button"
-                    className={`pick ${active ? "pick--on" : ""}`}
-                    onClick={() => onToggle(key)}
-                    title={getLabel(it)}
-                  >
-                    <span className="pick__dot" />
-                    <span className="pick__txt">{getLabel(it)}</span>
-                    <span className="pick__state">{active ? "ON" : ""}</span>
-                  </button>
-                );
-              })
-            )}
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
-function getResolutionIcon(resolutionName) {
-  const r = String(resolutionName || "").trim().toLowerCase();
-  if (!r) return null;
+// Helper für Chips – Rot als Akzent
+const chipClass = (active) =>
+  "px-3 py-1 rounded-full border text-sm " +
+  (active
+    ? "bg-red-500 border-red-600 text-black"
+    : "bg-neutral-900/90 border-neutral-700 text-neutral-100 hover:border-neutral-400 transition-colors");
 
-  if (r === "4k" || r.includes("4k"))
-    return { src: "/4k.svg", alt: "4K", title: "4K" };
-  if (
-    r === "fullhd" ||
-    r === "full hd" ||
-    r.includes("fullhd") ||
-    r.includes("full hd")
-  ) {
-    return { src: "/fullhd.svg", alt: "FullHD", title: "FullHD" };
-  }
-  if (r === "retro" || r.includes("retro"))
-    return { src: "/retro.svg", alt: "Retro", title: "Retro" };
+// -------------------------------
+// Dashboard
+// -------------------------------
 
-  return null;
-}
-
-function getAgeFromBirthDate(value) {
-  if (!value) return null;
-
-  const d = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(d.getTime())) return null;
-
-  const today = new Date();
-  let age = today.getFullYear() - d.getFullYear();
-  const birthdayThisYear = new Date(
-    today.getFullYear(),
-    d.getMonth(),
-    d.getDate()
-  );
-
-  if (today < birthdayThisYear) age -= 1;
-  return age >= 0 && age < 130 ? age : null;
-}
-
-function formatBirthDate(value) {
-  if (!value) return "";
-  const d = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(d.getTime())) return String(value);
-
-  const formatted = d.toLocaleDateString("de-DE", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-
-  const age = getAgeFromBirthDate(value);
-  return age === null ? formatted : `${formatted} (${age})`;
-}
-
-
-function getCountryFlag(origin) {
-  const value = String(origin || "").trim();
-  if (!value) return null;
-
-  const normalized = value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-
-  const map = {
-    deutschland: "de",
-    germany: "de",
-    deutsch: "de",
-    german: "de",
-    de: "de",
-    usa: "us",
-    us: "us",
-    unitedstates: "us",
-    "united states": "us",
-    amerika: "us",
-    america: "us",
-    kanada: "ca",
-    canada: "ca",
-    uk: "gb",
-    gb: "gb",
-    england: "gb",
-    schottland: "gb",
-    scotland: "gb",
-    wales: "gb",
-    frankreich: "fr",
-    france: "fr",
-    italien: "it",
-    italy: "it",
-    spanien: "es",
-    spain: "es",
-    portugal: "pt",
-    niederlande: "nl",
-    holland: "nl",
-    netherlands: "nl",
-    belgien: "be",
-    belgium: "be",
-    schweiz: "ch",
-    switzerland: "ch",
-    osterreich: "at",
-    austria: "at",
-    polen: "pl",
-    poland: "pl",
-    ukraine: "ua",
-    russland: "ru",
-    russia: "ru",
-    tschechien: "cz",
-    czechia: "cz",
-    "czech republic": "cz",
-    slowakei: "sk",
-    slovakia: "sk",
-    ungarn: "hu",
-    ungarland: "hu",
-    hungary: "hu",
-    hu: "hu",
-    albanien: "al",
-    albania: "al",
-    albanisch: "al",
-    albanian: "al",
-    al: "al",
-    rumanien: "ro",
-    romania: "ro",
-    bulgarien: "bg",
-    bulgaria: "bg",
-    kroatien: "hr",
-    croatia: "hr",
-    serbien: "rs",
-    serbia: "rs",
-    turkei: "tr",
-    turkey: "tr",
-    griechenland: "gr",
-    greece: "gr",
-    danemark: "dk",
-    denmark: "dk",
-    schweden: "se",
-    sweden: "se",
-    norwegen: "no",
-    norway: "no",
-    finnland: "fi",
-    finland: "fi",
-    irland: "ie",
-    ireland: "ie",
-    australien: "au",
-    australia: "au",
-    neuseeland: "nz",
-    "new zealand": "nz",
-    mexiko: "mx",
-    mexico: "mx",
-    brasilien: "br",
-    brazil: "br",
-    argentinien: "ar",
-    argentina: "ar",
-    kolumbien: "co",
-    colombia: "co",
-    japan: "jp",
-    china: "cn",
-    sudkorea: "kr",
-    korea: "kr",
-    "south korea": "kr",
-    thailand: "th",
-    indien: "in",
-    india: "in",
-  };
-
-  const compact = normalized.replace(/\s+/g, "");
-  const code = map[normalized] || map[compact] || (/^[a-z]{2}$/.test(compact) ? compact : "");
-  if (!code) return null;
-
-  return {
-    code,
-    src: `https://flagcdn.com/w40/${code}.png`,
-    srcSet: `https://flagcdn.com/w80/${code}.png 2x`,
-  };
-}
-
-function normalizeStatValue(value) {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
-const HAIR_COLOR_TAGS = [
-  "Blonde",
-  "Brunette",
-  "Dark Hair",
-  "Red Hair",
-].map(normalizeStatValue);
-
-const FINISH_TAGS = [
-  "Creampie",
-  "Cum in Mouth",
-  "Cum on Ass",
-  "Cum on Belly",
-  "Cum on Pussy",
-  "Cum on Tits",
-  "Swallow",
-  "Facial",
-].map(normalizeStatValue);
-
-function isHairColorTag(tag) {
-  const normalized = normalizeStatValue(tag);
-  if (!normalized) return false;
-  return HAIR_COLOR_TAGS.includes(normalized);
-}
-
-function isFinishTag(tag) {
-  const normalized = normalizeStatValue(tag);
-  if (!normalized) return false;
-  return FINISH_TAGS.includes(normalized);
-}
-
-function countValues(values) {
-  const counts = new Map();
-  values
-    .filter(Boolean)
-    .map((v) => String(v).trim())
-    .filter(Boolean)
-    .forEach((v) => counts.set(v, (counts.get(v) || 0) + 1));
-
-  return Array.from(counts.entries())
-    .map(([value, count]) => ({ value, count }))
-    .sort((a, b) => {
-      if (b.count !== a.count) return b.count - a.count;
-      return a.value.localeCompare(b.value, "de", { sensitivity: "base" });
-    });
-}
-
-function withPercent(items, total) {
-  return items.map((item) => ({
-    ...item,
-    percent: total ? Math.round((item.count / total) * 100) : 0,
-  }));
-}
-
-function buildActorStats(actorMovies) {
-  const list = Array.isArray(actorMovies) ? actorMovies : [];
-  const years = list
-    .map((m) => parseInt(m.year, 10))
-    .filter((y) => Number.isFinite(y));
-
-  const minYear = years.length ? Math.min(...years) : null;
-  const maxYear = years.length ? Math.max(...years) : null;
-  const yearRange =
-    minYear && maxYear
-      ? minYear === maxYear
-        ? String(minYear)
-        : `${minYear}–${maxYear}`
-      : "-";
-
-  const allTags = list.flatMap((m) => (Array.isArray(m.tags) ? m.tags : []));
-  const hairTags = allTags.filter(isHairColorTag);
-  const finishTags = allTags.filter(isFinishTag);
-  const topTagsSource = allTags.filter(
-    (tag) => !isHairColorTag(tag) && !isFinishTag(tag)
-  );
-  const topStudios = countValues(list.map((m) => m.studio)).slice(0, 5);
-  const topSupportingActors = countValues(
-    list.flatMap((m) =>
-      Array.isArray(m.supportingActorNames) ? m.supportingActorNames : []
-    )
-  ).slice(0, 5);
-  const topTags = countValues(topTagsSource).slice(0, 5);
-  const topFinish = countValues(finishTags).slice(0, 5);
-  const totalResolutions = list.filter((m) => m.resolution).length;
-  const totalHairTags = hairTags.length;
-  const qualityStats = withPercent(countValues(list.map((m) => m.resolution)), totalResolutions);
-  const hairColorStats = withPercent(countValues(hairTags), totalHairTags);
-
-  return {
-    yearRange,
-    topStudios,
-    topSupportingActors,
-    topTags,
-    topFinish,
-    hairColorStats,
-    qualityStats,
-  };
-}
-
-function ActorHero({ actor, movieCount, movies: actorMovies = [] }) {
-  const [statsOpen, setStatsOpen] = useState(false);
-
-  if (!actor) return null;
-
-  const originFlag = getCountryFlag(actor.origin);
-  const stats = buildActorStats(actorMovies);
-  const hasMeta = Boolean(actor.origin || actor.birthDate || stats.yearRange !== "-");
-  const hasLinks = Boolean(actor.iafdUrl || actor.planetsuzyUrl);
-
-  return (
-    <section className="actorHero">
-      <div className="actorHero__media">
-        {actor.profileImage ? (
-          <img src={actor.profileImage} alt={actor.name} />
-        ) : (
-          <div className="actorHero__placeholder">NO IMAGE</div>
-        )}
-      </div>
-
-      <div className="actorHero__content">
-        <div className="actorHero__main">
-            <AutoFitActorHeroName text={actor.name} />
-          <div className="actorHero__count">{movieCount} Film(e)</div>
-
-          {hasMeta ? (
-            <div className="actorHero__meta">
-              {actor.origin ? (
-                <div className="actorHero__metaItem">
-                  <span>Herkunft</span>
-                  <strong className="actorHero__metaValue">
-                    {originFlag ? (
-                      <img
-                        className="actorHero__flag"
-                        src={originFlag.src}
-                        srcSet={originFlag.srcSet}
-                        alt=""
-                        loading="lazy"
-                        aria-hidden="true"
-                      />
-                    ) : null}
-                    {actor.origin}
-                  </strong>
-                </div>
-              ) : null}
-
-              {actor.birthDate ? (
-                <div className="actorHero__metaItem">
-                  <span>Geboren</span>
-                  <strong className="actorHero__metaValue">
-                    {formatBirthDate(actor.birthDate)}
-                  </strong>
-                </div>
-              ) : null}
-
-              {stats.yearRange !== "-" ? (
-                <div className="actorHero__metaItem">
-                  <span>Zeitraum</span>
-                  <strong className="actorHero__metaValue">{stats.yearRange}</strong>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-
-          {hasLinks ? (
-            <div className="actorHero__links">
-              {actor.iafdUrl ? (
-                <button
-                  type="button"
-                  className="actorHero__link"
-                  onClick={() => safeOpen(actor.iafdUrl)}
-                >
-                  <img
-                    className="actorHero__linkIcon"
-                    src="/db.png"
-                    alt="IAFD"
-                  />
-                </button>
-              ) : null}
-
-              {actor.planetsuzyUrl ? (
-                <button
-                  type="button"
-                  className="actorHero__link"
-                  onClick={() => safeOpen(actor.planetsuzyUrl)}
-                >
-                  <img
-                    className="actorHero__linkIcon"
-                    src="/palm.png"
-                    alt="PlanetSuzy"
-                  />
-                </button>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
-
-        <div className="actorHero__stats" aria-label="Statistiken">
-          <button
-            type="button"
-            className="actorHero__statsToggle"
-            onClick={() => setStatsOpen((value) => !value)}
-            aria-expanded={statsOpen ? "true" : "false"}
-          >
-            <span>Statistiken</span>
-            <span className="actorHero__statsToggleIcon" aria-hidden="true">
-              {statsOpen ? "−" : "+"}
-            </span>
-          </button>
-
-          <div className={`actorHero__statsGrid ${statsOpen ? "actorHero__statsGrid--open" : ""}`}>
-            <div className="actorHero__statsBlock">
-              <div className="actorHero__statsLabel">Haarfarbe</div>
-              <div className="actorHero__qualityList">
-                {stats.hairColorStats.length ? (
-                  stats.hairColorStats.map((hairColor) => (
-                    <div key={hairColor.value} className="actorHero__qualityLine">
-                      <div className="actorHero__qualityTop">
-                        <span>{hairColor.value}</span>
-                        <strong>{hairColor.percent}%</strong>
-                      </div>
-                      <div className="actorHero__qualityBar" aria-hidden="true">
-                        <div style={{ width: `${hairColor.percent}%` }} />
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="actorHero__emptyStat">-</div>
-                )}
-              </div>
-            </div>
-
-            <div className="actorHero__statsBlock">
-              <div className="actorHero__statsLabel">Qualität</div>
-              <div className="actorHero__qualityList">
-                {stats.qualityStats.length ? (
-                  stats.qualityStats.map((quality) => (
-                    <div key={quality.value} className="actorHero__qualityLine">
-                      <div className="actorHero__qualityTop">
-                        <span>{quality.value}</span>
-                        <strong>{quality.percent}%</strong>
-                      </div>
-                      <div className="actorHero__qualityBar" aria-hidden="true">
-                        <div style={{ width: `${quality.percent}%` }} />
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="actorHero__emptyStat">-</div>
-                )}
-              </div>
-            </div>
-
-            <div className="actorHero__statsBlock">
-              <div className="actorHero__statsLabel">Top 5 Studios</div>
-              <div className="actorHero__rankList">
-                {stats.topStudios.length ? (
-                  stats.topStudios.map((studio, index) => (
-                    <div key={`${studio.value}-${index}`} className="actorHero__rankLine">
-                      <span className="actorHero__rankNo">{index + 1}</span>
-                      <strong>{studio.value}</strong>
-                      <em>{studio.count}</em>
-                    </div>
-                  ))
-                ) : (
-                  <div className="actorHero__emptyStat">-</div>
-                )}
-              </div>
-            </div>
-
-            <div className="actorHero__statsBlock">
-              <div className="actorHero__statsLabel">Top 5 Nebendarsteller</div>
-              <div className="actorHero__rankList">
-                {stats.topSupportingActors.length ? (
-                  stats.topSupportingActors.map((supportingActor, index) => (
-                    <div key={`${supportingActor.value}-${index}`} className="actorHero__rankLine">
-                      <span className="actorHero__rankNo">{index + 1}</span>
-                      <strong>{supportingActor.value}</strong>
-                      <em>{supportingActor.count}</em>
-                    </div>
-                  ))
-                ) : (
-                  <div className="actorHero__emptyStat">-</div>
-                )}
-              </div>
-            </div>
-
-            <div className="actorHero__statsBlock">
-              <div className="actorHero__statsLabel">Top 5 Tags</div>
-              <div className="actorHero__rankList">
-                {stats.topTags.length ? (
-                  stats.topTags.map((tag, index) => (
-                    <div key={`${tag.value}-${index}`} className="actorHero__rankLine">
-                      <span className="actorHero__rankNo">{index + 1}</span>
-                      <strong>{tag.value}</strong>
-                      <em>{tag.count}</em>
-                    </div>
-                  ))
-                ) : (
-                  <div className="actorHero__emptyStat">-</div>
-                )}
-              </div>
-            </div>
-
-            <div className="actorHero__statsBlock">
-              <div className="actorHero__statsLabel">Top Finish</div>
-              <div className="actorHero__rankList">
-                {stats.topFinish.length ? (
-                  stats.topFinish.map((finish, index) => (
-                    <div key={`${finish.value}-${index}`} className="actorHero__rankLine">
-                      <span className="actorHero__rankNo">{index + 1}</span>
-                      <strong>{finish.value}</strong>
-                      <em>{finish.count}</em>
-                    </div>
-                  ))
-                ) : (
-                  <div className="actorHero__emptyStat">-</div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-export default function HomePage() {
+export default function DashboardPage() {
   const router = useRouter();
 
-  const [movies, setMovies] = useState([]);
-  const [actors, setActors] = useState([]);
-  const [selectedActor, setSelectedActor] = useState(null);
-  const [selectedMovieId, setSelectedMovieId] = useState(null);
-  const [viewMode, setViewMode] = useState("actors"); // "actors" | "movies"
-  const [visibleMovies, setVisibleMovies] = useState([]);
-  const [movieSort, setMovieSort] = useState("added_desc");
-  const [moviesTitle, setMoviesTitle] = useState("Filme");
-  const [moviesSubtitle, setMoviesSubtitle] = useState("");
-  const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState(null);
-
+  // Header / Suche
+  const [dashboardSearch, setDashboardSearch] = useState("");
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
+  const searchWrapRef = useRef(null);
+  const searchInputRef = useRef(null);
+  const mobileSearchInputRef = useRef(null);
+  const userMenuRef = useRef(null);
+
+  // Login-Status
   const [loggedIn, setLoggedIn] = useState(false);
   const [loginUser, setLoginUser] = useState("gallardo1337");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginErr, setLoginErr] = useState(null);
   const [loginLoading, setLoginLoading] = useState(false);
 
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  // Tabs: Filme / Neuer Film / Stammdaten
+  const [activeFilmSection, setActiveFilmSection] = useState("stats"); // "stats" | "new" | "meta"
+  const [metaMenuOpen, setMetaMenuOpen] = useState(false);
+  const [activeMetaSection, setActiveMetaSection] = useState("mainActors"); // "mainActors" | "supportActors" | "studios" | "tags"
 
-  const [selectedTags, setSelectedTags] = useState([]);
-  const [selectedStudio, setSelectedStudio] = useState("");
-  const [selectedResolution, setSelectedResolution] = useState("");
-  const [yearFrom, setYearFrom] = useState("");
-  const [yearTo, setYearTo] = useState("");
+  // Daten
+  const [hauptdarsteller, setHauptdarsteller] = useState([]);
+  const [nebendarsteller, setNebendarsteller] = useState([]);
+  const [studios, setStudios] = useState([]);
+  const [tags, setTags] = useState([]);
+  const [filme, setFilme] = useState([]);
+  const [resolutions, setResolutions] = useState([]);
 
-  const [selectedMainActors, setSelectedMainActors] = useState([]);
-  const [selectedSupportingActors, setSelectedSupportingActors] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const [tagSearch, setTagSearch] = useState("");
-  const [mainActorSearch, setMainActorSearch] = useState("");
-  const [suppActorSearch, setSuppActorSearch] = useState("");
+  // Stammdaten Inputs
+  const [newActorName, setNewActorName] = useState("");
+  const [newActorImage, setNewActorImage] = useState("");
+  const [newActorOrigin, setNewActorOrigin] = useState("");
+  const [newActorBirthDate, setNewActorBirthDate] = useState("");
+  const [newActorIafdUrl, setNewActorIafdUrl] = useState("");
+  const [newActorPlanetsuzyUrl, setNewActorPlanetsuzyUrl] = useState("");
 
-  const [tagsSelectedOnly, setTagsSelectedOnly] = useState(false);
-  const [mainSelectedOnly, setMainSelectedOnly] = useState(false);
-  const [suppSelectedOnly, setSuppSelectedOnly] = useState(false);
+  const [newSupportName, setNewSupportName] = useState("");
+  const [newSupportImage, setNewSupportImage] = useState("");
 
-  const searchWrapRef = useRef(null);
-  const searchInputRef = useRef(null);
-  const mobileSearchInputRef = useRef(null);
+  const [newStudioName, setNewStudioName] = useState("");
+  const [newStudioImage, setNewStudioImage] = useState("");
 
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const userMenuRef = useRef(null);
+  const [newTagName, setNewTagName] = useState("");
 
+  const [editingActorMetaId, setEditingActorMetaId] = useState(null);
+  const [actorEditForm, setActorEditForm] = useState({
+    name: "",
+    profile_image: "",
+    origin: "",
+    birth_date: "",
+    iafd_url: "",
+    planetsuzy_url: "",
+  });
+
+  const [editingSupportMetaId, setEditingSupportMetaId] = useState(null);
+  const [supportEditForm, setSupportEditForm] = useState({
+    name: "",
+    profile_image: "",
+  });
+
+  const [editingStudioMetaId, setEditingStudioMetaId] = useState(null);
+  const [studioEditForm, setStudioEditForm] = useState({
+    name: "",
+    image_url: "",
+  });
+
+  const [editingTagMetaId, setEditingTagMetaId] = useState(null);
+  const [tagEditName, setTagEditName] = useState("");
+
+  // Film Inputs
+  const DEFAULT_FILE_BASE = "http://192.168.178.58:8080/";
+
+  const [filmTitel, setFilmTitel] = useState("");
+  const [filmJahr, setFilmJahr] = useState("");
+  const [filmStudioId, setFilmStudioId] = useState("");
+  const [filmFileUrl, setFilmFileUrl] = useState(DEFAULT_FILE_BASE);
+  const [filmResolutionId, setFilmResolutionId] = useState("");
+  const [filmThumbnailUrl, setFilmThumbnailUrl] = useState("");
+  const [selectedMainActorIds, setSelectedMainActorIds] = useState([]);
+  const [selectedSupportActorIds, setSelectedSupportActorIds] = useState([]);
+  const [selectedTagIds, setSelectedTagIds] = useState([]);
+
+  const [editingFilmId, setEditingFilmId] = useState(null);
+
+  // Login-Status aus localStorage laden
   useEffect(() => {
     if (typeof window === "undefined") return;
     const flag = window.localStorage.getItem("auth_1337_flag");
@@ -1072,21 +282,21 @@ export default function HomePage() {
     }
   }, []);
 
+  // Header: Klick außerhalb / Mobile Search / User Menu schließen
   useEffect(() => {
-    if (!filtersOpen && !mobileSearchOpen && !userMenuOpen) return;
+    if (!mobileSearchOpen && !userMenuOpen) return;
 
     const onDown = (e) => {
       if (mobileSearchOpen) {
-        const panel = document.querySelector(".mSearch__panel");
+        const panel = document.querySelector(".dashMSearch__panel");
         if (panel && panel.contains(e.target)) return;
         setMobileSearchOpen(false);
-        setFiltersOpen(false);
         setUserMenuOpen(false);
         return;
       }
 
-      const root = searchWrapRef.current;
-      if (root && !root.contains(e.target)) setFiltersOpen(false);
+      const sw = searchWrapRef.current;
+      if (sw && sw.contains(e.target)) return;
 
       const um = userMenuRef.current;
       if (um && !um.contains(e.target)) setUserMenuOpen(false);
@@ -1099,486 +309,240 @@ export default function HomePage() {
       document.removeEventListener("mousedown", onDown, true);
       document.removeEventListener("touchstart", onDown, true);
     };
-  }, [filtersOpen, mobileSearchOpen, userMenuOpen]);
+  }, [mobileSearchOpen, userMenuOpen]);
 
   useEffect(() => {
-    if (!mobileSearchOpen && !userMenuOpen && !filtersOpen) return;
+    if (!mobileSearchOpen && !userMenuOpen) return;
 
     const onKey = (e) => {
       if (e.key === "Escape") {
         setMobileSearchOpen(false);
-        setFiltersOpen(false);
         setUserMenuOpen(false);
       }
     };
+
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [mobileSearchOpen, userMenuOpen, filtersOpen]);
+  }, [mobileSearchOpen, userMenuOpen]);
 
+  // Daten laden, wenn eingeloggt
   useEffect(() => {
-    if (!loggedIn) {
-      setMovies([]);
-      setActors([]);
-      setSelectedActor(null);
-      setSelectedMovieId(null);
-      setVisibleMovies([]);
-      setLoading(false);
-      return;
-    }
+    const loadAll = async () => {
+      if (!loggedIn) {
+        setHauptdarsteller([]);
+        setNebendarsteller([]);
+        setStudios([]);
+        setTags([]);
+        setFilme([]);
+        setResolutions([]);
+        setLoading(false);
+        return;
+      }
 
-    const load = async () => {
       try {
         setLoading(true);
-        setErr(null);
+        setError(null);
 
         const [
-          moviesRes,
           actorsRes,
           actors2Res,
           studiosRes,
           tagsRes,
+          moviesRes,
           resolutionsRes,
         ] = await Promise.all([
-          supabase.from("movies").select("*"),
-          supabase.from("actors").select("*"),
-          supabase.from("actors2").select("*"),
-          supabase.from("studios").select("*"),
-          supabase.from("tags").select("*"),
-          supabase.from("resolutions").select("*"),
+          supabase.from("actors").select("*").order("name"),
+          supabase.from("actors2").select("*").order("name"),
+          supabase.from("studios").select("*").order("name"),
+          supabase.from("tags").select("*").order("name"),
+          supabase
+            .from("movies")
+            .select("*")
+            .order("created_at", { ascending: false }),
+          supabase.from("resolutions").select("*").order("name"),
         ]);
 
-        if (moviesRes.error) throw moviesRes.error;
         if (actorsRes.error) throw actorsRes.error;
         if (actors2Res.error) throw actors2Res.error;
         if (studiosRes.error) throw studiosRes.error;
         if (tagsRes.error) throw tagsRes.error;
+        if (moviesRes.error) throw moviesRes.error;
         if (resolutionsRes.error) throw resolutionsRes.error;
 
-        const moviesData = moviesRes.data || [];
-        const mainActors = actorsRes.data || [];
-        const supportActors = actors2Res.data || [];
-        const studios = studiosRes.data || [];
-        const tags = tagsRes.data || [];
-        const resolutions = resolutionsRes.data || [];
+        setHauptdarsteller(actorsRes.data || []);
+        setNebendarsteller(actors2Res.data || []);
+        setStudios(studiosRes.data || []);
+        setTags(tagsRes.data || []);
+        setFilme(moviesRes.data || []);
+        setResolutions(resolutionsRes.data || []);
 
-        const mainActorById = Object.fromEntries(
-          mainActors.map((a) => [a.id, a])
-        );
-        const supportActorById = Object.fromEntries(
-          supportActors.map((a) => [a.id, a])
-        );
-        const studioMap = Object.fromEntries(
-          studios.map((s) => [s.id, s.name])
-        );
-        const tagMap = Object.fromEntries(tags.map((t) => [t.id, t.name]));
-        const resolutionMap = Object.fromEntries(
-          resolutions.map((r) => [r.id, r.name])
-        );
-
-        const mappedMovies = (moviesData || []).map((m) => {
-          const mainIds = Array.isArray(m.main_actor_ids) ? m.main_actor_ids : [];
-          const supportIds = Array.isArray(m.supporting_actor_ids)
-            ? m.supporting_actor_ids
-            : [];
-
-          const mainNames = mainIds
-            .map((id) => mainActorById[id]?.name)
-            .filter(Boolean);
-          const supportNames = supportIds
-            .map((id) => supportActorById[id]?.name)
-            .filter(Boolean);
-
-          const allActors = [...mainNames, ...supportNames];
-          const tagNames = Array.isArray(m.tag_ids)
-            ? m.tag_ids
-                .map((id) => tagMap[id])
-                .filter(Boolean)
-                .sort((a, b) =>
-                  a.localeCompare(b, "de", { sensitivity: "base" })
-                )
-            : [];
-
-          const resolutionName = m.resolution_id
-            ? resolutionMap[m.resolution_id] || null
-            : null;
-
-          return {
-            id: m.id,
-            title: m.title,
-            year: m.year,
-            fileUrl: m.file_url,
-            studio: m.studio_id ? studioMap[m.studio_id] || null : null,
-            resolution: resolutionName,
-            thumbnailUrl: m.thumbnail_url || null,
-            addedAt: m.created_at || m.inserted_at || m.createdAt || null,
-            actors: allActors,
-            tags: tagNames,
-            mainActorIds: mainIds,
-            supportingActorIds: supportIds,
-            mainActorNames: mainNames,
-            supportingActorNames: supportNames,
-            mainCast: mainIds
-              .map((id) => mainActorById[id])
-              .filter(Boolean)
-              .map((a) => ({
-                id: a.id,
-                name: a.name,
-                profileImage: a.profile_image || null,
-              })),
-            supportCast: supportIds
-              .map((id) => supportActorById[id])
-              .filter(Boolean)
-              .map((a) => ({
-                id: a.id,
-                name: a.name,
-                profileImage: a.profile_image || null,
-              })),
-          };
-        });
-
-        setMovies(mappedMovies);
-
-        const movieCountByActorId = new Map();
-        moviesData.forEach((m) => {
-          const arr = Array.isArray(m.main_actor_ids) ? m.main_actor_ids : [];
-          arr.forEach((id) =>
-            movieCountByActorId.set(id, (movieCountByActorId.get(id) || 0) + 1)
+        if (!editingFilmId) {
+          const fullHd = (resolutionsRes.data || []).find(
+            (r) => r.name === "FullHD"
           );
-        });
-
-        const actorList = mainActors
-          .map((a) => ({
-            id: a.id,
-            slug: a.slug || null,
-            name: a.name,
-            profileImage: a.profile_image || null,
-            origin: a.origin || null,
-            birthDate: a.birth_date || null,
-            iafdUrl: a.iafd_url || null,
-            planetsuzyUrl: a.planetsuzy_url || null,
-            movieCount: movieCountByActorId.get(a.id) || 0,
-          }))
-          .filter((a) => a.movieCount > 0)
-          .sort((a, b) =>
-            a.name.localeCompare(b.name, "de", { sensitivity: "base" })
-          );
-
-        setActors(actorList);
-
-        let actorParam = null;
-        let movieParam = null;
-        if (typeof window !== "undefined") {
-          const sp = new URLSearchParams(window.location.search || "");
-          actorParam = sp.get("actor");
-          movieParam = sp.get("movie");
-        }
-
-        if (movieParam && mappedMovies.some((movie) => String(movie.id) === String(movieParam))) {
-          setSelectedMovieId(movieParam);
-          setViewMode("movies");
-          setSelectedActor(null);
-          setVisibleMovies([]);
-          setMoviesTitle("Filme");
-          setMoviesSubtitle("");
-        } else if (actorParam) {
-          const actor =
-            isUuid(actorParam)
-              ? actorList.find((a) => String(a.id) === String(actorParam))
-              : actorList.find((a) => String(a.slug) === String(actorParam));
-
-          if (actor) {
-            const subset = mappedMovies.filter(
-              (movie) =>
-                Array.isArray(movie.mainActorIds) &&
-                movie.mainActorIds.includes(actor.id)
-            );
-
-            if (isUuid(actorParam) && actor.slug) {
-              const sp = new URLSearchParams(window.location.search || "");
-              sp.set("actor", actor.slug);
-              router.replace(`/?${sp.toString()}`, { scroll: false });
-            }
-
-            setSelectedActor(actor);
-            setSelectedMovieId(null);
-            setMoviesTitle(actor.name);
-            setMoviesSubtitle(`${subset.length} Film(e)`);
-            setVisibleMovies(subset);
-            setViewMode("movies");
-          } else {
-            setViewMode("actors");
-            setSelectedActor(null);
-            setSelectedMovieId(null);
-            setVisibleMovies([]);
-            setMoviesTitle("Filme");
-            setMoviesSubtitle("");
+          if (fullHd && !filmResolutionId) {
+            setFilmResolutionId(fullHd.id);
           }
-        } else {
-          setViewMode("actors");
-          setSelectedActor(null);
-          setSelectedMovieId(null);
-          setVisibleMovies([]);
-          setMoviesTitle("Filme");
-          setMoviesSubtitle("");
         }
-      } catch (e) {
-        console.error(e);
-        setErr("Fehler beim Laden der Daten.");
+      } catch (err) {
+        console.error(err);
+        setError(err.message || "Fehler beim Laden der Daten.");
       } finally {
         setLoading(false);
       }
     };
 
-    void load();
-  }, [loggedIn, router]);
+    loadAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loggedIn]);
 
-  const allTags = useMemo(() => {
-    const set = new Set();
-    movies.forEach((m) => (m.tags || []).forEach((t) => set.add(t)));
-    return Array.from(set).sort((a, b) =>
-      a.localeCompare(b, "de", { sensitivity: "base" })
-    );
-  }, [movies]);
+  const actorMap = useMemo(
+    () => Object.fromEntries(hauptdarsteller.map((a) => [a.id, a])),
+    [hauptdarsteller]
+  );
 
-  const allStudios = useMemo(() => {
-    const set = new Set();
-    movies.forEach((m) => {
-      if (m.studio) set.add(m.studio);
-    });
-    return Array.from(set).sort((a, b) =>
-      a.localeCompare(b, "de", { sensitivity: "base" })
-    );
-  }, [movies]);
+  const supportMap = useMemo(
+    () => Object.fromEntries(nebendarsteller.map((a) => [a.id, a])),
+    [nebendarsteller]
+  );
 
-  const allResolutions = useMemo(() => {
-    const set = new Set();
-    movies.forEach((m) => {
-      if (m.resolution) set.add(m.resolution);
-    });
-    return Array.from(set).sort((a, b) =>
-      a.localeCompare(b, "de", { sensitivity: "base" })
-    );
-  }, [movies]);
+  const studioMap = useMemo(
+    () => Object.fromEntries(studios.map((s) => [s.id, s])),
+    [studios]
+  );
 
-  const mainActorOptions = useMemo(() => {
-    return (actors || [])
-      .map((a) => ({ id: a.id, name: a.name }))
-      .sort((a, b) =>
-        a.name.localeCompare(b.name, "de", { sensitivity: "base" })
-      );
-  }, [actors]);
+  const tagMap = useMemo(
+    () => Object.fromEntries(tags.map((t) => [t.id, t])),
+    [tags]
+  );
 
-  const supportingActorOptions = useMemo(() => {
-    const set = new Set();
-    movies.forEach((m) =>
-      (m.supportingActorNames || []).forEach((n) => set.add(n))
-    );
-    return Array.from(set).sort((a, b) =>
-      a.localeCompare(b, "de", { sensitivity: "base" })
-    );
-  }, [movies]);
+  const resolutionMap = useMemo(
+    () => Object.fromEntries(resolutions.map((r) => [r.id, r])),
+    [resolutions]
+  );
 
-  const applyAdvancedFilters = (baseList) => {
-    let list = baseList;
+  const filteredFilme = useMemo(() => {
+    const q = dashboardSearch.trim().toLowerCase();
+    if (!q) return filme;
 
-    if (selectedStudio)
-      list = list.filter((m) => (m.studio || "") === selectedStudio);
-    if (selectedResolution)
-      list = list.filter((m) => (m.resolution || "") === selectedResolution);
+    return filme.filter((f) => {
+      const mainActors = Array.isArray(f.main_actor_ids)
+        ? f.main_actor_ids.map((id) => actorMap[id]?.name).filter(Boolean)
+        : [];
 
-    const yf = yearFrom ? parseInt(yearFrom, 10) : null;
-    const yt = yearTo ? parseInt(yearTo, 10) : null;
-    if (yf || yt) {
-      list = list.filter((m) => {
-        const y = m.year ? parseInt(m.year, 10) : null;
-        if (!y) return false;
-        if (yf && y < yf) return false;
-        if (yt && y > yt) return false;
-        return true;
-      });
-    }
+      const supportActors = Array.isArray(f.supporting_actor_ids)
+        ? f.supporting_actor_ids
+            .map((id) => supportMap[id]?.name)
+            .filter(Boolean)
+        : [];
 
-    if (selectedTags.length > 0) {
-      list = list.filter((m) => {
-        const mtags = Array.isArray(m.tags) ? m.tags : [];
-        return selectedTags.every((t) => mtags.includes(t));
-      });
-    }
+      const tagNames = Array.isArray(f.tag_ids)
+        ? f.tag_ids.map((id) => tagMap[id]?.name).filter(Boolean)
+        : [];
 
-    if (selectedMainActors.length > 0) {
-      list = list.filter((m) => {
-        const ids = Array.isArray(m.mainActorIds)
-          ? m.mainActorIds.map(String)
-          : [];
-        return selectedMainActors.map(String).every((id) => ids.includes(id));
-      });
-    }
-
-    if (selectedSupportingActors.length > 0) {
-      list = list.filter((m) => {
-        const names = Array.isArray(m.supportingActorNames)
-          ? m.supportingActorNames
-          : [];
-        return selectedSupportingActors.every((n) => names.includes(n));
-      });
-    }
-
-    return list;
-  };
-
-  const hasAnyFilter = useMemo(() => {
-    return Boolean(
-      selectedStudio ||
-        selectedResolution ||
-        selectedTags.length > 0 ||
-        yearFrom ||
-        yearTo ||
-        selectedMainActors.length > 0 ||
-        selectedSupportingActors.length > 0
-    );
-  }, [
-    selectedStudio,
-    selectedResolution,
-    selectedTags.length,
-    yearFrom,
-    yearTo,
-    selectedMainActors.length,
-    selectedSupportingActors.length,
-  ]);
-
-  const showMovies = viewMode === "movies";
-
-  const getAddedTime = (movie) => {
-    if (!movie?.addedAt) return 0;
-    const t = new Date(movie.addedAt).getTime();
-    return Number.isNaN(t) ? 0 : t;
-  };
-
-  const getYearValue = (movie) => {
-    const y = movie?.year ? parseInt(movie.year, 10) : 0;
-    return Number.isNaN(y) ? 0 : y;
-  };
-
-  const getQualityRank = (movie) => {
-    const r = String(movie?.resolution || "").trim().toLowerCase();
-    if (r.includes("4k")) return 3;
-    if (r.includes("fullhd") || r.includes("full hd")) return 2;
-    if (r.includes("retro")) return 1;
-    return 0;
-  };
-
-  const movieList = useMemo(() => {
-    if (!showMovies) return [];
-
-    const list = [...visibleMovies];
-
-    list.sort((a, b) => {
-      if (movieSort === "year_desc") {
-        return (getYearValue(b) - getYearValue(a)) || String(a.title || "").localeCompare(String(b.title || ""), "de", { sensitivity: "base" });
-      }
-
-      if (movieSort === "quality_desc") {
-        return (getQualityRank(b) - getQualityRank(a)) || (getAddedTime(b) - getAddedTime(a)) || String(a.title || "").localeCompare(String(b.title || ""), "de", { sensitivity: "base" });
-      }
-
-      return (getAddedTime(b) - getAddedTime(a)) || String(a.title || "").localeCompare(String(b.title || ""), "de", { sensitivity: "base" });
-    });
-
-    return list;
-  }, [showMovies, visibleMovies, movieSort]);
-
-  const handleShowMoviesForActor = (actorId, actorName, actorSlug) => {
-    const actor = actors.find((a) => String(a.id) === String(actorId)) || null;
-    const urlVal = actorSlug ? actorSlug : actorId;
-    router.replace(`/?actor=${encodeURIComponent(urlVal)}`, { scroll: false });
-
-    requestAnimationFrame(() => {
-      window.scrollTo(0, 0);
-    });
-
-    const subset = movies.filter(
-      (movie) =>
-        Array.isArray(movie.mainActorIds) && movie.mainActorIds.includes(actorId)
-    );
-    const filtered = applyAdvancedFilters(subset);
-    setSelectedActor(actor);
-    setSelectedMovieId(null);
-    setMoviesTitle(actorName);
-    setMoviesSubtitle(`${filtered.length} Film(e)`);
-    setVisibleMovies(filtered);
-    setViewMode("movies");
-  };
-
-  const handleSearchChange = (val) => {
-    setSearch(val);
-    const trimmed = val.trim();
-
-    if (!trimmed) {
-      if (hasAnyFilter) {
-        const filtered = applyAdvancedFilters(movies);
-        setMoviesTitle("Gefilterte Filme");
-        setMoviesSubtitle(`${filtered.length} Treffer`);
-        setVisibleMovies(filtered);
-        setSelectedActor(null);
-        setSelectedMovieId(null);
-        setViewMode("movies");
-      } else {
-        router.replace("/", { scroll: false });
-        setSelectedActor(null);
-        setSelectedMovieId(null);
-        setViewMode("actors");
-        setVisibleMovies([]);
-        setMoviesTitle("Filme");
-        setMoviesSubtitle("");
-      }
-      return;
-    }
-
-    router.replace("/", { scroll: false });
-
-    const q = trimmed.toLowerCase();
-    const raw = movies.filter((movie) => {
       const haystack = [
-        movie.title || "",
-        movie.studio || "",
-        movie.resolution || "",
-        movie.actors.join(" "),
-        movie.tags.join(" "),
+        f.title || "",
+        f.year || "",
+        f.file_url || "",
+        f.thumbnail_url || "",
+        studioMap[f.studio_id]?.name || "",
+        resolutionMap[f.resolution_id]?.name || "",
+        mainActors.join(" "),
+        supportActors.join(" "),
+        tagNames.join(" "),
       ]
         .join(" ")
         .toLowerCase();
+
       return haystack.includes(q);
     });
+  }, [
+    dashboardSearch,
+    filme,
+    actorMap,
+    supportMap,
+    studioMap,
+    tagMap,
+    resolutionMap,
+  ]);
 
-    const filtered = applyAdvancedFilters(raw);
-    setSelectedActor(null);
-    setSelectedMovieId(null);
-    setMoviesTitle(`Suchergebnis für "${trimmed}"`);
-    setMoviesSubtitle(`${filtered.length} Treffer`);
-    setVisibleMovies(filtered);
-    setViewMode("movies");
+  const getResolutionNameById = (resolutionId) => {
+    return resolutions.find((r) => r.id === resolutionId)?.name || "";
   };
 
-  const handleBackToActors = () => {
-    router.replace("/", { scroll: false });
-    setViewMode("actors");
-    setSelectedActor(null);
-    setSelectedMovieId(null);
-    setVisibleMovies([]);
-    setMoviesTitle("Filme");
-    setMoviesSubtitle("");
+  const getFirstSelectedMainActor = (ids = selectedMainActorIds) => {
+    if (!Array.isArray(ids) || ids.length === 0) return null;
+    return hauptdarsteller.find((a) => a.id === ids[0]) || null;
   };
 
-  const handleSwitchToMovies = () => {
-    router.replace("/", { scroll: false });
-    const filtered = applyAdvancedFilters(movies);
-    setSelectedActor(null);
-    setSelectedMovieId(null);
-    setViewMode("movies");
-    setMoviesTitle(hasAnyFilter ? "Gefilterte Filme" : "Filme");
-    setMoviesSubtitle(`${filtered.length} Film(e)`);
-    setVisibleMovies(filtered);
+  const buildMovieFolderUrl = (actorName, resolutionId = filmResolutionId) => {
+    if (!actorName) return DEFAULT_FILE_BASE;
+
+    const actorFolder = encodeURIComponent(actorName.trim());
+    const resolutionName = getResolutionNameById(resolutionId);
+
+    if (resolutionName === "4K") {
+      return `${DEFAULT_FILE_BASE}${actorFolder}/4K/`;
+    }
+
+    return `${DEFAULT_FILE_BASE}${actorFolder}/`;
   };
+
+  const toggleId = (id, arr, setter) => {
+    if (arr.includes(id)) {
+      setter(arr.filter((x) => x !== id));
+    } else {
+      setter([...arr, id]);
+    }
+  };
+
+  const handleToggleMainActor = (actor) => {
+    setSelectedMainActorIds((prev) => {
+      const alreadySelected = prev.includes(actor.id);
+
+      if (alreadySelected) {
+        const next = prev.filter((id) => id !== actor.id);
+        const firstRemainingActor = getFirstSelectedMainActor(next);
+
+        if (firstRemainingActor) {
+          setFilmFileUrl(
+            buildMovieFolderUrl(firstRemainingActor.name, filmResolutionId)
+          );
+        } else {
+          setFilmFileUrl(DEFAULT_FILE_BASE);
+        }
+
+        return next;
+      }
+
+      setFilmFileUrl(buildMovieFolderUrl(actor.name, filmResolutionId));
+      return [...prev, actor.id];
+    });
+  };
+
+  const handleResolutionChange = (resolutionId) => {
+    setFilmResolutionId(resolutionId);
+
+    const firstSelectedActor = getFirstSelectedMainActor();
+
+    if (firstSelectedActor) {
+      setFilmFileUrl(buildMovieFolderUrl(firstSelectedActor.name, resolutionId));
+    } else {
+      setFilmFileUrl(DEFAULT_FILE_BASE);
+    }
+  };
+
+  const openMobileSearch = () => {
+    setMobileSearchOpen(true);
+    setUserMenuOpen(false);
+    setTimeout(() => mobileSearchInputRef.current?.focus(), 0);
+  };
+
+  const closeMobileSearch = () => {
+    setMobileSearchOpen(false);
+  };
+
+  // ---------------- Login / Logout ----------------
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -1589,15 +553,18 @@ export default function HomePage() {
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: loginUser, password: loginPassword }),
+        body: JSON.stringify({
+          username: loginUser,
+          password: loginPassword,
+        }),
       });
 
       if (!res.ok) {
-        setLoginErr(
-          res.status === 401
-            ? "User oder Passwort falsch."
-            : "Login fehlgeschlagen."
-        );
+        if (res.status === 401) {
+          setLoginErr("User oder Passwort falsch.");
+        } else {
+          setLoginErr("Login fehlgeschlagen.");
+        }
         return;
       }
 
@@ -1620,217 +587,861 @@ export default function HomePage() {
     try {
       await fetch("/api/logout", { method: "POST" });
     } catch {
-      // ignore
+      // ignorieren
     }
     if (typeof window !== "undefined") {
       window.localStorage.removeItem("auth_1337_flag");
       window.localStorage.removeItem("auth_1337_user");
     }
-    router.replace("/", { scroll: false });
     setLoggedIn(false);
-    setSearch("");
-    setSelectedActor(null);
-    setSelectedMovieId(null);
-    setViewMode("actors");
-    setVisibleMovies([]);
-    setMoviesTitle("Filme");
-    setMoviesSubtitle("");
-    setFiltersOpen(false);
+    setLoginPassword("");
+    setEditingFilmId(null);
+    setDashboardSearch("");
     setMobileSearchOpen(false);
     setUserMenuOpen(false);
+    router.replace("/", { scroll: false });
   };
 
-  const resetFilters = () => {
-    setSelectedTags([]);
-    setSelectedStudio("");
-    setSelectedResolution("");
-    setYearFrom("");
-    setYearTo("");
-    setSelectedMainActors([]);
-    setSelectedSupportingActors([]);
+  // ---------------- Stammdaten anlegen ----------------
 
-    setTagSearch("");
-    setMainActorSearch("");
-    setSuppActorSearch("");
-    setTagsSelectedOnly(false);
-    setMainSelectedOnly(false);
-    setSuppSelectedOnly(false);
-  };
+  const handleAddActor = async (e) => {
+    e.preventDefault();
+    const name = newActorName.trim();
+    if (!name) return;
 
-  const applyFiltersNow = () => {
-    if (search.trim()) handleSearchChange(search);
-    else {
-      router.replace("/", { scroll: false });
-      const filtered = applyAdvancedFilters(movies);
-      setSelectedActor(null);
-      setViewMode("movies");
-      setMoviesTitle(hasAnyFilter ? "Gefilterte Filme" : "Filme");
-      setMoviesSubtitle(`${filtered.length} Treffer`);
-      setVisibleMovies(filtered);
+    const { data, error: insertError } = await supabase
+      .from("actors")
+      .insert({
+        name,
+        profile_image: newActorImage.trim() || null,
+        origin: newActorOrigin.trim() || null,
+        birth_date: newActorBirthDate || null,
+        iafd_url: newActorIafdUrl.trim() || null,
+        planetsuzy_url: newActorPlanetsuzyUrl.trim() || null,
+      })
+      .select("*")
+      .single();
+
+    if (insertError) {
+      console.error(insertError);
+      setError(insertError.message);
+      return;
     }
 
-    setFiltersOpen(false);
-    setMobileSearchOpen(false);
+    setHauptdarsteller((prev) => [...prev, data]);
+    setNewActorName("");
+    setNewActorImage("");
+    setNewActorOrigin("");
+    setNewActorBirthDate("");
+    setNewActorIafdUrl("");
+    setNewActorPlanetsuzyUrl("");
   };
 
-  const toggleTag = (t) =>
-    setSelectedTags((prev) =>
-      prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]
+  const handleAddSupportActor = async (e) => {
+    e.preventDefault();
+    const name = newSupportName.trim();
+    if (!name) return;
+
+    const { data, error: insertError } = await supabase
+      .from("actors2")
+      .insert({
+        name,
+        profile_image: newSupportImage.trim() || null,
+      })
+      .select("*")
+      .single();
+
+    if (insertError) {
+      console.error(insertError);
+      setError(insertError.message);
+      return;
+    }
+
+    setNebendarsteller((prev) => [...prev, data]);
+    setNewSupportName("");
+    setNewSupportImage("");
+  };
+
+  const handleAddStudio = async (e) => {
+    e.preventDefault();
+    const name = newStudioName.trim();
+    if (!name) return;
+
+    const { data, error: insertError } = await supabase
+      .from("studios")
+      .insert({
+        name,
+        image_url: newStudioImage.trim() || null,
+      })
+      .select("*")
+      .single();
+
+    if (insertError) {
+      console.error(insertError);
+      setError(insertError.message);
+      return;
+    }
+
+    setStudios((prev) => [...prev, data]);
+    setNewStudioName("");
+    setNewStudioImage("");
+  };
+
+  const handleAddTag = async (e) => {
+    e.preventDefault();
+    const name = newTagName.trim();
+    if (!name) return;
+
+    const { data, error: insertError } = await supabase
+      .from("tags")
+      .insert({ name })
+      .select("*")
+      .single();
+
+    if (insertError) {
+      console.error(insertError);
+      setError(insertError.message);
+      return;
+    }
+
+    setTags((prev) => [...prev, data]);
+    setNewTagName("");
+  };
+
+  const handleEditStudio = async (studio) => {
+    const newName = window.prompt("Neuer Studio-Name:", studio.name || "");
+    if (newName === null) return;
+
+    const trimmedName = newName.trim();
+    if (!trimmedName) return;
+
+    const newImg = window.prompt(
+      "Neue Bild-URL (leer lassen zum Löschen):",
+      studio.image_url || ""
     );
 
-  const toggleMainActor = (id) => {
-    const sid = String(id);
-    setSelectedMainActors((prev) => {
-      const p = prev.map(String);
-      return p.includes(sid) ? p.filter((x) => x !== sid) : [...p, sid];
+    let image_url = studio.image_url || null;
+    if (newImg !== null) {
+      const t = newImg.trim();
+      image_url = t === "" ? null : t;
+    }
+
+    const { data, error: updateError } = await supabase
+      .from("studios")
+      .update({ name: trimmedName, image_url })
+      .eq("id", studio.id)
+      .select("*")
+      .single();
+
+    if (updateError) {
+      console.error(updateError);
+      setError(updateError.message);
+      return;
+    }
+
+    setStudios((prev) =>
+      prev.map((s) => (s.id === studio.id ? data : s))
+    );
+  };
+
+  const handleDeleteStudio = async (studioId) => {
+    const ok = window.confirm("Dieses Studio wirklich löschen?");
+    if (!ok) return;
+
+    const { error: deleteError } = await supabase
+      .from("studios")
+      .delete()
+      .eq("id", studioId);
+
+    if (deleteError) {
+      console.error(deleteError);
+      setError(deleteError.message);
+      return;
+    }
+
+    setStudios((prev) => prev.filter((s) => s.id !== studioId));
+    setFilmStudioId((prev) => (prev === studioId ? "" : prev));
+  };
+
+  const handleEditTagGlobal = async (tag) => {
+    const newName = window.prompt("Neuer Tag-Name:", tag.name || "");
+    if (newName === null) return;
+
+    const trimmedName = newName.trim();
+    if (!trimmedName) return;
+
+    const { data, error: updateError } = await supabase
+      .from("tags")
+      .update({ name: trimmedName })
+      .eq("id", tag.id)
+      .select("*")
+      .single();
+
+    if (updateError) {
+      console.error(updateError);
+      setError(updateError.message);
+      return;
+    }
+
+    setTags((prev) => prev.map((t) => (t.id === tag.id ? data : t)));
+  };
+
+  // --------- Darsteller & Tag bearbeiten/löschen ---------
+
+  const handleEditActor = async (actor) => {
+    const newName = window.prompt(
+      "Neuer Name für Hauptdarsteller:",
+      actor.name || ""
+    );
+    if (newName === null) return;
+    const trimmedName = newName.trim();
+    if (!trimmedName) return;
+
+    const newImg = window.prompt(
+      "Neue Bild-URL (leer lassen für unverändert, nur ein Leerzeichen für löschen):",
+      actor.profile_image || ""
+    );
+    let profile_image = actor.profile_image;
+    if (newImg !== null) {
+      const t = newImg.trim();
+      profile_image = t === "" ? null : t;
+    }
+
+    const newOrigin = window.prompt(
+      "Herkunft (leer lassen zum Löschen):",
+      actor.origin || ""
+    );
+    let origin = actor.origin || null;
+    if (newOrigin !== null) {
+      const t = newOrigin.trim();
+      origin = t === "" ? null : t;
+    }
+
+    const newBirthDate = window.prompt(
+      "Geburtsdatum im Format YYYY-MM-DD (leer lassen zum Löschen):",
+      actor.birth_date || ""
+    );
+    let birth_date = actor.birth_date || null;
+    if (newBirthDate !== null) {
+      const t = newBirthDate.trim();
+      birth_date = t === "" ? null : t;
+    }
+
+    const newIafdUrl = window.prompt(
+      "IAFD URL (leer lassen zum Löschen):",
+      actor.iafd_url || ""
+    );
+    let iafd_url = actor.iafd_url || null;
+    if (newIafdUrl !== null) {
+      const t = newIafdUrl.trim();
+      iafd_url = t === "" ? null : t;
+    }
+
+    const newPlanetsuzyUrl = window.prompt(
+      "PlanetSuzy URL (leer lassen zum Löschen):",
+      actor.planetsuzy_url || ""
+    );
+    let planetsuzy_url = actor.planetsuzy_url || null;
+    if (newPlanetsuzyUrl !== null) {
+      const t = newPlanetsuzyUrl.trim();
+      planetsuzy_url = t === "" ? null : t;
+    }
+
+    const { data, error: updateError } = await supabase
+      .from("actors")
+      .update({
+        name: trimmedName,
+        profile_image,
+        origin,
+        birth_date,
+        iafd_url,
+        planetsuzy_url,
+      })
+      .eq("id", actor.id)
+      .select("*")
+      .single();
+
+    if (updateError) {
+      console.error(updateError);
+      setError(updateError.message);
+      return;
+    }
+
+    setHauptdarsteller((prev) =>
+      prev.map((a) => (a.id === actor.id ? data : a))
+    );
+  };
+
+  const handleDeleteActor = async (actorId) => {
+    const ok = window.confirm("Diesen Hauptdarsteller wirklich löschen?");
+    if (!ok) return;
+
+    const { error: deleteError } = await supabase
+      .from("actors")
+      .delete()
+      .eq("id", actorId);
+
+    if (deleteError) {
+      console.error(deleteError);
+      setError(deleteError.message);
+      return;
+    }
+
+    setHauptdarsteller((prev) => prev.filter((a) => a.id !== actorId));
+    setSelectedMainActorIds((prev) => prev.filter((id) => id !== actorId));
+  };
+
+  const handleEditSupportActor = async (actor) => {
+    const newName = window.prompt(
+      "Neuer Name für Nebendarsteller:",
+      actor.name || ""
+    );
+    if (newName === null) return;
+    const trimmedName = newName.trim();
+    if (!trimmedName) return;
+
+    const newImg = window.prompt(
+      "Neue Bild-URL (leer lassen für unverändert, nur ein Leerzeichen für löschen):",
+      actor.profile_image || ""
+    );
+    let profile_image = actor.profile_image;
+    if (newImg !== null) {
+      const t = newImg.trim();
+      profile_image = t === "" ? null : t;
+    }
+
+    const { data, error: updateError } = await supabase
+      .from("actors2")
+      .update({ name: trimmedName, profile_image })
+      .eq("id", actor.id)
+      .select("*")
+      .single();
+
+    if (updateError) {
+      console.error(updateError);
+      setError(updateError.message);
+      return;
+    }
+
+    setNebendarsteller((prev) =>
+      prev.map((a) => (a.id === actor.id ? data : a))
+    );
+  };
+
+  const handleDeleteSupportActor = async (actorId) => {
+    const ok = window.confirm("Diesen Nebendarsteller wirklich löschen?");
+    if (!ok) return;
+
+    const { error: deleteError } = await supabase
+      .from("actors2")
+      .delete()
+      .eq("id", actorId);
+
+    if (deleteError) {
+      console.error(deleteError);
+      setError(deleteError.message);
+      return;
+    }
+
+    setNebendarsteller((prev) => prev.filter((a) => a.id !== actorId));
+    setSelectedSupportActorIds((prev) => prev.filter((id) => id !== actorId));
+  };
+
+  const handleDeleteTagGlobal = async (tagId) => {
+    const ok = window.confirm("Diesen Tag wirklich komplett löschen?");
+    if (!ok) return;
+
+    const { error: deleteError } = await supabase
+      .from("tags")
+      .delete()
+      .eq("id", tagId);
+
+    if (deleteError) {
+      console.error(deleteError);
+      setError(deleteError.message);
+      return;
+    }
+
+    setTags((prev) => prev.filter((t) => t.id !== tagId));
+    setSelectedTagIds((prev) => prev.filter((id) => id !== tagId));
+  };
+
+
+  const startEditActorInline = (actor) => {
+    setEditingActorMetaId(actor.id);
+    setActorEditForm({
+      name: actor.name || "",
+      profile_image: actor.profile_image || "",
+      origin: actor.origin || "",
+      birth_date: actor.birth_date || "",
+      iafd_url: actor.iafd_url || "",
+      planetsuzy_url: actor.planetsuzy_url || "",
     });
   };
 
-  const toggleSupportingActor = (name) =>
-    setSelectedSupportingActors((prev) =>
-      prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name]
-    );
-
-  const tagItems = useMemo(
-    () => allTags.map((t) => ({ key: t, label: t })),
-    [allTags]
-  );
-  const mainItems = useMemo(
-    () => mainActorOptions.map((a) => ({ key: String(a.id), label: a.name })),
-    [mainActorOptions]
-  );
-  const suppItems = useMemo(
-    () => supportingActorOptions.map((n) => ({ key: n, label: n })),
-    [supportingActorOptions]
-  );
-
-  const openMobileSearch = () => {
-    setMobileSearchOpen(true);
-    setFiltersOpen(true);
-    setUserMenuOpen(false);
-    setTimeout(() => mobileSearchInputRef.current?.focus(), 0);
-  };
-
-  const closeMobileSearch = () => {
-    setMobileSearchOpen(false);
-    setFiltersOpen(false);
-  };
-
-  const selectedMovie = useMemo(() => {
-    if (!selectedMovieId) return null;
-    return movies.find((movie) => String(movie.id) === String(selectedMovieId)) || null;
-  }, [movies, selectedMovieId]);
-
-  const handleOpenMovie = (movie) => {
-    if (!movie?.id) return;
-
-    const sp = new URLSearchParams();
-    sp.set("movie", String(movie.id));
-    router.replace(`/?${sp.toString()}`, { scroll: false });
-    setSelectedMovieId(String(movie.id));
-
-    requestAnimationFrame(() => {
-      window.scrollTo(0, 0);
+  const cancelEditActorInline = () => {
+    setEditingActorMetaId(null);
+    setActorEditForm({
+      name: "",
+      profile_image: "",
+      origin: "",
+      birth_date: "",
+      iafd_url: "",
+      planetsuzy_url: "",
     });
   };
 
-  const handleCloseMovie = () => {
-    setSelectedMovieId(null);
+  const saveEditActorInline = async (actorId) => {
+    const name = actorEditForm.name.trim();
+    if (!name) return;
 
-    if (selectedActor) {
-      const urlVal = selectedActor.slug ? selectedActor.slug : selectedActor.id;
-      router.replace(`/?actor=${encodeURIComponent(urlVal)}`, { scroll: false });
+    const payload = {
+      name,
+      profile_image: actorEditForm.profile_image.trim() || null,
+      origin: actorEditForm.origin.trim() || null,
+      birth_date: actorEditForm.birth_date || null,
+      iafd_url: actorEditForm.iafd_url.trim() || null,
+      planetsuzy_url: actorEditForm.planetsuzy_url.trim() || null,
+    };
+
+    const { data, error: updateError } = await supabase
+      .from("actors")
+      .update(payload)
+      .eq("id", actorId)
+      .select("*")
+      .single();
+
+    if (updateError) {
+      console.error(updateError);
+      setError(updateError.message);
+      return;
+    }
+
+    setHauptdarsteller((prev) =>
+      prev.map((a) => (a.id === actorId ? data : a))
+    );
+    cancelEditActorInline();
+  };
+
+  const startEditSupportInline = (actor) => {
+    setEditingSupportMetaId(actor.id);
+    setSupportEditForm({
+      name: actor.name || "",
+      profile_image: actor.profile_image || "",
+    });
+  };
+
+  const cancelEditSupportInline = () => {
+    setEditingSupportMetaId(null);
+    setSupportEditForm({
+      name: "",
+      profile_image: "",
+    });
+  };
+
+  const saveEditSupportInline = async (actorId) => {
+    const name = supportEditForm.name.trim();
+    if (!name) return;
+
+    const payload = {
+      name,
+      profile_image: supportEditForm.profile_image.trim() || null,
+    };
+
+    const { data, error: updateError } = await supabase
+      .from("actors2")
+      .update(payload)
+      .eq("id", actorId)
+      .select("*")
+      .single();
+
+    if (updateError) {
+      console.error(updateError);
+      setError(updateError.message);
+      return;
+    }
+
+    setNebendarsteller((prev) =>
+      prev.map((a) => (a.id === actorId ? data : a))
+    );
+    cancelEditSupportInline();
+  };
+
+  const startEditStudioInline = (studio) => {
+    setEditingStudioMetaId(studio.id);
+    setStudioEditForm({
+      name: studio.name || "",
+      image_url: studio.image_url || "",
+    });
+  };
+
+  const cancelEditStudioInline = () => {
+    setEditingStudioMetaId(null);
+    setStudioEditForm({
+      name: "",
+      image_url: "",
+    });
+  };
+
+  const saveEditStudioInline = async (studioId) => {
+    const name = studioEditForm.name.trim();
+    if (!name) return;
+
+    const payload = {
+      name,
+      image_url: studioEditForm.image_url.trim() || null,
+    };
+
+    const { data, error: updateError } = await supabase
+      .from("studios")
+      .update(payload)
+      .eq("id", studioId)
+      .select("*")
+      .single();
+
+    if (updateError) {
+      console.error(updateError);
+      setError(updateError.message);
+      return;
+    }
+
+    setStudios((prev) => prev.map((s) => (s.id === studioId ? data : s)));
+    cancelEditStudioInline();
+  };
+
+  const startEditTagInline = (tag) => {
+    setEditingTagMetaId(tag.id);
+    setTagEditName(tag.name || "");
+  };
+
+  const cancelEditTagInline = () => {
+    setEditingTagMetaId(null);
+    setTagEditName("");
+  };
+
+  const saveEditTagInline = async (tagId) => {
+    const name = tagEditName.trim();
+    if (!name) return;
+
+    const { data, error: updateError } = await supabase
+      .from("tags")
+      .update({ name })
+      .eq("id", tagId)
+      .select("*")
+      .single();
+
+    if (updateError) {
+      console.error(updateError);
+      setError(updateError.message);
+      return;
+    }
+
+    setTags((prev) => prev.map((t) => (t.id === tagId ? data : t)));
+    cancelEditTagInline();
+  };
+
+
+  // ---------------- Filme anlegen / bearbeiten / löschen ----------------
+
+  const resetFilmForm = () => {
+    setFilmTitel("");
+    setFilmJahr("");
+    setFilmStudioId("");
+    setFilmFileUrl(DEFAULT_FILE_BASE);
+    setFilmThumbnailUrl("");
+    setSelectedMainActorIds([]);
+    setSelectedSupportActorIds([]);
+    setSelectedTagIds([]);
+    setEditingFilmId(null);
+
+    // Resolution Default: FullHD, sonst erstes
+    const fullHd = resolutions.find((r) => r.name === "FullHD");
+    if (fullHd) setFilmResolutionId(fullHd.id);
+    else setFilmResolutionId(resolutions[0]?.id || "");
+  };
+
+  const handleAddOrUpdateFilm = async (e) => {
+    e.preventDefault();
+    setError(null);
+
+    const title = filmTitel.trim();
+    if (!title) {
+      setError("Bitte Filmname eingeben.");
+      return;
+    }
+
+    if (!filmResolutionId) {
+      setError("Bitte eine Resolution auswählen (Pflichtfeld).");
+      return;
+    }
+
+    let year = null;
+    if (filmJahr.trim()) {
+      const parsed = parseInt(filmJahr.trim(), 10);
+      if (Number.isNaN(parsed)) {
+        setError("Erscheinungsjahr ist keine gültige Zahl.");
+        return;
+      }
+      year = parsed;
+    }
+
+    const payload = {
+      title,
+      year,
+      studio_id: filmStudioId || null,
+      file_url: filmFileUrl.trim() || null,
+      resolution_id: filmResolutionId,
+      thumbnail_url: filmThumbnailUrl.trim() || null,
+      main_actor_ids:
+        selectedMainActorIds.length > 0 ? selectedMainActorIds : null,
+      supporting_actor_ids:
+        selectedSupportActorIds.length > 0 ? selectedSupportActorIds : null,
+      tag_ids: selectedTagIds.length > 0 ? selectedTagIds : null,
+    };
+
+    if (editingFilmId) {
+      const { data, error: updateError } = await supabase
+        .from("movies")
+        .update(payload)
+        .eq("id", editingFilmId)
+        .select("*")
+        .single();
+
+      if (updateError) {
+        console.error(updateError);
+        setError(updateError.message);
+        return;
+      }
+
+      setFilme((prev) => prev.map((f) => (f.id === editingFilmId ? data : f)));
+      resetFilmForm();
     } else {
-      router.replace("/", { scroll: false });
-    }
+      const { data, error: insertError } = await supabase
+        .from("movies")
+        .insert(payload)
+        .select("*")
+        .single();
 
-    requestAnimationFrame(() => {
-      window.scrollTo(0, 0);
-    });
+      if (insertError) {
+        console.error(insertError);
+        setError(insertError.message);
+        return;
+      }
+
+      setFilme((prev) => [data, ...prev]);
+      resetFilmForm();
+    }
   };
 
-  // Reusable ViewToggle component
-  const ViewToggle = () => (
-    <div className="viewToggle">
-      <button
-        type="button"
-        className={`viewToggle__btn ${viewMode === "actors" ? "viewToggle__btn--active" : ""}`}
-        onClick={handleBackToActors}
-      >
-        Darsteller
-      </button>
-      <button
-        type="button"
-        className={`viewToggle__btn ${viewMode === "movies" ? "viewToggle__btn--active" : ""}`}
-        onClick={handleSwitchToMovies}
-      >
-        Filme
-      </button>
-    </div>
-  );
+  const handleEditFilm = (film) => {
+    setEditingFilmId(film.id);
+    setFilmTitel(film.title || "");
+    setFilmJahr(film.year ? String(film.year) : "");
+    setFilmStudioId(film.studio_id || "");
+    setFilmFileUrl(film.file_url || "");
+    setFilmResolutionId(film.resolution_id || "");
+    setFilmThumbnailUrl(film.thumbnail_url || "");
+    setSelectedMainActorIds(
+      Array.isArray(film.main_actor_ids) ? film.main_actor_ids : []
+    );
+    setSelectedSupportActorIds(
+      Array.isArray(film.supporting_actor_ids)
+        ? film.supporting_actor_ids
+        : []
+    );
+    setSelectedTagIds(Array.isArray(film.tag_ids) ? film.tag_ids : []);
 
-  const SortControl = () => (
-    <select
-        className="actorSortSelect"
-        value={movieSort}
-        onChange={(e) => setMovieSort(e.target.value)}
-      >
-        <option value="added_desc">Zuletzt hinzugefügt</option>
-        <option value="year_desc">Erscheinungsdatum</option>
-        <option value="quality_desc">Qualität</option>
-      </select>
+    setActiveFilmSection("new");
+    setMetaMenuOpen(false);
+  };
+
+  const handleCancelEdit = () => {
+    resetFilmForm();
+  };
+
+  const handleDeleteFilm = async (filmId) => {
+    const ok = window.confirm("Diesen Film wirklich löschen?");
+    if (!ok) return;
+
+    const { error: deleteError } = await supabase
+      .from("movies")
+      .delete()
+      .eq("id", filmId);
+
+    if (deleteError) {
+      console.error(deleteError);
+      setError(deleteError.message);
+      return;
+    }
+
+    setFilme((prev) => prev.filter((f) => f.id !== filmId));
+    if (editingFilmId === filmId) {
+      resetFilmForm();
+    }
+  };
+
+  // ---------------- Render ----------------
+
+  // Sidebar-Inhalt (einmal definieren, dann mobil + desktop nutzen)
+  const metaNavItems = [
+    { key: "mainActors", label: "Hauptdarsteller", count: hauptdarsteller.length },
+    { key: "supportActors", label: "Nebendarsteller", count: nebendarsteller.length },
+    { key: "studios", label: "Studios", count: studios.length },
+    { key: "tags", label: "Tags", count: tags.length },
+  ];
+
+  const metaButtonClass = (key) =>
+    "flex w-full items-center justify-between gap-2 rounded-xl px-4 py-2 text-sm transition-all " +
+    (activeFilmSection === "meta" && activeMetaSection === key
+      ? "bg-red-500/95 text-black shadow-lg shadow-red-900/50"
+      : "bg-neutral-950/80 text-neutral-300 hover:bg-neutral-800 hover:text-neutral-50");
+
+  const SidebarContent = (
+    <>
+      {/* Bereiche */}
+      <div className="rounded-3xl border border-neutral-800 bg-gradient-to-b from-neutral-950/90 to-black/90 px-5 py-5 shadow-2xl shadow-black/70">
+        <div className="flex flex-col gap-2">
+          {/* Filme */}
+          <button
+            type="button"
+            onClick={() => {
+              setActiveFilmSection("stats");
+              setMetaMenuOpen(false);
+            }}
+            className={
+              "flex w-full items-center justify-between gap-2 rounded-2xl px-4 py-2.5 text-sm transition-all " +
+              (activeFilmSection === "stats"
+                ? "bg-red-600 text-black shadow-lg shadow-red-900/60"
+                : "bg-neutral-900/80 text-neutral-200 hover:bg-neutral-800 hover:text-neutral-50")
+            }
+          >
+            <span>Filme</span>
+          </button>
+
+          {/* Neuer Film */}
+          <button
+            type="button"
+            onClick={() => {
+              setActiveFilmSection("new");
+              setMetaMenuOpen(false);
+            }}
+            className={
+              "flex w-full items-center justify-between gap-2 rounded-2xl px-4 py-2.5 text-sm transition-all " +
+              (activeFilmSection === "new"
+                ? "bg-red-600 text-black shadow-lg shadow-red-900/60"
+                : "bg-neutral-900/80 text-neutral-200 hover:bg-neutral-800 hover:text-neutral-50")
+            }
+          >
+            <span>Neuer Film</span>
+          </button>
+
+          {/* Stammdaten */}
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveFilmSection("meta");
+                setMetaMenuOpen((value) => !value);
+              }}
+              className={
+                "flex w-full items-center justify-between gap-2 rounded-2xl px-4 py-2.5 text-sm transition-all " +
+                (activeFilmSection === "meta"
+                  ? "bg-red-600 text-black shadow-lg shadow-red-900/60"
+                  : "bg-neutral-900/80 text-neutral-200 hover:bg-neutral-800 hover:text-neutral-50")
+              }
+            >
+              <span>Stammdaten</span>
+              <span className="text-xs font-black">
+                {metaMenuOpen || activeFilmSection === "meta" ? "−" : "+"}
+              </span>
+            </button>
+
+            {(metaMenuOpen || activeFilmSection === "meta") && (
+              <div className="ml-2 grid gap-1.5 border-l border-neutral-800 pl-2">
+                {metaNavItems.map((item) => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => {
+                      setActiveFilmSection("meta");
+                      setActiveMetaSection(item.key);
+                      setMetaMenuOpen(true);
+                    }}
+                    className={metaButtonClass(item.key)}
+                  >
+                    <span>{item.label}</span>
+                    <span className="rounded-full bg-black/25 px-2 py-0.5 text-xs font-semibold">
+                      {item.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Überblick */}
+      <div className="rounded-3xl border border-neutral-800 bg-neutral-950/90 px-5 py-4 text-sm shadow-xl shadow-black/70">
+        <div className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">
+          Überblick
+        </div>
+        <div className="space-y-2 text-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-neutral-300">Filme</span>
+            <span className="font-semibold text-neutral-50">
+              {filme.length}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-neutral-300">Hauptdarsteller</span>
+            <span className="font-semibold text-neutral-50">
+              {hauptdarsteller.length}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-neutral-300">Nebendarsteller</span>
+            <span className="font-semibold text-neutral-50">
+              {nebendarsteller.length}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-neutral-300">Studios</span>
+            <span className="font-semibold text-neutral-50">
+              {studios.length}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-neutral-300">Tags</span>
+            <span className="font-semibold text-neutral-50">{tags.length}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-neutral-300">Resolutions</span>
+            <span className="font-semibold text-neutral-50">
+              {resolutions.length}
+            </span>
+          </div>
+        </div>
+      </div>
+    </>
   );
 
   return (
-    <div className="nfx">
+    <div className="page min-h-screen bg-gradient-to-br from-neutral-950 via-black to-neutral-900 text-neutral-100 text-[15px]">
       <style jsx global>{`
         :root {
-          --bg: #0b0b0f;
-          --text: rgba(255, 255, 255, 0.92);
-          --muted: rgba(255, 255, 255, 0.68);
-          --muted2: rgba(255, 255, 255, 0.52);
-          --accent: #e50914;
-          --shadow: rgba(0, 0, 0, 0.55);
-          --menuBg: #111218;
+          --dash-text: rgba(255, 255, 255, 0.92);
+          --dash-accent: #e50914;
         }
+.changelogPanel {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
 
-        html,
-        body {
-          background: var(--bg);
-          color: var(--text);
-        }
-        * {
-          box-sizing: border-box;
-        }
-        .mono {
-          font-variant-numeric: tabular-nums;
-        }
-
-        .nfx {
-          min-height: 100vh;
-          background: radial-gradient(
-              1200px 700px at 15% 15%,
-              rgba(229, 9, 20, 0.25),
-              transparent 55%
-            ),
-            radial-gradient(
-              900px 600px at 85% 10%,
-              rgba(255, 255, 255, 0.08),
-              transparent 55%
-            ),
-            radial-gradient(
-              900px 700px at 60% 80%,
-              rgba(255, 255, 255, 0.06),
-              transparent 60%
-            ),
-            linear-gradient(
-              180deg,
-              rgba(0, 0, 0, 0.65),
-              rgba(0, 0, 0, 0.95)
-            );
-        }
-
-        .topbar {
+.changelogPanel::-webkit-scrollbar {
+  display: none;
+}
+        .dashTopbar {
           position: sticky;
           top: 0;
           z-index: 50;
@@ -1844,7 +1455,18 @@ export default function HomePage() {
           backdrop-filter: blur(14px);
           border-bottom: 1px solid rgba(255, 255, 255, 0.06);
         }
-        .topbar__mid {
+
+        .dashTopbar__left,
+        .dashTopbar__right {
+          display: flex;
+          align-items: center;
+        }
+
+        .dashTopbar__left {
+          justify-self: start;
+        }
+
+        .dashTopbar__mid {
           justify-self: center;
           width: 100%;
           min-width: 0;
@@ -1852,18 +1474,27 @@ export default function HomePage() {
           justify-content: center;
           align-items: center;
         }
-        .topbar__right {
+
+        .dashTopbar__right {
           justify-self: end;
-          display: flex;
-          align-items: center;
           gap: 10px;
         }
 
-        .input {
+        .dashSearchWrap {
+          position: relative;
+          width: 100%;
+          max-width: 860px;
+          min-width: 0;
+          display: grid;
+          gap: 10px;
+        }
+
+        .dashInput {
           width: 100%;
           height: 42px;
           min-height: 42px;
           max-height: 42px;
+          min-width: 0;
           display: flex;
           align-items: center;
           gap: 10px;
@@ -1872,19 +1503,22 @@ export default function HomePage() {
           border-radius: 999px;
           padding: 0 14px;
           overflow: hidden;
-          min-width: 0;
           transition: border-color 0.18s ease, background 0.18s ease;
         }
-        .input:focus-within {
+
+        .dashInput:focus-within {
           border-color: rgba(229, 9, 20, 0.55);
           background: rgba(255, 255, 255, 0.08);
         }
-        .input__icon {
+
+        .dashInput__icon {
           width: 16px;
           height: 16px;
           opacity: 0.8;
+          flex: 0 0 auto;
         }
-        .input input {
+
+        .dashInput input {
           flex: 1;
           min-width: 0;
           width: 100%;
@@ -1892,19 +1526,20 @@ export default function HomePage() {
           outline: none;
           border: none;
           background: transparent;
-          color: var(--text);
+          color: var(--dash-text);
           font-size: 14px;
           line-height: 42px;
         }
-        .input input::placeholder {
+
+        .dashInput input::placeholder {
           color: rgba(255, 255, 255, 0.45);
         }
 
-        .btn {
+        .dashBtn {
           appearance: none;
           border: 1px solid rgba(255, 255, 255, 0.12);
           background: rgba(255, 255, 255, 0.06);
-          color: var(--text);
+          color: var(--dash-text);
           border-radius: 12px;
           padding: 10px 12px;
           font-size: 13px;
@@ -1914,15 +1549,18 @@ export default function HomePage() {
             border-color 0.12s ease;
           white-space: nowrap;
         }
-        .btn:hover {
+
+        .dashBtn:hover {
           transform: translateY(-1px);
           background: rgba(255, 255, 255, 0.09);
           border-color: rgba(255, 255, 255, 0.18);
         }
-        .btn:active {
+
+        .dashBtn:active {
           transform: translateY(0px);
         }
-        .btn--primary {
+
+        .dashBtn--primary {
           background: linear-gradient(
             180deg,
             rgba(229, 9, 20, 0.95),
@@ -1931,7 +1569,8 @@ export default function HomePage() {
           border-color: rgba(229, 9, 20, 0.6);
           box-shadow: 0 18px 36px rgba(229, 9, 20, 0.22);
         }
-        .btn--primary:hover {
+
+        .dashBtn--primary:hover {
           background: linear-gradient(
             180deg,
             rgba(255, 21, 33, 0.95),
@@ -1939,71 +1578,54 @@ export default function HomePage() {
           );
           border-color: rgba(255, 21, 33, 0.65);
         }
-        .btn--ghost {
+
+        .dashBtn--ghost {
           background: transparent;
-        }
-        .btn--danger {
-          border-color: rgba(229, 9, 20, 0.35);
-        }
-        .btn--xs {
-          padding: 6px 10px;
-          border-radius: 10px;
-          font-size: 12px;
         }
 
-        /* View Toggle */
-        .viewToggle {
-          display: inline-flex;
-          border-radius: 14px;
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          background: rgba(255, 255, 255, 0.04);
-          padding: 4px;
-          gap: 4px;
+        .dashAuthForm {
+          display: flex;
+          align-items: center;
+          gap: 8px;
         }
-        .viewToggle__btn {
-          appearance: none;
-          border: 1px solid transparent;
-          background: transparent;
-          color: rgba(255, 255, 255, 0.62);
-          border-radius: 10px;
-          padding: 8px 16px;
-          font-size: 13px;
-          font-weight: 700;
-          cursor: pointer;
-          transition: background 0.15s ease, color 0.15s ease,
-            border-color 0.15s ease;
-          white-space: nowrap;
-        }
-        .viewToggle__btn:hover {
-          color: rgba(255, 255, 255, 0.9);
+
+        .dashAuthField {
+          display: flex;
+          align-items: center;
           background: rgba(255, 255, 255, 0.06);
-        }
-        .viewToggle__btn--active {
-          background: rgba(229, 9, 20, 0.18);
-          border-color: rgba(229, 9, 20, 0.35);
-          color: rgba(255, 255, 255, 0.95);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 12px;
+          padding: 8px 10px;
         }
 
-
-        .sortBox__select option {
-          background: var(--menuBg);
-          color: rgba(255, 255, 255, 0.92);
+        .dashAuthField input {
+          width: 130px;
+          outline: none;
+          border: none;
+          background: transparent;
+          color: var(--dash-text);
+          font-size: 13px;
         }
 
-        .auth__label {
+        .dashAuthField input::placeholder {
+          color: rgba(255, 255, 255, 0.45);
+        }
+
+        .dashAuth__label {
           color: rgba(255, 255, 255, 0.72);
           font-weight: 700;
           font-size: 13px;
         }
 
-        /* User dropdown */
-        .userMenu {
+        .dashUserMenu {
           position: relative;
           display: inline-flex;
           align-items: center;
           gap: 8px;
         }
-        .userMenu__btn {
+
+        .dashUserMenu__btn,
+        .dashIconBtn {
           width: 38px;
           height: 38px;
           border-radius: 14px;
@@ -2016,17 +1638,27 @@ export default function HomePage() {
           transition: transform 0.12s ease, background 0.12s ease,
             border-color 0.12s ease;
         }
-        .userMenu__btn:hover {
+
+        .dashIconBtn {
+          width: 42px;
+          height: 42px;
+        }
+
+        .dashUserMenu__btn:hover,
+        .dashIconBtn:hover {
           transform: translateY(-1px);
           background: rgba(255, 255, 255, 0.09);
           border-color: rgba(255, 255, 255, 0.18);
         }
-        .userMenu__btn svg {
+
+        .dashUserMenu__btn svg,
+        .dashIconBtn svg {
           width: 18px;
           height: 18px;
           opacity: 0.9;
         }
-        .userMenu__panel {
+
+        .dashUserMenu__panel {
           position: absolute;
           right: 0;
           top: calc(100% + 10px);
@@ -2039,7 +1671,8 @@ export default function HomePage() {
           overflow: hidden;
           padding: 8px;
         }
-        .userMenu__item {
+
+        .dashUserMenu__item {
           width: 100%;
           display: flex;
           align-items: center;
@@ -2049,7 +1682,7 @@ export default function HomePage() {
           border-radius: 12px;
           border: 1px solid rgba(255, 255, 255, 0.12);
           background: rgba(255, 255, 255, 0.06);
-          color: var(--text);
+          color: var(--dash-text);
           font-size: 13px;
           font-weight: 750;
           cursor: pointer;
@@ -2057,699 +1690,18 @@ export default function HomePage() {
             border-color 0.12s ease;
           text-align: left;
         }
-        .userMenu__item:hover {
+
+        .dashUserMenu__item:hover {
           transform: translateY(-1px);
           background: rgba(255, 255, 255, 0.09);
           border-color: rgba(255, 255, 255, 0.18);
         }
-        .userMenu__item:active {
-          transform: translateY(0px);
-        }
-        .userMenu__item--danger {
+
+        .dashUserMenu__item--danger {
           border-color: rgba(229, 9, 20, 0.35);
         }
 
-        .searchWrap {
-          position: relative;
-          width: 100%;
-          max-width: 860px;
-          min-width: 0;
-          display: grid;
-          gap: 10px;
-        }
-
-        .filterPopover {
-          position: absolute;
-          top: calc(100% + 10px);
-          left: 0;
-          right: 0;
-          z-index: 2000;
-          border-radius: 18px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          background: rgba(10, 10, 14, 0.92);
-          box-shadow: 0 40px 120px rgba(0, 0, 0, 0.75);
-          overflow: hidden;
-        }
-
-        .filterPopover__head {
-          padding: 12px 12px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 10px;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-        }
-
-        .filterPopover__title {
-          font-weight: 900;
-          letter-spacing: -0.01em;
-        }
-
-        .filterPopover__actions {
-          display: flex;
-          gap: 10px;
-          flex-wrap: wrap;
-          justify-content: flex-end;
-        }
-
-        .filterPopover__body {
-          padding: 12px;
-          max-height: min(70vh, 640px);
-          overflow: auto;
-        }
-
-        .wrap {
-          width: 100%;
-          max-width: 1800px;
-          margin: 0 auto;
-          padding: 0 18px 70px;
-        }
-
-        .logoSolo {
-          margin-top: 22px;
-          display: flex;
-          justify-content: center;
-        }
-        .logoSolo__img {
-          width: min(260px, 65%);
-          height: auto;
-          display: block;
-          opacity: 0.95;
-          filter: drop-shadow(0 18px 55px rgba(0, 0, 0, 0.55));
-        }
-
-        .sectionHead {
-          display: flex;
-          align-items: baseline;
-          justify-content: space-between;
-          gap: 12px;
-          margin: 22px 2px 12px;
-        }
-        .sectionTitle {
-          font-size: 18px;
-          font-weight: 850;
-          letter-spacing: -0.01em;
-        }
-        .sectionMeta {
-          color: var(--muted2);
-          font-size: 13px;
-        }
-
-        .pill {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          padding: 4px 8px;
-          border-radius: 999px;
-          background: rgba(255, 255, 255, 0.08);
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          color: rgba(255, 255, 255, 0.72);
-          font-size: 11px;
-          font-weight: 650;
-        }
-
-        .row {
-          display: grid;
-          grid-template-columns: repeat(6, minmax(0, 1fr));
-          gap: 12px;
-        }
-
-        .card {
-          position: relative;
-          border-radius: 16px;
-          overflow: hidden;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          background: rgba(255, 255, 255, 0.05);
-          box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
-          cursor: pointer;
-          transition: transform 0.14s ease, border-color 0.14s ease,
-            background 0.14s ease;
-        }
-        .card:hover {
-          transform: translateY(-3px);
-          border-color: rgba(229, 9, 20, 0.35);
-          background: rgba(255, 255, 255, 0.07);
-        }
-        .card__img {
-          position: relative;
-          width: 100%;
-          aspect-ratio: 3/4;
-          background: rgba(255, 255, 255, 0.06);
-          overflow: hidden;
-        }
-        .card__img img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          display: block;
-          transform: scale(1.02);
-        }
-
-        .card__badge {
-          position: absolute;
-          right: 8px;
-          bottom: 8px;
-          z-index: 2;
-          width: 26px;
-          height: 26px;
-          display: grid;
-          place-items: center;
-          border-radius: 999px;
-          border: 1px solid rgba(255, 255, 255, 0.18);
-          background: rgba(0, 0, 0, 0.55);
-          color: rgba(255, 255, 255, 0.92);
-          font-size: 11px;
-          font-weight: 900;
-          line-height: 1;
-          backdrop-filter: blur(10px);
-        }
-
-        .card__body {
-          padding: 8px 10px 10px;
-        }
-        .card__title {
-          font-weight: 600;
-          font-size: 14px;
-          line-height: 1.4;
-          letter-spacing: -0.01em;
-          margin: 0;
-          text-align: center;
-          display: -webkit-box;
-          -webkit-line-clamp: 1;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-          min-height: 18px;
-          white-space: nowrap;
-        }
-
-        .movieGrid {
-          display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 12px;
-        }
-
-        .movieCard {
-          position: relative;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          background: rgba(255, 255, 255, 0.05);
-          border-radius: 18px;
-          padding: 12px;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
-          transition: transform 0.14s ease, border-color 0.14s ease,
-            background 0.14s ease;
-
-          display: flex;
-          flex-direction: column;
-        }
-        .movieCard:hover {
-          transform: translateY(-2px);
-          border-color: rgba(229, 9, 20, 0.35);
-          background: rgba(255, 255, 255, 0.07);
-        }
-        .movieCard--clickable {
-          cursor: pointer;
-        }
-
-        .movieCard--clickable:focus {
-          outline: none;
-          border-color: rgba(229, 9, 20, 0.48);
-          background: rgba(255, 255, 255, 0.075);
-        }
-
-        .movieCard__resIcon {
-          position: absolute;
-          right: 8px;
-          bottom: 8px;
-          width: 46px;
-          height: 46px;
-          z-index: 6;
-          pointer-events: none;
-          filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.55));
-          opacity: 0.95;
-        }
-
-        .movieCard__resIcon--noThumb {
-          right: 14px;
-          bottom: 14px;
-        }
-
-        .movieCard__resIcon img {
-          width: 100%;
-          height: 100%;
-          display: block;
-        }
-
-
-        .movieCard__thumb {
-          position: relative;
-          width: 100%;
-          aspect-ratio: 16 / 9;
-          border-radius: 14px;
-          overflow: hidden;
-          background: rgba(0, 0, 0, 0.35);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          margin-bottom: 12px;
-          box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
-          display: grid;
-          place-items: center;
-          flex: 0 0 auto;
-        }
-        .movieCard__thumb img {
-          width: 100%;
-          height: 100%;
-          object-fit: contain;
-          display: block;
-          transform: none;
-        }
-
-        .movieCard__top {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          gap: 10px;
-          flex: 0 0 auto;
-        }
-
-        .movieCard__title {
-          margin: 0;
-          font-weight: 900;
-          letter-spacing: -0.01em;
-          line-height: 1.15;
-          max-width: 100%;
-          font-size: 16px;
-
-          display: -webkit-box;
-          -webkit-line-clamp: 3;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-
-          min-height: 56px;
-        }
-
-        .movieCard__year {
-          color: rgba(255, 255, 255, 0.62);
-          font-weight: 800;
-          font-size: 13px;
-          white-space: nowrap;
-          padding-top: 2px;
-        }
-
-        .movieCard__meta {
-          margin-top: 10px;
-          display: grid;
-          gap: 8px;
-          flex: 0 0 auto;
-        }
-
-        .kv {
-          display: grid;
-          grid-template-columns: 90px 1fr;
-          gap: 10px;
-          align-items: start;
-        }
-        .kv__k {
-          color: rgba(255, 255, 255, 0.55);
-          font-size: 12px;
-          font-weight: 900;
-          letter-spacing: 0.03em;
-          text-transform: uppercase;
-        }
-        .kv__v {
-          color: rgba(255, 255, 255, 0.84);
-          font-size: 13px;
-          line-height: 1.35;
-        }
-
-        .movieCard__tags {
-          display: -webkit-box;
-          -webkit-line-clamp: 3;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
-
-
-        .authForm {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-        .authField {
-          display: flex;
-          align-items: center;
-          background: rgba(255, 255, 255, 0.06);
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          border-radius: 12px;
-          padding: 8px 10px;
-        }
-        .authField input {
-          width: 130px;
-          outline: none;
-          border: none;
-          background: transparent;
-          color: var(--text);
-          font-size: 13px;
-        }
-
-        .errorBanner {
-          margin-top: 14px;
-          border-radius: 16px;
-          padding: 12px 14px;
-          border: 1px solid rgba(229, 9, 20, 0.35);
-          background: rgba(229, 9, 20, 0.1);
-          color: rgba(255, 255, 255, 0.88);
-        }
-
-        .empty {
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          background: rgba(255, 255, 255, 0.04);
-          border-radius: 18px;
-          padding: 22px;
-          box-shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
-        }
-        .empty__title {
-          font-weight: 900;
-          font-size: 16px;
-          margin-bottom: 6px;
-        }
-        .empty__sub {
-          color: rgba(255, 255, 255, 0.68);
-          font-size: 13px;
-          line-height: 1.45;
-        }
-        .empty__cta {
-          margin-top: 12px;
-        }
-
-        .skRow {
-          display: grid;
-          grid-template-columns: repeat(6, minmax(0, 1fr));
-          gap: 12px;
-        }
-        @keyframes shimmer {
-          0% {
-            background-position: 200% 0;
-          }
-          100% {
-            background-position: -200% 0;
-          }
-        }
-        .skCard {
-          border-radius: 16px;
-          aspect-ratio: 3/4;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          background: linear-gradient(
-            90deg,
-            rgba(255, 255, 255, 0.05),
-            rgba(255, 255, 255, 0.08),
-            rgba(255, 255, 255, 0.05)
-          );
-          background-size: 200% 100%;
-          animation: shimmer 1.2s infinite linear;
-        }
-
-        .filterGrid {
-          display: grid;
-          grid-template-columns: 1.25fr 0.75fr;
-          gap: 12px;
-          align-items: start;
-        }
-        @media (max-width: 900px) {
-          .filterGrid {
-            grid-template-columns: 1fr;
-          }
-        }
-        .fieldLabel {
-          color: rgba(255, 255, 255, 0.72);
-          font-weight: 800;
-          font-size: 12px;
-          letter-spacing: 0.04em;
-          text-transform: uppercase;
-          margin-bottom: 6px;
-        }
-
-        .select {
-          width: 100%;
-          background: rgba(255, 255, 255, 0.06);
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          color: rgba(255, 255, 255, 0.92);
-          border-radius: 12px;
-          padding: 10px 12px;
-          outline: none;
-        }
-        .select option {
-          background: var(--menuBg);
-          color: rgba(255, 255, 255, 0.92);
-        }
-
-        .yearRow {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 10px;
-        }
-
-        .fsec {
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          background: rgba(255, 255, 255, 0.03);
-          border-radius: 16px;
-          overflow: hidden;
-        }
-        .fsec__head {
-          width: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 10px;
-          padding: 12px 12px;
-          background: rgba(0, 0, 0, 0.25);
-          border: none;
-          color: var(--text);
-          cursor: pointer;
-          text-align: left;
-        }
-        .fsec__head:hover {
-          background: rgba(0, 0, 0, 0.32);
-        }
-        .fsec__title {
-          font-weight: 900;
-          letter-spacing: -0.01em;
-        }
-        .fsec__sub {
-          margin-top: 2px;
-          color: rgba(255, 255, 255, 0.62);
-          font-size: 12px;
-        }
-        .fsec__chev {
-          width: 34px;
-          height: 34px;
-          display: grid;
-          place-items: center;
-          border-radius: 12px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          background: rgba(255, 255, 255, 0.04);
-          font-weight: 900;
-        }
-        .fsec__body {
-          padding: 12px;
-          display: grid;
-          gap: 10px;
-        }
-
-        .fsec__tools {
-          display: flex;
-          gap: 10px;
-          align-items: center;
-          flex-wrap: wrap;
-        }
-        .fsearch {
-          flex: 1;
-          min-width: 220px;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          border-radius: 12px;
-          background: rgba(255, 255, 255, 0.06);
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          padding: 8px 10px;
-        }
-        .fsearch__icon {
-          width: 16px;
-          height: 16px;
-          opacity: 0.75;
-        }
-        .fsearch input {
-          width: 100%;
-          outline: none;
-          border: none;
-          background: transparent;
-          color: var(--text);
-          font-size: 13px;
-        }
-        .fsearch input::placeholder {
-          color: rgba(255, 255, 255, 0.45);
-        }
-
-        .toggle {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          color: rgba(255, 255, 255, 0.72);
-          font-size: 12px;
-          font-weight: 700;
-          user-select: none;
-          padding: 8px 10px;
-          border-radius: 12px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          background: rgba(255, 255, 255, 0.03);
-        }
-        .toggle input {
-          accent-color: var(--accent);
-        }
-
-        .chipsRow {
-          display: flex;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
-        .selChip {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          padding: 8px 10px;
-          border-radius: 999px;
-          border: 1px solid rgba(229, 9, 20, 0.28);
-          background: rgba(229, 9, 20, 0.1);
-          color: rgba(255, 255, 255, 0.88);
-          cursor: pointer;
-          font-size: 12px;
-          font-weight: 750;
-        }
-        .selChip:hover {
-          border-color: rgba(229, 9, 20, 0.4);
-          background: rgba(229, 9, 20, 0.14);
-        }
-        .selChip__dot {
-          width: 7px;
-          height: 7px;
-          border-radius: 99px;
-          background: var(--accent);
-        }
-        .selChip__txt {
-          max-width: 220px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-        .selChip__x {
-          opacity: 0.9;
-          font-size: 14px;
-          line-height: 1;
-        }
-
-        .pickList {
-          max-height: 260px;
-          overflow: auto;
-          border-radius: 14px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          background: rgba(0, 0, 0, 0.22);
-          padding: 6px;
-        }
-        .pickList::-webkit-scrollbar {
-          height: 10px;
-          width: 10px;
-        }
-        .pickList::-webkit-scrollbar-thumb {
-          background: rgba(255, 255, 255, 0.12);
-          border-radius: 999px;
-        }
-        .pick {
-          width: 100%;
-          display: grid;
-          grid-template-columns: 14px 1fr auto;
-          align-items: center;
-          gap: 10px;
-          padding: 10px 10px;
-          border-radius: 12px;
-          border: 1px solid transparent;
-          background: transparent;
-          color: var(--text);
-          cursor: pointer;
-          text-align: left;
-        }
-        .pick:hover {
-          background: rgba(255, 255, 255, 0.04);
-          border-color: rgba(255, 255, 255, 0.08);
-        }
-        .pick--on {
-          background: rgba(229, 9, 20, 0.1);
-          border-color: rgba(229, 9, 20, 0.22);
-        }
-        .pick__dot {
-          width: 10px;
-          height: 10px;
-          border-radius: 99px;
-          background: rgba(255, 255, 255, 0.25);
-        }
-        .pick--on .pick__dot {
-          background: var(--accent);
-          box-shadow: 0 0 0 6px rgba(229, 9, 20, 0.12);
-        }
-        .pick__txt {
-          font-size: 13px;
-          font-weight: 700;
-          color: rgba(255, 255, 255, 0.88);
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-        .pick__state {
-          font-size: 11px;
-          font-weight: 900;
-          letter-spacing: 0.05em;
-          color: rgba(255, 255, 255, 0.55);
-        }
-        .pick--on .pick__state {
-          color: rgba(255, 255, 255, 0.8);
-        }
-        .pickEmpty {
-          padding: 14px 10px;
-          color: rgba(255, 255, 255, 0.6);
-          font-size: 13px;
-        }
-
-        .divider {
-          height: 1px;
-          background: rgba(255, 255, 255, 0.08);
-          margin: 10px 0;
-        }
-
-        .iconBtn {
-          width: 42px;
-          height: 42px;
-          border-radius: 14px;
-          display: grid;
-          place-items: center;
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          background: rgba(255, 255, 255, 0.06);
-          color: rgba(255, 255, 255, 0.92);
-          cursor: pointer;
-          transition: transform 0.12s ease, background 0.12s ease,
-            border-color 0.12s ease;
-        }
-        .iconBtn:hover {
-          transform: translateY(-1px);
-          background: rgba(255, 255, 255, 0.09);
-          border-color: rgba(255, 255, 255, 0.18);
-        }
-        .iconBtn svg {
-          width: 18px;
-          height: 18px;
-          opacity: 0.9;
-        }
-        .iconBtn.mOnly {
-          display: none;
-        }
-
-        .mSearch {
+        .dashMSearch {
           position: fixed;
           inset: 0;
           z-index: 5000;
@@ -2760,7 +1712,8 @@ export default function HomePage() {
           justify-items: center;
           padding: 14px 12px;
         }
-        .mSearch__panel {
+
+        .dashMSearch__panel {
           width: min(860px, 100%);
           border-radius: 18px;
           border: 1px solid rgba(255, 255, 255, 0.1);
@@ -2768,7 +1721,8 @@ export default function HomePage() {
           box-shadow: 0 50px 140px rgba(0, 0, 0, 0.75);
           overflow: hidden;
         }
-        .mSearch__head {
+
+        .dashMSearch__head {
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -2776,890 +1730,72 @@ export default function HomePage() {
           padding: 12px 12px;
           border-bottom: 1px solid rgba(255, 255, 255, 0.06);
         }
-        .mSearch__title {
+
+        .dashMSearch__title {
           font-weight: 900;
           letter-spacing: -0.01em;
         }
-        .mSearch__body {
+
+        .dashMSearch__body {
           padding: 12px;
         }
-        .mSearch .filterPopover {
-          position: static;
-          margin-top: 10px;
-        }
 
-
-        
-        
-        .movieDetail {
-          width: 100%;
-          max-width: 1280px;
-          margin: 14px auto 0;
-        }
-
-
-
-        
-        .movieDetail__top {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 12px;
-          margin-bottom: 10px;
-        }
-
-
-        
-        
-        .movieDetail__playerShell {
-          position: relative;
-          width: min(100%, 1280px);
-          margin: 0 auto;
-          aspect-ratio: 16 / 9;
-          border-radius: 24px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          background: rgba(255, 255, 255, 0.045);
-          box-shadow: 0 28px 90px rgba(0, 0, 0, 0.45);
-          overflow: hidden;
-        }
-
-
-
-        
-        
-        
-        .movieDetail__player {
-          width: 100%;
-          height: 100%;
-          display: block;
-          background: #000;
-          object-fit: contain;
-        }
-
-
-
-
-        
-        
-        
-        .movieDetail__fallback {
-          width: 100%;
-          height: 100%;
-          display: grid;
-          place-items: center;
-          padding: 24px;
-          background: rgba(0, 0, 0, 0.55);
-          color: rgba(255, 255, 255, 0.72);
-          text-align: center;
-          font-weight: 850;
-        }
-
-
-        
-        
-        .movieDetail__titleBlock {
-          width: min(100%, 1280px);
-          margin: 16px auto 0;
-          display: grid;
-          gap: 10px;
-        }
-
-
-
-        
-        
-        .movieDetail__title {
-          margin: 0;
-          min-width: 0;
-          flex: 0 1 auto;
-          color: rgba(255, 255, 255, 0.96);
-          font-size: clamp(34px, 4.2vw, 62px);
-          font-weight: 950;
-          line-height: 0.96;
-          letter-spacing: -0.05em;
-          white-space: nowrap;
-        }
-
-
-
-
-        .movieDetail__titleRow {
-          width: 100%;
-          min-width: 0;
-          max-width: 100%;
-          display: flex;
-          align-items: center;
-          gap: 14px;
-          overflow: hidden;
-          white-space: nowrap;
-        }
-
-        .movieDetail__titleIcon {
-          width: 58px;
-          height: 58px;
-          flex: 0 0 58px;
-          display: block;
-          object-fit: contain;
-          filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.55));
-        }
-
-        
-
-        
-                .movieDetail__year {
-          color: rgba(255, 255, 255, 0.78);
-          font-size: inherit;
-          font-weight: 850;
-          font-variant-numeric: tabular-nums;
-          line-height: inherit;
-        }
-
-
-        .movieDetail__infoLine {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          flex-wrap: wrap;
-          color: rgba(255, 255, 255, 0.78);
-          font-size: 18px;
-          font-weight: 800;
-          line-height: 1.35;
-        }
-
-        .movieDetail__studio {
-          color: rgba(255, 255, 255, 0.9);
-          font-weight: 900;
-        }
-
-        .movieDetail__dot {
-          color: rgba(255, 255, 255, 0.42);
-          font-weight: 900;
-        }
-
-        .movieDetail__tags {
-          color: rgba(255, 255, 255, 0.72);
-          font-weight: 750;
-        }
-
-
-        .movieDetail__meta {
-          display: flex;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
-
-        
-        
-        .movieDetail__cast {
-          width: min(100%, 1280px);
-          margin: 18px auto 0;
-        }
-
-
-
-        
-
-        
-        
-        .movieCastGrid {
-          display: grid;
-          grid-template-columns: repeat(7, minmax(0, 1fr));
-          gap: 14px;
-        }
-
-
-
-        
-        .movieCastCard {
-          min-width: 0;
-          border-radius: 14px;
-          overflow: hidden;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          background: rgba(255, 255, 255, 0.05);
-          box-shadow: 0 14px 38px rgba(0, 0, 0, 0.28);
-        }
-
-
-        .movieCastCard__img {
-          width: 100%;
-          aspect-ratio: 3 / 4;
-          background: rgba(0, 0, 0, 0.32);
-          overflow: hidden;
-        }
-
-        .movieCastCard__img img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          display: block;
-        }
-
-        .movieCastCard__placeholder {
-          width: 100%;
-          height: 100%;
-          display: grid;
-          place-items: center;
-          color: rgba(255, 255, 255, 0.5);
-          font-size: 11px;
-          font-weight: 900;
-          letter-spacing: 0.04em;
-        }
-
-        
-        
-        .movieCastCard__body {
-          padding: 10px 10px 11px;
-        }
-
-
-
-        
-        
-        .movieCastCard__name {
-          color: rgba(255, 255, 255, 0.92);
-          font-size: 14px;
-          font-weight: 850;
-          line-height: 1.15;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          text-align: center;
-        }
-
-
-
-        
-
-        @media (max-width: 1200px) {
-          .movieCastGrid {
-            grid-template-columns: repeat(6, minmax(0, 1fr));
-          }
-        }
-
-        @media (max-width: 900px) {
-          .movieCastGrid {
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-          }
-        }
-
-        @media (max-width: 700px) {
-          .movieDetail {
-            margin-top: 14px;
-          }
-
-          .movieDetail__top {
-            margin-bottom: 12px;
-          }
-
-          .movieDetail__playerShell {
-            border-radius: 18px;
-          }
-
-          .movieDetail__title {
-            font-size: 32px;
-          }
-
-          .movieDetail__titleBlock {
-            width: 100%;
-            margin-top: 12px;
-          }
-
-          .movieDetail__titleRow {
-            gap: 10px;
-          }
-
-          .movieDetail__titleIcon {
-            width: 44px;
-            height: 44px;
-            flex-basis: 44px;
-          }
-
-          .movieDetail__subRow {
-            align-items: flex-start;
-          }
-
-          .movieDetail__year {
-            font-size: 16px;
-          }
-
-
-          .movieCastGrid {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 10px;
-          }
-
-          .movieCastCard__body {
-            padding: 8px;
-          }
-
-          .movieCastCard__name {
-            font-size: 12px;
-          }
-        }
-
-        @media (max-width: 420px) {
-          .movieCastGrid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-          }
-        }
-
-        .actorHero {
-          margin: 22px 0 18px;
-          display: grid;
-          grid-template-columns: 220px minmax(0, 1fr);
-          gap: 20px;
-          align-items: stretch;
-          border-radius: 24px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          background: linear-gradient(
-              135deg,
-              rgba(229, 9, 20, 0.18),
-              rgba(255, 255, 255, 0.05) 45%,
-              rgba(0, 0, 0, 0.2)
-            ),
-            rgba(255, 255, 255, 0.05);
-          box-shadow: 0 28px 90px rgba(0, 0, 0, 0.42);
-          padding: 16px;
-          overflow: hidden;
-        }
-
-        .actorHero__media {
-          width: 100%;
-          aspect-ratio: 3 / 4;
-          border-radius: 18px;
-          overflow: hidden;
-          background: rgba(0, 0, 0, 0.32);
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          box-shadow: 0 22px 70px rgba(0, 0, 0, 0.42);
-        }
-
-        .actorHero__media img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          display: block;
-        }
-
-        .actorHero__placeholder {
-          width: 100%;
-          height: 100%;
-          display: grid;
-          place-items: center;
-          color: rgba(255, 255, 255, 0.55);
-          font-weight: 900;
-          letter-spacing: 0.04em;
-        }
-
-        .actorHero__content {
-          min-width: 0;
-          display: grid;
-          grid-template-columns: minmax(250px, 0.34fr) minmax(0, 1.66fr);
-          gap: 18px;
-          align-items: center;
-          padding: 8px 4px;
-        }
-
-        .actorHero__main {
-          min-width: 0;
-        }
-
-        .actorHero__eyebrow {
-          color: rgba(255, 255, 255, 0.54);
-          font-size: 12px;
-          font-weight: 900;
-          letter-spacing: 0.16em;
-          text-transform: uppercase;
-        }
-
-        .actorHero__name {
-          margin: 8px 0 0;
-          color: rgba(255, 255, 255, 0.96);
-          font-size: 58px;
-          font-weight: 950;
-          line-height: 0.98;
-          letter-spacing: -0.05em;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: clip;
-          max-width: 100%;
-        }
-
-
-        .actorHero__count {
-          margin-top: 10px;
-          color: rgba(255, 255, 255, 0.62);
-          font-size: 13px;
-          font-weight: 800;
-        }
-
-        .actorHero__meta {
-          margin-top: 22px;
-          display: grid;
-          gap: 9px;
-          max-width: 360px;
-        }
-
-        .actorHero__metaItem {
-          display: grid;
-          grid-template-columns: 92px minmax(0, 1fr);
-          gap: 14px;
-          align-items: center;
-          padding: 0;
-          border: none;
-          background: transparent;
-        }
-
-        .actorHero__metaItem > span {
-          display: block;
-          color: rgba(255, 255, 255, 0.5);
-          font-size: 11px;
-          font-weight: 900;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-        }
-
-        .actorHero__metaValue {
-          min-width: 0;
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          color: rgba(255, 255, 255, 0.92);
-          font-size: 15px;
-          line-height: 1.25;
-        }
-
-        .actorHero__flag {
-          width: 24px;
-          height: 18px;
-          flex: 0 0 24px;
-          display: block;
-          object-fit: cover;
-          border-radius: 4px;
-          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
-        }
-
-        .actorHero__links {
-          margin-top: 18px;
-          display: flex;
-          gap: 2px;
-          flex-wrap: wrap;
-        }
-
-        .actorHero__link {
-          appearance: none;
-          width: 54px;
-          height: 54px;
-          display: inline-grid;
-          place-items: center;
-          border: none;
-          background: transparent;
-          border-radius: 16px;
-          padding: 0;
-          margin: 0;
-          cursor: pointer;
-          transition: transform 0.12s ease, filter 0.12s ease;
-        }
-
-        .actorHero__link:hover {
-          transform: translateY(-2px) scale(1.03);
-          filter: brightness(1.08);
-        }
-
-        .actorHero__linkIcon {
-          width: 54px;
-          height: 54px;
-          object-fit: contain;
-          display: block;
-          pointer-events: none;
-        }
-
-        .actorHero__stats {
-          width: 100%;
-          min-width: 0;
-          align-self: center;
-          justify-self: stretch;
-          overflow-x: auto;
-          scrollbar-width: thin;
-          border-radius: 20px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          background: rgba(0, 0, 0, 0.2);
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
-          padding: 18px;
-        }
-
-        .actorHero__statsToggle {
-          width: 100%;
-          margin: 0 0 12px;
-          padding: 0;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 10px;
-          border: none;
-          background: transparent;
-          color: rgba(255, 255, 255, 0.58);
-          font-size: 11px;
-          font-weight: 950;
-          letter-spacing: 0.14em;
-          text-transform: uppercase;
-          text-align: left;
-          cursor: default;
-        }
-
-        .actorHero__statsToggleIcon {
+        .dashIconBtn.dashMOnly {
           display: none;
         }
 
-        .actorHero__statsGrid {
-          display: grid;
-          grid-template-columns: repeat(6, minmax(132px, 1fr));
-          gap: 10px;
-        }
-
-        .actorHero__statsBlock {
-          min-width: 0;
-          display: grid;
-          align-content: start;
-          gap: 9px;
-          border-radius: 16px;
-          background: rgba(255, 255, 255, 0.035);
-          border: 1px solid rgba(255, 255, 255, 0.07);
-          padding: 12px;
-        }
-
-        .actorHero__statsLabel {
-          color: rgba(255, 255, 255, 0.48);
-          font-size: 10px;
-          font-weight: 900;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-        }
-
-        .actorHero__rankList,
-        .actorHero__qualityList {
-          display: grid;
-          gap: 8px;
-        }
-
-        .actorHero__rankLine {
-          min-width: 0;
-          display: grid;
-          grid-template-columns: 24px minmax(0, 1fr) auto;
-          gap: 10px;
-          align-items: center;
-        }
-
-        .actorHero__rankNo {
-          width: 22px;
-          height: 22px;
-          display: grid;
-          place-items: center;
-          border-radius: 999px;
-          background: rgba(229, 9, 20, 0.16);
-          color: rgba(255, 255, 255, 0.78);
-          font-size: 11px;
-          font-weight: 950;
-        }
-
-        .actorHero__rankLine strong {
-          min-width: 0;
-          color: rgba(255, 255, 255, 0.9);
-          font-size: 13px;
-          font-weight: 850;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .actorHero__rankLine em {
-          color: rgba(255, 255, 255, 0.52);
-          font-size: 12px;
-          font-style: normal;
-          font-weight: 850;
-          font-variant-numeric: tabular-nums;
-        }
-
-        .actorHero__qualityLine {
-          display: grid;
-          gap: 6px;
-        }
-
-        .actorHero__qualityTop {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 12px;
-          color: rgba(255, 255, 255, 0.86);
-          font-size: 13px;
-          font-weight: 850;
-        }
-
-        .actorHero__qualityTop strong {
-          color: rgba(255, 255, 255, 0.62);
-          font-size: 12px;
-          font-weight: 950;
-          font-variant-numeric: tabular-nums;
-        }
-
-        .actorHero__qualityBar {
-          height: 6px;
-          overflow: hidden;
-          border-radius: 999px;
-          background: rgba(255, 255, 255, 0.08);
-        }
-
-        .actorHero__qualityBar div {
-          height: 100%;
-          border-radius: inherit;
-          background: linear-gradient(
-            90deg,
-            rgba(229, 9, 20, 0.65),
-            rgba(255, 255, 255, 0.5)
-          );
-        }
-
-        .actorHero__emptyStat {
-          color: rgba(255, 255, 255, 0.52);
-          font-size: 13px;
-          font-weight: 850;
-        }
-
-        @media (max-width: 1200px) {
-          .row {
-            grid-template-columns: repeat(5, minmax(0, 1fr));
-          }
-          .movieGrid {
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-          }
-          .actorHero__content {
-            grid-template-columns: minmax(240px, 0.38fr) minmax(0, 1.62fr);
-            gap: 16px;
-          }
-        }
-        @media (max-width: 1050px) {
-          .actorHero {
-            grid-template-columns: 180px minmax(0, 1fr);
-          }
-
-          .actorHero__content {
-            grid-template-columns: 1fr;
-            gap: 16px;
-            align-items: start;
-          }
-        }
-
-        @media (max-width: 900px) {
-          .row {
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-          }
-        }
         @media (max-width: 700px) {
-
-          .actorHero__content {
-            align-items: center;
-            text-align: center;
-          }
-
-          .actorHero__name {
-            text-align: center;
-            margin-left: auto;
-            margin-right: auto;
-          }
-
-          .actorHero__count {
-            text-align: center;
-          }
-
-          .actorHero__info {
-            align-items: center;
-            text-align: center;
-          }
-
-          .actorHero__meta {
-            justify-content: center;
-            text-align: center;
-          }
-
-          .actorHero__metaItem {
-            text-align: center;
-          }
-
-          .actorHero__links {
-            justify-content: center;
-          }
-
-          .actorHero__statsToggle {
-            justify-content: center;
-            text-align: center;
-          }
-
-          .row {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-          }
-          .movieGrid {
-            grid-template-columns: 1fr;
-          }
-
-          .actorHero {
-            grid-template-columns: 1fr;
-            gap: 14px;
-            padding: 12px;
-          }
-
-          .actorHero__media {
-            width: min(240px, 72vw);
-            justify-self: center;
-          }
-
-          .actorHero__content {
-            grid-template-columns: 1fr;
-            gap: 14px;
-            align-items: start;
-            padding: 4px 0;
-          }
-
-          .actorHero__main {
-            width: 100%;
-          }
-
-          .actorHero__stats {
-            padding: 12px;
-            border-radius: 16px;
-            overflow-x: hidden;
-          }
-
-          .actorHero__statsToggle {
-            min-height: 38px;
-            margin-bottom: 0;
-            padding: 0 2px;
-            cursor: pointer;
-          }
-
-          .actorHero__statsToggleIcon {
-            width: 30px;
-            height: 30px;
-            display: grid;
-            place-items: center;
-            border-radius: 999px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            background: rgba(255, 255, 255, 0.05);
-            color: rgba(255, 255, 255, 0.86);
-            font-size: 18px;
-            font-weight: 900;
-            line-height: 1;
-            letter-spacing: 0;
-          }
-
-          .actorHero__statsGrid {
-            display: none;
-            grid-template-columns: 1fr;
-            gap: 10px;
-            margin-top: 12px;
-          }
-
-          .actorHero__statsGrid--open {
-            display: grid;
-          }
-
-          .actorHero__statsBlock {
-            padding: 10px;
-          }
-
-          .actorHero__rankLine {
-            grid-template-columns: 22px minmax(0, 1fr) auto;
-            gap: 8px;
-          }
-          .actorHero__name {
-            font-size: 34px;
-            letter-spacing: -0.045em;
-          }
-
-
-          .actorHero__meta {
-            margin-top: 14px;
-            gap: 8px;
-            max-width: none;
-          }
-
-          .actorHero__metaItem {
-            grid-template-columns: 82px minmax(0, 1fr);
-            gap: 10px;
-          }
-
-          .topbar {
+          .dashTopbar {
             grid-template-columns: 1fr auto;
           }
-          .topbar__mid {
+
+          .dashTopbar__mid {
             display: none;
           }
-          .iconBtn.mOnly {
+
+          .dashIconBtn.dashMOnly {
             display: inline-grid;
           }
 
-        }
-        @media (max-width: 420px) {
-          .row {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+          .dashAuth__label {
+            display: none;
+          }
+
+          .dashAuthForm {
+            gap: 6px;
+          }
+
+          .dashAuthField input {
+            width: 92px;
           }
         }
 
-
-        @media (max-width: 700px) {
-
-        }
-        .actorSortSelect {
-          min-width: 190px;
-          height: 40px;
-          border-radius: 12px;
-          border: none;
-          background: transparent;
-          color: rgba(255, 255, 255, 0.88);
-          padding: 0 30px 0 8px;
-          outline: none;
-          font-size: 13px;
-          font-weight: 750;
-          cursor: pointer;
-        }
-
-        .actorSortSelect:focus {
-          background: transparent;
-          border: none;
-          outline: none;
-        }
-
-
-        .actorSortSelect option {
-          background: var(--menuBg);
-          color: rgba(255, 255, 255, 0.92);
-        }
-
-        @media (max-width: 700px) {
-          .actorSortSelect {
-            width: 100%;
-            min-width: 0;
+        @media (max-width: 480px) {
+          .dashAuthField {
+            padding: 7px 8px;
           }
-        }
 
-        .logoBtn {
-          background: transparent;
-          border: none;
-          padding: 0;
-          cursor: pointer;
+          .dashAuthField input {
+            width: 74px;
+            font-size: 12px;
+          }
+
+          .dashBtn {
+            padding: 9px 10px;
+          }
         }
       `}</style>
 
-      <div className="topbar">
-        <div className="topbar__left" />
+      {/* Header */}
+        <div className="dashTopbar">
+            <div className="dashTopbar__left" />
 
-        <div className="topbar__mid">
+          <div className="dashTopbar__mid">
           {loggedIn ? (
-            <div className="searchWrap" ref={searchWrapRef}>
-              <div
-                className="input"
-                title="Suche nach Titel, Studio, Darsteller, Tags"
-              >
+            <div className="dashSearchWrap" ref={searchWrapRef}>
+              <div className="dashInput" title="Dashboard-Filme suchen">
                 <svg
-                  className="input__icon"
+                  className="dashInput__icon"
                   viewBox="0 0 24 24"
                   fill="none"
                   aria-hidden="true"
@@ -3679,232 +1815,26 @@ export default function HomePage() {
 
                 <input
                   ref={searchInputRef}
-                  value={search}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                  onFocus={() => {
-                    setFiltersOpen(true);
-                    setUserMenuOpen(false);
+                  value={dashboardSearch}
+                  onChange={(e) => {
+                    setDashboardSearch(e.target.value);
+                    setActiveFilmSection("stats");
                   }}
                   placeholder="Suchen: Titel, Studio, Darsteller, Tags…"
                   autoComplete="off"
                 />
+
               </div>
-
-              {filtersOpen && (
-                <div
-                  className="filterPopover"
-                  role="dialog"
-                  aria-modal="false"
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onTouchStart={(e) => e.stopPropagation()}
-                >
-                  <div className="filterPopover__head">
-                    <div className="filterPopover__title">Filter</div>
-                    <div className="filterPopover__actions">
-                      <button
-                        type="button"
-                        className="btn"
-                        onClick={resetFilters}
-                      >
-                        Reset
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn--primary"
-                        onClick={applyFiltersNow}
-                      >
-                        Anwenden
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn--ghost"
-                        onClick={() => setFiltersOpen(false)}
-                      >
-                        Schließen
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="filterPopover__body">
-                    <div className="filterGrid">
-                      <div style={{ display: "grid", gap: 12 }}>
-                        <FilterSection
-                          title="Tags"
-                          subtitle=""
-                          items={tagItems}
-                          selectedKeys={selectedTags}
-                          getKey={(it) => it.key}
-                          getLabel={(it) => it.label}
-                          onToggle={(k) => toggleTag(String(k))}
-                          search={tagSearch}
-                          setSearch={setTagSearch}
-                          showSelectedOnly={tagsSelectedOnly}
-                          setShowSelectedOnly={setTagsSelectedOnly}
-                          defaultOpen={true}
-                        />
-                        <FilterSection
-                          title="Hauptdarsteller"
-                          subtitle=""
-                          items={mainItems}
-                          selectedKeys={selectedMainActors}
-                          getKey={(it) => it.key}
-                          getLabel={(it) => it.label}
-                          onToggle={(k) => toggleMainActor(String(k))}
-                          search={mainActorSearch}
-                          setSearch={setMainActorSearch}
-                          showSelectedOnly={mainSelectedOnly}
-                          setShowSelectedOnly={setMainSelectedOnly}
-                          defaultOpen={false}
-                        />
-                        <FilterSection
-                          title="Nebendarsteller"
-                          subtitle=""
-                          items={suppItems}
-                          selectedKeys={selectedSupportingActors}
-                          getKey={(it) => it.key}
-                          getLabel={(it) => it.label}
-                          onToggle={(k) => toggleSupportingActor(String(k))}
-                          search={suppActorSearch}
-                          setSearch={setSuppActorSearch}
-                          showSelectedOnly={suppSelectedOnly}
-                          setShowSelectedOnly={setSuppSelectedOnly}
-                          defaultOpen={false}
-                        />
-                      </div>
-
-                      <div style={{ display: "grid", gap: 12 }}>
-                        <div className="fsec">
-                          <div
-                            className="fsec__head"
-                            style={{ cursor: "default" }}
-                          >
-                            <div className="fsec__headL">
-                              <div className="fsec__title">Basis</div>
-                              <div className="fsec__sub">
-                                Studio, Resolution & Jahr
-                              </div>
-                            </div>
-                            <div className="fsec__headR">
-                              <span
-                                className="fsec__chev"
-                                style={{ opacity: 0.35 }}
-                              >
-                                ✓
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="fsec__body">
-                            <div>
-                              <div className="fieldLabel">Studio</div>
-                              <select
-                                className="select"
-                                value={selectedStudio}
-                                onChange={(e) =>
-                                  setSelectedStudio(e.target.value)
-                                }
-                              >
-                                <option value="">Alle Studios</option>
-                                {allStudios.map((s) => (
-                                  <option key={`st-${s}`} value={s}>
-                                    {s}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-
-                            <div>
-                              <div className="fieldLabel">Resolution</div>
-                              <select
-                                className="select"
-                                value={selectedResolution}
-                                onChange={(e) =>
-                                  setSelectedResolution(e.target.value)
-                                }
-                              >
-                                <option value="">Alle Resolutions</option>
-                                {allResolutions.map((r) => (
-                                  <option key={`rs-${r}`} value={r}>
-                                    {r}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-
-                            <div>
-                              <div className="fieldLabel">Jahr</div>
-                              <div className="yearRow">
-                                <input
-                                  className="select"
-                                  value={yearFrom}
-                                  onChange={(e) => setYearFrom(e.target.value)}
-                                  placeholder="von (z.B. 1999)"
-                                  inputMode="numeric"
-                                />
-                                <input
-                                  className="select"
-                                  value={yearTo}
-                                  onChange={(e) => setYearTo(e.target.value)}
-                                  placeholder="bis (z.B. 2025)"
-                                  inputMode="numeric"
-                                />
-                              </div>
-                            </div>
-
-                            {hasAnyFilter ? (
-                              <>
-                                <div className="divider" />
-                                <div style={{ display: "grid", gap: 8 }}>
-                                  <div className="fieldLabel">Aktiv</div>
-                                  <div
-                                    style={{
-                                      display: "flex",
-                                      gap: 8,
-                                      flexWrap: "wrap",
-                                    }}
-                                  >
-                                    {selectedStudio ? <Pill>Studio</Pill> : null}
-                                    {selectedResolution ? (
-                                      <Pill>{selectedResolution}</Pill>
-                                    ) : null}
-                                    {yearFrom ? (
-                                      <Pill>ab {yearFrom}</Pill>
-                                    ) : null}
-                                    {yearTo ? <Pill>bis {yearTo}</Pill> : null}
-                                    {selectedTags.length ? (
-                                      <Pill>{selectedTags.length} Tags</Pill>
-                                    ) : null}
-                                    {selectedMainActors.length ? (
-                                      <Pill>
-                                        {selectedMainActors.length} Haupt
-                                      </Pill>
-                                    ) : null}
-                                    {selectedSupportingActors.length ? (
-                                      <Pill>
-                                        {selectedSupportingActors.length} Neben
-                                      </Pill>
-                                    ) : null}
-                                  </div>
-                                </div>
-                              </>
-                            ) : null}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           ) : null}
         </div>
 
-        <div className="topbar__right">
+        <div className="dashTopbar__right">
           {loggedIn ? (
             <>
               <button
                 type="button"
-                className="iconBtn mOnly"
+                className="dashIconBtn dashMOnly"
                 onClick={openMobileSearch}
                 title="Suche"
               >
@@ -3923,18 +1853,17 @@ export default function HomePage() {
                 </svg>
               </button>
 
-              <div className="userMenu" ref={userMenuRef}>
-                <div className="auth__label">Willkommen, {loginUser}</div>
+              <div className="dashUserMenu" ref={userMenuRef}>
+                <div className="dashAuth__label">Willkommen, {loginUser}</div>
 
                 <button
                   type="button"
-                  className="userMenu__btn"
+                  className="dashUserMenu__btn"
                   aria-haspopup="menu"
                   aria-expanded={userMenuOpen ? "true" : "false"}
                   title="Menü"
                   onClick={() => {
                     setUserMenuOpen((v) => !v);
-                    setFiltersOpen(false);
                     setMobileSearchOpen(false);
                   }}
                 >
@@ -3950,23 +1879,25 @@ export default function HomePage() {
                 </button>
 
                 {userMenuOpen ? (
-                  <div className="userMenu__panel" role="menu">
+                  <div className="dashUserMenu__panel" role="menu">
                     <button
                       type="button"
-                      className="userMenu__item"
+                      className="dashUserMenu__item"
                       role="menuitem"
                       onClick={() => {
                         setUserMenuOpen(false);
-                        safeOpen("/dashboard");
+                        router.push("/");
                       }}
-                      title="Zum Dashboard"
+                      title="Zur Hauptseite"
                     >
-                      Dashboard
+                      Hauptseite
                     </button>
+
                     <div style={{ height: 8 }} />
+
                     <button
                       type="button"
-                      className="userMenu__item userMenu__item--danger"
+                      className="dashUserMenu__item dashUserMenu__item--danger"
                       role="menuitem"
                       onClick={() => {
                         setUserMenuOpen(false);
@@ -3981,8 +1912,8 @@ export default function HomePage() {
               </div>
             </>
           ) : (
-            <form className="authForm" onSubmit={handleLogin}>
-              <div className="authField">
+            <form className="dashAuthForm" onSubmit={handleLogin}>
+              <div className="dashAuthField">
                 <input
                   value={loginUser}
                   onChange={(e) => setLoginUser(e.target.value)}
@@ -3990,7 +1921,8 @@ export default function HomePage() {
                   autoComplete="username"
                 />
               </div>
-              <div className="authField">
+
+              <div className="dashAuthField">
                 <input
                   type="password"
                   value={loginPassword}
@@ -3999,9 +1931,10 @@ export default function HomePage() {
                   autoComplete="current-password"
                 />
               </div>
+
               <button
                 type="submit"
-                className="btn btn--primary"
+                className="dashBtn dashBtn--primary"
                 disabled={loginLoading}
               >
                 {loginLoading ? "Login…" : "Login"}
@@ -4013,36 +1946,34 @@ export default function HomePage() {
 
       {loggedIn && mobileSearchOpen ? (
         <div
-          className="mSearch"
+          className="dashMSearch"
           role="dialog"
           aria-modal="true"
           onMouseDown={closeMobileSearch}
           onTouchStart={closeMobileSearch}
         >
           <div
-            className="mSearch__panel"
+            className="dashMSearch__panel"
             onMouseDown={(e) => e.stopPropagation()}
             onTouchStart={(e) => e.stopPropagation()}
           >
-            <div className="mSearch__head">
-              <div className="mSearch__title">Suche</div>
+            <div className="dashMSearch__head">
+              <div className="dashMSearch__title">Suche</div>
+
               <button
                 type="button"
-                className="btn btn--ghost"
+                className="dashBtn dashBtn--ghost"
                 onClick={closeMobileSearch}
               >
                 Schließen
               </button>
             </div>
 
-            <div className="mSearch__body">
-              <div className="searchWrap">
-                <div
-                  className="input"
-                  title="Suche nach Titel, Studio, Darsteller, Tags"
-                >
+            <div className="dashMSearch__body">
+              <div className="dashSearchWrap">
+                <div className="dashInput" title="Dashboard-Filme suchen">
                   <svg
-                    className="input__icon"
+                    className="dashInput__icon"
                     viewBox="0 0 24 24"
                     fill="none"
                     aria-hidden="true"
@@ -4062,477 +1993,1253 @@ export default function HomePage() {
 
                   <input
                     ref={mobileSearchInputRef}
-                    value={search}
-                    onChange={(e) => handleSearchChange(e.target.value)}
-                    onFocus={() => {
-                      setFiltersOpen(true);
-                      setUserMenuOpen(false);
+                    value={dashboardSearch}
+                    onChange={(e) => {
+                      setDashboardSearch(e.target.value);
+                      setActiveFilmSection("stats");
                     }}
                     placeholder="Suchen: Titel, Studio, Darsteller, Tags…"
                     autoComplete="off"
                   />
+
                 </div>
-
-                {filtersOpen && (
-                  <div
-                    className="filterPopover"
-                    role="dialog"
-                    aria-modal="false"
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onTouchStart={(e) => e.stopPropagation()}
-                  >
-                    <div className="filterPopover__head">
-                      <div className="filterPopover__title">Filter</div>
-                      <div className="filterPopover__actions">
-                        <button
-                          type="button"
-                          className="btn"
-                          onClick={resetFilters}
-                        >
-                          Reset
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn--primary"
-                          onClick={applyFiltersNow}
-                        >
-                          Anwenden
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn--ghost"
-                          onClick={() => setFiltersOpen(false)}
-                        >
-                          Schließen
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="filterPopover__body">
-                      <div className="filterGrid">
-                        <div style={{ display: "grid", gap: 12 }}>
-                          <FilterSection
-                            title="Tags"
-                            subtitle=""
-                            items={tagItems}
-                            selectedKeys={selectedTags}
-                            getKey={(it) => it.key}
-                            getLabel={(it) => it.label}
-                            onToggle={(k) => toggleTag(String(k))}
-                            search={tagSearch}
-                            setSearch={setTagSearch}
-                            showSelectedOnly={tagsSelectedOnly}
-                            setShowSelectedOnly={setTagsSelectedOnly}
-                            defaultOpen={true}
-                          />
-                          <FilterSection
-                            title="Hauptdarsteller"
-                            subtitle=""
-                            items={mainItems}
-                            selectedKeys={selectedMainActors}
-                            getKey={(it) => it.key}
-                            getLabel={(it) => it.label}
-                            onToggle={(k) => toggleMainActor(String(k))}
-                            search={mainActorSearch}
-                            setSearch={setMainActorSearch}
-                            showSelectedOnly={mainSelectedOnly}
-                            setShowSelectedOnly={setMainSelectedOnly}
-                            defaultOpen={false}
-                          />
-                          <FilterSection
-                            title="Nebendarsteller"
-                            subtitle=""
-                            items={suppItems}
-                            selectedKeys={selectedSupportingActors}
-                            getKey={(it) => it.key}
-                            getLabel={(it) => it.label}
-                            onToggle={(k) => toggleSupportingActor(String(k))}
-                            search={suppActorSearch}
-                            setSearch={setSuppActorSearch}
-                            showSelectedOnly={suppSelectedOnly}
-                            setShowSelectedOnly={setSuppSelectedOnly}
-                            defaultOpen={false}
-                          />
-                        </div>
-
-                        <div style={{ display: "grid", gap: 12 }}>
-                          <div className="fsec">
-                            <div
-                              className="fsec__head"
-                              style={{ cursor: "default" }}
-                            >
-                              <div className="fsec__headL">
-                                <div className="fsec__title">Basis</div>
-                                <div className="fsec__sub">
-                                  Studio, Resolution & Jahr
-                                </div>
-                              </div>
-                              <div className="fsec__headR">
-                                <span
-                                  className="fsec__chev"
-                                  style={{ opacity: 0.35 }}
-                                >
-                                  ✓
-                                </span>
-                              </div>
-                            </div>
-
-                            <div className="fsec__body">
-                              <div>
-                                <div className="fieldLabel">Studio</div>
-                                <select
-                                  className="select"
-                                  value={selectedStudio}
-                                  onChange={(e) =>
-                                    setSelectedStudio(e.target.value)
-                                  }
-                                >
-                                  <option value="">Alle Studios</option>
-                                  {allStudios.map((s) => (
-                                    <option key={`st-${s}`} value={s}>
-                                      {s}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-
-                              <div>
-                                <div className="fieldLabel">Resolution</div>
-                                <select
-                                  className="select"
-                                  value={selectedResolution}
-                                  onChange={(e) =>
-                                    setSelectedResolution(e.target.value)
-                                  }
-                                >
-                                  <option value="">Alle Resolutions</option>
-                                  {allResolutions.map((r) => (
-                                    <option key={`rs-${r}`} value={r}>
-                                      {r}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-
-                              <div>
-                                <div className="fieldLabel">Jahr</div>
-                                <div className="yearRow">
-                                  <input
-                                    className="select"
-                                    value={yearFrom}
-                                    onChange={(e) =>
-                                      setYearFrom(e.target.value)
-                                    }
-                                    placeholder="von (z.B. 1999)"
-                                    inputMode="numeric"
-                                  />
-                                  <input
-                                    className="select"
-                                    value={yearTo}
-                                    onChange={(e) => setYearTo(e.target.value)}
-                                    placeholder="bis (z.B. 2025)"
-                                    inputMode="numeric"
-                                  />
-                                </div>
-                              </div>
-
-                              {hasAnyFilter ? (
-                                <>
-                                  <div className="divider" />
-                                  <div style={{ display: "grid", gap: 8 }}>
-                                    <div className="fieldLabel">Aktiv</div>
-                                    <div
-                                      style={{
-                                        display: "flex",
-                                        gap: 8,
-                                        flexWrap: "wrap",
-                                      }}
-                                    >
-                                      {selectedStudio ? (
-                                        <Pill>Studio</Pill>
-                                      ) : null}
-                                      {selectedResolution ? (
-                                        <Pill>{selectedResolution}</Pill>
-                                      ) : null}
-                                      {yearFrom ? (
-                                        <Pill>ab {yearFrom}</Pill>
-                                      ) : null}
-                                      {yearTo ? (
-                                        <Pill>bis {yearTo}</Pill>
-                                      ) : null}
-                                      {selectedTags.length ? (
-                                        <Pill>{selectedTags.length} Tags</Pill>
-                                      ) : null}
-                                      {selectedMainActors.length ? (
-                                        <Pill>
-                                          {selectedMainActors.length} Haupt
-                                        </Pill>
-                                      ) : null}
-                                      {selectedSupportingActors.length ? (
-                                        <Pill>
-                                          {selectedSupportingActors.length} Neben
-                                        </Pill>
-                                      ) : null}
-                                    </div>
-                                  </div>
-                                </>
-                              ) : null}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>
         </div>
       ) : null}
 
-      <div className="wrap">
-        <div className="logoSolo">
-          <button
-            type="button"
-            className="logoBtn"
-            onClick={() => {
-              router.replace("/", { scroll: false });
-              setViewMode("actors");
-              setSelectedActor(null);
-              setSelectedMovieId(null);
-              setVisibleMovies([]);
-              setSearch("");
-            }}
-            title="Zur Hauptseite"
-            aria-label="Zur Hauptseite"
-          >
-            <img className="logoSolo__img" src="/logo.png" alt="Project1337 Logo" />
-          </button>
-        </div>
-
-        {loginErr ? <div className="errorBanner">{loginErr}</div> : null}
-        {err ? <div className="errorBanner">{err}</div> : null}
-
+      <main className="px-4 pb-10 pt-6 md:px-6">
         {!loggedIn ? (
-          <EmptyState
-            title="Bitte einloggen"
-            subtitle="Ohne Login werden keine Inhalte geladen. Logge dich oben rechts ein, um Darsteller und Filme zu sehen."
-            action={<Pill>Project1337 • Private Library</Pill>}
-          />
-        ) : loading ? (
-          <>
-            <div className="sectionHead">
-              <div>
-                <div className="sectionTitle">Lade Inhalte…</div>
-                <div className="sectionMeta">
-                  Supabase-Abfragen werden ausgeführt.
-                </div>
-              </div>
-              <Pill>Bitte warten</Pill>
-            </div>
-            <SkeletonRow />
-            <div style={{ height: 16 }} />
-            <SkeletonRow />
-          </>
-        ) : selectedMovieId ? (
-          selectedMovie ? (
-            <MovieDetailView movie={selectedMovie} onBack={handleCloseMovie} />
-          ) : (
-            <EmptyState
-              title="Film nicht gefunden"
-              subtitle="Der Film konnte nicht geladen werden oder existiert nicht mehr."
-              action={
-                <button type="button" className="btn" onClick={handleCloseMovie}>
-                  Zurück
-                </button>
-              }
-            />
-          )
-        ) : showMovies ? (
-          <>
-            {selectedActor ? (
-              <ActorHero actor={selectedActor} movieCount={movieList.length} movies={movieList} />
-            ) : null}
-
-            <div className="sectionHead">
-              {selectedActor ? (
-                <>
-                  <div />
-                  <SortControl />
-                </>
-              ) : (
-                <>
-                  <div>
-                    <div className="sectionTitle">{moviesTitle}</div>
-                    <div className="sectionMeta">
-                      {moviesSubtitle || `${movieList.length} Film(e)`}
-                    </div>
-                  </div>
-                  <ViewToggle />
-                </>
-              )}
-            </div>
-
-            {movieList.length === 0 ? (
-              <EmptyState
-                title="Keine Filme gefunden"
-                subtitle="Passe Suche/Filter an oder gehe zurück zur Darsteller-Ansicht."
-              />
-            ) : (
-              <div className="movieGrid">
-                {movieList.map((m) => {
-                  const icon = getResolutionIcon(m.resolution);
-                  return (
-                    <div
-                      key={m.id}
-                      className="movieCard movieCard--clickable"
-                      onClick={() => handleOpenMovie(m)}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          handleOpenMovie(m);
-                        }
-                      }}
-                    >
-                      {m.thumbnailUrl ? (
-                        <div className="movieCard__thumb">
-                          <img
-                            src={m.thumbnailUrl}
-                            alt={m.title || "Thumbnail"}
-                            loading="lazy"
-                          />
-
-                          {icon ? (
-                            <div
-                              className="movieCard__resIcon"
-                              title={icon.title}
-                              aria-label={icon.title}
-                            >
-                              <img src={icon.src} alt={icon.alt} />
-                            </div>
-                          ) : null}
-                        </div>
-                      ) : icon ? (
-                        <div
-                          className="movieCard__resIcon movieCard__resIcon--noThumb"
-                          title={icon.title}
-                          aria-label={icon.title}
-                        >
-                          <img src={icon.src} alt={icon.alt} />
-                        </div>
-                      ) : null}
-
-                      <div className="movieCard__top">
-                        <div
-                          className="movieCard__title"
-                          title={m.title || "Unbenannt"}
-                        >
-                          {m.title || "Unbenannt"}
-                        </div>
-                        <div className="movieCard__year">{m.year || ""}</div>
-                      </div>
-
-                      <div className="movieCard__meta">
-                        <div className="kv">
-                          <div className="kv__k">Studio</div>
-                          <div className="kv__v">{m.studio || "-"}</div>
-                        </div>
-
-                        <div className="kv">
-                          <div className="kv__k">Darsteller</div>
-                          <div className="kv__v">
-                            {m.actors && m.actors.length
-                              ? m.actors.join(", ")
-                              : "-"}
-                          </div>
-                        </div>
-
-                        <div className="kv">
-                          <div className="kv__k">Tags</div>
-                          <div className={`kv__v movieCard__tags`}>
-                            {m.tags && m.tags.length
-                              ? [...m.tags]
-                                  .sort((a, b) =>
-                                    a.localeCompare(b, "de", {
-                                      sensitivity: "base",
-                                    })
-                                  )
-                                  .join(", ")
-                              : "-"}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+          <section className="mx-auto mt-16 max-w-md rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950 to-black/90 p-8 text-center shadow-2xl shadow-black/70">
+            <p className="mb-3 text-base text-neutral-200">
+              Bitte oben einloggen, um das Dashboard zu nutzen.
+            </p>
+            <p className="text-sm text-neutral-500">
+              Zugang ist nur für den Admin vorgesehen.
+            </p>
+            {loginErr && (
+              <p className="mt-4 text-sm text-red-400">{loginErr}</p>
+            )}
+          </section>
+        ) : (
+          <section className="mx-auto max-w-7xl space-y-5">
+            {error && (
+              <div className="rounded-xl border border-red-700/80 bg-red-950/80 px-4 py-3 text-base text-red-100 shadow shadow-red-900/70">
+                Fehler: {error}
               </div>
             )}
-          </>
-        ) : (
-          <>
-            <div className="sectionHead">
-              <div>
-                <div className="sectionTitle">Hauptdarsteller</div>
-                <div className="sectionMeta">{actors.length} Darsteller</div>
-              </div>
-              <ViewToggle />
-            </div>
 
-            {actors.length === 0 ? (
-              <EmptyState
-                title="Keine Hauptdarsteller verfügbar"
-                subtitle="Entweder sind noch keine Filme mit main_actor_ids hinterlegt oder es fehlen Datensätze."
-              />
+            {loading ? (
+              <div className="mt-10 flex items-center justify-center gap-3 text-base text-neutral-200">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-neutral-500 border-t-transparent" />
+                <span>Lade Daten…</span>
+              </div>
             ) : (
-              <div className="row">
-                {actors.map((a) => (
-                  <div
-                    key={a.id}
-                    className="card"
-                    onClick={() =>
-                      handleShowMoviesForActor(a.id, a.name, a.slug)
-                    }
-                    title={`${a.name} öffnen`}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ")
-                        handleShowMoviesForActor(a.id, a.name, a.slug);
-                    }}
-                  >
-                    <div className="card__img">
-                      {a.profileImage ? (
-                        <img src={a.profileImage} alt={a.name} />
+              <div className="relative">
+                {/* Mobile: Sidebar oberhalb der Hauptbox */}
+                <div className="mb-5 w-full space-y-4 lg:hidden">
+                  {SidebarContent}
+                </div>
+
+                {/* Hauptbox: EXAKT horizontal zentriert */}
+                <section className="space-y-5 max-w-5xl mx-auto w-full">
+                  {/* Tab: Neuer Film */}
+                  {activeFilmSection === "new" && (
+                    <div className="group rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950/95 to-black/95 p-6 shadow-2xl shadow-black/70 transition-transform duration-200">
+                      <div className="mb-4 flex items-center justify-between gap-2">
+                        <div>
+                          <h2 className="text-xl font-semibold text-neutral-50">
+                            {editingFilmId
+                              ? "Film bearbeiten"
+                              : "Neuen Film hinzufügen"}
+                          </h2>
+                          <p className="text-sm text-neutral-500">
+                            Titel, Jahr, Studio, Resolution, Thumbnail, Cast und
+                            Tags festlegen.
+                          </p>
+                        </div>
+                        {editingFilmId && (
+                          <button
+                            type="button"
+                            onClick={handleCancelEdit}
+                            className="text-sm text-neutral-300 underline underline-offset-4 hover:text-neutral-50"
+                          >
+                            Bearbeitung abbrechen
+                          </button>
+                        )}
+                      </div>
+
+                      <form
+                        onSubmit={handleAddOrUpdateFilm}
+                        className="space-y-5 text-base"
+                      >
+                        {/* Titel + Jahr */}
+                        <div className="grid grid-cols-[2fr,1fr] gap-4 max-sm:grid-cols-1">
+                          <div>
+                            <label className="text-sm text-neutral-300">
+                              Filmname
+                            </label>
+                            <input
+                              className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                              value={filmTitel}
+                              onChange={(e) => setFilmTitel(e.target.value)}
+                              placeholder="z. B. Interstellar"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm text-neutral-300">
+                              Erscheinungsjahr
+                            </label>
+                            <input
+                              className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                              value={filmJahr}
+                              onChange={(e) => setFilmJahr(e.target.value)}
+                              placeholder="2014"
+                              type="number"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Studio + Resolution + Thumbnail + File URL */}
+                        <div className="grid grid-cols-1 gap-4">
+                          <div>
+                            <label className="text-sm text-neutral-300">
+                              Studio
+                            </label>
+                            <select
+                              className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 focus:border-red-500 focus:outline-none"
+                              value={filmStudioId}
+                              onChange={(e) => setFilmStudioId(e.target.value)}
+                            >
+                              <option value="">(kein Studio)</option>
+                              {studios.map((s) => (
+                                <option key={s.id} value={s.id}>
+                                  {s.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="text-sm text-neutral-300">
+                              Resolution <span className="text-red-400">*</span>
+                            </label>
+                            <select
+                              className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 focus:border-red-500 focus:outline-none"
+                              value={filmResolutionId}
+                              onChange={(e) =>
+                                handleResolutionChange(e.target.value)
+                              }
+                              required
+                            >
+                              <option value="" disabled>
+                                Bitte wählen…
+                              </option>
+                              {resolutions.map((r) => (
+                                <option key={r.id} value={r.id}>
+                                  {r.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {/* Thumbnail Upload: OHNE CROP */}
+                          <div>
+                            <label className="text-sm text-neutral-300">
+                              Thumbnail (optional)
+                            </label>
+
+                            {filmThumbnailUrl ? (
+                              <div className="mt-2 flex items-center gap-3">
+                                <img
+                                  src={filmThumbnailUrl}
+                                  alt="Thumbnail Preview"
+                                  className="h-16 w-16 rounded-xl border border-neutral-700 object-cover bg-neutral-900"
+                                  loading="lazy"
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <div className="truncate text-xs text-neutral-400">
+                                    {filmThumbnailUrl}
+                                  </div>
+                                  <div className="mt-2 flex gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => setFilmThumbnailUrl("")}
+                                      className="rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-xs text-neutral-200 hover:bg-neutral-900"
+                                    >
+                                      Entfernen
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        try {
+                                          navigator.clipboard.writeText(
+                                            filmThumbnailUrl
+                                          );
+                                        } catch {
+                                          // ignore
+                                        }
+                                      }}
+                                      className="rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-xs text-neutral-200 hover:bg-neutral-900"
+                                    >
+                                      Copy URL
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="mt-2">
+                                <MovieThumbnailUploader
+                                  onUploaded={(url) =>
+                                    setFilmThumbnailUrl(url)
+                                  }
+                                />
+                              </div>
+                            )}
+                          </div>
+
+                          <div>
+                            <label className="text-sm text-neutral-300">
+                              File-URL / NAS-Pfad
+                            </label>
+                            <input
+                              className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                              value={filmFileUrl}
+                              onChange={(e) => setFilmFileUrl(e.target.value)}
+                              placeholder="http://192.168.178.58:8080/"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Hauptdarsteller Chips */}
+                        <div>
+                          <label className="text-sm text-neutral-300">
+                            Hauptdarsteller (klick zum Auswählen / Entfernen)
+                          </label>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {hauptdarsteller.length === 0 ? (
+                              <span className="text-sm text-neutral-500">
+                                Noch keine Hauptdarsteller angelegt.
+                              </span>
+                            ) : (
+                              hauptdarsteller.map((a) => {
+                                const active = selectedMainActorIds.includes(
+                                  a.id
+                                );
+                                return (
+                                  <button
+                                    key={a.id}
+                                    type="button"
+                                    onClick={() => handleToggleMainActor(a)}
+                                    className={chipClass(active)}
+                                  >
+                                    {a.name}
+                                  </button>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Nebendarsteller Chips */}
+                        <div>
+                          <label className="text-sm text-neutral-300">
+                            Nebendarsteller (klick zum Auswählen / Entfernen)
+                          </label>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {nebendarsteller.length === 0 ? (
+                              <span className="text-sm text-neutral-500">
+                                Noch keine Nebendarsteller angelegt.
+                              </span>
+                            ) : (
+                              nebendarsteller.map((a) => {
+                                const active = selectedSupportActorIds.includes(
+                                  a.id
+                                );
+                                return (
+                                  <button
+                                    key={a.id}
+                                    type="button"
+                                    onClick={() =>
+                                      toggleId(
+                                        a.id,
+                                        selectedSupportActorIds,
+                                        setSelectedSupportActorIds
+                                      )
+                                    }
+                                    className={chipClass(active)}
+                                  >
+                                    {a.name}
+                                  </button>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Tags Chips */}
+                        <div>
+                          <label className="text-sm text-neutral-300">
+                            Tags (klick zum Auswählen / Entfernen)
+                          </label>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {tags.length === 0 ? (
+                              <span className="text-sm text-neutral-500">
+                                Noch keine Tags angelegt.
+                              </span>
+                            ) : (
+                              tags.map((t) => {
+                                const active = selectedTagIds.includes(t.id);
+                                return (
+                                  <button
+                                    key={t.id}
+                                    type="button"
+                                    onClick={() =>
+                                      toggleId(
+                                        t.id,
+                                        selectedTagIds,
+                                        setSelectedTagIds
+                                      )
+                                    }
+                                    className={chipClass(active)}
+                                  >
+                                    {t.name}
+                                  </button>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex gap-3 pt-1">
+                          <button
+                            type="submit"
+                            className="rounded-xl bg-red-500 px-5 py-2.5 text-sm font-semibold text-black shadow shadow-red-900/70 hover:bg-red-400 hover:shadow-lg hover:shadow-red-900/70 disabled:opacity-60"
+                            disabled={!filmTitel.trim() || !filmResolutionId}
+                          >
+                            {editingFilmId
+                              ? "Film aktualisieren"
+                              : "Film speichern"}
+                          </button>
+                          {editingFilmId && (
+                            <button
+                              type="button"
+                              onClick={handleCancelEdit}
+                              className="rounded-xl border border-neutral-600 px-4 py-2.5 text-sm text-neutral-200 hover:bg-neutral-800"
+                            >
+                              Abbrechen
+                            </button>
+                          )}
+                        </div>
+                      </form>
+                    </div>
+                  )}
+
+                  {/* Tab: Filmestatistik */}
+                  {activeFilmSection === "stats" && (
+                    <div className="rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950 to-black/95 p-6 shadow-2xl shadow-black/70 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h2 className="text-xl font-semibold text-neutral-50">
+                            Filme
+                          </h2>
+                          <p className="mt-1 text-sm text-neutral-500">
+                            Insgesamt{" "}
+                            <span className="font-semibold text-neutral-100">
+                              {filteredFilme.length}
+                            </span>{" "}
+                            {dashboardSearch.trim()
+                              ? "Treffer"
+                              : "Filme"}{" "}
+                            in der Bibliothek.
+                          </p>
+                        </div>
+                      </div>
+
+                      {filteredFilme.length === 0 ? (
+                        <p className="text-sm text-neutral-500">
+                          {dashboardSearch.trim()
+                            ? "Keine Filme zur Suche gefunden."
+                            : "Noch keine Filme angelegt."}
+                        </p>
                       ) : (
-                        <div
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            display: "grid",
-                            placeItems: "center",
-                            color: "rgba(255,255,255,0.55)",
-                            fontWeight: 800,
-                            letterSpacing: "0.02em",
-                          }}
-                        >
-                          NO IMAGE
+                        <div className="space-y-3 text-sm">
+                          {filteredFilme.map((f) => (
+                            <details
+                              key={f.id}
+                              className="group rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4 shadow-sm shadow-black/60 transition-all hover:border-red-500/70"
+                            >
+                              <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-base font-medium text-neutral-50">
+                                    {f.title}
+                                  </span>
+                                  {f.year && (
+                                    <span className="text-xs text-neutral-400">
+                                      {f.year}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1 text-xs text-neutral-500 group-open:text-red-400">
+                                  <span>Details</span>
+                                  <svg
+                                    className="h-3 w-3 transform transition-transform group-open:rotate-90"
+                                    viewBox="0 0 20 20"
+                                    fill="none"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                  >
+                                    <path
+                                      d="M7 5L12 10L7 15"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    />
+                                  </svg>
+                                </div>
+                              </summary>
+
+                              <div className="mt-3 border-t border-neutral-800 pt-3 space-y-1.5">
+                                {f.studio_id && studioMap[f.studio_id] && (
+                                  <div className="text-sm text-neutral-400">
+                                    Studio: {studioMap[f.studio_id].name}
+                                  </div>
+                                )}
+
+                                {f.resolution_id &&
+                                  resolutionMap[f.resolution_id] && (
+                                    <div className="text-sm text-neutral-400">
+                                      Resolution:{" "}
+                                      {resolutionMap[f.resolution_id].name}
+                                    </div>
+                                  )}
+
+                                {/* Thumbnail Anzeige */}
+                                {f.thumbnail_url && (
+                                  <div className="mt-2">
+                                    <div className="text-sm text-neutral-400">
+                                      Thumbnail:
+                                    </div>
+                                    <div className="mt-2 flex items-center gap-3">
+                                      <img
+                                        src={f.thumbnail_url}
+                                        alt={`${f.title} Thumbnail`}
+                                        className="h-14 w-14 rounded-xl border border-neutral-800 object-cover bg-neutral-900"
+                                        loading="lazy"
+                                      />
+                                      <div className="min-w-0 flex-1">
+                                        <div className="break-all text-xs text-neutral-500">
+                                          {f.thumbnail_url}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {Array.isArray(f.main_actor_ids) &&
+                                  f.main_actor_ids.length > 0 && (
+                                    <div className="text-sm text-neutral-300">
+                                      Hauptdarsteller:{" "}
+                                      {f.main_actor_ids
+                                        .map((id) => actorMap[id]?.name)
+                                        .filter(Boolean)
+                                        .join(", ")}
+                                    </div>
+                                  )}
+
+                                {Array.isArray(f.supporting_actor_ids) &&
+                                  f.supporting_actor_ids.length > 0 && (
+                                    <div className="text-sm text-neutral-300">
+                                      Nebendarsteller:{" "}
+                                      {f.supporting_actor_ids
+                                        .map((id) => supportMap[id]?.name)
+                                        .filter(Boolean)
+                                        .join(", ")}
+                                    </div>
+                                  )}
+
+                                {Array.isArray(f.tag_ids) &&
+                                  f.tag_ids.length > 0 && (
+                                    <div className="mt-1 flex flex-wrap gap-2">
+                                      {f.tag_ids.map((id) => {
+                                        const t = tagMap[id];
+                                        if (!t) return null;
+                                        return (
+                                          <span
+                                            key={id}
+                                            className={chipClass(true)}
+                                          >
+                                            {t.name}
+                                          </span>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+
+                                {f.file_url && (
+                                  <div className="mt-1 break-all text-sm text-red-400">
+                                    File: {f.file_url}
+                                  </div>
+                                )}
+
+                                <div className="mt-3 flex gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleEditFilm(f)}
+                                    className="rounded-lg border border-neutral-600 px-3 py-1.5 text-xs text-neutral-100 hover:bg-neutral-800"
+                                  >
+                                    Bearbeiten
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteFilm(f.id)}
+                                    className="rounded-lg border border-red-600 px-3 py-1.5 text-xs text-red-200 hover:bg-red-700/80"
+                                  >
+                                    Löschen
+                                  </button>
+                                </div>
+                              </div>
+                            </details>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Tab: Stammdaten */}
+                  {activeFilmSection === "meta" && (
+                    <section className="rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950 to-black/95 p-6 text-sm text-neutral-100 shadow-2xl shadow-black/70 space-y-5">
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <h2 className="text-xl font-semibold text-neutral-50">
+                            {activeMetaSection === "mainActors"
+                              ? "Hauptdarsteller"
+                              : activeMetaSection === "supportActors"
+                              ? "Nebendarsteller"
+                              : activeMetaSection === "studios"
+                              ? "Studios"
+                              : "Tags"}
+                          </h2>
+                          <p className="mt-1 text-sm text-neutral-500">
+                            {activeMetaSection === "mainActors"
+                              ? "Hauptdarsteller anlegen, bearbeiten und löschen."
+                              : activeMetaSection === "supportActors"
+                              ? "Nebendarsteller anlegen, bearbeiten und löschen."
+                              : activeMetaSection === "studios"
+                              ? "Studios anlegen, bearbeiten und löschen."
+                              : "Tags anlegen, bearbeiten und löschen."}
+                          </p>
+                        </div>
+                      </div>
+
+                      {activeMetaSection === "mainActors" && (
+                        <div className="grid gap-5 xl:grid-cols-[minmax(360px,0.9fr),minmax(0,1.35fr)]">
+                          <form
+                            onSubmit={handleAddActor}
+                            className="space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-5"
+                          >
+                            <div className="text-base font-semibold text-neutral-50">
+                              Neuen Hauptdarsteller anlegen
+                            </div>
+
+                            <input
+                              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                              placeholder="Name"
+                              value={newActorName}
+                              onChange={(e) => setNewActorName(e.target.value)}
+                            />
+
+                            <input
+                              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                              placeholder="Herkunft"
+                              value={newActorOrigin}
+                              onChange={(e) =>
+                                setNewActorOrigin(e.target.value)
+                              }
+                            />
+
+                            <input
+                              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                              placeholder="Geburtsdatum"
+                              type="date"
+                              value={newActorBirthDate}
+                              onChange={(e) =>
+                                setNewActorBirthDate(e.target.value)
+                              }
+                            />
+
+                            <input
+                              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                              placeholder="IAFD URL"
+                              value={newActorIafdUrl}
+                              onChange={(e) =>
+                                setNewActorIafdUrl(e.target.value)
+                              }
+                            />
+
+                            <input
+                              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                              placeholder="PlanetSuzy URL"
+                              value={newActorPlanetsuzyUrl}
+                              onChange={(e) =>
+                                setNewActorPlanetsuzyUrl(e.target.value)
+                              }
+                            />
+
+                            <ActorImageUploader
+                              onUploaded={(url) => setNewActorImage(url)}
+                            />
+
+                            <button
+                              type="submit"
+                              className="rounded-xl bg-red-500 px-4 py-2 text-sm font-semibold text-black shadow shadow-red-900/70 hover:bg-red-400 disabled:opacity-60"
+                              disabled={!newActorName.trim()}
+                            >
+                              Speichern
+                            </button>
+                          </form>
+
+                          <div className="rounded-2xl border border-neutral-800 bg-neutral-950/95 p-5">
+                            <div className="mb-3 flex items-center justify-between">
+                              <div className="text-base font-semibold text-neutral-50">
+                                Vorhandene Hauptdarsteller
+                              </div>
+                              <div className="text-xs text-neutral-500">
+                                {hauptdarsteller.length}
+                              </div>
+                            </div>
+
+                            <div className="max-h-[560px] space-y-2 overflow-y-auto pr-1">
+                              {hauptdarsteller.map((a) => (
+                                <div
+                                  key={a.id}
+                                  className="rounded-xl border border-neutral-800 bg-neutral-950 px-3 py-2.5"
+                                >
+                                  {editingActorMetaId === a.id ? (
+                                    <div className="space-y-3">
+                                      <div className="grid gap-3">
+                                        <input
+                                          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                                          placeholder="Name"
+                                          value={actorEditForm.name}
+                                          onChange={(e) =>
+                                            setActorEditForm((prev) => ({
+                                              ...prev,
+                                              name: e.target.value,
+                                            }))
+                                          }
+                                        />
+                                        <input
+                                          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                                          placeholder="Herkunft"
+                                          value={actorEditForm.origin}
+                                          onChange={(e) =>
+                                            setActorEditForm((prev) => ({
+                                              ...prev,
+                                              origin: e.target.value,
+                                            }))
+                                          }
+                                        />
+                                        <input
+                                          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                                          type="date"
+                                          value={actorEditForm.birth_date}
+                                          onChange={(e) =>
+                                            setActorEditForm((prev) => ({
+                                              ...prev,
+                                              birth_date: e.target.value,
+                                            }))
+                                          }
+                                        />
+                                        <div className="space-y-2">
+                                          <input
+                                            className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                                            placeholder="Bild-URL"
+                                            value={actorEditForm.profile_image}
+                                            onChange={(e) =>
+                                              setActorEditForm((prev) => ({
+                                                ...prev,
+                                                profile_image: e.target.value,
+                                              }))
+                                            }
+                                          />
+
+                                          {actorEditForm.profile_image ? (
+                                            <div className="flex items-center gap-3 rounded-lg border border-neutral-800 bg-neutral-950/80 p-2">
+                                              <img
+                                                src={actorEditForm.profile_image}
+                                                alt="Bildvorschau"
+                                                className="h-14 w-14 rounded-lg border border-neutral-800 object-cover bg-neutral-900"
+                                                loading="lazy"
+                                              />
+                                              <button
+                                                type="button"
+                                                onClick={() =>
+                                                  setActorEditForm((prev) => ({
+                                                    ...prev,
+                                                    profile_image: "",
+                                                  }))
+                                                }
+                                                className="rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-xs text-neutral-200 hover:bg-neutral-900"
+                                              >
+                                                Bild entfernen
+                                              </button>
+                                            </div>
+                                          ) : null}
+
+                                          <ActorImageUploader
+                                            onUploaded={(url) =>
+                                              setActorEditForm((prev) => ({
+                                                ...prev,
+                                                profile_image: url,
+                                              }))
+                                            }
+                                          />
+                                        </div>
+                                        <input
+                                          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                                          placeholder="IAFD URL"
+                                          value={actorEditForm.iafd_url}
+                                          onChange={(e) =>
+                                            setActorEditForm((prev) => ({
+                                              ...prev,
+                                              iafd_url: e.target.value,
+                                            }))
+                                          }
+                                        />
+                                        <input
+                                          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                                          placeholder="PlanetSuzy URL"
+                                          value={actorEditForm.planetsuzy_url}
+                                          onChange={(e) =>
+                                            setActorEditForm((prev) => ({
+                                              ...prev,
+                                              planetsuzy_url: e.target.value,
+                                            }))
+                                          }
+                                        />
+                                      </div>
+
+                                      <div className="flex flex-wrap gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={() => saveEditActorInline(a.id)}
+                                          className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-black hover:bg-red-400 disabled:opacity-60"
+                                          disabled={!actorEditForm.name.trim()}
+                                        >
+                                          Speichern
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={cancelEditActorInline}
+                                          className="rounded-lg border border-neutral-600 px-3 py-1.5 text-xs text-neutral-100 hover:bg-neutral-800"
+                                        >
+                                          Abbrechen
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center justify-between gap-3">
+                                      <div className="flex min-w-0 items-center gap-3">
+                                        {a.profile_image ? (
+                                          <img
+                                            src={a.profile_image}
+                                            alt={a.name}
+                                            className="h-10 w-10 rounded-lg border border-neutral-800 object-cover"
+                                            loading="lazy"
+                                          />
+                                        ) : (
+                                          <div className="grid h-10 w-10 place-items-center rounded-lg border border-neutral-800 bg-neutral-900 text-[10px] font-bold text-neutral-500">
+                                            IMG
+                                          </div>
+                                        )}
+
+                                        <div className="min-w-0">
+                                          <div className="truncate text-sm font-medium text-neutral-50">
+                                            {a.name}
+                                          </div>
+                                          {(a.origin ||
+                                            a.birth_date ||
+                                            a.iafd_url ||
+                                            a.planetsuzy_url) && (
+                                            <div className="mt-1 flex flex-wrap gap-1.5 text-xs text-neutral-500">
+                                              {a.origin ? <span>{a.origin}</span> : null}
+                                              {a.birth_date ? (
+                                                <span>{a.birth_date}</span>
+                                              ) : null}
+                                              {a.iafd_url ? (
+                                                <span className="text-red-400">
+                                                  IAFD
+                                                </span>
+                                              ) : null}
+                                              {a.planetsuzy_url ? (
+                                                <span className="text-red-400">
+                                                  PlanetSuzy
+                                                </span>
+                                              ) : null}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      <div className="flex shrink-0 gap-1.5">
+                                        <button
+                                          type="button"
+                                          onClick={() => startEditActorInline(a)}
+                                          className="rounded-lg border border-neutral-600 px-3 py-1.5 text-xs text-neutral-100 hover:bg-neutral-800"
+                                        >
+                                          Bearbeiten
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleDeleteActor(a.id)}
+                                          className="rounded-lg border border-red-600 px-3 py-1.5 text-xs text-red-200 hover:bg-red-700/80"
+                                        >
+                                          Löschen
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
                         </div>
                       )}
 
-                      <div className="card__badge">{a.movieCount}</div>
-                    </div>
+                      {activeMetaSection === "supportActors" && (
+                        <div className="grid gap-5 xl:grid-cols-[minmax(360px,0.9fr),minmax(0,1.35fr)]">
+                          <form
+                            onSubmit={handleAddSupportActor}
+                            className="space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-5"
+                          >
+                            <div className="text-base font-semibold text-neutral-50">
+                              Neuen Nebendarsteller anlegen
+                            </div>
 
-                    <div className="card__body">
-                      <AutoFitActorTitle text={a.name} />
-                    </div>
-                  </div>
-                ))}
+                            <input
+                              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                              placeholder="Name"
+                              value={newSupportName}
+                              onChange={(e) =>
+                                setNewSupportName(e.target.value)
+                              }
+                            />
+
+                            <ActorImageUploader
+                              onUploaded={(url) => setNewSupportImage(url)}
+                            />
+
+                            <button
+                              type="submit"
+                              className="rounded-xl bg-red-500 px-4 py-2 text-sm font-semibold text-black shadow shadow-red-900/70 hover:bg-red-400 disabled:opacity-60"
+                              disabled={!newSupportName.trim()}
+                            >
+                              Speichern
+                            </button>
+                          </form>
+
+                          <div className="rounded-2xl border border-neutral-800 bg-neutral-950/95 p-5">
+                            <div className="mb-3 flex items-center justify-between">
+                              <div className="text-base font-semibold text-neutral-50">
+                                Vorhandene Nebendarsteller
+                              </div>
+                              <div className="text-xs text-neutral-500">
+                                {nebendarsteller.length}
+                              </div>
+                            </div>
+
+                            <div className="max-h-[560px] space-y-2 overflow-y-auto pr-1">
+                              {nebendarsteller.map((a) => (
+                                <div
+                                  key={a.id}
+                                  className="rounded-xl border border-neutral-800 bg-neutral-950 px-3 py-2.5"
+                                >
+                                  {editingSupportMetaId === a.id ? (
+                                    <div className="space-y-3">
+                                      <div className="grid gap-3">
+                                        <input
+                                          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                                          placeholder="Name"
+                                          value={supportEditForm.name}
+                                          onChange={(e) =>
+                                            setSupportEditForm((prev) => ({
+                                              ...prev,
+                                              name: e.target.value,
+                                            }))
+                                          }
+                                        />
+                                        <div className="space-y-2">
+                                          <input
+                                            className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                                            placeholder="Bild-URL"
+                                            value={supportEditForm.profile_image}
+                                            onChange={(e) =>
+                                              setSupportEditForm((prev) => ({
+                                                ...prev,
+                                                profile_image: e.target.value,
+                                              }))
+                                            }
+                                          />
+
+                                          {supportEditForm.profile_image ? (
+                                            <div className="flex items-center gap-3 rounded-lg border border-neutral-800 bg-neutral-950/80 p-2">
+                                              <img
+                                                src={supportEditForm.profile_image}
+                                                alt="Bildvorschau"
+                                                className="h-14 w-14 rounded-lg border border-neutral-800 object-cover bg-neutral-900"
+                                                loading="lazy"
+                                              />
+                                              <button
+                                                type="button"
+                                                onClick={() =>
+                                                  setSupportEditForm((prev) => ({
+                                                    ...prev,
+                                                    profile_image: "",
+                                                  }))
+                                                }
+                                                className="rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-xs text-neutral-200 hover:bg-neutral-900"
+                                              >
+                                                Bild entfernen
+                                              </button>
+                                            </div>
+                                          ) : null}
+
+                                          <ActorImageUploader
+                                            onUploaded={(url) =>
+                                              setSupportEditForm((prev) => ({
+                                                ...prev,
+                                                profile_image: url,
+                                              }))
+                                            }
+                                          />
+                                        </div>
+                                      </div>
+
+                                      <div className="flex flex-wrap gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={() => saveEditSupportInline(a.id)}
+                                          className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-black hover:bg-red-400 disabled:opacity-60"
+                                          disabled={!supportEditForm.name.trim()}
+                                        >
+                                          Speichern
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={cancelEditSupportInline}
+                                          className="rounded-lg border border-neutral-600 px-3 py-1.5 text-xs text-neutral-100 hover:bg-neutral-800"
+                                        >
+                                          Abbrechen
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center justify-between gap-3">
+                                      <div className="flex min-w-0 items-center gap-3">
+                                        {a.profile_image ? (
+                                          <img
+                                            src={a.profile_image}
+                                            alt={a.name}
+                                            className="h-10 w-10 rounded-lg border border-neutral-800 object-cover"
+                                            loading="lazy"
+                                          />
+                                        ) : (
+                                          <div className="grid h-10 w-10 place-items-center rounded-lg border border-neutral-800 bg-neutral-900 text-[10px] font-bold text-neutral-500">
+                                            IMG
+                                          </div>
+                                        )}
+
+                                        <span className="truncate text-sm font-medium text-neutral-50">
+                                          {a.name}
+                                        </span>
+                                      </div>
+
+                                      <div className="flex shrink-0 gap-1.5">
+                                        <button
+                                          type="button"
+                                          onClick={() => startEditSupportInline(a)}
+                                          className="rounded-lg border border-neutral-600 px-3 py-1.5 text-xs text-neutral-100 hover:bg-neutral-800"
+                                        >
+                                          Bearbeiten
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            handleDeleteSupportActor(a.id)
+                                          }
+                                          className="rounded-lg border border-red-600 px-3 py-1.5 text-xs text-red-200 hover:bg-red-700/80"
+                                        >
+                                          Löschen
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {activeMetaSection === "studios" && (
+                        <div className="grid gap-5 xl:grid-cols-[minmax(360px,0.9fr),minmax(0,1.35fr)]">
+                          <form
+                            onSubmit={handleAddStudio}
+                            className="space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-5"
+                          >
+                            <div className="text-base font-semibold text-neutral-50">
+                              Neues Studio anlegen
+                            </div>
+
+                            <input
+                              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                              placeholder="Studio"
+                              value={newStudioName}
+                              onChange={(e) =>
+                                setNewStudioName(e.target.value)
+                              }
+                            />
+
+                            <ActorImageUploader
+                              onUploaded={(url) => setNewStudioImage(url)}
+                            />
+
+                            <button
+                              type="submit"
+                              className="rounded-xl bg-red-500 px-4 py-2 text-sm font-semibold text-black shadow shadow-red-900/70 hover:bg-red-400 disabled:opacity-60"
+                              disabled={!newStudioName.trim()}
+                            >
+                              Speichern
+                            </button>
+                          </form>
+
+                          <div className="rounded-2xl border border-neutral-800 bg-neutral-950/95 p-5">
+                            <div className="mb-3 flex items-center justify-between">
+                              <div className="text-base font-semibold text-neutral-50">
+                                Vorhandene Studios
+                              </div>
+                              <div className="text-xs text-neutral-500">
+                                {studios.length}
+                              </div>
+                            </div>
+
+                            <div className="max-h-[560px] space-y-2 overflow-y-auto pr-1">
+                              {studios.map((s) => (
+                                <div
+                                  key={s.id}
+                                  className="rounded-xl border border-neutral-800 bg-neutral-950 px-3 py-2.5"
+                                >
+                                  {editingStudioMetaId === s.id ? (
+                                    <div className="space-y-3">
+                                      <div className="grid gap-3">
+                                        <input
+                                          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                                          placeholder="Studio"
+                                          value={studioEditForm.name}
+                                          onChange={(e) =>
+                                            setStudioEditForm((prev) => ({
+                                              ...prev,
+                                              name: e.target.value,
+                                            }))
+                                          }
+                                        />
+                                        <input
+                                          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                                          placeholder="Bild-URL"
+                                          value={studioEditForm.image_url}
+                                          onChange={(e) =>
+                                            setStudioEditForm((prev) => ({
+                                              ...prev,
+                                              image_url: e.target.value,
+                                            }))
+                                          }
+                                        />
+                                      </div>
+
+                                      <div className="flex flex-wrap gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={() => saveEditStudioInline(s.id)}
+                                          className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-black hover:bg-red-400 disabled:opacity-60"
+                                          disabled={!studioEditForm.name.trim()}
+                                        >
+                                          Speichern
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={cancelEditStudioInline}
+                                          className="rounded-lg border border-neutral-600 px-3 py-1.5 text-xs text-neutral-100 hover:bg-neutral-800"
+                                        >
+                                          Abbrechen
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center justify-between gap-3">
+                                      <div className="flex min-w-0 items-center gap-3">
+                                        {s.image_url ? (
+                                          <img
+                                            src={s.image_url}
+                                            alt={s.name}
+                                            className="h-10 w-10 rounded-lg border border-neutral-800 object-cover"
+                                            loading="lazy"
+                                          />
+                                        ) : (
+                                          <div className="grid h-10 w-10 place-items-center rounded-lg border border-neutral-800 bg-neutral-900 text-[10px] font-bold text-neutral-500">
+                                            IMG
+                                          </div>
+                                        )}
+
+                                        <span className="truncate text-sm font-medium text-neutral-50">
+                                          {s.name}
+                                        </span>
+                                      </div>
+
+                                      <div className="flex shrink-0 gap-1.5">
+                                        <button
+                                          type="button"
+                                          onClick={() => startEditStudioInline(s)}
+                                          className="rounded-lg border border-neutral-600 px-3 py-1.5 text-xs text-neutral-100 hover:bg-neutral-800"
+                                        >
+                                          Bearbeiten
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleDeleteStudio(s.id)}
+                                          className="rounded-lg border border-red-600 px-3 py-1.5 text-xs text-red-200 hover:bg-red-700/80"
+                                        >
+                                          Löschen
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {activeMetaSection === "tags" && (
+                        <div className="grid gap-5 xl:grid-cols-[minmax(360px,0.9fr),minmax(0,1.35fr)]">
+                          <form
+                            onSubmit={handleAddTag}
+                            className="space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-5"
+                          >
+                            <div className="text-base font-semibold text-neutral-50">
+                              Neuen Tag anlegen
+                            </div>
+
+                            <input
+                              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                              placeholder="Tag-Name"
+                              value={newTagName}
+                              onChange={(e) => setNewTagName(e.target.value)}
+                            />
+
+                            <button
+                              type="submit"
+                              className="rounded-xl bg-red-500 px-4 py-2 text-sm font-semibold text-black shadow shadow-red-900/70 hover:bg-red-400 disabled:opacity-60"
+                              disabled={!newTagName.trim()}
+                            >
+                              Speichern
+                            </button>
+                          </form>
+
+                          <div className="rounded-2xl border border-neutral-800 bg-neutral-950/95 p-5">
+                            <div className="mb-3 flex items-center justify-between">
+                              <div className="text-base font-semibold text-neutral-50">
+                                Vorhandene Tags
+                              </div>
+                              <div className="text-xs text-neutral-500">
+                                {tags.length}
+                              </div>
+                            </div>
+
+                            <div className="max-h-[560px] space-y-2 overflow-y-auto pr-1">
+                              {tags.map((t) => (
+                                <div
+                                  key={t.id}
+                                  className="rounded-xl border border-neutral-800 bg-neutral-950 px-3 py-2.5"
+                                >
+                                  {editingTagMetaId === t.id ? (
+                                    <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                                      <input
+                                        className="min-w-0 flex-1 rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                                        placeholder="Tag-Name"
+                                        value={tagEditName}
+                                        onChange={(e) =>
+                                          setTagEditName(e.target.value)
+                                        }
+                                      />
+
+                                      <div className="flex shrink-0 gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={() => saveEditTagInline(t.id)}
+                                          className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-black hover:bg-red-400 disabled:opacity-60"
+                                          disabled={!tagEditName.trim()}
+                                        >
+                                          Speichern
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={cancelEditTagInline}
+                                          className="rounded-lg border border-neutral-600 px-3 py-1.5 text-xs text-neutral-100 hover:bg-neutral-800"
+                                        >
+                                          Abbrechen
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center justify-between gap-3">
+                                      <span className="truncate text-sm font-medium text-neutral-50">
+                                        {t.name}
+                                      </span>
+
+                                      <div className="flex shrink-0 gap-1.5">
+                                        <button
+                                          type="button"
+                                          onClick={() => startEditTagInline(t)}
+                                          className="rounded-lg border border-neutral-600 px-3 py-1.5 text-xs text-neutral-100 hover:bg-neutral-800"
+                                        >
+                                          Bearbeiten
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleDeleteTagGlobal(t.id)}
+                                          className="rounded-lg border border-red-600 px-3 py-1.5 text-xs text-red-200 hover:bg-red-700/80"
+                                        >
+                                          Löschen
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </section>
+                  )}
+                </section>
+
+                {/* Desktop: Sidebar links von der zentrierten Hauptbox, Position ignoriert die Zentrierung */}
+                <aside className="hidden lg:flex lg:flex-col lg:space-y-4 lg:absolute lg:-left-72 lg:top-0 lg:w-64">
+                  {SidebarContent}
+                </aside>
               </div>
             )}
-          </>
+          </section>
         )}
+      </main>
+
+      {/* Changelog-Button unten rechts */}
+      <div className="fixed bottom-4 right-4 z-40">
+        <VersionHint />
       </div>
     </div>
   );
