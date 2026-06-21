@@ -437,6 +437,7 @@ const FINISH_TAGS = [
   "Cum on Pussy",
   "Cum on Tits",
   "Swallow",
+  "Facial",
 ].map(normalizeStatValue);
 
 function isHairColorTag(tag) {
@@ -495,9 +496,9 @@ function buildActorStats(actorMovies) {
   const topTagsSource = allTags.filter(
     (tag) => !isHairColorTag(tag) && !isFinishTag(tag)
   );
-  const topStudios = countValues(list.map((m) => m.studio)).slice(0, 3);
-  const topTags = countValues(topTagsSource).slice(0, 3);
-  const topFinish = countValues(finishTags).slice(0, 3);
+  const topStudios = countValues(list.map((m) => m.studio)).slice(0, 5);
+  const topTags = countValues(topTagsSource).slice(0, 5);
+  const topFinish = countValues(finishTags).slice(0, 5);
   const totalResolutions = list.filter((m) => m.resolution).length;
   const totalHairTags = hairTags.length;
   const qualityStats = withPercent(countValues(list.map((m) => m.resolution)), totalResolutions);
@@ -656,7 +657,7 @@ function ActorHero({ actor, movieCount, movies: actorMovies = [] }) {
             </div>
 
             <div className="actorHero__statsBlock">
-              <div className="actorHero__statsLabel">Top 3 Studios</div>
+              <div className="actorHero__statsLabel">Top 5 Studios</div>
               <div className="actorHero__rankList">
                 {stats.topStudios.length ? (
                   stats.topStudios.map((studio, index) => (
@@ -673,7 +674,7 @@ function ActorHero({ actor, movieCount, movies: actorMovies = [] }) {
             </div>
 
             <div className="actorHero__statsBlock">
-              <div className="actorHero__statsLabel">Top 3 Tags</div>
+              <div className="actorHero__statsLabel">Top 5 Tags</div>
               <div className="actorHero__rankList">
                 {stats.topTags.length ? (
                   stats.topTags.map((tag, index) => (
