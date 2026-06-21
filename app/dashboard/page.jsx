@@ -229,6 +229,31 @@ export default function DashboardPage() {
 
   const [newTagName, setNewTagName] = useState("");
 
+  const [editingActorMetaId, setEditingActorMetaId] = useState(null);
+  const [actorEditForm, setActorEditForm] = useState({
+    name: "",
+    profile_image: "",
+    origin: "",
+    birth_date: "",
+    iafd_url: "",
+    planetsuzy_url: "",
+  });
+
+  const [editingSupportMetaId, setEditingSupportMetaId] = useState(null);
+  const [supportEditForm, setSupportEditForm] = useState({
+    name: "",
+    profile_image: "",
+  });
+
+  const [editingStudioMetaId, setEditingStudioMetaId] = useState(null);
+  const [studioEditForm, setStudioEditForm] = useState({
+    name: "",
+    image_url: "",
+  });
+
+  const [editingTagMetaId, setEditingTagMetaId] = useState(null);
+  const [tagEditName, setTagEditName] = useState("");
+
   // Film Inputs
   const DEFAULT_FILE_BASE = "http://192.168.178.58:8080/";
 
@@ -940,6 +965,181 @@ export default function DashboardPage() {
     setTags((prev) => prev.filter((t) => t.id !== tagId));
     setSelectedTagIds((prev) => prev.filter((id) => id !== tagId));
   };
+
+
+  const startEditActorInline = (actor) => {
+    setEditingActorMetaId(actor.id);
+    setActorEditForm({
+      name: actor.name || "",
+      profile_image: actor.profile_image || "",
+      origin: actor.origin || "",
+      birth_date: actor.birth_date || "",
+      iafd_url: actor.iafd_url || "",
+      planetsuzy_url: actor.planetsuzy_url || "",
+    });
+  };
+
+  const cancelEditActorInline = () => {
+    setEditingActorMetaId(null);
+    setActorEditForm({
+      name: "",
+      profile_image: "",
+      origin: "",
+      birth_date: "",
+      iafd_url: "",
+      planetsuzy_url: "",
+    });
+  };
+
+  const saveEditActorInline = async (actorId) => {
+    const name = actorEditForm.name.trim();
+    if (!name) return;
+
+    const payload = {
+      name,
+      profile_image: actorEditForm.profile_image.trim() || null,
+      origin: actorEditForm.origin.trim() || null,
+      birth_date: actorEditForm.birth_date || null,
+      iafd_url: actorEditForm.iafd_url.trim() || null,
+      planetsuzy_url: actorEditForm.planetsuzy_url.trim() || null,
+    };
+
+    const { data, error: updateError } = await supabase
+      .from("actors")
+      .update(payload)
+      .eq("id", actorId)
+      .select("*")
+      .single();
+
+    if (updateError) {
+      console.error(updateError);
+      setError(updateError.message);
+      return;
+    }
+
+    setHauptdarsteller((prev) =>
+      prev.map((a) => (a.id === actorId ? data : a))
+    );
+    cancelEditActorInline();
+  };
+
+  const startEditSupportInline = (actor) => {
+    setEditingSupportMetaId(actor.id);
+    setSupportEditForm({
+      name: actor.name || "",
+      profile_image: actor.profile_image || "",
+    });
+  };
+
+  const cancelEditSupportInline = () => {
+    setEditingSupportMetaId(null);
+    setSupportEditForm({
+      name: "",
+      profile_image: "",
+    });
+  };
+
+  const saveEditSupportInline = async (actorId) => {
+    const name = supportEditForm.name.trim();
+    if (!name) return;
+
+    const payload = {
+      name,
+      profile_image: supportEditForm.profile_image.trim() || null,
+    };
+
+    const { data, error: updateError } = await supabase
+      .from("actors2")
+      .update(payload)
+      .eq("id", actorId)
+      .select("*")
+      .single();
+
+    if (updateError) {
+      console.error(updateError);
+      setError(updateError.message);
+      return;
+    }
+
+    setNebendarsteller((prev) =>
+      prev.map((a) => (a.id === actorId ? data : a))
+    );
+    cancelEditSupportInline();
+  };
+
+  const startEditStudioInline = (studio) => {
+    setEditingStudioMetaId(studio.id);
+    setStudioEditForm({
+      name: studio.name || "",
+      image_url: studio.image_url || "",
+    });
+  };
+
+  const cancelEditStudioInline = () => {
+    setEditingStudioMetaId(null);
+    setStudioEditForm({
+      name: "",
+      image_url: "",
+    });
+  };
+
+  const saveEditStudioInline = async (studioId) => {
+    const name = studioEditForm.name.trim();
+    if (!name) return;
+
+    const payload = {
+      name,
+      image_url: studioEditForm.image_url.trim() || null,
+    };
+
+    const { data, error: updateError } = await supabase
+      .from("studios")
+      .update(payload)
+      .eq("id", studioId)
+      .select("*")
+      .single();
+
+    if (updateError) {
+      console.error(updateError);
+      setError(updateError.message);
+      return;
+    }
+
+    setStudios((prev) => prev.map((s) => (s.id === studioId ? data : s)));
+    cancelEditStudioInline();
+  };
+
+  const startEditTagInline = (tag) => {
+    setEditingTagMetaId(tag.id);
+    setTagEditName(tag.name || "");
+  };
+
+  const cancelEditTagInline = () => {
+    setEditingTagMetaId(null);
+    setTagEditName("");
+  };
+
+  const saveEditTagInline = async (tagId) => {
+    const name = tagEditName.trim();
+    if (!name) return;
+
+    const { data, error: updateError } = await supabase
+      .from("tags")
+      .update({ name })
+      .eq("id", tagId)
+      .select("*")
+      .single();
+
+    if (updateError) {
+      console.error(updateError);
+      setError(updateError.message);
+      return;
+    }
+
+    setTags((prev) => prev.map((t) => (t.id === tagId ? data : t)));
+    cancelEditTagInline();
+  };
+
 
   // ---------------- Filme anlegen / bearbeiten / löschen ----------------
 
@@ -1823,7 +2023,7 @@ export default function DashboardPage() {
             )}
           </section>
         ) : (
-          <section className="mx-auto max-w-6xl space-y-5">
+          <section className="mx-auto max-w-7xl space-y-5">
             {error && (
               <div className="rounded-xl border border-red-700/80 bg-red-950/80 px-4 py-3 text-base text-red-100 shadow shadow-red-900/70">
                 Fehler: {error}
@@ -1843,7 +2043,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Hauptbox: EXAKT horizontal zentriert */}
-                <section className="space-y-5 max-w-4xl mx-auto w-full">
+                <section className="space-y-5 max-w-5xl mx-auto w-full">
                   {/* Tab: Neuer Film */}
                   {activeFilmSection === "new" && (
                     <div className="group rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950/95 to-black/95 p-6 shadow-2xl shadow-black/70 transition-transform duration-200">
@@ -2334,7 +2534,7 @@ export default function DashboardPage() {
                       </div>
 
                       {activeMetaSection === "mainActors" && (
-                        <div className="grid gap-5 lg:grid-cols-[minmax(0,0.95fr),minmax(0,1.2fr)]">
+                        <div className="grid gap-5 xl:grid-cols-[minmax(360px,0.9fr),minmax(0,1.35fr)]">
                           <form
                             onSubmit={handleAddActor}
                             className="space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-5"
@@ -2414,66 +2614,159 @@ export default function DashboardPage() {
                               {hauptdarsteller.map((a) => (
                                 <div
                                   key={a.id}
-                                  className="flex items-center justify-between gap-3 rounded-xl border border-neutral-800 bg-neutral-950 px-3 py-2.5"
+                                  className="rounded-xl border border-neutral-800 bg-neutral-950 px-3 py-2.5"
                                 >
-                                  <div className="flex min-w-0 items-center gap-3">
-                                    {a.profile_image ? (
-                                      <img
-                                        src={a.profile_image}
-                                        alt={a.name}
-                                        className="h-10 w-10 rounded-lg border border-neutral-800 object-cover"
-                                        loading="lazy"
-                                      />
-                                    ) : (
-                                      <div className="grid h-10 w-10 place-items-center rounded-lg border border-neutral-800 bg-neutral-900 text-[10px] font-bold text-neutral-500">
-                                        IMG
+                                  {editingActorMetaId === a.id ? (
+                                    <div className="space-y-3">
+                                      <div className="grid gap-3 md:grid-cols-2">
+                                        <input
+                                          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                                          placeholder="Name"
+                                          value={actorEditForm.name}
+                                          onChange={(e) =>
+                                            setActorEditForm((prev) => ({
+                                              ...prev,
+                                              name: e.target.value,
+                                            }))
+                                          }
+                                        />
+                                        <input
+                                          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                                          placeholder="Herkunft"
+                                          value={actorEditForm.origin}
+                                          onChange={(e) =>
+                                            setActorEditForm((prev) => ({
+                                              ...prev,
+                                              origin: e.target.value,
+                                            }))
+                                          }
+                                        />
+                                        <input
+                                          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                                          type="date"
+                                          value={actorEditForm.birth_date}
+                                          onChange={(e) =>
+                                            setActorEditForm((prev) => ({
+                                              ...prev,
+                                              birth_date: e.target.value,
+                                            }))
+                                          }
+                                        />
+                                        <input
+                                          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                                          placeholder="Bild-URL"
+                                          value={actorEditForm.profile_image}
+                                          onChange={(e) =>
+                                            setActorEditForm((prev) => ({
+                                              ...prev,
+                                              profile_image: e.target.value,
+                                            }))
+                                          }
+                                        />
+                                        <input
+                                          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                                          placeholder="IAFD URL"
+                                          value={actorEditForm.iafd_url}
+                                          onChange={(e) =>
+                                            setActorEditForm((prev) => ({
+                                              ...prev,
+                                              iafd_url: e.target.value,
+                                            }))
+                                          }
+                                        />
+                                        <input
+                                          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                                          placeholder="PlanetSuzy URL"
+                                          value={actorEditForm.planetsuzy_url}
+                                          onChange={(e) =>
+                                            setActorEditForm((prev) => ({
+                                              ...prev,
+                                              planetsuzy_url: e.target.value,
+                                            }))
+                                          }
+                                        />
                                       </div>
-                                    )}
 
-                                    <div className="min-w-0">
-                                      <div className="truncate text-sm font-medium text-neutral-50">
-                                        {a.name}
+                                      <div className="flex flex-wrap gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={() => saveEditActorInline(a.id)}
+                                          className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-black hover:bg-red-400 disabled:opacity-60"
+                                          disabled={!actorEditForm.name.trim()}
+                                        >
+                                          Speichern
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={cancelEditActorInline}
+                                          className="rounded-lg border border-neutral-600 px-3 py-1.5 text-xs text-neutral-100 hover:bg-neutral-800"
+                                        >
+                                          Abbrechen
+                                        </button>
                                       </div>
-                                      {(a.origin ||
-                                        a.birth_date ||
-                                        a.iafd_url ||
-                                        a.planetsuzy_url) && (
-                                        <div className="mt-1 flex flex-wrap gap-1.5 text-xs text-neutral-500">
-                                          {a.origin ? <span>{a.origin}</span> : null}
-                                          {a.birth_date ? (
-                                            <span>{a.birth_date}</span>
-                                          ) : null}
-                                          {a.iafd_url ? (
-                                            <span className="text-red-400">
-                                              IAFD
-                                            </span>
-                                          ) : null}
-                                          {a.planetsuzy_url ? (
-                                            <span className="text-red-400">
-                                              PlanetSuzy
-                                            </span>
-                                          ) : null}
-                                        </div>
-                                      )}
                                     </div>
-                                  </div>
+                                  ) : (
+                                    <div className="flex items-center justify-between gap-3">
+                                      <div className="flex min-w-0 items-center gap-3">
+                                        {a.profile_image ? (
+                                          <img
+                                            src={a.profile_image}
+                                            alt={a.name}
+                                            className="h-10 w-10 rounded-lg border border-neutral-800 object-cover"
+                                            loading="lazy"
+                                          />
+                                        ) : (
+                                          <div className="grid h-10 w-10 place-items-center rounded-lg border border-neutral-800 bg-neutral-900 text-[10px] font-bold text-neutral-500">
+                                            IMG
+                                          </div>
+                                        )}
 
-                                  <div className="flex shrink-0 gap-1.5">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleEditActor(a)}
-                                      className="rounded-lg border border-neutral-600 px-3 py-1.5 text-xs text-neutral-100 hover:bg-neutral-800"
-                                    >
-                                      Bearbeiten
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDeleteActor(a.id)}
-                                      className="rounded-lg border border-red-600 px-3 py-1.5 text-xs text-red-200 hover:bg-red-700/80"
-                                    >
-                                      Löschen
-                                    </button>
-                                  </div>
+                                        <div className="min-w-0">
+                                          <div className="truncate text-sm font-medium text-neutral-50">
+                                            {a.name}
+                                          </div>
+                                          {(a.origin ||
+                                            a.birth_date ||
+                                            a.iafd_url ||
+                                            a.planetsuzy_url) && (
+                                            <div className="mt-1 flex flex-wrap gap-1.5 text-xs text-neutral-500">
+                                              {a.origin ? <span>{a.origin}</span> : null}
+                                              {a.birth_date ? (
+                                                <span>{a.birth_date}</span>
+                                              ) : null}
+                                              {a.iafd_url ? (
+                                                <span className="text-red-400">
+                                                  IAFD
+                                                </span>
+                                              ) : null}
+                                              {a.planetsuzy_url ? (
+                                                <span className="text-red-400">
+                                                  PlanetSuzy
+                                                </span>
+                                              ) : null}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      <div className="flex shrink-0 gap-1.5">
+                                        <button
+                                          type="button"
+                                          onClick={() => startEditActorInline(a)}
+                                          className="rounded-lg border border-neutral-600 px-3 py-1.5 text-xs text-neutral-100 hover:bg-neutral-800"
+                                        >
+                                          Bearbeiten
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleDeleteActor(a.id)}
+                                          className="rounded-lg border border-red-600 px-3 py-1.5 text-xs text-red-200 hover:bg-red-700/80"
+                                        >
+                                          Löschen
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               ))}
                             </div>
@@ -2482,7 +2775,7 @@ export default function DashboardPage() {
                       )}
 
                       {activeMetaSection === "supportActors" && (
-                        <div className="grid gap-5 lg:grid-cols-[minmax(0,0.95fr),minmax(0,1.2fr)]">
+                        <div className="grid gap-5 xl:grid-cols-[minmax(360px,0.9fr),minmax(0,1.35fr)]">
                           <form
                             onSubmit={handleAddSupportActor}
                             className="space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-5"
@@ -2527,45 +2820,94 @@ export default function DashboardPage() {
                               {nebendarsteller.map((a) => (
                                 <div
                                   key={a.id}
-                                  className="flex items-center justify-between gap-3 rounded-xl border border-neutral-800 bg-neutral-950 px-3 py-2.5"
+                                  className="rounded-xl border border-neutral-800 bg-neutral-950 px-3 py-2.5"
                                 >
-                                  <div className="flex min-w-0 items-center gap-3">
-                                    {a.profile_image ? (
-                                      <img
-                                        src={a.profile_image}
-                                        alt={a.name}
-                                        className="h-10 w-10 rounded-lg border border-neutral-800 object-cover"
-                                        loading="lazy"
-                                      />
-                                    ) : (
-                                      <div className="grid h-10 w-10 place-items-center rounded-lg border border-neutral-800 bg-neutral-900 text-[10px] font-bold text-neutral-500">
-                                        IMG
+                                  {editingSupportMetaId === a.id ? (
+                                    <div className="space-y-3">
+                                      <div className="grid gap-3 md:grid-cols-2">
+                                        <input
+                                          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                                          placeholder="Name"
+                                          value={supportEditForm.name}
+                                          onChange={(e) =>
+                                            setSupportEditForm((prev) => ({
+                                              ...prev,
+                                              name: e.target.value,
+                                            }))
+                                          }
+                                        />
+                                        <input
+                                          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                                          placeholder="Bild-URL"
+                                          value={supportEditForm.profile_image}
+                                          onChange={(e) =>
+                                            setSupportEditForm((prev) => ({
+                                              ...prev,
+                                              profile_image: e.target.value,
+                                            }))
+                                          }
+                                        />
                                       </div>
-                                    )}
 
-                                    <span className="truncate text-sm font-medium text-neutral-50">
-                                      {a.name}
-                                    </span>
-                                  </div>
+                                      <div className="flex flex-wrap gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={() => saveEditSupportInline(a.id)}
+                                          className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-black hover:bg-red-400 disabled:opacity-60"
+                                          disabled={!supportEditForm.name.trim()}
+                                        >
+                                          Speichern
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={cancelEditSupportInline}
+                                          className="rounded-lg border border-neutral-600 px-3 py-1.5 text-xs text-neutral-100 hover:bg-neutral-800"
+                                        >
+                                          Abbrechen
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center justify-between gap-3">
+                                      <div className="flex min-w-0 items-center gap-3">
+                                        {a.profile_image ? (
+                                          <img
+                                            src={a.profile_image}
+                                            alt={a.name}
+                                            className="h-10 w-10 rounded-lg border border-neutral-800 object-cover"
+                                            loading="lazy"
+                                          />
+                                        ) : (
+                                          <div className="grid h-10 w-10 place-items-center rounded-lg border border-neutral-800 bg-neutral-900 text-[10px] font-bold text-neutral-500">
+                                            IMG
+                                          </div>
+                                        )}
 
-                                  <div className="flex shrink-0 gap-1.5">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleEditSupportActor(a)}
-                                      className="rounded-lg border border-neutral-600 px-3 py-1.5 text-xs text-neutral-100 hover:bg-neutral-800"
-                                    >
-                                      Bearbeiten
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        handleDeleteSupportActor(a.id)
-                                      }
-                                      className="rounded-lg border border-red-600 px-3 py-1.5 text-xs text-red-200 hover:bg-red-700/80"
-                                    >
-                                      Löschen
-                                    </button>
-                                  </div>
+                                        <span className="truncate text-sm font-medium text-neutral-50">
+                                          {a.name}
+                                        </span>
+                                      </div>
+
+                                      <div className="flex shrink-0 gap-1.5">
+                                        <button
+                                          type="button"
+                                          onClick={() => startEditSupportInline(a)}
+                                          className="rounded-lg border border-neutral-600 px-3 py-1.5 text-xs text-neutral-100 hover:bg-neutral-800"
+                                        >
+                                          Bearbeiten
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            handleDeleteSupportActor(a.id)
+                                          }
+                                          className="rounded-lg border border-red-600 px-3 py-1.5 text-xs text-red-200 hover:bg-red-700/80"
+                                        >
+                                          Löschen
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               ))}
                             </div>
@@ -2574,7 +2916,7 @@ export default function DashboardPage() {
                       )}
 
                       {activeMetaSection === "studios" && (
-                        <div className="grid gap-5 lg:grid-cols-[minmax(0,0.95fr),minmax(0,1.2fr)]">
+                        <div className="grid gap-5 xl:grid-cols-[minmax(360px,0.9fr),minmax(0,1.35fr)]">
                           <form
                             onSubmit={handleAddStudio}
                             className="space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-5"
@@ -2619,43 +2961,92 @@ export default function DashboardPage() {
                               {studios.map((s) => (
                                 <div
                                   key={s.id}
-                                  className="flex items-center justify-between gap-3 rounded-xl border border-neutral-800 bg-neutral-950 px-3 py-2.5"
+                                  className="rounded-xl border border-neutral-800 bg-neutral-950 px-3 py-2.5"
                                 >
-                                  <div className="flex min-w-0 items-center gap-3">
-                                    {s.image_url ? (
-                                      <img
-                                        src={s.image_url}
-                                        alt={s.name}
-                                        className="h-10 w-10 rounded-lg border border-neutral-800 object-cover"
-                                        loading="lazy"
-                                      />
-                                    ) : (
-                                      <div className="grid h-10 w-10 place-items-center rounded-lg border border-neutral-800 bg-neutral-900 text-[10px] font-bold text-neutral-500">
-                                        IMG
+                                  {editingStudioMetaId === s.id ? (
+                                    <div className="space-y-3">
+                                      <div className="grid gap-3 md:grid-cols-2">
+                                        <input
+                                          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                                          placeholder="Studio"
+                                          value={studioEditForm.name}
+                                          onChange={(e) =>
+                                            setStudioEditForm((prev) => ({
+                                              ...prev,
+                                              name: e.target.value,
+                                            }))
+                                          }
+                                        />
+                                        <input
+                                          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                                          placeholder="Bild-URL"
+                                          value={studioEditForm.image_url}
+                                          onChange={(e) =>
+                                            setStudioEditForm((prev) => ({
+                                              ...prev,
+                                              image_url: e.target.value,
+                                            }))
+                                          }
+                                        />
                                       </div>
-                                    )}
 
-                                    <span className="truncate text-sm font-medium text-neutral-50">
-                                      {s.name}
-                                    </span>
-                                  </div>
+                                      <div className="flex flex-wrap gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={() => saveEditStudioInline(s.id)}
+                                          className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-black hover:bg-red-400 disabled:opacity-60"
+                                          disabled={!studioEditForm.name.trim()}
+                                        >
+                                          Speichern
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={cancelEditStudioInline}
+                                          className="rounded-lg border border-neutral-600 px-3 py-1.5 text-xs text-neutral-100 hover:bg-neutral-800"
+                                        >
+                                          Abbrechen
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center justify-between gap-3">
+                                      <div className="flex min-w-0 items-center gap-3">
+                                        {s.image_url ? (
+                                          <img
+                                            src={s.image_url}
+                                            alt={s.name}
+                                            className="h-10 w-10 rounded-lg border border-neutral-800 object-cover"
+                                            loading="lazy"
+                                          />
+                                        ) : (
+                                          <div className="grid h-10 w-10 place-items-center rounded-lg border border-neutral-800 bg-neutral-900 text-[10px] font-bold text-neutral-500">
+                                            IMG
+                                          </div>
+                                        )}
 
-                                  <div className="flex shrink-0 gap-1.5">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleEditStudio(s)}
-                                      className="rounded-lg border border-neutral-600 px-3 py-1.5 text-xs text-neutral-100 hover:bg-neutral-800"
-                                    >
-                                      Bearbeiten
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDeleteStudio(s.id)}
-                                      className="rounded-lg border border-red-600 px-3 py-1.5 text-xs text-red-200 hover:bg-red-700/80"
-                                    >
-                                      Löschen
-                                    </button>
-                                  </div>
+                                        <span className="truncate text-sm font-medium text-neutral-50">
+                                          {s.name}
+                                        </span>
+                                      </div>
+
+                                      <div className="flex shrink-0 gap-1.5">
+                                        <button
+                                          type="button"
+                                          onClick={() => startEditStudioInline(s)}
+                                          className="rounded-lg border border-neutral-600 px-3 py-1.5 text-xs text-neutral-100 hover:bg-neutral-800"
+                                        >
+                                          Bearbeiten
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleDeleteStudio(s.id)}
+                                          className="rounded-lg border border-red-600 px-3 py-1.5 text-xs text-red-200 hover:bg-red-700/80"
+                                        >
+                                          Löschen
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               ))}
                             </div>
@@ -2664,7 +3055,7 @@ export default function DashboardPage() {
                       )}
 
                       {activeMetaSection === "tags" && (
-                        <div className="grid gap-5 lg:grid-cols-[minmax(0,0.95fr),minmax(0,1.2fr)]">
+                        <div className="grid gap-5 xl:grid-cols-[minmax(360px,0.9fr),minmax(0,1.35fr)]">
                           <form
                             onSubmit={handleAddTag}
                             className="space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-5"
@@ -2703,28 +3094,61 @@ export default function DashboardPage() {
                               {tags.map((t) => (
                                 <div
                                   key={t.id}
-                                  className="flex items-center justify-between gap-3 rounded-xl border border-neutral-800 bg-neutral-950 px-3 py-2.5"
+                                  className="rounded-xl border border-neutral-800 bg-neutral-950 px-3 py-2.5"
                                 >
-                                  <span className="truncate text-sm font-medium text-neutral-50">
-                                    {t.name}
-                                  </span>
+                                  {editingTagMetaId === t.id ? (
+                                    <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                                      <input
+                                        className="min-w-0 flex-1 rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                                        placeholder="Tag-Name"
+                                        value={tagEditName}
+                                        onChange={(e) =>
+                                          setTagEditName(e.target.value)
+                                        }
+                                      />
 
-                                  <div className="flex shrink-0 gap-1.5">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleEditTagGlobal(t)}
-                                      className="rounded-lg border border-neutral-600 px-3 py-1.5 text-xs text-neutral-100 hover:bg-neutral-800"
-                                    >
-                                      Bearbeiten
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDeleteTagGlobal(t.id)}
-                                      className="rounded-lg border border-red-600 px-3 py-1.5 text-xs text-red-200 hover:bg-red-700/80"
-                                    >
-                                      Löschen
-                                    </button>
-                                  </div>
+                                      <div className="flex shrink-0 gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={() => saveEditTagInline(t.id)}
+                                          className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-black hover:bg-red-400 disabled:opacity-60"
+                                          disabled={!tagEditName.trim()}
+                                        >
+                                          Speichern
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={cancelEditTagInline}
+                                          className="rounded-lg border border-neutral-600 px-3 py-1.5 text-xs text-neutral-100 hover:bg-neutral-800"
+                                        >
+                                          Abbrechen
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center justify-between gap-3">
+                                      <span className="truncate text-sm font-medium text-neutral-50">
+                                        {t.name}
+                                      </span>
+
+                                      <div className="flex shrink-0 gap-1.5">
+                                        <button
+                                          type="button"
+                                          onClick={() => startEditTagInline(t)}
+                                          className="rounded-lg border border-neutral-600 px-3 py-1.5 text-xs text-neutral-100 hover:bg-neutral-800"
+                                        >
+                                          Bearbeiten
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleDeleteTagGlobal(t.id)}
+                                          className="rounded-lg border border-red-600 px-3 py-1.5 text-xs text-red-200 hover:bg-red-700/80"
+                                        >
+                                          Löschen
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               ))}
                             </div>
