@@ -2706,11 +2706,13 @@ export default function HomePage() {
 
 
         
+        
         .movieDetail {
           width: 100%;
-          max-width: 1180px;
+          max-width: 1280px;
           margin: 14px auto 0;
         }
+
 
 
         
@@ -2723,8 +2725,12 @@ export default function HomePage() {
         }
 
 
+        
         .movieDetail__playerShell {
           position: relative;
+          width: min(100%, 980px);
+          margin: 0 auto;
+          aspect-ratio: 16 / 9;
           border-radius: 24px;
           border: 1px solid rgba(255, 255, 255, 0.1);
           background: rgba(255, 255, 255, 0.045);
@@ -2732,12 +2738,13 @@ export default function HomePage() {
           overflow: hidden;
         }
 
+
+        
         
         
         .movieDetail__player {
           width: 100%;
-          height: min(42vh, 390px);
-          min-height: 300px;
+          height: 100%;
           display: block;
           background: #000;
           object-fit: contain;
@@ -2745,12 +2752,13 @@ export default function HomePage() {
 
 
 
+
+        
         
         
         .movieDetail__fallback {
           width: 100%;
-          height: min(42vh, 390px);
-          min-height: 300px;
+          height: 100%;
           display: grid;
           place-items: center;
           padding: 24px;
@@ -2759,6 +2767,7 @@ export default function HomePage() {
           text-align: center;
           font-weight: 850;
         }
+
 
 
 
