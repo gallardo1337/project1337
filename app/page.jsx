@@ -300,7 +300,7 @@ function formatBirthDate(value) {
 
 function getCountryFlag(origin) {
   const value = String(origin || "").trim();
-  if (!value) return "";
+  if (!value) return null;
 
   const normalized = value
     .toLowerCase()
@@ -310,110 +310,106 @@ function getCountryFlag(origin) {
     .trim();
 
   const map = {
-    deutschland: "🇩🇪",
-    germany: "🇩🇪",
-    deutsch: "🇩🇪",
-    german: "🇩🇪",
-    de: "🇩🇪",
-    usa: "🇺🇸",
-    us: "🇺🇸",
-    unitedstates: "🇺🇸",
-    "united states": "🇺🇸",
-    amerika: "🇺🇸",
-    america: "🇺🇸",
-    kanada: "🇨🇦",
-    canada: "🇨🇦",
-    uk: "🇬🇧",
-    gb: "🇬🇧",
-    england: "🏴",
-    schottland: "🏴",
-    scotland: "🏴",
-    wales: "🏴",
-    frankreich: "🇫🇷",
-    france: "🇫🇷",
-    italien: "🇮🇹",
-    italy: "🇮🇹",
-    spanien: "🇪🇸",
-    spain: "🇪🇸",
-    portugal: "🇵🇹",
-    niederlande: "🇳🇱",
-    holland: "🇳🇱",
-    netherlands: "🇳🇱",
-    belgien: "🇧🇪",
-    belgium: "🇧🇪",
-    schweiz: "🇨🇭",
-    switzerland: "🇨🇭",
-    osterreich: "🇦🇹",
-    austria: "🇦🇹",
-    polen: "🇵🇱",
-    poland: "🇵🇱",
-    ukraine: "🇺🇦",
-    russland: "🇷🇺",
-    russia: "🇷🇺",
-    tschechien: "🇨🇿",
-    czechia: "🇨🇿",
-    "czech republic": "🇨🇿",
-    slowakei: "🇸🇰",
-    slovakia: "🇸🇰",
-    ungarland: "🇭🇺",
-    hungary: "🇭🇺",
-    rumanien: "🇷🇴",
-    romania: "🇷🇴",
-    bulgarien: "🇧🇬",
-    bulgaria: "🇧🇬",
-    kroatien: "🇭🇷",
-    croatia: "🇭🇷",
-    serbien: "🇷🇸",
-    serbia: "🇷🇸",
-    turkei: "🇹🇷",
-    turkey: "🇹🇷",
-    griechenland: "🇬🇷",
-    greece: "🇬🇷",
-    danemark: "🇩🇰",
-    denmark: "🇩🇰",
-    schweden: "🇸🇪",
-    sweden: "🇸🇪",
-    norwegen: "🇳🇴",
-    norway: "🇳🇴",
-    finnland: "🇫🇮",
-    finland: "🇫🇮",
-    irland: "🇮🇪",
-    ireland: "🇮🇪",
-    australien: "🇦🇺",
-    australia: "🇦🇺",
-    neuseeland: "🇳🇿",
-    "new zealand": "🇳🇿",
-    mexiko: "🇲🇽",
-    mexico: "🇲🇽",
-    brasilien: "🇧🇷",
-    brazil: "🇧🇷",
-    argentinien: "🇦🇷",
-    argentina: "🇦🇷",
-    kolumbien: "🇨🇴",
-    colombia: "🇨🇴",
-    japan: "🇯🇵",
-    china: "🇨🇳",
-    sudkorea: "🇰🇷",
-    korea: "🇰🇷",
-    "south korea": "🇰🇷",
-    thailand: "🇹🇭",
-    indien: "🇮🇳",
-    india: "🇮🇳",
+    deutschland: "de",
+    germany: "de",
+    deutsch: "de",
+    german: "de",
+    de: "de",
+    usa: "us",
+    us: "us",
+    unitedstates: "us",
+    "united states": "us",
+    amerika: "us",
+    america: "us",
+    kanada: "ca",
+    canada: "ca",
+    uk: "gb",
+    gb: "gb",
+    england: "gb",
+    schottland: "gb",
+    scotland: "gb",
+    wales: "gb",
+    frankreich: "fr",
+    france: "fr",
+    italien: "it",
+    italy: "it",
+    spanien: "es",
+    spain: "es",
+    portugal: "pt",
+    niederlande: "nl",
+    holland: "nl",
+    netherlands: "nl",
+    belgien: "be",
+    belgium: "be",
+    schweiz: "ch",
+    switzerland: "ch",
+    osterreich: "at",
+    austria: "at",
+    polen: "pl",
+    poland: "pl",
+    ukraine: "ua",
+    russland: "ru",
+    russia: "ru",
+    tschechien: "cz",
+    czechia: "cz",
+    "czech republic": "cz",
+    slowakei: "sk",
+    slovakia: "sk",
+    ungarland: "hu",
+    hungary: "hu",
+    rumanien: "ro",
+    romania: "ro",
+    bulgarien: "bg",
+    bulgaria: "bg",
+    kroatien: "hr",
+    croatia: "hr",
+    serbien: "rs",
+    serbia: "rs",
+    turkei: "tr",
+    turkey: "tr",
+    griechenland: "gr",
+    greece: "gr",
+    danemark: "dk",
+    denmark: "dk",
+    schweden: "se",
+    sweden: "se",
+    norwegen: "no",
+    norway: "no",
+    finnland: "fi",
+    finland: "fi",
+    irland: "ie",
+    ireland: "ie",
+    australien: "au",
+    australia: "au",
+    neuseeland: "nz",
+    "new zealand": "nz",
+    mexiko: "mx",
+    mexico: "mx",
+    brasilien: "br",
+    brazil: "br",
+    argentinien: "ar",
+    argentina: "ar",
+    kolumbien: "co",
+    colombia: "co",
+    japan: "jp",
+    china: "cn",
+    sudkorea: "kr",
+    korea: "kr",
+    "south korea": "kr",
+    thailand: "th",
+    indien: "in",
+    india: "in",
   };
 
-  if (map[normalized]) return map[normalized];
-
   const compact = normalized.replace(/\s+/g, "");
-  if (map[compact]) return map[compact];
+  const code = map[normalized] || map[compact] || (/^[a-z]{2}$/.test(compact) ? compact : "");
+  if (!code) return null;
 
-  if (/^[a-z]{2}$/.test(compact)) {
-    const code = compact.toUpperCase();
-    return String.fromCodePoint(
-      ...[...code].map((char) => 127397 + char.charCodeAt(0))
-    );
-  }
-
-  return "";
+  return {
+    code,
+    src: `https://flagcdn.com/w40/${code}.png`,
+    srcSet: `https://flagcdn.com/w80/${code}.png 2x`,
+  };
 }
 
 function ActorHero({ actor, movieCount }) {
@@ -445,9 +441,14 @@ function ActorHero({ actor, movieCount }) {
                 <span>Herkunft</span>
                 <strong className="actorHero__metaValue">
                   {originFlag ? (
-                    <span className="actorHero__flag" aria-hidden="true">
-                      {originFlag}
-                    </span>
+                    <img
+                      className="actorHero__flag"
+                      src={originFlag.src}
+                      srcSet={originFlag.srcSet}
+                      alt=""
+                      loading="lazy"
+                      aria-hidden="true"
+                    />
                   ) : null}
                   {actor.origin}
                 </strong>
@@ -2253,13 +2254,13 @@ export default function HomePage() {
         }
 
         .actorHero__flag {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          width: 22px;
-          font-size: 18px;
-          line-height: 1;
-          filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35));
+          width: 24px;
+          height: 18px;
+          flex: 0 0 24px;
+          display: block;
+          object-fit: cover;
+          border-radius: 4px;
+          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
         }
 
         .actorHero__links {
