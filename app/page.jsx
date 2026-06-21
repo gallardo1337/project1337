@@ -1997,25 +1997,42 @@ export default function HomePage() {
           border-color: rgba(229, 9, 20, 0.35);
           background: rgba(255, 255, 255, 0.07);
         }
+        .movieCard--clickable {
+          cursor: pointer;
+        }
+
+        .movieCard--clickable:focus {
+          outline: none;
+          border-color: rgba(229, 9, 20, 0.48);
+          background: rgba(255, 255, 255, 0.075);
+        }
 
         .movieCard__resIcon {
           position: absolute;
-          right: 14px;
-          bottom: 10px;
-          width: 52px;
-          height: 52px;
+          right: 8px;
+          bottom: 8px;
+          width: 46px;
+          height: 46px;
           z-index: 6;
           pointer-events: none;
           filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.55));
           opacity: 0.95;
         }
+
+        .movieCard__resIcon--noThumb {
+          right: 14px;
+          bottom: 14px;
+        }
+
         .movieCard__resIcon img {
           width: 100%;
           height: 100%;
           display: block;
         }
 
+
         .movieCard__thumb {
+          position: relative;
           width: 100%;
           aspect-ratio: 16 / 9;
           border-radius: 14px;
@@ -2102,13 +2119,6 @@ export default function HomePage() {
           min-height: 53px;
         }
 
-        .movieCard__actions {
-          margin-top: auto;
-          display: flex;
-          gap: 10px;
-          flex-wrap: wrap;
-          padding-top: 12px;
-        }
 
         .authForm {
           display: flex;
@@ -3775,24 +3785,48 @@ export default function HomePage() {
                 {movieList.map((m) => {
                   const icon = getResolutionIcon(m.resolution);
                   return (
-                    <div key={m.id} className="movieCard">
-                      {icon ? (
-                        <div
-                          className="movieCard__resIcon"
-                          title={icon.title}
-                          aria-label={icon.title}
-                        >
-                          <img src={icon.src} alt={icon.alt} />
-                        </div>
-                      ) : null}
-
+                    <div
+                      key={m.id}
+                      className={`movieCard ${m.fileUrl ? "movieCard--clickable" : ""}`}
+                      onClick={() => {
+                        if (m.fileUrl) safeOpen(m.fileUrl);
+                      }}
+                      role={m.fileUrl ? "button" : undefined}
+                      tabIndex={m.fileUrl ? 0 : undefined}
+                      onKeyDown={(e) => {
+                        if (!m.fileUrl) return;
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          safeOpen(m.fileUrl);
+                        }
+                      }}
+                      title={m.fileUrl ? "Film öffnen" : undefined}
+                    >
                       {m.thumbnailUrl ? (
-                        <div className="movieCard__thumb" title="Thumbnail">
+                        <div className="movieCard__thumb">
                           <img
                             src={m.thumbnailUrl}
                             alt={m.title || "Thumbnail"}
                             loading="lazy"
                           />
+
+                          {icon ? (
+                            <div
+                              className="movieCard__resIcon"
+                              title={icon.title}
+                              aria-label={icon.title}
+                            >
+                              <img src={icon.src} alt={icon.alt} />
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : icon ? (
+                        <div
+                          className="movieCard__resIcon movieCard__resIcon--noThumb"
+                          title={icon.title}
+                          aria-label={icon.title}
+                        >
+                          <img src={icon.src} alt={icon.alt} />
                         </div>
                       ) : null}
 
