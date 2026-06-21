@@ -346,7 +346,7 @@ function ActorHero({ actor, movieCount }) {
               >
                 <img
                   className="actorHero__linkIcon"
-                  src="/dbgpt.ico"
+                  src="/db.png"
                   alt="IAFD"
                 />
               </button>
@@ -360,7 +360,7 @@ function ActorHero({ actor, movieCount }) {
               >
                 <img
                   className="actorHero__linkIcon"
-                  src="/palmgpt.ico"
+                  src="/palm.png"
                   alt="PlanetSuzy"
                 />
               </button>
@@ -2124,28 +2124,29 @@ export default function HomePage() {
 
         .actorHero__link {
           appearance: none;
-          width: 38px;
-          height: 38px;
+          width: 58px;
+          height: 58px;
           display: inline-grid;
           place-items: center;
           border: none;
           background: transparent;
-          border-radius: 12px;
+          border-radius: 16px;
           padding: 0;
           cursor: pointer;
-          transition: transform 0.12s ease, background 0.12s ease;
+          transition: transform 0.12s ease, filter 0.12s ease;
         }
 
         .actorHero__link:hover {
-          transform: translateY(-1px);
-          background: rgba(255, 255, 255, 0.08);
+          transform: translateY(-2px) scale(1.03);
+          filter: brightness(1.08);
         }
 
         .actorHero__linkIcon {
-          width: 28px;
-          height: 28px;
+          width: 58px;
+          height: 58px;
           object-fit: contain;
           display: block;
+          pointer-events: none;
         }
 
         @media (max-width: 1200px) {
