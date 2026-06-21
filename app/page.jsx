@@ -2967,6 +2967,49 @@ export default function HomePage() {
           }
         }
 
+
+        .actorSortPlain {
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+        }
+
+        .actorSortSelect {
+          min-width: 190px;
+          height: 40px;
+          border-radius: 12px;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: rgba(255, 255, 255, 0.06);
+          color: rgba(255, 255, 255, 0.92);
+          padding: 0 12px;
+          outline: none;
+          font-size: 13px;
+          font-weight: 750;
+          cursor: pointer;
+        }
+
+        .actorSortSelect:focus {
+          border-color: rgba(229, 9, 20, 0.5);
+          background: rgba(255, 255, 255, 0.08);
+        }
+
+        .actorSortSelect option {
+          background: var(--menuBg);
+          color: rgba(255, 255, 255, 0.92);
+        }
+
+        @media (max-width: 700px) {
+          .actorSortPlain {
+            width: 100%;
+            justify-content: stretch;
+          }
+
+          .actorSortSelect {
+            width: 100%;
+            min-width: 0;
+          }
+        }
+
         .logoBtn {
           background: transparent;
           border: none;
