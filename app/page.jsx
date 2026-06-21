@@ -475,8 +475,9 @@ function buildActorStats(actorMovies) {
 
   const allTags = list.flatMap((m) => (Array.isArray(m.tags) ? m.tags : []));
   const hairTags = allTags.filter(isHairColorTag);
+  const topTagsSource = allTags.filter((tag) => !isHairColorTag(tag));
   const topStudios = countValues(list.map((m) => m.studio)).slice(0, 3);
-  const topTags = countValues(allTags).slice(0, 3);
+  const topTags = countValues(topTagsSource).slice(0, 3);
   const totalResolutions = list.filter((m) => m.resolution).length;
   const totalHairTags = hairTags.length;
   const qualityStats = withPercent(countValues(list.map((m) => m.resolution)), totalResolutions);
@@ -590,79 +591,81 @@ function ActorHero({ actor, movieCount, movies: actorMovies = [] }) {
         <div className="actorHero__stats" aria-label="Statistiken">
           <div className="actorHero__statsHead">Statistiken</div>
 
-          <div className="actorHero__statsBlock">
-            <div className="actorHero__statsLabel">Top 3 Studios</div>
-            <div className="actorHero__rankList">
-              {stats.topStudios.length ? (
-                stats.topStudios.map((studio, index) => (
-                  <div key={`${studio.value}-${index}`} className="actorHero__rankLine">
-                    <span className="actorHero__rankNo">{index + 1}</span>
-                    <strong>{studio.value}</strong>
-                    <em>{studio.count}</em>
-                  </div>
-                ))
-              ) : (
-                <div className="actorHero__emptyStat">-</div>
-              )}
+          <div className="actorHero__statsGrid">
+            <div className="actorHero__statsBlock">
+              <div className="actorHero__statsLabel">Top 3 Studios</div>
+              <div className="actorHero__rankList">
+                {stats.topStudios.length ? (
+                  stats.topStudios.map((studio, index) => (
+                    <div key={`${studio.value}-${index}`} className="actorHero__rankLine">
+                      <span className="actorHero__rankNo">{index + 1}</span>
+                      <strong>{studio.value}</strong>
+                      <em>{studio.count}</em>
+                    </div>
+                  ))
+                ) : (
+                  <div className="actorHero__emptyStat">-</div>
+                )}
+              </div>
             </div>
-          </div>
 
-          <div className="actorHero__statsBlock">
-            <div className="actorHero__statsLabel">Top 3 Tags</div>
-            <div className="actorHero__rankList">
-              {stats.topTags.length ? (
-                stats.topTags.map((tag, index) => (
-                  <div key={`${tag.value}-${index}`} className="actorHero__rankLine">
-                    <span className="actorHero__rankNo">{index + 1}</span>
-                    <strong>{tag.value}</strong>
-                    <em>{tag.count}</em>
-                  </div>
-                ))
-              ) : (
-                <div className="actorHero__emptyStat">-</div>
-              )}
+            <div className="actorHero__statsBlock">
+              <div className="actorHero__statsLabel">Top 3 Tags</div>
+              <div className="actorHero__rankList">
+                {stats.topTags.length ? (
+                  stats.topTags.map((tag, index) => (
+                    <div key={`${tag.value}-${index}`} className="actorHero__rankLine">
+                      <span className="actorHero__rankNo">{index + 1}</span>
+                      <strong>{tag.value}</strong>
+                      <em>{tag.count}</em>
+                    </div>
+                  ))
+                ) : (
+                  <div className="actorHero__emptyStat">-</div>
+                )}
+              </div>
             </div>
-          </div>
 
-          <div className="actorHero__statsBlock">
-            <div className="actorHero__statsLabel">Haarfarbe</div>
-            <div className="actorHero__qualityList">
-              {stats.hairColorStats.length ? (
-                stats.hairColorStats.map((hairColor) => (
-                  <div key={hairColor.value} className="actorHero__qualityLine">
-                    <div className="actorHero__qualityTop">
-                      <span>{hairColor.value}</span>
-                      <strong>{hairColor.percent}%</strong>
+            <div className="actorHero__statsBlock">
+              <div className="actorHero__statsLabel">Haarfarbe</div>
+              <div className="actorHero__qualityList">
+                {stats.hairColorStats.length ? (
+                  stats.hairColorStats.map((hairColor) => (
+                    <div key={hairColor.value} className="actorHero__qualityLine">
+                      <div className="actorHero__qualityTop">
+                        <span>{hairColor.value}</span>
+                        <strong>{hairColor.percent}%</strong>
+                      </div>
+                      <div className="actorHero__qualityBar" aria-hidden="true">
+                        <div style={{ width: `${hairColor.percent}%` }} />
+                      </div>
                     </div>
-                    <div className="actorHero__qualityBar" aria-hidden="true">
-                      <div style={{ width: `${hairColor.percent}%` }} />
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="actorHero__emptyStat">-</div>
-              )}
+                  ))
+                ) : (
+                  <div className="actorHero__emptyStat">-</div>
+                )}
+              </div>
             </div>
-          </div>
 
-          <div className="actorHero__statsBlock">
-            <div className="actorHero__statsLabel">Qualität</div>
-            <div className="actorHero__qualityList">
-              {stats.qualityStats.length ? (
-                stats.qualityStats.map((quality) => (
-                  <div key={quality.value} className="actorHero__qualityLine">
-                    <div className="actorHero__qualityTop">
-                      <span>{quality.value}</span>
-                      <strong>{quality.percent}%</strong>
+            <div className="actorHero__statsBlock">
+              <div className="actorHero__statsLabel">Qualität</div>
+              <div className="actorHero__qualityList">
+                {stats.qualityStats.length ? (
+                  stats.qualityStats.map((quality) => (
+                    <div key={quality.value} className="actorHero__qualityLine">
+                      <div className="actorHero__qualityTop">
+                        <span>{quality.value}</span>
+                        <strong>{quality.percent}%</strong>
+                      </div>
+                      <div className="actorHero__qualityBar" aria-hidden="true">
+                        <div style={{ width: `${quality.percent}%` }} />
+                      </div>
                     </div>
-                    <div className="actorHero__qualityBar" aria-hidden="true">
-                      <div style={{ width: `${quality.percent}%` }} />
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="actorHero__emptyStat">-</div>
-              )}
+                  ))
+                ) : (
+                  <div className="actorHero__emptyStat">-</div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -2490,15 +2493,21 @@ export default function HomePage() {
           text-transform: uppercase;
         }
 
-        .actorHero__statsBlock {
+        .actorHero__statsGrid {
           display: grid;
-          gap: 9px;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 12px;
         }
 
-        .actorHero__statsBlock + .actorHero__statsBlock {
-          margin-top: 16px;
-          padding-top: 14px;
-          border-top: 1px solid rgba(255, 255, 255, 0.08);
+        .actorHero__statsBlock {
+          min-width: 0;
+          display: grid;
+          align-content: start;
+          gap: 9px;
+          border-radius: 16px;
+          background: rgba(255, 255, 255, 0.035);
+          border: 1px solid rgba(255, 255, 255, 0.07);
+          padding: 12px;
         }
 
         .actorHero__statsLabel {
@@ -2641,9 +2650,13 @@ export default function HomePage() {
             border-radius: 16px;
           }
 
-          .actorHero__statsBlock + .actorHero__statsBlock {
-            margin-top: 14px;
-            padding-top: 12px;
+          .actorHero__statsGrid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+          }
+
+          .actorHero__statsBlock {
+            padding: 10px;
           }
 
           .actorHero__rankLine {
@@ -2677,6 +2690,12 @@ export default function HomePage() {
             display: inline-grid;
           }
         }
+        @media (max-width: 520px) {
+          .actorHero__statsGrid {
+            grid-template-columns: 1fr;
+          }
+        }
+
         @media (max-width: 420px) {
           .row {
             grid-template-columns: repeat(2, minmax(0, 1fr));
