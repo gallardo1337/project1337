@@ -92,33 +92,36 @@ function MovieDetailView({ movie, onBack }) {
           ) : null}
         </div>
 
-        {movie.year ? (
-          <div className="movieDetail__year">{movie.year}</div>
-        ) : null}
-
         <div className="movieDetail__infoLine">
           {movie.studio ? (
             <span className="movieDetail__studio">{movie.studio}</span>
           ) : null}
 
-          {movie.studio && movie.tags && movie.tags.length ? (
+          {movie.studio && movie.year ? (
+            <span className="movieDetail__dot">•</span>
+          ) : null}
+
+          {movie.year ? (
+            <span className="movieDetail__year">{movie.year}</span>
+          ) : null}
+
+          {(movie.studio || movie.year) && movie.tags && movie.tags.length ? (
             <span className="movieDetail__dot">•</span>
           ) : null}
 
           {movie.tags && movie.tags.length ? (
-            <span className="movieDetail__tags">{movie.tags.join(", ")}</span>
+            <span className="movieDetail__tags">
+              {[...movie.tags]
+                .sort((a, b) =>
+                  a.localeCompare(b, "de", { sensitivity: "base" })
+                )
+                .join(", ")}
+            </span>
           ) : null}
         </div>
       </div>
 
       <section className="movieDetail__cast">
-        <div className="sectionHead movieDetail__castHead">
-          <div>
-            <div className="sectionTitle">Darsteller</div>
-            <div className="sectionMeta">{castCount} Person(en)</div>
-          </div>
-        </div>
-
         {castCount === 0 ? (
           <EmptyState
             title="Keine Darsteller hinterlegt"
@@ -1127,7 +1130,12 @@ export default function HomePage() {
 
           const allActors = [...mainNames, ...supportNames];
           const tagNames = Array.isArray(m.tag_ids)
-            ? m.tag_ids.map((id) => tagMap[id]).filter(Boolean)
+            ? m.tag_ids
+                .map((id) => tagMap[id])
+                .filter(Boolean)
+                .sort((a, b) =>
+                  a.localeCompare(b, "de", { sensitivity: "base" })
+                )
             : [];
 
           const resolutionName = m.resolution_id
@@ -2832,13 +2840,14 @@ export default function HomePage() {
         
 
         
-        .movieDetail__year {
-          color: rgba(255, 255, 255, 0.68);
-          font-size: 22px;
-          font-weight: 900;
+                .movieDetail__year {
+          color: rgba(255, 255, 255, 0.78);
+          font-size: inherit;
+          font-weight: 850;
           font-variant-numeric: tabular-nums;
-          line-height: 1;
+          line-height: inherit;
         }
+
 
         .movieDetail__infoLine {
           display: flex;
@@ -2882,9 +2891,7 @@ export default function HomePage() {
 
 
 
-        .movieDetail__castHead {
-          margin-top: 0;
-        }
+        
 
         
         
@@ -4379,7 +4386,15 @@ export default function HomePage() {
                         <div className="kv">
                           <div className="kv__k">Tags</div>
                           <div className={`kv__v movieCard__tags`}>
-                            {m.tags && m.tags.length ? m.tags.join(", ") : "-"}
+                            {m.tags && m.tags.length
+                              ? [...m.tags]
+                                  .sort((a, b) =>
+                                    a.localeCompare(b, "de", {
+                                      sensitivity: "base",
+                                    })
+                                  )
+                                  .join(", ")
+                              : "-"}
                           </div>
                         </div>
                       </div>
