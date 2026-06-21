@@ -2652,17 +2652,51 @@ export default function DashboardPage() {
                                             }))
                                           }
                                         />
-                                        <input
-                                          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
-                                          placeholder="Bild-URL"
-                                          value={actorEditForm.profile_image}
-                                          onChange={(e) =>
-                                            setActorEditForm((prev) => ({
-                                              ...prev,
-                                              profile_image: e.target.value,
-                                            }))
-                                          }
-                                        />
+                                        <div className="space-y-2">
+                                          <input
+                                            className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                                            placeholder="Bild-URL"
+                                            value={actorEditForm.profile_image}
+                                            onChange={(e) =>
+                                              setActorEditForm((prev) => ({
+                                                ...prev,
+                                                profile_image: e.target.value,
+                                              }))
+                                            }
+                                          />
+
+                                          {actorEditForm.profile_image ? (
+                                            <div className="flex items-center gap-3 rounded-lg border border-neutral-800 bg-neutral-950/80 p-2">
+                                              <img
+                                                src={actorEditForm.profile_image}
+                                                alt="Bildvorschau"
+                                                className="h-14 w-14 rounded-lg border border-neutral-800 object-cover bg-neutral-900"
+                                                loading="lazy"
+                                              />
+                                              <button
+                                                type="button"
+                                                onClick={() =>
+                                                  setActorEditForm((prev) => ({
+                                                    ...prev,
+                                                    profile_image: "",
+                                                  }))
+                                                }
+                                                className="rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-xs text-neutral-200 hover:bg-neutral-900"
+                                              >
+                                                Bild entfernen
+                                              </button>
+                                            </div>
+                                          ) : null}
+
+                                          <ActorImageUploader
+                                            onUploaded={(url) =>
+                                              setActorEditForm((prev) => ({
+                                                ...prev,
+                                                profile_image: url,
+                                              }))
+                                            }
+                                          />
+                                        </div>
                                         <input
                                           className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
                                           placeholder="IAFD URL"
@@ -2836,17 +2870,51 @@ export default function DashboardPage() {
                                             }))
                                           }
                                         />
-                                        <input
-                                          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
-                                          placeholder="Bild-URL"
-                                          value={supportEditForm.profile_image}
-                                          onChange={(e) =>
-                                            setSupportEditForm((prev) => ({
-                                              ...prev,
-                                              profile_image: e.target.value,
-                                            }))
-                                          }
-                                        />
+                                        <div className="space-y-2">
+                                          <input
+                                            className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                                            placeholder="Bild-URL"
+                                            value={supportEditForm.profile_image}
+                                            onChange={(e) =>
+                                              setSupportEditForm((prev) => ({
+                                                ...prev,
+                                                profile_image: e.target.value,
+                                              }))
+                                            }
+                                          />
+
+                                          {supportEditForm.profile_image ? (
+                                            <div className="flex items-center gap-3 rounded-lg border border-neutral-800 bg-neutral-950/80 p-2">
+                                              <img
+                                                src={supportEditForm.profile_image}
+                                                alt="Bildvorschau"
+                                                className="h-14 w-14 rounded-lg border border-neutral-800 object-cover bg-neutral-900"
+                                                loading="lazy"
+                                              />
+                                              <button
+                                                type="button"
+                                                onClick={() =>
+                                                  setSupportEditForm((prev) => ({
+                                                    ...prev,
+                                                    profile_image: "",
+                                                  }))
+                                                }
+                                                className="rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-xs text-neutral-200 hover:bg-neutral-900"
+                                              >
+                                                Bild entfernen
+                                              </button>
+                                            </div>
+                                          ) : null}
+
+                                          <ActorImageUploader
+                                            onUploaded={(url) =>
+                                              setSupportEditForm((prev) => ({
+                                                ...prev,
+                                                profile_image: url,
+                                              }))
+                                            }
+                                          />
+                                        </div>
                                       </div>
 
                                       <div className="flex flex-wrap gap-2">
