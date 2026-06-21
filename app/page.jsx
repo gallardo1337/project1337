@@ -65,7 +65,7 @@ function AutoFitMovieDetailTitle({ title, icon }) {
       const maxTitleWidth = Math.max(
         isMobile ? 90 : 120,
         isMobile
-          ? Math.floor(rowWidth * 0.8)
+          ? Math.floor(rowWidth * 0.7)
           : Math.floor(rowWidth * 0.95 - reservedWidth)
       );
 
