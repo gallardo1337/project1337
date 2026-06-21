@@ -2359,8 +2359,8 @@ export default function HomePage() {
         .actorHero__content {
           min-width: 0;
           display: grid;
-          grid-template-columns: minmax(0, 1fr) minmax(300px, 420px);
-          gap: 22px;
+          grid-template-columns: minmax(320px, 0.78fr) minmax(560px, 720px);
+          gap: 28px;
           align-items: center;
           padding: 8px 4px;
         }
@@ -2475,13 +2475,15 @@ export default function HomePage() {
         }
 
         .actorHero__stats {
+          width: 100%;
           min-width: 0;
           align-self: center;
+          justify-self: stretch;
           border-radius: 20px;
           border: 1px solid rgba(255, 255, 255, 0.1);
           background: rgba(0, 0, 0, 0.2);
           box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
-          padding: 16px;
+          padding: 18px;
         }
 
         .actorHero__statsHead {
@@ -2496,7 +2498,7 @@ export default function HomePage() {
         .actorHero__statsGrid {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 12px;
+          gap: 14px;
         }
 
         .actorHero__statsBlock {
@@ -2507,7 +2509,7 @@ export default function HomePage() {
           border-radius: 16px;
           background: rgba(255, 255, 255, 0.035);
           border: 1px solid rgba(255, 255, 255, 0.07);
-          padding: 12px;
+          padding: 14px;
         }
 
         .actorHero__statsLabel {
@@ -2615,10 +2617,22 @@ export default function HomePage() {
             grid-template-columns: repeat(4, minmax(0, 1fr));
           }
           .actorHero__content {
-            grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
-            gap: 18px;
+            grid-template-columns: minmax(0, 1fr) minmax(430px, 520px);
+            gap: 20px;
           }
         }
+        @media (max-width: 1050px) {
+          .actorHero {
+            grid-template-columns: 180px minmax(0, 1fr);
+          }
+
+          .actorHero__content {
+            grid-template-columns: 1fr;
+            gap: 16px;
+            align-items: start;
+          }
+        }
+
         @media (max-width: 900px) {
           .row {
             grid-template-columns: repeat(4, minmax(0, 1fr));
