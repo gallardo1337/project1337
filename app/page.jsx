@@ -49,6 +49,7 @@ function AutoFitMovieDetailTitle({ title, icon }) {
 
       const rowEl = rowRef.current;
       const h1 = titleRef.current;
+      const iconEl = rowEl.querySelector(".movieDetail__titleIcon");
       const isMobile =
         typeof window !== "undefined" && window.innerWidth <= 700;
 
@@ -56,12 +57,23 @@ function AutoFitMovieDetailTitle({ title, icon }) {
       const min = isMobile ? 18 : 26;
       const step = 1;
 
+      const rowWidth = rowEl.clientWidth || 0;
+      const iconWidth = iconEl ? iconEl.getBoundingClientRect().width : 0;
+      const styles = window.getComputedStyle(rowEl);
+      const gap = parseFloat(styles.columnGap || styles.gap || "0") || 0;
+      const reservedWidth = icon ? iconWidth + gap : 0;
+      const maxTitleWidth = Math.max(
+        120,
+        Math.floor(rowWidth * 0.95 - reservedWidth)
+      );
+
+      h1.style.maxWidth = `${maxTitleWidth}px`;
       h1.style.fontSize = `${size}px`;
       h1.style.whiteSpace = "nowrap";
-      h1.style.overflow = "visible";
+      h1.style.overflow = "hidden";
       h1.style.textOverflow = "clip";
 
-      while (rowEl.scrollWidth > rowEl.clientWidth + 1 && size > min) {
+      while (h1.scrollWidth > maxTitleWidth + 1 && size > min) {
         size -= step;
         h1.style.fontSize = `${size}px`;
       }
@@ -2878,6 +2890,8 @@ export default function HomePage() {
           line-height: 0.96;
           letter-spacing: -0.05em;
           white-space: nowrap;
+          overflow: hidden;
+          text-overflow: clip;
         }
 
 
@@ -2897,6 +2911,7 @@ export default function HomePage() {
         .movieDetail__titleIcon {
           width: 58px;
           height: 58px;
+          min-width: 58px;
           flex: 0 0 58px;
           display: block;
           object-fit: contain;
