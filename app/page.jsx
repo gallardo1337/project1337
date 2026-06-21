@@ -412,7 +412,7 @@ function getCountryFlag(origin) {
   };
 }
 
-function getTopValue(values) {
+function countValues(values) {
   const counts = new Map();
   values
     .filter(Boolean)
@@ -420,43 +420,40 @@ function getTopValue(values) {
     .filter(Boolean)
     .forEach((v) => counts.set(v, (counts.get(v) || 0) + 1));
 
-  let best = null;
-  counts.forEach((count, value) => {
-    if (!best || count > best.count) best = { value, count };
-  });
-
-  return best;
+  return Array.from(counts.entries())
+    .map(([value, count]) => ({ value, count }))
+    .sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count;
+      return a.value.localeCompare(b.value, "de", { sensitivity: "base" });
+    });
 }
 
-function buildActorStats(actorMovies, fallbackMovieCount) {
+function buildActorStats(actorMovies) {
   const list = Array.isArray(actorMovies) ? actorMovies : [];
   const years = list
     .map((m) => parseInt(m.year, 10))
     .filter((y) => Number.isFinite(y));
 
-  const studios = Array.from(
-    new Set(list.map((m) => m.studio).filter(Boolean).map(String))
-  );
-
-  const resolutions = Array.from(
-    new Set(list.map((m) => m.resolution).filter(Boolean).map(String))
-  );
-
-  const topStudio = getTopValue(list.map((m) => m.studio));
-  const topResolution = getTopValue(list.map((m) => m.resolution));
-
   const minYear = years.length ? Math.min(...years) : null;
   const maxYear = years.length ? Math.max(...years) : null;
   const yearRange =
-    minYear && maxYear ? (minYear === maxYear ? String(minYear) : `${minYear}–${maxYear}`) : "-";
+    minYear && maxYear
+      ? minYear === maxYear
+        ? String(minYear)
+        : `${minYear}–${maxYear}`
+      : "-";
+
+  const topStudios = countValues(list.map((m) => m.studio)).slice(0, 3);
+  const totalResolutions = list.filter((m) => m.resolution).length;
+  const qualityStats = countValues(list.map((m) => m.resolution)).map((item) => ({
+    ...item,
+    percent: totalResolutions ? Math.round((item.count / totalResolutions) * 100) : 0,
+  }));
 
   return {
-    movieCount: list.length || fallbackMovieCount || 0,
-    studioCount: studios.length,
-    resolutionCount: resolutions.length,
     yearRange,
-    topStudio: topStudio?.value || "-",
-    topResolution: topResolution?.value || "-",
+    topStudios,
+    qualityStats,
   };
 }
 
@@ -464,9 +461,9 @@ function ActorHero({ actor, movieCount, movies: actorMovies = [] }) {
   if (!actor) return null;
 
   const originFlag = getCountryFlag(actor.origin);
-  const hasMeta = Boolean(actor.origin || actor.birthDate);
+  const stats = buildActorStats(actorMovies);
+  const hasMeta = Boolean(actor.origin || actor.birthDate || stats.yearRange !== "-");
   const hasLinks = Boolean(actor.iafdUrl || actor.planetsuzyUrl);
-  const stats = buildActorStats(actorMovies, movieCount);
 
   return (
     <section className="actorHero">
@@ -513,6 +510,13 @@ function ActorHero({ actor, movieCount, movies: actorMovies = [] }) {
                   </strong>
                 </div>
               ) : null}
+
+              {stats.yearRange !== "-" ? (
+                <div className="actorHero__metaItem">
+                  <span>Zeitraum</span>
+                  <strong className="actorHero__metaValue">{stats.yearRange}</strong>
+                </div>
+              ) : null}
             </div>
           ) : null}
 
@@ -551,33 +555,42 @@ function ActorHero({ actor, movieCount, movies: actorMovies = [] }) {
 
         <div className="actorHero__stats" aria-label="Statistiken">
           <div className="actorHero__statsHead">Statistiken</div>
-          <div className="actorHero__statsGrid">
-            <div className="actorHero__stat">
-              <span>Filme</span>
-              <strong>{stats.movieCount}</strong>
-            </div>
-            <div className="actorHero__stat">
-              <span>Studios</span>
-              <strong>{stats.studioCount || "-"}</strong>
-            </div>
-            <div className="actorHero__stat">
-              <span>Zeitraum</span>
-              <strong>{stats.yearRange}</strong>
-            </div>
-            <div className="actorHero__stat">
-              <span>Qualitäten</span>
-              <strong>{stats.resolutionCount || "-"}</strong>
+
+          <div className="actorHero__statsBlock">
+            <div className="actorHero__statsLabel">Top 3 Studios</div>
+            <div className="actorHero__rankList">
+              {stats.topStudios.length ? (
+                stats.topStudios.map((studio, index) => (
+                  <div key={`${studio.value}-${index}`} className="actorHero__rankLine">
+                    <span className="actorHero__rankNo">{index + 1}</span>
+                    <strong>{studio.value}</strong>
+                    <em>{studio.count}</em>
+                  </div>
+                ))
+              ) : (
+                <div className="actorHero__emptyStat">-</div>
+              )}
             </div>
           </div>
 
-          <div className="actorHero__statsList">
-            <div className="actorHero__statsLine">
-              <span>Top Studio</span>
-              <strong>{stats.topStudio}</strong>
-            </div>
-            <div className="actorHero__statsLine">
-              <span>Top Qualität</span>
-              <strong>{stats.topResolution}</strong>
+          <div className="actorHero__statsBlock">
+            <div className="actorHero__statsLabel">Qualität</div>
+            <div className="actorHero__qualityList">
+              {stats.qualityStats.length ? (
+                stats.qualityStats.map((quality) => (
+                  <div key={quality.value} className="actorHero__qualityLine">
+                    <div className="actorHero__qualityTop">
+                      <span>{quality.value}</span>
+                      <strong>{quality.percent}%</strong>
+                    </div>
+                    <div className="actorHero__qualityBar" aria-hidden="true">
+                      <div style={{ width: `${quality.percent}%` }} />
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="actorHero__emptyStat">-</div>
+              )}
             </div>
           </div>
         </div>
@@ -2405,22 +2418,18 @@ export default function HomePage() {
           text-transform: uppercase;
         }
 
-        .actorHero__statsGrid {
+        .actorHero__statsBlock {
           display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 10px;
+          gap: 9px;
         }
 
-        .actorHero__stat {
-          min-width: 0;
-          border-radius: 16px;
-          background: rgba(255, 255, 255, 0.055);
-          padding: 12px;
+        .actorHero__statsBlock + .actorHero__statsBlock {
+          margin-top: 16px;
+          padding-top: 14px;
+          border-top: 1px solid rgba(255, 255, 255, 0.08);
         }
 
-        .actorHero__stat span,
-        .actorHero__statsLine span {
-          display: block;
+        .actorHero__statsLabel {
           color: rgba(255, 255, 255, 0.48);
           font-size: 10px;
           font-weight: 900;
@@ -2428,43 +2437,93 @@ export default function HomePage() {
           text-transform: uppercase;
         }
 
-        .actorHero__stat strong {
-          display: block;
-          margin-top: 5px;
-          color: rgba(255, 255, 255, 0.94);
-          font-size: 21px;
-          font-weight: 950;
-          line-height: 1;
-          letter-spacing: -0.02em;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .actorHero__statsList {
-          margin-top: 12px;
+        .actorHero__rankList,
+        .actorHero__qualityList {
           display: grid;
           gap: 8px;
         }
 
-        .actorHero__statsLine {
+        .actorHero__rankLine {
           min-width: 0;
           display: grid;
-          grid-template-columns: 96px minmax(0, 1fr);
-          gap: 12px;
+          grid-template-columns: 24px minmax(0, 1fr) auto;
+          gap: 10px;
           align-items: center;
-          padding-top: 8px;
-          border-top: 1px solid rgba(255, 255, 255, 0.08);
         }
 
-        .actorHero__statsLine strong {
+        .actorHero__rankNo {
+          width: 22px;
+          height: 22px;
+          display: grid;
+          place-items: center;
+          border-radius: 999px;
+          background: rgba(229, 9, 20, 0.16);
+          color: rgba(255, 255, 255, 0.78);
+          font-size: 11px;
+          font-weight: 950;
+        }
+
+        .actorHero__rankLine strong {
           min-width: 0;
-          color: rgba(255, 255, 255, 0.88);
+          color: rgba(255, 255, 255, 0.9);
           font-size: 13px;
           font-weight: 850;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
+        }
+
+        .actorHero__rankLine em {
+          color: rgba(255, 255, 255, 0.52);
+          font-size: 12px;
+          font-style: normal;
+          font-weight: 850;
+          font-variant-numeric: tabular-nums;
+        }
+
+        .actorHero__qualityLine {
+          display: grid;
+          gap: 6px;
+        }
+
+        .actorHero__qualityTop {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          color: rgba(255, 255, 255, 0.86);
+          font-size: 13px;
+          font-weight: 850;
+        }
+
+        .actorHero__qualityTop strong {
+          color: rgba(255, 255, 255, 0.62);
+          font-size: 12px;
+          font-weight: 950;
+          font-variant-numeric: tabular-nums;
+        }
+
+        .actorHero__qualityBar {
+          height: 6px;
+          overflow: hidden;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.08);
+        }
+
+        .actorHero__qualityBar div {
+          height: 100%;
+          border-radius: inherit;
+          background: linear-gradient(
+            90deg,
+            rgba(229, 9, 20, 0.65),
+            rgba(255, 255, 255, 0.5)
+          );
+        }
+
+        .actorHero__emptyStat {
+          color: rgba(255, 255, 255, 0.52);
+          font-size: 13px;
+          font-weight: 850;
         }
 
         @media (max-width: 1200px) {
@@ -2510,21 +2569,14 @@ export default function HomePage() {
             border-radius: 16px;
           }
 
-          .actorHero__statsGrid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+          .actorHero__statsBlock + .actorHero__statsBlock {
+            margin-top: 14px;
+            padding-top: 12px;
+          }
+
+          .actorHero__rankLine {
+            grid-template-columns: 22px minmax(0, 1fr) auto;
             gap: 8px;
-          }
-
-          .actorHero__stat {
-            padding: 10px;
-          }
-
-          .actorHero__stat strong {
-            font-size: 17px;
-          }
-
-          .actorHero__statsLine {
-            grid-template-columns: 86px minmax(0, 1fr);
           }
 
           .actorHero__name {
