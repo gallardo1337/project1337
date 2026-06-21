@@ -86,12 +86,28 @@ function MovieDetailView({ movie, onBack }) {
       </div>
 
       <div className="movieDetail__titleBlock">
-        <h1 className="movieDetail__title">{movie.title || "Unbenannt"}</h1>
-        <div className="movieDetail__meta">
-          {movie.year ? <Pill>{movie.year}</Pill> : null}
-          {movie.studio ? <Pill>{movie.studio}</Pill> : null}
-          {movie.resolution ? <Pill>{movie.resolution}</Pill> : null}
-          {movie.tags && movie.tags.length ? <Pill>{movie.tags.length} Tags</Pill> : null}
+        <div className="movieDetail__titleRow">
+          <h1 className="movieDetail__title">{movie.title || "Unbenannt"}</h1>
+
+          {resolutionIcon ? (
+            <img
+              className="movieDetail__titleIcon"
+              src={resolutionIcon.src}
+              alt={resolutionIcon.alt}
+              title={resolutionIcon.title}
+            />
+          ) : null}
+        </div>
+
+        <div className="movieDetail__subRow">
+          <div className="movieDetail__meta">
+            {movie.studio ? <Pill>{movie.studio}</Pill> : null}
+            {movie.tags && movie.tags.length ? <Pill>{movie.tags.length} Tags</Pill> : null}
+          </div>
+
+          {movie.year ? (
+            <div className="movieDetail__year">{movie.year}</div>
+          ) : null}
         </div>
       </div>
 
@@ -2726,9 +2742,10 @@ export default function HomePage() {
 
 
         
+        
         .movieDetail__playerShell {
           position: relative;
-          width: min(100%, 980px);
+          width: min(100%, 1160px);
           margin: 0 auto;
           aspect-ratio: 16 / 9;
           border-radius: 24px;
@@ -2737,6 +2754,7 @@ export default function HomePage() {
           box-shadow: 0 28px 90px rgba(0, 0, 0, 0.45);
           overflow: hidden;
         }
+
 
 
         
@@ -2789,23 +2807,62 @@ export default function HomePage() {
         }
 
         
+        
         .movieDetail__titleBlock {
-          margin: 12px 0 0;
+          width: min(100%, 1160px);
+          margin: 16px auto 0;
           display: grid;
-          gap: 8px;
+          gap: 10px;
         }
+
 
 
         
+        
         .movieDetail__title {
           margin: 0;
+          min-width: 0;
           color: rgba(255, 255, 255, 0.96);
-          font-size: clamp(24px, 3vw, 40px);
+          font-size: clamp(34px, 4.2vw, 62px);
           font-weight: 950;
-          line-height: 1;
-          letter-spacing: -0.04em;
+          line-height: 0.96;
+          letter-spacing: -0.05em;
         }
 
+
+
+
+        .movieDetail__titleRow {
+          min-width: 0;
+          display: flex;
+          align-items: center;
+          gap: 14px;
+        }
+
+        .movieDetail__titleIcon {
+          width: 58px;
+          height: 58px;
+          flex: 0 0 58px;
+          display: block;
+          object-fit: contain;
+          filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.55));
+        }
+
+        .movieDetail__subRow {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 14px;
+        }
+
+        .movieDetail__year {
+          color: rgba(255, 255, 255, 0.72);
+          font-size: 20px;
+          font-weight: 900;
+          font-variant-numeric: tabular-nums;
+          text-align: right;
+          white-space: nowrap;
+        }
 
         .movieDetail__meta {
           display: flex;
@@ -2814,9 +2871,12 @@ export default function HomePage() {
         }
 
         
+        
         .movieDetail__cast {
-          margin-top: 14px;
+          width: min(100%, 1160px);
+          margin: 18px auto 0;
         }
+
 
 
         .movieDetail__castHead {
@@ -2920,7 +2980,30 @@ export default function HomePage() {
           }
 
           .movieDetail__title {
-            font-size: 30px;
+            font-size: 32px;
+          }
+
+          .movieDetail__titleBlock {
+            width: 100%;
+            margin-top: 12px;
+          }
+
+          .movieDetail__titleRow {
+            gap: 10px;
+          }
+
+          .movieDetail__titleIcon {
+            width: 44px;
+            height: 44px;
+            flex-basis: 44px;
+          }
+
+          .movieDetail__subRow {
+            align-items: flex-start;
+          }
+
+          .movieDetail__year {
+            font-size: 16px;
           }
 
           .movieDetail__resIcon {
