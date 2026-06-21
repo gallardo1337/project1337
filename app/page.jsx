@@ -777,6 +777,7 @@ export default function HomePage() {
   const [selectedActor, setSelectedActor] = useState(null);
   const [viewMode, setViewMode] = useState("actors"); // "actors" | "movies"
   const [visibleMovies, setVisibleMovies] = useState([]);
+  const [movieSort, setMovieSort] = useState("added_desc");
   const [moviesTitle, setMoviesTitle] = useState("Filme");
   const [moviesSubtitle, setMoviesSubtitle] = useState("");
   const [search, setSearch] = useState("");
@@ -961,6 +962,7 @@ export default function HomePage() {
             studio: m.studio_id ? studioMap[m.studio_id] || null : null,
             resolution: resolutionName,
             thumbnailUrl: m.thumbnail_url || null,
+            addedAt: m.created_at || m.inserted_at || m.createdAt || null,
             actors: allActors,
             tags: tagNames,
             mainActorIds: mainIds,
@@ -1168,7 +1170,45 @@ export default function HomePage() {
   ]);
 
   const showMovies = viewMode === "movies";
-  const movieList = showMovies ? visibleMovies : [];
+
+  const getAddedTime = (movie) => {
+    if (!movie?.addedAt) return 0;
+    const t = new Date(movie.addedAt).getTime();
+    return Number.isNaN(t) ? 0 : t;
+  };
+
+  const getYearValue = (movie) => {
+    const y = movie?.year ? parseInt(movie.year, 10) : 0;
+    return Number.isNaN(y) ? 0 : y;
+  };
+
+  const getQualityRank = (movie) => {
+    const r = String(movie?.resolution || "").trim().toLowerCase();
+    if (r.includes("4k")) return 3;
+    if (r.includes("fullhd") || r.includes("full hd")) return 2;
+    if (r.includes("retro")) return 1;
+    return 0;
+  };
+
+  const movieList = useMemo(() => {
+    if (!showMovies) return [];
+
+    const list = [...visibleMovies];
+
+    list.sort((a, b) => {
+      if (movieSort === "year_desc") {
+        return (getYearValue(b) - getYearValue(a)) || String(a.title || "").localeCompare(String(b.title || ""), "de", { sensitivity: "base" });
+      }
+
+      if (movieSort === "quality_desc") {
+        return (getQualityRank(b) - getQualityRank(a)) || (getAddedTime(b) - getAddedTime(a)) || String(a.title || "").localeCompare(String(b.title || ""), "de", { sensitivity: "base" });
+      }
+
+      return (getAddedTime(b) - getAddedTime(a)) || String(a.title || "").localeCompare(String(b.title || ""), "de", { sensitivity: "base" });
+    });
+
+    return list;
+  }, [showMovies, visibleMovies, movieSort]);
 
   const handleShowMoviesForActor = (actorId, actorName, actorSlug) => {
     const actor = actors.find((a) => String(a.id) === String(actorId)) || null;
@@ -1412,6 +1452,21 @@ export default function HomePage() {
     </div>
   );
 
+  const SortControl = () => (
+    <label className="sortBox">
+      <span className="sortBox__label">Sortieren</span>
+      <select
+        className="sortBox__select"
+        value={movieSort}
+        onChange={(e) => setMovieSort(e.target.value)}
+      >
+        <option value="added_desc">Zuletzt hinzugefügt</option>
+        <option value="year_desc">Erscheinungsdatum</option>
+        <option value="quality_desc">Qualität</option>
+      </select>
+    </label>
+  );
+
   return (
     <div className="nfx">
       <style jsx global>{`
@@ -1613,6 +1668,49 @@ export default function HomePage() {
           background: rgba(229, 9, 20, 0.18);
           border-color: rgba(229, 9, 20, 0.35);
           color: rgba(255, 255, 255, 0.95);
+        }
+
+        .sortBox {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          border-radius: 14px;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: rgba(255, 255, 255, 0.05);
+          padding: 4px 4px 4px 12px;
+        }
+
+        .sortBox__label {
+          color: rgba(255, 255, 255, 0.62);
+          font-size: 12px;
+          font-weight: 900;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+          white-space: nowrap;
+        }
+
+        .sortBox__select {
+          appearance: none;
+          min-width: 190px;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: rgba(0, 0, 0, 0.24);
+          color: rgba(255, 255, 255, 0.92);
+          border-radius: 10px;
+          padding: 8px 34px 8px 12px;
+          outline: none;
+          cursor: pointer;
+          font-size: 13px;
+          font-weight: 800;
+          background-image: linear-gradient(45deg, transparent 50%, rgba(255,255,255,0.78) 50%),
+            linear-gradient(135deg, rgba(255,255,255,0.78) 50%, transparent 50%);
+          background-position: calc(100% - 18px) 50%, calc(100% - 12px) 50%;
+          background-size: 6px 6px, 6px 6px;
+          background-repeat: no-repeat;
+        }
+
+        .sortBox__select option {
+          background: var(--menuBg);
+          color: rgba(255, 255, 255, 0.92);
         }
 
         .auth__label {
@@ -2852,6 +2950,16 @@ export default function HomePage() {
           .iconBtn.mOnly {
             display: inline-grid;
           }
+
+          .sortBox {
+            width: 100%;
+            justify-content: space-between;
+          }
+
+          .sortBox__select {
+            min-width: 0;
+            flex: 1;
+          }
         }
         @media (max-width: 420px) {
           .row {
@@ -3559,13 +3667,22 @@ export default function HomePage() {
             ) : null}
 
             <div className="sectionHead">
-              <div>
-                <div className="sectionTitle">{moviesTitle}</div>
-                <div className="sectionMeta">
-                  {moviesSubtitle || `${movieList.length} Film(e)`}
-                </div>
-              </div>
-              <ViewToggle />
+              {selectedActor ? (
+                <>
+                  <div />
+                  <SortControl />
+                </>
+              ) : (
+                <>
+                  <div>
+                    <div className="sectionTitle">{moviesTitle}</div>
+                    <div className="sectionMeta">
+                      {moviesSubtitle || `${movieList.length} Film(e)`}
+                    </div>
+                  </div>
+                  <ViewToggle />
+                </>
+              )}
             </div>
 
             {movieList.length === 0 ? (
