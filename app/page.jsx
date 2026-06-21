@@ -543,6 +543,8 @@ function buildActorStats(actorMovies) {
 }
 
 function ActorHero({ actor, movieCount, movies: actorMovies = [] }) {
+  const [statsOpen, setStatsOpen] = useState(false);
+
   if (!actor) return null;
 
   const originFlag = getCountryFlag(actor.origin);
@@ -638,9 +640,19 @@ function ActorHero({ actor, movieCount, movies: actorMovies = [] }) {
         </div>
 
         <div className="actorHero__stats" aria-label="Statistiken">
-          <div className="actorHero__statsHead">Statistiken</div>
+          <button
+            type="button"
+            className="actorHero__statsToggle"
+            onClick={() => setStatsOpen((value) => !value)}
+            aria-expanded={statsOpen ? "true" : "false"}
+          >
+            <span>Statistiken</span>
+            <span className="actorHero__statsToggleIcon" aria-hidden="true">
+              {statsOpen ? "−" : "+"}
+            </span>
+          </button>
 
-          <div className="actorHero__statsGrid">
+          <div className={`actorHero__statsGrid ${statsOpen ? "actorHero__statsGrid--open" : ""}`}>
             <div className="actorHero__statsBlock">
               <div className="actorHero__statsLabel">Haarfarbe</div>
               <div className="actorHero__qualityList">
@@ -2571,13 +2583,27 @@ export default function HomePage() {
           padding: 18px;
         }
 
-        .actorHero__statsHead {
-          margin-bottom: 12px;
+        .actorHero__statsToggle {
+          width: 100%;
+          margin: 0 0 12px;
+          padding: 0;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          border: none;
+          background: transparent;
           color: rgba(255, 255, 255, 0.58);
           font-size: 11px;
           font-weight: 950;
           letter-spacing: 0.14em;
           text-transform: uppercase;
+          text-align: left;
+          cursor: default;
+        }
+
+        .actorHero__statsToggleIcon {
+          display: none;
         }
 
         .actorHero__statsGrid {
@@ -2747,11 +2773,40 @@ export default function HomePage() {
           .actorHero__stats {
             padding: 12px;
             border-radius: 16px;
+            overflow-x: hidden;
+          }
+
+          .actorHero__statsToggle {
+            min-height: 38px;
+            margin-bottom: 0;
+            padding: 0 2px;
+            cursor: pointer;
+          }
+
+          .actorHero__statsToggleIcon {
+            width: 30px;
+            height: 30px;
+            display: grid;
+            place-items: center;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+            color: rgba(255, 255, 255, 0.86);
+            font-size: 18px;
+            font-weight: 900;
+            line-height: 1;
+            letter-spacing: 0;
           }
 
           .actorHero__statsGrid {
-            grid-template-columns: repeat(6, minmax(108px, 1fr));
+            display: none;
+            grid-template-columns: 1fr;
             gap: 10px;
+            margin-top: 12px;
+          }
+
+          .actorHero__statsGrid--open {
+            display: grid;
           }
 
           .actorHero__statsBlock {
