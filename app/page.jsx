@@ -347,10 +347,8 @@ function ActorHero({ actor, movieCount }) {
                 <img
                   className="actorHero__linkIcon"
                   src="/dbgpt.ico"
-                  alt=""
-                  aria-hidden="true"
+                  alt="IAFD"
                 />
-                <span>IAFD</span>
               </button>
             ) : null}
 
@@ -363,10 +361,8 @@ function ActorHero({ actor, movieCount }) {
                 <img
                   className="actorHero__linkIcon"
                   src="/palmgpt.ico"
-                  alt=""
-                  aria-hidden="true"
+                  alt="PlanetSuzy"
                 />
-                <span>PlanetSuzy</span>
               </button>
             ) : null}
           </div>
@@ -2128,33 +2124,28 @@ export default function HomePage() {
 
         .actorHero__link {
           appearance: none;
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          border: 1px solid rgba(229, 9, 20, 0.38);
-          background: rgba(229, 9, 20, 0.12);
-          color: rgba(255, 255, 255, 0.92);
-          border-radius: 999px;
-          padding: 8px 13px;
-          font-size: 13px;
-          font-weight: 850;
+          width: 38px;
+          height: 38px;
+          display: inline-grid;
+          place-items: center;
+          border: none;
+          background: transparent;
+          border-radius: 12px;
+          padding: 0;
           cursor: pointer;
-          transition: transform 0.12s ease, background 0.12s ease,
-            border-color 0.12s ease;
+          transition: transform 0.12s ease, background 0.12s ease;
         }
 
         .actorHero__link:hover {
           transform: translateY(-1px);
-          background: rgba(229, 9, 20, 0.18);
-          border-color: rgba(229, 9, 20, 0.55);
+          background: rgba(255, 255, 255, 0.08);
         }
 
         .actorHero__linkIcon {
-          width: 18px;
-          height: 18px;
+          width: 28px;
+          height: 28px;
           object-fit: contain;
           display: block;
-          flex: 0 0 auto;
         }
 
         @media (max-width: 1200px) {
