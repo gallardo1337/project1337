@@ -2873,7 +2873,7 @@ export default function HomePage() {
           width: min(100%, 1280px);
           margin: 16px auto 0;
           display: grid;
-          gap: 10px;
+          gap: 14px;
         }
 
 
@@ -2887,8 +2887,9 @@ export default function HomePage() {
           color: rgba(255, 255, 255, 0.96);
           font-size: clamp(34px, 4.2vw, 62px);
           font-weight: 950;
-          line-height: 0.96;
+          line-height: 1.08;
           letter-spacing: -0.05em;
+          padding-bottom: 4px;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: clip;
@@ -3072,6 +3073,8 @@ export default function HomePage() {
 
           .movieDetail__title {
             font-size: 32px;
+            line-height: 1.1;
+            padding-bottom: 3px;
           }
 
           .movieDetail__titleBlock {
