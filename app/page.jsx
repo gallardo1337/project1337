@@ -103,6 +103,54 @@ function AutoFitActorTitle({ text }) {
   );
 }
 
+
+function AutoFitActorHeroName({ text }) {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const fit = () => {
+      if (!ref.current) return;
+
+      const width = el.clientWidth;
+      if (!width) return;
+
+      const isMobile =
+        typeof window !== "undefined" && window.innerWidth <= 700;
+
+      let size = isMobile ? 34 : 58;
+      const min = isMobile ? 22 : 30;
+      const step = 1;
+
+      el.style.fontSize = `${size}px`;
+      el.style.whiteSpace = "nowrap";
+
+      while (el.scrollWidth > el.clientWidth + 1 && size > min) {
+        size -= step;
+        el.style.fontSize = `${size}px`;
+      }
+    };
+
+    const raf = requestAnimationFrame(fit);
+    const onResize = () => fit();
+
+    window.addEventListener("resize", onResize);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [text]);
+
+  return (
+    <h1 ref={ref} className="actorHero__name" title={text}>
+      {text}
+    </h1>
+  );
+}
+
 function FilterSection({
   title,
   subtitle,
@@ -564,7 +612,7 @@ function ActorHero({ actor, movieCount, movies: actorMovies = [] }) {
 
       <div className="actorHero__content">
         <div className="actorHero__main">
-            <h1 className="actorHero__name">{actor.name}</h1>
+            <AutoFitActorHeroName text={actor.name} />
           <div className="actorHero__count">{movieCount} Film(e)</div>
 
           {hasMeta ? (
@@ -2573,11 +2621,16 @@ export default function HomePage() {
         .actorHero__name {
           margin: 8px 0 0;
           color: rgba(255, 255, 255, 0.96);
-          font-size: clamp(30px, 5vw, 58px);
+          font-size: 58px;
           font-weight: 950;
           line-height: 0.98;
           letter-spacing: -0.05em;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: clip;
+          max-width: 100%;
         }
+
 
         .actorHero__count {
           margin-top: 10px;
@@ -2924,11 +2977,11 @@ export default function HomePage() {
             grid-template-columns: 22px minmax(0, 1fr) auto;
             gap: 8px;
           }
-
           .actorHero__name {
-            font-size: 28px;
-            letter-spacing: -0.04em;
+            font-size: 34px;
+            letter-spacing: -0.045em;
           }
+
 
           .actorHero__meta {
             margin-top: 14px;
@@ -2972,25 +3025,25 @@ export default function HomePage() {
 
         }
 
-
         .actorSortSelect {
           min-width: 190px;
           height: 40px;
           border-radius: 12px;
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          background: rgba(255, 255, 255, 0.06);
-          color: rgba(255, 255, 255, 0.92);
-          padding: 0 12px;
+          border: none;
+          background: transparent;
+          color: rgba(255, 255, 255, 0.88);
+          padding: 0 30px 0 8px;
           outline: none;
           font-size: 13px;
           font-weight: 750;
           cursor: pointer;
         }
-
         .actorSortSelect:focus {
-          border-color: rgba(229, 9, 20, 0.5);
-          background: rgba(255, 255, 255, 0.08);
+          background: transparent;
+          border: none;
+          outline: none;
         }
+
 
         .actorSortSelect option {
           background: var(--menuBg);
