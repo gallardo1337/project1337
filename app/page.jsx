@@ -412,12 +412,61 @@ function getCountryFlag(origin) {
   };
 }
 
-function ActorHero({ actor, movieCount }) {
+function getTopValue(values) {
+  const counts = new Map();
+  values
+    .filter(Boolean)
+    .map((v) => String(v).trim())
+    .filter(Boolean)
+    .forEach((v) => counts.set(v, (counts.get(v) || 0) + 1));
+
+  let best = null;
+  counts.forEach((count, value) => {
+    if (!best || count > best.count) best = { value, count };
+  });
+
+  return best;
+}
+
+function buildActorStats(actorMovies, fallbackMovieCount) {
+  const list = Array.isArray(actorMovies) ? actorMovies : [];
+  const years = list
+    .map((m) => parseInt(m.year, 10))
+    .filter((y) => Number.isFinite(y));
+
+  const studios = Array.from(
+    new Set(list.map((m) => m.studio).filter(Boolean).map(String))
+  );
+
+  const resolutions = Array.from(
+    new Set(list.map((m) => m.resolution).filter(Boolean).map(String))
+  );
+
+  const topStudio = getTopValue(list.map((m) => m.studio));
+  const topResolution = getTopValue(list.map((m) => m.resolution));
+
+  const minYear = years.length ? Math.min(...years) : null;
+  const maxYear = years.length ? Math.max(...years) : null;
+  const yearRange =
+    minYear && maxYear ? (minYear === maxYear ? String(minYear) : `${minYear}–${maxYear}`) : "-";
+
+  return {
+    movieCount: list.length || fallbackMovieCount || 0,
+    studioCount: studios.length,
+    resolutionCount: resolutions.length,
+    yearRange,
+    topStudio: topStudio?.value || "-",
+    topResolution: topResolution?.value || "-",
+  };
+}
+
+function ActorHero({ actor, movieCount, movies: actorMovies = [] }) {
   if (!actor) return null;
 
   const originFlag = getCountryFlag(actor.origin);
   const hasMeta = Boolean(actor.origin || actor.birthDate);
   const hasLinks = Boolean(actor.iafdUrl || actor.planetsuzyUrl);
+  const stats = buildActorStats(actorMovies, movieCount);
 
   return (
     <section className="actorHero">
@@ -430,78 +479,112 @@ function ActorHero({ actor, movieCount }) {
       </div>
 
       <div className="actorHero__content">
-        <div className="actorHero__eyebrow">Hauptdarsteller</div>
-        <h1 className="actorHero__name">{actor.name}</h1>
-        <div className="actorHero__count">{movieCount} Film(e)</div>
+        <div className="actorHero__main">
+          <div className="actorHero__eyebrow">Hauptdarsteller</div>
+          <h1 className="actorHero__name">{actor.name}</h1>
+          <div className="actorHero__count">{movieCount} Film(e)</div>
 
-        {hasMeta ? (
-          <div className="actorHero__meta">
-            {actor.origin ? (
-              <div className="actorHero__metaItem">
-                <span>Herkunft</span>
-                <strong className="actorHero__metaValue">
-                  {originFlag ? (
-                    <img
-                      className="actorHero__flag"
-                      src={originFlag.src}
-                      srcSet={originFlag.srcSet}
-                      alt=""
-                      loading="lazy"
-                      aria-hidden="true"
-                    />
-                  ) : null}
-                  {actor.origin}
-                </strong>
-              </div>
-            ) : null}
+          {hasMeta ? (
+            <div className="actorHero__meta">
+              {actor.origin ? (
+                <div className="actorHero__metaItem">
+                  <span>Herkunft</span>
+                  <strong className="actorHero__metaValue">
+                    {originFlag ? (
+                      <img
+                        className="actorHero__flag"
+                        src={originFlag.src}
+                        srcSet={originFlag.srcSet}
+                        alt=""
+                        loading="lazy"
+                        aria-hidden="true"
+                      />
+                    ) : null}
+                    {actor.origin}
+                  </strong>
+                </div>
+              ) : null}
 
-            {actor.birthDate ? (
-              <div className="actorHero__metaItem">
-                <span>Geboren</span>
-                <strong className="actorHero__metaValue">
-                  {formatBirthDate(actor.birthDate)}
-                </strong>
-              </div>
-            ) : null}
+              {actor.birthDate ? (
+                <div className="actorHero__metaItem">
+                  <span>Geboren</span>
+                  <strong className="actorHero__metaValue">
+                    {formatBirthDate(actor.birthDate)}
+                  </strong>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {hasLinks ? (
+            <div className="actorHero__links">
+              {actor.iafdUrl ? (
+                <button
+                  type="button"
+                  className="actorHero__link"
+                  onClick={() => safeOpen(actor.iafdUrl)}
+                >
+                  <img
+                    className="actorHero__linkIcon"
+                    src="/db.png"
+                    alt="IAFD"
+                  />
+                </button>
+              ) : null}
+
+              {actor.planetsuzyUrl ? (
+                <button
+                  type="button"
+                  className="actorHero__link"
+                  onClick={() => safeOpen(actor.planetsuzyUrl)}
+                >
+                  <img
+                    className="actorHero__linkIcon"
+                    src="/palm.png"
+                    alt="PlanetSuzy"
+                  />
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="actorHero__stats" aria-label="Statistiken">
+          <div className="actorHero__statsHead">Statistiken</div>
+          <div className="actorHero__statsGrid">
+            <div className="actorHero__stat">
+              <span>Filme</span>
+              <strong>{stats.movieCount}</strong>
+            </div>
+            <div className="actorHero__stat">
+              <span>Studios</span>
+              <strong>{stats.studioCount || "-"}</strong>
+            </div>
+            <div className="actorHero__stat">
+              <span>Zeitraum</span>
+              <strong>{stats.yearRange}</strong>
+            </div>
+            <div className="actorHero__stat">
+              <span>Qualitäten</span>
+              <strong>{stats.resolutionCount || "-"}</strong>
+            </div>
           </div>
-        ) : null}
 
-        {hasLinks ? (
-          <div className="actorHero__links">
-            {actor.iafdUrl ? (
-              <button
-                type="button"
-                className="actorHero__link"
-                onClick={() => safeOpen(actor.iafdUrl)}
-              >
-                <img
-                  className="actorHero__linkIcon"
-                  src="/db.png"
-                  alt="IAFD"
-                />
-              </button>
-            ) : null}
-
-            {actor.planetsuzyUrl ? (
-              <button
-                type="button"
-                className="actorHero__link"
-                onClick={() => safeOpen(actor.planetsuzyUrl)}
-              >
-                <img
-                  className="actorHero__linkIcon"
-                  src="/palm.png"
-                  alt="PlanetSuzy"
-                />
-              </button>
-            ) : null}
+          <div className="actorHero__statsList">
+            <div className="actorHero__statsLine">
+              <span>Top Studio</span>
+              <strong>{stats.topStudio}</strong>
+            </div>
+            <div className="actorHero__statsLine">
+              <span>Top Qualität</span>
+              <strong>{stats.topResolution}</strong>
+            </div>
           </div>
-        ) : null}
+        </div>
       </div>
     </section>
   );
 }
-
 
 export default function HomePage() {
   const router = useRouter();
@@ -2187,10 +2270,15 @@ export default function HomePage() {
 
         .actorHero__content {
           min-width: 0;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) minmax(300px, 420px);
+          gap: 22px;
+          align-items: center;
           padding: 8px 4px;
+        }
+
+        .actorHero__main {
+          min-width: 0;
         }
 
         .actorHero__eyebrow {
@@ -2298,12 +2386,97 @@ export default function HomePage() {
           pointer-events: none;
         }
 
+        .actorHero__stats {
+          min-width: 0;
+          align-self: center;
+          border-radius: 20px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: rgba(0, 0, 0, 0.2);
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+          padding: 16px;
+        }
+
+        .actorHero__statsHead {
+          margin-bottom: 12px;
+          color: rgba(255, 255, 255, 0.58);
+          font-size: 11px;
+          font-weight: 950;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+        }
+
+        .actorHero__statsGrid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 10px;
+        }
+
+        .actorHero__stat {
+          min-width: 0;
+          border-radius: 16px;
+          background: rgba(255, 255, 255, 0.055);
+          padding: 12px;
+        }
+
+        .actorHero__stat span,
+        .actorHero__statsLine span {
+          display: block;
+          color: rgba(255, 255, 255, 0.48);
+          font-size: 10px;
+          font-weight: 900;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+        }
+
+        .actorHero__stat strong {
+          display: block;
+          margin-top: 5px;
+          color: rgba(255, 255, 255, 0.94);
+          font-size: 21px;
+          font-weight: 950;
+          line-height: 1;
+          letter-spacing: -0.02em;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .actorHero__statsList {
+          margin-top: 12px;
+          display: grid;
+          gap: 8px;
+        }
+
+        .actorHero__statsLine {
+          min-width: 0;
+          display: grid;
+          grid-template-columns: 96px minmax(0, 1fr);
+          gap: 12px;
+          align-items: center;
+          padding-top: 8px;
+          border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .actorHero__statsLine strong {
+          min-width: 0;
+          color: rgba(255, 255, 255, 0.88);
+          font-size: 13px;
+          font-weight: 850;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
         @media (max-width: 1200px) {
           .row {
             grid-template-columns: repeat(5, minmax(0, 1fr));
           }
           .movieGrid {
             grid-template-columns: repeat(4, minmax(0, 1fr));
+          }
+          .actorHero__content {
+            grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+            gap: 18px;
           }
         }
         @media (max-width: 900px) {
@@ -2323,6 +2496,35 @@ export default function HomePage() {
             grid-template-columns: 120px minmax(0, 1fr);
             gap: 14px;
             padding: 12px;
+          }
+
+          .actorHero__content {
+            grid-template-columns: 1fr;
+            gap: 14px;
+            align-items: start;
+            padding: 4px 0;
+          }
+
+          .actorHero__stats {
+            padding: 12px;
+            border-radius: 16px;
+          }
+
+          .actorHero__statsGrid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+          }
+
+          .actorHero__stat {
+            padding: 10px;
+          }
+
+          .actorHero__stat strong {
+            font-size: 17px;
+          }
+
+          .actorHero__statsLine {
+            grid-template-columns: 86px minmax(0, 1fr);
           }
 
           .actorHero__name {
@@ -3053,7 +3255,7 @@ export default function HomePage() {
         ) : showMovies ? (
           <>
             {selectedActor ? (
-              <ActorHero actor={selectedActor} movieCount={movieList.length} />
+              <ActorHero actor={selectedActor} movieCount={movieList.length} movies={movieList} />
             ) : null}
 
             <div className="sectionHead">
