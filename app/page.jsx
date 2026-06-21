@@ -53,8 +53,8 @@ function AutoFitMovieDetailTitle({ title, icon }) {
       const isMobile =
         typeof window !== "undefined" && window.innerWidth <= 700;
 
-      let size = isMobile ? 32 : 62;
-      const min = isMobile ? 18 : 26;
+      let size = isMobile ? 30 : 62;
+      const min = isMobile ? 11 : 26;
       const step = 1;
 
       const rowWidth = rowEl.clientWidth || 0;
@@ -65,14 +65,14 @@ function AutoFitMovieDetailTitle({ title, icon }) {
       const maxTitleWidth = Math.max(
         isMobile ? 90 : 120,
         isMobile
-          ? Math.floor(rowWidth * 0.7)
+          ? Math.floor(rowWidth * 0.9)
           : Math.floor(rowWidth * 0.95 - reservedWidth)
       );
 
       h1.style.maxWidth = `${maxTitleWidth}px`;
       h1.style.fontSize = `${size}px`;
       h1.style.whiteSpace = "nowrap";
-      h1.style.overflow = "hidden";
+      h1.style.overflow = "visible";
       h1.style.textOverflow = "clip";
 
       while (h1.scrollWidth > maxTitleWidth + 1 && size > min) {
@@ -2893,7 +2893,7 @@ export default function HomePage() {
           letter-spacing: -0.05em;
           padding-bottom: 7px;
           white-space: nowrap;
-          overflow: hidden;
+          overflow: visible;
           text-overflow: clip;
         }
 
