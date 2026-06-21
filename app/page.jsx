@@ -3800,7 +3800,6 @@ export default function HomePage() {
                           safeOpen(m.fileUrl);
                         }
                       }}
-                      title={m.fileUrl ? "Film öffnen" : undefined}
                     >
                       {m.thumbnailUrl ? (
                         <div className="movieCard__thumb">
@@ -3861,23 +3860,6 @@ export default function HomePage() {
                             {m.tags && m.tags.length ? m.tags.join(", ") : "-"}
                           </div>
                         </div>
-                      </div>
-
-                      <div className="movieCard__actions">
-                        <button
-                          type="button"
-                          className="btn btn--primary"
-                          onClick={() => safeOpen(m.fileUrl)}
-                          title="Film starten"
-                          disabled={!m.fileUrl}
-                          style={
-                            !m.fileUrl
-                              ? { opacity: 0.6, cursor: "not-allowed" }
-                              : undefined
-                          }
-                        >
-                          Play
-                        </button>
                       </div>
                     </div>
                   );
