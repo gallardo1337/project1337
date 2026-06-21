@@ -286,11 +286,91 @@ function getResolutionIcon(resolutionName) {
   return null;
 }
 
+function formatBirthDate(value) {
+  if (!value) return "";
+  const d = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return String(value);
+  return d.toLocaleDateString("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
+function ActorHero({ actor, movieCount }) {
+  if (!actor) return null;
+
+  const hasMeta = Boolean(actor.origin || actor.birthDate);
+  const hasLinks = Boolean(actor.iafdUrl || actor.planetsuzyUrl);
+
+  return (
+    <section className="actorHero">
+      <div className="actorHero__media">
+        {actor.profileImage ? (
+          <img src={actor.profileImage} alt={actor.name} />
+        ) : (
+          <div className="actorHero__placeholder">NO IMAGE</div>
+        )}
+      </div>
+
+      <div className="actorHero__content">
+        <div className="actorHero__eyebrow">Hauptdarsteller</div>
+        <h1 className="actorHero__name">{actor.name}</h1>
+        <div className="actorHero__count">{movieCount} Film(e)</div>
+
+        {hasMeta ? (
+          <div className="actorHero__meta">
+            {actor.origin ? (
+              <div className="actorHero__metaItem">
+                <span>Herkunft</span>
+                <strong>{actor.origin}</strong>
+              </div>
+            ) : null}
+
+            {actor.birthDate ? (
+              <div className="actorHero__metaItem">
+                <span>Geboren</span>
+                <strong>{formatBirthDate(actor.birthDate)}</strong>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        {hasLinks ? (
+          <div className="actorHero__links">
+            {actor.iafdUrl ? (
+              <button
+                type="button"
+                className="actorHero__link"
+                onClick={() => safeOpen(actor.iafdUrl)}
+              >
+                IAFD
+              </button>
+            ) : null}
+
+            {actor.planetsuzyUrl ? (
+              <button
+                type="button"
+                className="actorHero__link"
+                onClick={() => safeOpen(actor.planetsuzyUrl)}
+              >
+                PlanetSuzy
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+
 export default function HomePage() {
   const router = useRouter();
 
   const [movies, setMovies] = useState([]);
   const [actors, setActors] = useState([]);
+  const [selectedActor, setSelectedActor] = useState(null);
   const [viewMode, setViewMode] = useState("actors"); // "actors" | "movies"
   const [visibleMovies, setVisibleMovies] = useState([]);
   const [moviesTitle, setMoviesTitle] = useState("Filme");
@@ -392,6 +472,7 @@ export default function HomePage() {
     if (!loggedIn) {
       setMovies([]);
       setActors([]);
+      setSelectedActor(null);
       setVisibleMovies([]);
       setLoading(false);
       return;
@@ -500,6 +581,10 @@ export default function HomePage() {
             slug: a.slug || null,
             name: a.name,
             profileImage: a.profile_image || null,
+            origin: a.origin || null,
+            birthDate: a.birth_date || null,
+            iafdUrl: a.iafd_url || null,
+            planetsuzyUrl: a.planetsuzy_url || null,
             movieCount: movieCountByActorId.get(a.id) || 0,
           }))
           .filter((a) => a.movieCount > 0)
@@ -534,18 +619,21 @@ export default function HomePage() {
               router.replace(`/?${sp.toString()}`, { scroll: false });
             }
 
+            setSelectedActor(actor);
             setMoviesTitle(actor.name);
             setMoviesSubtitle(`${subset.length} Film(e)`);
             setVisibleMovies(subset);
             setViewMode("movies");
           } else {
             setViewMode("actors");
+            setSelectedActor(null);
             setVisibleMovies([]);
             setMoviesTitle("Filme");
             setMoviesSubtitle("");
           }
         } else {
           setViewMode("actors");
+          setSelectedActor(null);
           setVisibleMovies([]);
           setMoviesTitle("Filme");
           setMoviesSubtitle("");
@@ -679,6 +767,7 @@ export default function HomePage() {
   const movieList = showMovies ? visibleMovies : [];
 
   const handleShowMoviesForActor = (actorId, actorName, actorSlug) => {
+    const actor = actors.find((a) => String(a.id) === String(actorId)) || null;
     const urlVal = actorSlug ? actorSlug : actorId;
     router.replace(`/?actor=${encodeURIComponent(urlVal)}`, { scroll: false });
 
@@ -687,6 +776,7 @@ export default function HomePage() {
         Array.isArray(movie.mainActorIds) && movie.mainActorIds.includes(actorId)
     );
     const filtered = applyAdvancedFilters(subset);
+    setSelectedActor(actor);
     setMoviesTitle(actorName);
     setMoviesSubtitle(`${filtered.length} Film(e)`);
     setVisibleMovies(filtered);
@@ -703,9 +793,11 @@ export default function HomePage() {
         setMoviesTitle("Gefilterte Filme");
         setMoviesSubtitle(`${filtered.length} Treffer`);
         setVisibleMovies(filtered);
+        setSelectedActor(null);
         setViewMode("movies");
       } else {
         router.replace("/", { scroll: false });
+        setSelectedActor(null);
         setViewMode("actors");
         setVisibleMovies([]);
         setMoviesTitle("Filme");
@@ -731,6 +823,7 @@ export default function HomePage() {
     });
 
     const filtered = applyAdvancedFilters(raw);
+    setSelectedActor(null);
     setMoviesTitle(`Suchergebnis für "${trimmed}"`);
     setMoviesSubtitle(`${filtered.length} Treffer`);
     setVisibleMovies(filtered);
@@ -740,6 +833,7 @@ export default function HomePage() {
   const handleBackToActors = () => {
     router.replace("/", { scroll: false });
     setViewMode("actors");
+    setSelectedActor(null);
     setVisibleMovies([]);
     setMoviesTitle("Filme");
     setMoviesSubtitle("");
@@ -748,6 +842,7 @@ export default function HomePage() {
   const handleSwitchToMovies = () => {
     router.replace("/", { scroll: false });
     const filtered = applyAdvancedFilters(movies);
+    setSelectedActor(null);
     setViewMode("movies");
     setMoviesTitle(hasAnyFilter ? "Gefilterte Filme" : "Filme");
     setMoviesSubtitle(`${filtered.length} Film(e)`);
@@ -803,6 +898,7 @@ export default function HomePage() {
     router.replace("/", { scroll: false });
     setLoggedIn(false);
     setSearch("");
+    setSelectedActor(null);
     setViewMode("actors");
     setVisibleMovies([]);
     setMoviesTitle("Filme");
@@ -834,6 +930,7 @@ export default function HomePage() {
     else {
       router.replace("/", { scroll: false });
       const filtered = applyAdvancedFilters(movies);
+      setSelectedActor(null);
       setViewMode("movies");
       setMoviesTitle(hasAnyFilter ? "Gefilterte Filme" : "Filme");
       setMoviesSubtitle(`${filtered.length} Treffer`);
@@ -1899,6 +1996,144 @@ export default function HomePage() {
           margin-top: 10px;
         }
 
+        .actorHero {
+          margin: 22px 0 18px;
+          display: grid;
+          grid-template-columns: 220px minmax(0, 1fr);
+          gap: 20px;
+          align-items: stretch;
+          border-radius: 24px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: linear-gradient(
+              135deg,
+              rgba(229, 9, 20, 0.18),
+              rgba(255, 255, 255, 0.05) 45%,
+              rgba(0, 0, 0, 0.2)
+            ),
+            rgba(255, 255, 255, 0.05);
+          box-shadow: 0 28px 90px rgba(0, 0, 0, 0.42);
+          padding: 16px;
+          overflow: hidden;
+        }
+
+        .actorHero__media {
+          width: 100%;
+          aspect-ratio: 3 / 4;
+          border-radius: 18px;
+          overflow: hidden;
+          background: rgba(0, 0, 0, 0.32);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          box-shadow: 0 22px 70px rgba(0, 0, 0, 0.42);
+        }
+
+        .actorHero__media img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
+        }
+
+        .actorHero__placeholder {
+          width: 100%;
+          height: 100%;
+          display: grid;
+          place-items: center;
+          color: rgba(255, 255, 255, 0.55);
+          font-weight: 900;
+          letter-spacing: 0.04em;
+        }
+
+        .actorHero__content {
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          padding: 8px 4px;
+        }
+
+        .actorHero__eyebrow {
+          color: rgba(255, 255, 255, 0.54);
+          font-size: 12px;
+          font-weight: 900;
+          letter-spacing: 0.16em;
+          text-transform: uppercase;
+        }
+
+        .actorHero__name {
+          margin: 8px 0 0;
+          color: rgba(255, 255, 255, 0.96);
+          font-size: clamp(30px, 5vw, 58px);
+          font-weight: 950;
+          line-height: 0.98;
+          letter-spacing: -0.05em;
+        }
+
+        .actorHero__count {
+          margin-top: 10px;
+          color: rgba(255, 255, 255, 0.62);
+          font-size: 13px;
+          font-weight: 800;
+        }
+
+        .actorHero__meta {
+          margin-top: 22px;
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
+
+        .actorHero__metaItem {
+          min-width: 150px;
+          border-radius: 16px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: rgba(0, 0, 0, 0.24);
+          padding: 12px 14px;
+        }
+
+        .actorHero__metaItem span {
+          display: block;
+          margin-bottom: 4px;
+          color: rgba(255, 255, 255, 0.5);
+          font-size: 11px;
+          font-weight: 900;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+        }
+
+        .actorHero__metaItem strong {
+          display: block;
+          color: rgba(255, 255, 255, 0.92);
+          font-size: 14px;
+          line-height: 1.25;
+        }
+
+        .actorHero__links {
+          margin-top: 18px;
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
+
+        .actorHero__link {
+          appearance: none;
+          border: 1px solid rgba(229, 9, 20, 0.38);
+          background: rgba(229, 9, 20, 0.12);
+          color: rgba(255, 255, 255, 0.92);
+          border-radius: 999px;
+          padding: 9px 14px;
+          font-size: 13px;
+          font-weight: 850;
+          cursor: pointer;
+          transition: transform 0.12s ease, background 0.12s ease,
+            border-color 0.12s ease;
+        }
+
+        .actorHero__link:hover {
+          transform: translateY(-1px);
+          background: rgba(229, 9, 20, 0.18);
+          border-color: rgba(229, 9, 20, 0.55);
+        }
+
         @media (max-width: 1200px) {
           .row {
             grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -1918,6 +2153,27 @@ export default function HomePage() {
           }
           .movieGrid {
             grid-template-columns: 1fr;
+          }
+
+          .actorHero {
+            grid-template-columns: 120px minmax(0, 1fr);
+            gap: 14px;
+            padding: 12px;
+          }
+
+          .actorHero__name {
+            font-size: 28px;
+            letter-spacing: -0.04em;
+          }
+
+          .actorHero__meta {
+            margin-top: 14px;
+          }
+
+          .actorHero__metaItem {
+            min-width: 0;
+            flex: 1 1 140px;
+            padding: 10px 12px;
           }
 
           .topbar {
@@ -2594,6 +2850,7 @@ export default function HomePage() {
             onClick={() => {
               router.replace("/", { scroll: false });
               setViewMode("actors");
+              setSelectedActor(null);
               setVisibleMovies([]);
               setSearch("");
             }}
@@ -2630,6 +2887,10 @@ export default function HomePage() {
           </>
         ) : showMovies ? (
           <>
+            {selectedActor ? (
+              <ActorHero actor={selectedActor} movieCount={movieList.length} />
+            ) : null}
+
             <div className="sectionHead">
               <div>
                 <div className="sectionTitle">{moviesTitle}</div>
