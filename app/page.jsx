@@ -519,6 +519,11 @@ function buildActorStats(actorMovies) {
     (tag) => !isHairColorTag(tag) && !isFinishTag(tag)
   );
   const topStudios = countValues(list.map((m) => m.studio)).slice(0, 5);
+  const topSupportingActors = countValues(
+    list.flatMap((m) =>
+      Array.isArray(m.supportingActorNames) ? m.supportingActorNames : []
+    )
+  ).slice(0, 5);
   const topTags = countValues(topTagsSource).slice(0, 5);
   const topFinish = countValues(finishTags).slice(0, 5);
   const totalResolutions = list.filter((m) => m.resolution).length;
@@ -529,6 +534,7 @@ function buildActorStats(actorMovies) {
   return {
     yearRange,
     topStudios,
+    topSupportingActors,
     topTags,
     topFinish,
     hairColorStats,
@@ -556,8 +562,7 @@ function ActorHero({ actor, movieCount, movies: actorMovies = [] }) {
 
       <div className="actorHero__content">
         <div className="actorHero__main">
-          <div className="actorHero__eyebrow">Hauptdarsteller</div>
-          <h1 className="actorHero__name">{actor.name}</h1>
+            <h1 className="actorHero__name">{actor.name}</h1>
           <div className="actorHero__count">{movieCount} Film(e)</div>
 
           {hasMeta ? (
@@ -687,6 +692,23 @@ function ActorHero({ actor, movieCount, movies: actorMovies = [] }) {
                       <span className="actorHero__rankNo">{index + 1}</span>
                       <strong>{studio.value}</strong>
                       <em>{studio.count}</em>
+                    </div>
+                  ))
+                ) : (
+                  <div className="actorHero__emptyStat">-</div>
+                )}
+              </div>
+            </div>
+
+            <div className="actorHero__statsBlock">
+              <div className="actorHero__statsLabel">Top 5 Nebendarsteller</div>
+              <div className="actorHero__rankList">
+                {stats.topSupportingActors.length ? (
+                  stats.topSupportingActors.map((supportingActor, index) => (
+                    <div key={`${supportingActor.value}-${index}`} className="actorHero__rankLine">
+                      <span className="actorHero__rankNo">{index + 1}</span>
+                      <strong>{supportingActor.value}</strong>
+                      <em>{supportingActor.count}</em>
                     </div>
                   ))
                 ) : (
@@ -2560,7 +2582,7 @@ export default function HomePage() {
 
         .actorHero__statsGrid {
           display: grid;
-          grid-template-columns: repeat(5, minmax(112px, 1fr));
+          grid-template-columns: repeat(6, minmax(108px, 1fr));
           gap: 10px;
         }
 
@@ -2728,7 +2750,7 @@ export default function HomePage() {
           }
 
           .actorHero__statsGrid {
-            grid-template-columns: repeat(5, minmax(112px, 1fr));
+            grid-template-columns: repeat(6, minmax(108px, 1fr));
             gap: 10px;
           }
 
