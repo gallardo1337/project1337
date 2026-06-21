@@ -2399,6 +2399,7 @@ export default function HomePage() {
           -webkit-line-clamp: 3;
           -webkit-box-orient: vertical;
           overflow: hidden;
+          font-weight: 400;
         }
 
 
@@ -2927,7 +2928,7 @@ export default function HomePage() {
                 .movieDetail__year {
           color: rgba(255, 255, 255, 0.78);
           font-size: inherit;
-          font-weight: 850;
+          font-weight: 400;
           font-variant-numeric: tabular-nums;
           line-height: inherit;
         }
@@ -2939,24 +2940,24 @@ export default function HomePage() {
           gap: 10px;
           flex-wrap: wrap;
           color: rgba(255, 255, 255, 0.78);
-          font-size: 18px;
-          font-weight: 800;
+          font-size: 16px;
+          font-weight: 400;
           line-height: 1.35;
         }
 
         .movieDetail__studio {
           color: rgba(255, 255, 255, 0.9);
-          font-weight: 900;
+          font-weight: 400;
         }
 
         .movieDetail__dot {
           color: rgba(255, 255, 255, 0.42);
-          font-weight: 900;
+          font-weight: 400;
         }
 
         .movieDetail__tags {
           color: rgba(255, 255, 255, 0.72);
-          font-weight: 750;
+          font-weight: 400;
         }
 
 
