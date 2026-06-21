@@ -2705,17 +2705,23 @@ export default function HomePage() {
         }
 
 
+        
         .movieDetail {
-          margin-top: 22px;
+          width: 100%;
+          max-width: 1180px;
+          margin: 14px auto 0;
         }
 
+
+        
         .movieDetail__top {
           display: flex;
           justify-content: space-between;
           align-items: center;
           gap: 12px;
-          margin-bottom: 14px;
+          margin-bottom: 10px;
         }
+
 
         .movieDetail__playerShell {
           position: relative;
@@ -2726,16 +2732,25 @@ export default function HomePage() {
           overflow: hidden;
         }
 
+        
+        
         .movieDetail__player {
           width: 100%;
-          aspect-ratio: 16 / 9;
+          height: min(42vh, 390px);
+          min-height: 300px;
           display: block;
           background: #000;
+          object-fit: contain;
         }
 
+
+
+        
+        
         .movieDetail__fallback {
           width: 100%;
-          aspect-ratio: 16 / 9;
+          height: min(42vh, 390px);
+          min-height: 300px;
           display: grid;
           place-items: center;
           padding: 24px;
@@ -2744,6 +2759,8 @@ export default function HomePage() {
           text-align: center;
           font-weight: 850;
         }
+
+
 
         .movieDetail__resIcon {
           position: absolute;
@@ -2762,20 +2779,24 @@ export default function HomePage() {
           display: block;
         }
 
+        
         .movieDetail__titleBlock {
-          margin: 22px 0 0;
+          margin: 12px 0 0;
           display: grid;
-          gap: 10px;
+          gap: 8px;
         }
 
+
+        
         .movieDetail__title {
           margin: 0;
           color: rgba(255, 255, 255, 0.96);
-          font-size: clamp(28px, 4vw, 54px);
+          font-size: clamp(24px, 3vw, 40px);
           font-weight: 950;
           line-height: 1;
-          letter-spacing: -0.045em;
+          letter-spacing: -0.04em;
         }
+
 
         .movieDetail__meta {
           display: flex;
@@ -2783,28 +2804,34 @@ export default function HomePage() {
           flex-wrap: wrap;
         }
 
+        
         .movieDetail__cast {
-          margin-top: 26px;
+          margin-top: 14px;
         }
+
 
         .movieDetail__castHead {
           margin-top: 0;
         }
 
+        
         .movieCastGrid {
           display: grid;
-          grid-template-columns: repeat(8, minmax(0, 1fr));
-          gap: 12px;
+          grid-template-columns: repeat(10, minmax(0, 1fr));
+          gap: 10px;
         }
 
+
+        
         .movieCastCard {
           min-width: 0;
-          border-radius: 16px;
+          border-radius: 14px;
           overflow: hidden;
           border: 1px solid rgba(255, 255, 255, 0.1);
           background: rgba(255, 255, 255, 0.05);
-          box-shadow: 0 18px 50px rgba(0, 0, 0, 0.32);
+          box-shadow: 0 14px 38px rgba(0, 0, 0, 0.28);
         }
+
 
         .movieCastCard__img {
           width: 100%;
@@ -2831,19 +2858,23 @@ export default function HomePage() {
           letter-spacing: 0.04em;
         }
 
+        
         .movieCastCard__body {
-          padding: 9px 10px 10px;
+          padding: 7px 8px 8px;
         }
 
+
+        
         .movieCastCard__name {
           color: rgba(255, 255, 255, 0.9);
-          font-size: 13px;
+          font-size: 12px;
           font-weight: 850;
-          line-height: 1.15;
+          line-height: 1.1;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
         }
+
 
         .movieCastCard__type {
           margin-top: 4px;
