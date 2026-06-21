@@ -2070,7 +2070,7 @@ export default function HomePage() {
           -webkit-line-clamp: 3;
           -webkit-box-orient: vertical;
           overflow: hidden;
-          min-height: 0;
+          min-height: 56px;
         }
 
         .movieCard__year {
@@ -2081,8 +2081,7 @@ export default function HomePage() {
           padding-top: 2px;
         }
 
-        .movieCard__meta {
-          margin-top: 10px;
+        Jpx;
           display: grid;
           gap: 8px;
         }
