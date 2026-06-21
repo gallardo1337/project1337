@@ -960,9 +960,10 @@ export default function HomePage() {
           position: sticky;
           top: 0;
           z-index: 50;
+          min-height: 64px;
           padding: 10px 18px;
           display: grid;
-          grid-template-columns: 1fr minmax(0, 860px) 1fr;
+          grid-template-columns: minmax(0, 1fr) minmax(0, 860px) minmax(0, 1fr);
           align-items: center;
           gap: 12px;
           background: rgba(0, 0, 0, 0.55);
@@ -972,6 +973,7 @@ export default function HomePage() {
         .topbar__mid {
           justify-self: center;
           width: 100%;
+          min-width: 0;
           display: flex;
           justify-content: center;
           align-items: center;
@@ -985,13 +987,18 @@ export default function HomePage() {
 
         .input {
           width: 100%;
+          height: 42px;
+          min-height: 42px;
+          max-height: 42px;
           display: flex;
           align-items: center;
           gap: 10px;
           background: rgba(255, 255, 255, 0.06);
           border: 1px solid rgba(255, 255, 255, 0.12);
           border-radius: 999px;
-          padding: 10px 14px;
+          padding: 0 14px;
+          overflow: hidden;
+          min-width: 0;
           transition: border-color 0.18s ease, background 0.18s ease;
         }
         .input:focus-within {
@@ -1004,12 +1011,16 @@ export default function HomePage() {
           opacity: 0.8;
         }
         .input input {
+          flex: 1;
+          min-width: 0;
           width: 100%;
+          height: 100%;
           outline: none;
           border: none;
           background: transparent;
           color: var(--text);
           font-size: 14px;
+          line-height: 42px;
         }
         .input input::placeholder {
           color: rgba(255, 255, 255, 0.45);
@@ -1182,6 +1193,7 @@ export default function HomePage() {
           position: relative;
           width: 100%;
           max-width: 860px;
+          min-width: 0;
           display: grid;
           gap: 10px;
         }
@@ -1972,17 +1984,6 @@ export default function HomePage() {
                   placeholder="Suchen: Titel, Studio, Darsteller, Tags…"
                   autoComplete="off"
                 />
-
-                {search ? (
-                  <button
-                    type="button"
-                    className="btn btn--ghost"
-                    onClick={() => handleSearchChange("")}
-                    title="Suche löschen"
-                  >
-                    Reset
-                  </button>
-                ) : null}
               </div>
 
               {filtersOpen && (
@@ -2366,17 +2367,6 @@ export default function HomePage() {
                     placeholder="Suchen: Titel, Studio, Darsteller, Tags…"
                     autoComplete="off"
                   />
-
-                  {search ? (
-                    <button
-                      type="button"
-                      className="btn btn--ghost"
-                      onClick={() => handleSearchChange("")}
-                      title="Suche löschen"
-                    >
-                      Reset
-                    </button>
-                  ) : null}
                 </div>
 
                 {filtersOpen && (
