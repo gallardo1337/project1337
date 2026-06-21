@@ -2118,20 +2118,21 @@ export default function HomePage() {
         .actorHero__links {
           margin-top: 18px;
           display: flex;
-          gap: 10px;
+          gap: 2px;
           flex-wrap: wrap;
         }
 
         .actorHero__link {
           appearance: none;
-          width: 58px;
-          height: 58px;
+          width: 54px;
+          height: 54px;
           display: inline-grid;
           place-items: center;
           border: none;
           background: transparent;
           border-radius: 16px;
           padding: 0;
+          margin: 0;
           cursor: pointer;
           transition: transform 0.12s ease, filter 0.12s ease;
         }
@@ -2142,8 +2143,8 @@ export default function HomePage() {
         }
 
         .actorHero__linkIcon {
-          width: 58px;
-          height: 58px;
+          width: 54px;
+          height: 54px;
           object-fit: contain;
           display: block;
           pointer-events: none;
