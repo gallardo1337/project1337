@@ -412,6 +412,29 @@ function getCountryFlag(origin) {
   };
 }
 
+function normalizeStatValue(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+const HAIR_COLOR_TAGS = [
+  "Blonde",
+  "Brunette",
+  "Dark Hair",
+  "Red Hair",
+].map(normalizeStatValue);
+
+function isHairColorTag(tag) {
+  const normalized = normalizeStatValue(tag);
+  if (!normalized) return false;
+  return HAIR_COLOR_TAGS.includes(normalized);
+}
+
 function countValues(values) {
   const counts = new Map();
   values
@@ -426,6 +449,13 @@ function countValues(values) {
       if (b.count !== a.count) return b.count - a.count;
       return a.value.localeCompare(b.value, "de", { sensitivity: "base" });
     });
+}
+
+function withPercent(items, total) {
+  return items.map((item) => ({
+    ...item,
+    percent: total ? Math.round((item.count / total) * 100) : 0,
+  }));
 }
 
 function buildActorStats(actorMovies) {
@@ -443,16 +473,20 @@ function buildActorStats(actorMovies) {
         : `${minYear}–${maxYear}`
       : "-";
 
+  const allTags = list.flatMap((m) => (Array.isArray(m.tags) ? m.tags : []));
+  const hairTags = allTags.filter(isHairColorTag);
   const topStudios = countValues(list.map((m) => m.studio)).slice(0, 3);
+  const topTags = countValues(allTags).slice(0, 3);
   const totalResolutions = list.filter((m) => m.resolution).length;
-  const qualityStats = countValues(list.map((m) => m.resolution)).map((item) => ({
-    ...item,
-    percent: totalResolutions ? Math.round((item.count / totalResolutions) * 100) : 0,
-  }));
+  const totalHairTags = hairTags.length;
+  const qualityStats = withPercent(countValues(list.map((m) => m.resolution)), totalResolutions);
+  const hairColorStats = withPercent(countValues(hairTags), totalHairTags);
 
   return {
     yearRange,
     topStudios,
+    topTags,
+    hairColorStats,
     qualityStats,
   };
 }
@@ -565,6 +599,44 @@ function ActorHero({ actor, movieCount, movies: actorMovies = [] }) {
                     <span className="actorHero__rankNo">{index + 1}</span>
                     <strong>{studio.value}</strong>
                     <em>{studio.count}</em>
+                  </div>
+                ))
+              ) : (
+                <div className="actorHero__emptyStat">-</div>
+              )}
+            </div>
+          </div>
+
+          <div className="actorHero__statsBlock">
+            <div className="actorHero__statsLabel">Top 3 Tags</div>
+            <div className="actorHero__rankList">
+              {stats.topTags.length ? (
+                stats.topTags.map((tag, index) => (
+                  <div key={`${tag.value}-${index}`} className="actorHero__rankLine">
+                    <span className="actorHero__rankNo">{index + 1}</span>
+                    <strong>{tag.value}</strong>
+                    <em>{tag.count}</em>
+                  </div>
+                ))
+              ) : (
+                <div className="actorHero__emptyStat">-</div>
+              )}
+            </div>
+          </div>
+
+          <div className="actorHero__statsBlock">
+            <div className="actorHero__statsLabel">Haarfarbe</div>
+            <div className="actorHero__qualityList">
+              {stats.hairColorStats.length ? (
+                stats.hairColorStats.map((hairColor) => (
+                  <div key={hairColor.value} className="actorHero__qualityLine">
+                    <div className="actorHero__qualityTop">
+                      <span>{hairColor.value}</span>
+                      <strong>{hairColor.percent}%</strong>
+                    </div>
+                    <div className="actorHero__qualityBar" aria-hidden="true">
+                      <div style={{ width: `${hairColor.percent}%` }} />
+                    </div>
                   </div>
                 ))
               ) : (
