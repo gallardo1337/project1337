@@ -3079,11 +3079,17 @@ export default function HomePage() {
             padding-bottom: 6px;
           }
 
+          .movieDetail__titleRow {
+            align-items: flex-end;
+          }
+
           .movieDetail__titleIcon {
-            width: 34px;
-            height: 34px;
-            min-width: 34px;
-            flex: 0 0 34px;
+            width: 28px;
+            height: 28px;
+            min-width: 28px;
+            flex: 0 0 28px;
+            align-self: flex-end;
+            margin-left: auto;
           }
 
           .movieDetail__titleBlock {
