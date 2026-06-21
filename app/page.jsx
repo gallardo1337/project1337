@@ -18,7 +18,7 @@ function EmptyState({ title, subtitle, action }) {
   );
 }
 
-function MovieCastCard({ person, type }) {
+function MovieCastCard({ person }) {
   return (
     <div className="movieCastCard" title={person.name}>
       <div className="movieCastCard__img">
@@ -30,7 +30,6 @@ function MovieCastCard({ person, type }) {
       </div>
       <div className="movieCastCard__body">
         <div className="movieCastCard__name">{person.name}</div>
-        <div className="movieCastCard__type">{type}</div>
       </div>
     </div>
   );
@@ -93,14 +92,21 @@ function MovieDetailView({ movie, onBack }) {
           ) : null}
         </div>
 
-        <div className="movieDetail__subRow">
-          <div className="movieDetail__meta">
-            {movie.studio ? <Pill>{movie.studio}</Pill> : null}
-            {movie.tags && movie.tags.length ? <Pill>{movie.tags.length} Tags</Pill> : null}
-          </div>
+        {movie.year ? (
+          <div className="movieDetail__year">{movie.year}</div>
+        ) : null}
 
-          {movie.year ? (
-            <div className="movieDetail__year">{movie.year}</div>
+        <div className="movieDetail__infoLine">
+          {movie.studio ? (
+            <span className="movieDetail__studio">{movie.studio}</span>
+          ) : null}
+
+          {movie.studio && movie.tags && movie.tags.length ? (
+            <span className="movieDetail__dot">•</span>
+          ) : null}
+
+          {movie.tags && movie.tags.length ? (
+            <span className="movieDetail__tags">{movie.tags.join(", ")}</span>
           ) : null}
         </div>
       </div>
@@ -2823,21 +2829,43 @@ export default function HomePage() {
           filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.55));
         }
 
-        .movieDetail__subRow {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 14px;
-        }
+        
 
+        
         .movieDetail__year {
-          color: rgba(255, 255, 255, 0.72);
-          font-size: 20px;
+          color: rgba(255, 255, 255, 0.68);
+          font-size: 22px;
           font-weight: 900;
           font-variant-numeric: tabular-nums;
-          text-align: right;
-          white-space: nowrap;
+          line-height: 1;
         }
+
+        .movieDetail__infoLine {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex-wrap: wrap;
+          color: rgba(255, 255, 255, 0.78);
+          font-size: 18px;
+          font-weight: 800;
+          line-height: 1.35;
+        }
+
+        .movieDetail__studio {
+          color: rgba(255, 255, 255, 0.9);
+          font-weight: 900;
+        }
+
+        .movieDetail__dot {
+          color: rgba(255, 255, 255, 0.42);
+          font-weight: 900;
+        }
+
+        .movieDetail__tags {
+          color: rgba(255, 255, 255, 0.72);
+          font-weight: 750;
+        }
+
 
         .movieDetail__meta {
           display: flex;
@@ -2859,11 +2887,13 @@ export default function HomePage() {
         }
 
         
+        
         .movieCastGrid {
           display: grid;
-          grid-template-columns: repeat(10, minmax(0, 1fr));
-          gap: 10px;
+          grid-template-columns: repeat(7, minmax(0, 1fr));
+          gap: 14px;
         }
+
 
 
         
@@ -2903,31 +2933,29 @@ export default function HomePage() {
         }
 
         
+        
         .movieCastCard__body {
-          padding: 7px 8px 8px;
+          padding: 10px 10px 11px;
         }
+
 
 
         
+        
         .movieCastCard__name {
-          color: rgba(255, 255, 255, 0.9);
-          font-size: 12px;
+          color: rgba(255, 255, 255, 0.92);
+          font-size: 14px;
           font-weight: 850;
-          line-height: 1.1;
+          line-height: 1.15;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
+          text-align: center;
         }
 
 
-        .movieCastCard__type {
-          margin-top: 4px;
-          color: rgba(255, 255, 255, 0.48);
-          font-size: 11px;
-          font-weight: 850;
-          text-transform: uppercase;
-          letter-spacing: 0.06em;
-        }
+
+        
 
         @media (max-width: 1200px) {
           .movieCastGrid {
