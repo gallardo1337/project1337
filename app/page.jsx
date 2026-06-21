@@ -286,15 +286,37 @@ function getResolutionIcon(resolutionName) {
   return null;
 }
 
+function getAgeFromBirthDate(value) {
+  if (!value) return null;
+
+  const d = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return null;
+
+  const today = new Date();
+  let age = today.getFullYear() - d.getFullYear();
+  const birthdayThisYear = new Date(
+    today.getFullYear(),
+    d.getMonth(),
+    d.getDate()
+  );
+
+  if (today < birthdayThisYear) age -= 1;
+  return age >= 0 && age < 130 ? age : null;
+}
+
 function formatBirthDate(value) {
   if (!value) return "";
   const d = new Date(`${value}T00:00:00`);
   if (Number.isNaN(d.getTime())) return String(value);
-  return d.toLocaleDateString("de-DE", {
+
+  const formatted = d.toLocaleDateString("de-DE", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
   });
+
+  const age = getAgeFromBirthDate(value);
+  return age === null ? formatted : `${formatted} (${age})`;
 }
 
 
