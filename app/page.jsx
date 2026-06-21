@@ -62,9 +62,10 @@ function AutoFitMovieDetailTitle({ title, icon }) {
       const styles = window.getComputedStyle(rowEl);
       const gap = parseFloat(styles.columnGap || styles.gap || "0") || 0;
       const reservedWidth = icon ? iconWidth + gap : 0;
+      const widthFactor = isMobile ? 0.8 : 0.95;
       const maxTitleWidth = Math.max(
-        120,
-        Math.floor(rowWidth * 0.95 - reservedWidth)
+        isMobile ? 90 : 120,
+        Math.floor(rowWidth * widthFactor - reservedWidth)
       );
 
       h1.style.maxWidth = `${maxTitleWidth}px`;
