@@ -3079,6 +3079,13 @@ export default function HomePage() {
             padding-bottom: 6px;
           }
 
+          .movieDetail__titleIcon {
+            width: 34px;
+            height: 34px;
+            min-width: 34px;
+            flex: 0 0 34px;
+          }
+
           .movieDetail__titleBlock {
             width: 100%;
             margin-top: 12px;
