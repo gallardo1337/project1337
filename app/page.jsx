@@ -707,6 +707,7 @@ const HAIR_COLOR_TAGS = [
 ].map(normalizeStatValue);
 
 const FINISH_TAGS = [
+  "Anal Creampie"
   "Creampie",
   "Cum in Mouth",
   "Cum on Ass",
