@@ -297,9 +297,129 @@ function formatBirthDate(value) {
   });
 }
 
+
+function getCountryFlag(origin) {
+  const value = String(origin || "").trim();
+  if (!value) return "";
+
+  const normalized = value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+
+  const map = {
+    deutschland: "🇩🇪",
+    germany: "🇩🇪",
+    deutsch: "🇩🇪",
+    german: "🇩🇪",
+    de: "🇩🇪",
+    usa: "🇺🇸",
+    us: "🇺🇸",
+    unitedstates: "🇺🇸",
+    "united states": "🇺🇸",
+    amerika: "🇺🇸",
+    america: "🇺🇸",
+    kanada: "🇨🇦",
+    canada: "🇨🇦",
+    uk: "🇬🇧",
+    gb: "🇬🇧",
+    england: "🏴",
+    schottland: "🏴",
+    scotland: "🏴",
+    wales: "🏴",
+    frankreich: "🇫🇷",
+    france: "🇫🇷",
+    italien: "🇮🇹",
+    italy: "🇮🇹",
+    spanien: "🇪🇸",
+    spain: "🇪🇸",
+    portugal: "🇵🇹",
+    niederlande: "🇳🇱",
+    holland: "🇳🇱",
+    netherlands: "🇳🇱",
+    belgien: "🇧🇪",
+    belgium: "🇧🇪",
+    schweiz: "🇨🇭",
+    switzerland: "🇨🇭",
+    osterreich: "🇦🇹",
+    austria: "🇦🇹",
+    polen: "🇵🇱",
+    poland: "🇵🇱",
+    ukraine: "🇺🇦",
+    russland: "🇷🇺",
+    russia: "🇷🇺",
+    tschechien: "🇨🇿",
+    czechia: "🇨🇿",
+    "czech republic": "🇨🇿",
+    slowakei: "🇸🇰",
+    slovakia: "🇸🇰",
+    ungarland: "🇭🇺",
+    hungary: "🇭🇺",
+    rumanien: "🇷🇴",
+    romania: "🇷🇴",
+    bulgarien: "🇧🇬",
+    bulgaria: "🇧🇬",
+    kroatien: "🇭🇷",
+    croatia: "🇭🇷",
+    serbien: "🇷🇸",
+    serbia: "🇷🇸",
+    turkei: "🇹🇷",
+    turkey: "🇹🇷",
+    griechenland: "🇬🇷",
+    greece: "🇬🇷",
+    danemark: "🇩🇰",
+    denmark: "🇩🇰",
+    schweden: "🇸🇪",
+    sweden: "🇸🇪",
+    norwegen: "🇳🇴",
+    norway: "🇳🇴",
+    finnland: "🇫🇮",
+    finland: "🇫🇮",
+    irland: "🇮🇪",
+    ireland: "🇮🇪",
+    australien: "🇦🇺",
+    australia: "🇦🇺",
+    neuseeland: "🇳🇿",
+    "new zealand": "🇳🇿",
+    mexiko: "🇲🇽",
+    mexico: "🇲🇽",
+    brasilien: "🇧🇷",
+    brazil: "🇧🇷",
+    argentinien: "🇦🇷",
+    argentina: "🇦🇷",
+    kolumbien: "🇨🇴",
+    colombia: "🇨🇴",
+    japan: "🇯🇵",
+    china: "🇨🇳",
+    sudkorea: "🇰🇷",
+    korea: "🇰🇷",
+    "south korea": "🇰🇷",
+    thailand: "🇹🇭",
+    indien: "🇮🇳",
+    india: "🇮🇳",
+  };
+
+  if (map[normalized]) return map[normalized];
+
+  const compact = normalized.replace(/\s+/g, "");
+  if (map[compact]) return map[compact];
+
+  if (/^[a-z]{2}$/.test(compact)) {
+    const code = compact.toUpperCase();
+    return String.fromCodePoint(
+      ...[...code].map((char) => 127397 + char.charCodeAt(0))
+    );
+  }
+
+  return "";
+}
+
 function ActorHero({ actor, movieCount }) {
   if (!actor) return null;
 
+  const originFlag = getCountryFlag(actor.origin);
   const hasMeta = Boolean(actor.origin || actor.birthDate);
   const hasLinks = Boolean(actor.iafdUrl || actor.planetsuzyUrl);
 
@@ -323,14 +443,23 @@ function ActorHero({ actor, movieCount }) {
             {actor.origin ? (
               <div className="actorHero__metaItem">
                 <span>Herkunft</span>
-                <strong>{actor.origin}</strong>
+                <strong className="actorHero__metaValue">
+                  {originFlag ? (
+                    <span className="actorHero__flag" aria-hidden="true">
+                      {originFlag}
+                    </span>
+                  ) : null}
+                  {actor.origin}
+                </strong>
               </div>
             ) : null}
 
             {actor.birthDate ? (
               <div className="actorHero__metaItem">
                 <span>Geboren</span>
-                <strong>{formatBirthDate(actor.birthDate)}</strong>
+                <strong className="actorHero__metaValue">
+                  {formatBirthDate(actor.birthDate)}
+                </strong>
               </div>
             ) : null}
           </div>
@@ -2089,22 +2218,23 @@ export default function HomePage() {
 
         .actorHero__meta {
           margin-top: 22px;
-          display: flex;
-          gap: 10px;
-          flex-wrap: wrap;
+          display: grid;
+          gap: 9px;
+          max-width: 360px;
         }
 
         .actorHero__metaItem {
-          min-width: 150px;
-          border-radius: 16px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          background: rgba(0, 0, 0, 0.24);
-          padding: 12px 14px;
+          display: grid;
+          grid-template-columns: 92px minmax(0, 1fr);
+          gap: 14px;
+          align-items: center;
+          padding: 0;
+          border: none;
+          background: transparent;
         }
 
-        .actorHero__metaItem span {
+        .actorHero__metaItem > span {
           display: block;
-          margin-bottom: 4px;
           color: rgba(255, 255, 255, 0.5);
           font-size: 11px;
           font-weight: 900;
@@ -2112,11 +2242,24 @@ export default function HomePage() {
           text-transform: uppercase;
         }
 
-        .actorHero__metaItem strong {
-          display: block;
+        .actorHero__metaValue {
+          min-width: 0;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
           color: rgba(255, 255, 255, 0.92);
-          font-size: 14px;
+          font-size: 15px;
           line-height: 1.25;
+        }
+
+        .actorHero__flag {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 22px;
+          font-size: 18px;
+          line-height: 1;
+          filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35));
         }
 
         .actorHero__links {
@@ -2188,12 +2331,13 @@ export default function HomePage() {
 
           .actorHero__meta {
             margin-top: 14px;
+            gap: 8px;
+            max-width: none;
           }
 
           .actorHero__metaItem {
-            min-width: 0;
-            flex: 1 1 140px;
-            padding: 10px 12px;
+            grid-template-columns: 82px minmax(0, 1fr);
+            gap: 10px;
           }
 
           .topbar {
