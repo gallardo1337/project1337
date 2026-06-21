@@ -429,10 +429,26 @@ const HAIR_COLOR_TAGS = [
   "Red Hair",
 ].map(normalizeStatValue);
 
+const FINISH_TAGS = [
+  "Creampie",
+  "Cum in Mouth",
+  "Cum on Ass",
+  "Cum on Belly",
+  "Cum on Pussy",
+  "Cum on Tits",
+  "Swallow",
+].map(normalizeStatValue);
+
 function isHairColorTag(tag) {
   const normalized = normalizeStatValue(tag);
   if (!normalized) return false;
   return HAIR_COLOR_TAGS.includes(normalized);
+}
+
+function isFinishTag(tag) {
+  const normalized = normalizeStatValue(tag);
+  if (!normalized) return false;
+  return FINISH_TAGS.includes(normalized);
 }
 
 function countValues(values) {
@@ -475,9 +491,13 @@ function buildActorStats(actorMovies) {
 
   const allTags = list.flatMap((m) => (Array.isArray(m.tags) ? m.tags : []));
   const hairTags = allTags.filter(isHairColorTag);
-  const topTagsSource = allTags.filter((tag) => !isHairColorTag(tag));
+  const finishTags = allTags.filter(isFinishTag);
+  const topTagsSource = allTags.filter(
+    (tag) => !isHairColorTag(tag) && !isFinishTag(tag)
+  );
   const topStudios = countValues(list.map((m) => m.studio)).slice(0, 3);
   const topTags = countValues(topTagsSource).slice(0, 3);
+  const topFinish = countValues(finishTags).slice(0, 3);
   const totalResolutions = list.filter((m) => m.resolution).length;
   const totalHairTags = hairTags.length;
   const qualityStats = withPercent(countValues(list.map((m) => m.resolution)), totalResolutions);
@@ -487,6 +507,7 @@ function buildActorStats(actorMovies) {
     yearRange,
     topStudios,
     topTags,
+    topFinish,
     hairColorStats,
     qualityStats,
   };
@@ -593,6 +614,48 @@ function ActorHero({ actor, movieCount, movies: actorMovies = [] }) {
 
           <div className="actorHero__statsGrid">
             <div className="actorHero__statsBlock">
+              <div className="actorHero__statsLabel">Haarfarbe</div>
+              <div className="actorHero__qualityList">
+                {stats.hairColorStats.length ? (
+                  stats.hairColorStats.map((hairColor) => (
+                    <div key={hairColor.value} className="actorHero__qualityLine">
+                      <div className="actorHero__qualityTop">
+                        <span>{hairColor.value}</span>
+                        <strong>{hairColor.percent}%</strong>
+                      </div>
+                      <div className="actorHero__qualityBar" aria-hidden="true">
+                        <div style={{ width: `${hairColor.percent}%` }} />
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="actorHero__emptyStat">-</div>
+                )}
+              </div>
+            </div>
+
+            <div className="actorHero__statsBlock">
+              <div className="actorHero__statsLabel">Qualität</div>
+              <div className="actorHero__qualityList">
+                {stats.qualityStats.length ? (
+                  stats.qualityStats.map((quality) => (
+                    <div key={quality.value} className="actorHero__qualityLine">
+                      <div className="actorHero__qualityTop">
+                        <span>{quality.value}</span>
+                        <strong>{quality.percent}%</strong>
+                      </div>
+                      <div className="actorHero__qualityBar" aria-hidden="true">
+                        <div style={{ width: `${quality.percent}%` }} />
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="actorHero__emptyStat">-</div>
+                )}
+              </div>
+            </div>
+
+            <div className="actorHero__statsBlock">
               <div className="actorHero__statsLabel">Top 3 Studios</div>
               <div className="actorHero__rankList">
                 {stats.topStudios.length ? (
@@ -627,39 +690,14 @@ function ActorHero({ actor, movieCount, movies: actorMovies = [] }) {
             </div>
 
             <div className="actorHero__statsBlock">
-              <div className="actorHero__statsLabel">Haarfarbe</div>
-              <div className="actorHero__qualityList">
-                {stats.hairColorStats.length ? (
-                  stats.hairColorStats.map((hairColor) => (
-                    <div key={hairColor.value} className="actorHero__qualityLine">
-                      <div className="actorHero__qualityTop">
-                        <span>{hairColor.value}</span>
-                        <strong>{hairColor.percent}%</strong>
-                      </div>
-                      <div className="actorHero__qualityBar" aria-hidden="true">
-                        <div style={{ width: `${hairColor.percent}%` }} />
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="actorHero__emptyStat">-</div>
-                )}
-              </div>
-            </div>
-
-            <div className="actorHero__statsBlock">
-              <div className="actorHero__statsLabel">Qualität</div>
-              <div className="actorHero__qualityList">
-                {stats.qualityStats.length ? (
-                  stats.qualityStats.map((quality) => (
-                    <div key={quality.value} className="actorHero__qualityLine">
-                      <div className="actorHero__qualityTop">
-                        <span>{quality.value}</span>
-                        <strong>{quality.percent}%</strong>
-                      </div>
-                      <div className="actorHero__qualityBar" aria-hidden="true">
-                        <div style={{ width: `${quality.percent}%` }} />
-                      </div>
+              <div className="actorHero__statsLabel">Top Finish</div>
+              <div className="actorHero__rankList">
+                {stats.topFinish.length ? (
+                  stats.topFinish.map((finish, index) => (
+                    <div key={`${finish.value}-${index}`} className="actorHero__rankLine">
+                      <span className="actorHero__rankNo">{index + 1}</span>
+                      <strong>{finish.value}</strong>
+                      <em>{finish.count}</em>
                     </div>
                   ))
                 ) : (
@@ -1783,7 +1821,7 @@ export default function HomePage() {
           border: 1px solid rgba(255, 255, 255, 0.1);
           background: rgba(255, 255, 255, 0.05);
           border-radius: 18px;
-          padding: 14px;
+          padding: 12px;
           box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
           transition: transform 0.14s ease, border-color 0.14s ease,
             background 0.14s ease;
@@ -2359,8 +2397,8 @@ export default function HomePage() {
         .actorHero__content {
           min-width: 0;
           display: grid;
-          grid-template-columns: minmax(320px, 0.78fr) minmax(560px, 720px);
-          gap: 28px;
+          grid-template-columns: minmax(300px, 0.52fr) minmax(820px, 1fr);
+          gap: 24px;
           align-items: center;
           padding: 8px 4px;
         }
@@ -2479,6 +2517,8 @@ export default function HomePage() {
           min-width: 0;
           align-self: center;
           justify-self: stretch;
+          overflow-x: auto;
+          scrollbar-width: thin;
           border-radius: 20px;
           border: 1px solid rgba(255, 255, 255, 0.1);
           background: rgba(0, 0, 0, 0.2);
@@ -2497,8 +2537,8 @@ export default function HomePage() {
 
         .actorHero__statsGrid {
           display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 14px;
+          grid-template-columns: repeat(5, minmax(112px, 1fr));
+          gap: 10px;
         }
 
         .actorHero__statsBlock {
@@ -2509,7 +2549,7 @@ export default function HomePage() {
           border-radius: 16px;
           background: rgba(255, 255, 255, 0.035);
           border: 1px solid rgba(255, 255, 255, 0.07);
-          padding: 14px;
+          padding: 12px;
         }
 
         .actorHero__statsLabel {
@@ -2617,8 +2657,8 @@ export default function HomePage() {
             grid-template-columns: repeat(4, minmax(0, 1fr));
           }
           .actorHero__content {
-            grid-template-columns: minmax(0, 1fr) minmax(430px, 520px);
-            gap: 20px;
+            grid-template-columns: minmax(280px, 0.5fr) minmax(680px, 1fr);
+            gap: 18px;
           }
         }
         @media (max-width: 1050px) {
@@ -2665,7 +2705,7 @@ export default function HomePage() {
           }
 
           .actorHero__statsGrid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-columns: repeat(5, minmax(112px, 1fr));
             gap: 10px;
           }
 
@@ -2704,12 +2744,6 @@ export default function HomePage() {
             display: inline-grid;
           }
         }
-        @media (max-width: 520px) {
-          .actorHero__statsGrid {
-            grid-template-columns: 1fr;
-          }
-        }
-
         @media (max-width: 420px) {
           .row {
             grid-template-columns: repeat(2, minmax(0, 1fr));
