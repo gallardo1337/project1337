@@ -779,6 +779,10 @@ export default function HomePage() {
     const urlVal = actorSlug ? actorSlug : actorId;
     router.replace(`/?actor=${encodeURIComponent(urlVal)}`, { scroll: false });
 
+    requestAnimationFrame(() => {
+      window.scrollTo(0, 0);
+    });
+
     const subset = movies.filter(
       (movie) =>
         Array.isArray(movie.mainActorIds) && movie.mainActorIds.includes(actorId)
