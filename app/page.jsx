@@ -1979,7 +1979,8 @@ export default function HomePage() {
           gap: 12px;
         }
 
-        .movieCard {
+                .movieCard {
+
           position: relative;
           border: 1px solid rgba(255, 255, 255, 0.1);
           background: rgba(255, 255, 255, 0.05);
@@ -1988,9 +1989,7 @@ export default function HomePage() {
           box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
           transition: transform 0.14s ease, border-color 0.14s ease,
             background 0.14s ease;
-
-          display: flex;
-          flex-direction: column;
+        
         }
         .movieCard:hover {
           transform: translateY(-2px);
@@ -2043,7 +2042,6 @@ export default function HomePage() {
           box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
           display: grid;
           place-items: center;
-          flex: 0 0 auto;
         }
         .movieCard__thumb img {
           width: 100%;
@@ -2058,7 +2056,6 @@ export default function HomePage() {
           justify-content: space-between;
           align-items: flex-start;
           gap: 10px;
-          flex: 0 0 auto;
         }
 
         .movieCard__title {
@@ -2073,8 +2070,7 @@ export default function HomePage() {
           -webkit-line-clamp: 3;
           -webkit-box-orient: vertical;
           overflow: hidden;
-
-          min-height: 56px;
+          min-height: 0;
         }
 
         .movieCard__year {
@@ -2089,7 +2085,6 @@ export default function HomePage() {
           margin-top: 10px;
           display: grid;
           gap: 8px;
-          flex: 0 0 auto;
         }
 
         .kv {
@@ -2111,12 +2106,13 @@ export default function HomePage() {
           line-height: 1.35;
         }
 
-        .movieCard__tags {
+                .movieCard__tags {
+
           display: -webkit-box;
           -webkit-line-clamp: 3;
           -webkit-box-orient: vertical;
           overflow: hidden;
-          min-height: 53px;
+        
         }
 
 
