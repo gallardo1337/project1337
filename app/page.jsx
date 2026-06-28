@@ -110,7 +110,6 @@ function AutoFitMovieDetailTitle({ title, icon }) {
   );
 }
 
-
 function getVideoMimeType(url) {
   const clean = String(url || "").split("?")[0].toLowerCase();
 
@@ -121,28 +120,14 @@ function getVideoMimeType(url) {
   return "video/mp4";
 }
 
-function isUnsafeVideoUrl(url) {
-  if (typeof window === "undefined") return false;
-
-  try {
-    const pageIsHttps = window.location.protocol === "https:";
-    const videoUrl = new URL(url, window.location.href);
-
-    return pageIsHttps && videoUrl.protocol === "http:";
-  } catch {
-    return false;
-  }
-}
-
 function MovieDetailView({ movie, onBack }) {
   if (!movie) return null;
 
   const resolutionIcon = getResolutionIcon(movie.resolution);
   const mainCast = Array.isArray(movie.mainCast) ? movie.mainCast : [];
   const supportCast = Array.isArray(movie.supportCast) ? movie.supportCast : [];
-  const castCount = mainCast.length + supportCast.length;
   const videoMimeType = getVideoMimeType(movie.fileUrl);
-  const unsafeVideoUrl = movie.fileUrl ? isUnsafeVideoUrl(movie.fileUrl) : false;
+  const castCount = mainCast.length + supportCast.length;
 
   return (
     <div className="movieDetail">
@@ -164,29 +149,18 @@ function MovieDetailView({ movie, onBack }) {
 
       <div className="movieDetail__playerShell">
         {movie.fileUrl ? (
-          unsafeVideoUrl ? (
-            <div className="movieDetail__fallback">
-              iOS/iPadOS blockiert diesen Stream wahrscheinlich, weil die Seite über HTTPS läuft,
-              das Video aber über HTTP geladen wird.
-              <br />
-              <br />
-              Öffne das Video extern oder stelle die Video-URL auf HTTPS um.
-            </div>
-          ) : (
-            <video
-              key={movie.fileUrl}
-              className="movieDetail__player"
-              poster={movie.thumbnailUrl || undefined}
-              controls
-              playsInline
-              webkit-playsinline="true"
-              preload="metadata"
-              controlsList="nodownload"
-            >
-              <source src={movie.fileUrl} type={videoMimeType} />
-              Dein Browser unterstützt dieses Video nicht.
-            </video>
-          )
+          <video
+            key={movie.fileUrl}
+            className="movieDetail__player"
+            src={movie.fileUrl}
+            poster={movie.thumbnailUrl || undefined}
+            controls
+            playsInline
+            preload="metadata"
+          >
+            <source src={movie.fileUrl} type={videoMimeType} />
+            Dein Browser unterstützt dieses Video nicht.
+          </video>
         ) : (
           <div className="movieDetail__fallback">
             Für diesen Film ist keine Datei hinterlegt.
