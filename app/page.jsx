@@ -2966,7 +2966,6 @@ export default function HomePage() {
         }
 
         .movieDetail__playOverlay:hover .movieDetail__playButton {
-          transform: translateY(-2px) scale(1.04);
           border-color: rgba(229, 9, 20, 0.72);
           background: rgba(229, 9, 20, 0.92);
           box-shadow:
@@ -2975,7 +2974,7 @@ export default function HomePage() {
         }
 
         .movieDetail__playOverlay:active .movieDetail__playButton {
-          transform: translateY(0) scale(0.98);
+          background: rgba(229, 9, 20, 0.78);
         }
 
         .movieDetail__playPoster {
@@ -3012,6 +3011,7 @@ export default function HomePage() {
         }
 
         .movieDetail__playButton {
+          position: relative;
           width: clamp(72px, 8vw, 104px);
           height: clamp(72px, 8vw, 104px);
           display: grid;
@@ -3024,19 +3024,24 @@ export default function HomePage() {
             0 24px 64px rgba(229, 9, 20, 0.26),
             0 18px 46px rgba(0, 0, 0, 0.42);
           transition:
-            transform 0.16s ease,
             border-color 0.16s ease,
             background 0.16s ease,
             box-shadow 0.16s ease;
         }
 
-        .movieDetail__playButton svg {
-          width: 50%;
-          height: 50%;
-          display: block;
-          transform: translateX(-2px);
-          transform-origin: center;
+        .movieDetail__playButton::before {
+          content: "";
+          width: 0;
+          height: 0;
+          border-top: clamp(10px, 1.15vw, 15px) solid transparent;
+          border-bottom: clamp(10px, 1.15vw, 15px) solid transparent;
+          border-left: clamp(16px, 1.7vw, 24px) solid currentColor;
+          transform: translateX(clamp(1px, 0.18vw, 3px));
           filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.35));
+        }
+
+        .movieDetail__playButton svg {
+          display: none;
         }
 
         .movieDetail__playText {
