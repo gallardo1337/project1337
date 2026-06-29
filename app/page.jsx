@@ -18,9 +18,9 @@ function EmptyState({ title, subtitle, action }) {
   );
 }
 
-function MovieCastCard({ person }) {
-  return (
-    <div className="movieCastCard" title={person.name}>
+function MovieCastCard({ person, clickable = false, onClick }) {
+  const content = (
+    <>
       <div className="movieCastCard__img">
         {person.profileImage ? (
           <img src={person.profileImage} alt={person.name} loading="lazy" />
@@ -31,6 +31,25 @@ function MovieCastCard({ person }) {
       <div className="movieCastCard__body">
         <div className="movieCastCard__name">{person.name}</div>
       </div>
+    </>
+  );
+
+  if (clickable) {
+    return (
+      <button
+        type="button"
+        className="movieCastCard movieCastCard--clickable"
+        title={`${person.name} öffnen`}
+        onClick={onClick}
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <div className="movieCastCard" title={person.name}>
+      {content}
     </div>
   );
 }
@@ -120,7 +139,7 @@ function getVideoMimeType(url) {
   return "video/mp4";
 }
 
-function MovieDetailView({ movie, onBack }) {
+function MovieDetailView({ movie, onBack, onOpenActor }) {
   const videoRef = useRef(null);
   const [playerStarted, setPlayerStarted] = useState(false);
 
@@ -277,6 +296,8 @@ function MovieDetailView({ movie, onBack }) {
                 key={`main-${person.id}`}
                 person={person}
                 type="Hauptdarsteller"
+                clickable
+                onClick={() => onOpenActor?.(person)}
               />
             ))}
             {supportCast.map((person) => (
@@ -1319,6 +1340,7 @@ export default function HomePage() {
                 id: a.id,
                 name: a.name,
                 profileImage: a.profile_image || null,
+                slug: a.slug || null,
               })),
             supportCast: supportIds
               .map((id) => supportActorById[id])
@@ -3225,12 +3247,36 @@ export default function HomePage() {
 
         
         .movieCastCard {
+          appearance: none;
+          width: 100%;
           min-width: 0;
+          padding: 0;
           border-radius: 14px;
           overflow: hidden;
           border: 1px solid rgba(255, 255, 255, 0.1);
           background: rgba(255, 255, 255, 0.05);
+          color: inherit;
+          font: inherit;
+          text-align: left;
           box-shadow: 0 14px 38px rgba(0, 0, 0, 0.28);
+        }
+
+        .movieCastCard--clickable {
+          cursor: pointer;
+          transition: transform 0.14s ease, border-color 0.14s ease,
+            background 0.14s ease;
+        }
+
+        .movieCastCard--clickable:hover {
+          transform: translateY(-2px);
+          border-color: rgba(229, 9, 20, 0.35);
+          background: rgba(255, 255, 255, 0.07);
+        }
+
+        .movieCastCard--clickable:focus {
+          outline: none;
+          border-color: rgba(229, 9, 20, 0.48);
+          background: rgba(255, 255, 255, 0.075);
         }
 
 
@@ -4605,7 +4651,13 @@ export default function HomePage() {
           </>
         ) : selectedMovieId ? (
           selectedMovie ? (
-            <MovieDetailView movie={selectedMovie} onBack={handleCloseMovie} />
+            <MovieDetailView
+              movie={selectedMovie}
+              onBack={handleCloseMovie}
+              onOpenActor={(person) =>
+                handleShowMoviesForActor(person.id, person.name, person.slug)
+              }
+            />
           ) : (
             <EmptyState
               title="Film nicht gefunden"
