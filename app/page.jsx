@@ -121,6 +121,13 @@ function getVideoMimeType(url) {
 }
 
 function MovieDetailView({ movie, onBack }) {
+  const videoRef = useRef(null);
+  const [playerStarted, setPlayerStarted] = useState(false);
+
+  useEffect(() => {
+    setPlayerStarted(false);
+  }, [movie?.fileUrl]);
+
   if (!movie) return null;
 
   const resolutionIcon = getResolutionIcon(movie.resolution);
@@ -128,6 +135,19 @@ function MovieDetailView({ movie, onBack }) {
   const supportCast = Array.isArray(movie.supportCast) ? movie.supportCast : [];
   const videoMimeType = getVideoMimeType(movie.fileUrl);
   const castCount = mainCast.length + supportCast.length;
+
+  const handleStartPlayer = async () => {
+    const video = videoRef.current;
+    setPlayerStarted(true);
+
+    if (!video) return;
+
+    try {
+      await video.play();
+    } catch {
+      // Falls iOS/Safari Autoplay trotz User-Geste blockiert, bleiben die nativen Controls sichtbar.
+    }
+  };
 
   return (
     <div className="movieDetail">
@@ -142,25 +162,66 @@ function MovieDetailView({ movie, onBack }) {
             className="btn"
             onClick={() => safeOpen(movie.fileUrl)}
           >
-            Extern öffnen
+            Direkt öffnen
           </button>
         ) : null}
       </div>
 
-      <div className="movieDetail__playerShell">
+      <div className={`movieDetail__playerShell ${playerStarted ? "movieDetail__playerShell--started" : ""}`}>
         {movie.fileUrl ? (
-          <video
-            key={movie.fileUrl}
-            className="movieDetail__player"
-            src={movie.fileUrl}
-            poster={movie.thumbnailUrl || undefined}
-            controls
-            playsInline
-            preload="metadata"
-          >
-            <source src={movie.fileUrl} type={videoMimeType} />
-            Dein Browser unterstützt dieses Video nicht.
-          </video>
+          <>
+            <video
+              ref={videoRef}
+              key={movie.fileUrl}
+              className="movieDetail__player"
+              poster={movie.thumbnailUrl || undefined}
+              controls={playerStarted}
+              playsInline
+              preload="metadata"
+              controlsList="nodownload"
+              onPlay={() => setPlayerStarted(true)}
+            >
+              <source src={movie.fileUrl} type={videoMimeType} />
+              Dein Browser unterstützt dieses Video nicht.
+            </video>
+
+            {!playerStarted ? (
+              <button
+                type="button"
+                className="movieDetail__playOverlay"
+                onClick={handleStartPlayer}
+                aria-label={`${movie.title || "Film"} abspielen`}
+              >
+                {movie.thumbnailUrl ? (
+                  <img
+                    className="movieDetail__playPoster"
+                    src={movie.thumbnailUrl}
+                    alt=""
+                    aria-hidden="true"
+                    loading="eager"
+                  />
+                ) : null}
+
+                <span className="movieDetail__playShade" aria-hidden="true" />
+
+                <span className="movieDetail__playContent">
+                  <span className="movieDetail__playButton" aria-hidden="true">
+                    <svg viewBox="0 0 64 64" fill="none">
+                      <path
+                        d="M25 19.5v25l21-12.5-21-12.5Z"
+                        fill="currentColor"
+                      />
+                    </svg>
+                  </span>
+
+                  <span className="movieDetail__playText">
+                    <strong>{movie.title || "Film starten"}</strong>
+                    <em>Tippen zum Abspielen</em>
+                  </span>
+                </span>
+              </button>
+            ) : null}
+          </>
         ) : (
           <div className="movieDetail__fallback">
             Für diesen Film ist keine Datei hinterlegt.
@@ -231,7 +292,6 @@ function MovieDetailView({ movie, onBack }) {
     </div>
   );
 }
-
 
 function SkeletonRow() {
   return (
@@ -2847,19 +2907,37 @@ export default function HomePage() {
           width: min(100%, 1280px);
           margin: 0 auto;
           aspect-ratio: 16 / 9;
-          border-radius: 24px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          background: rgba(255, 255, 255, 0.045);
-          box-shadow: 0 28px 90px rgba(0, 0, 0, 0.45);
+          border-radius: 26px;
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          background:
+            radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.08), transparent 38%),
+            #000;
+          box-shadow:
+            0 32px 110px rgba(0, 0, 0, 0.62),
+            0 0 0 1px rgba(255, 255, 255, 0.04) inset;
           overflow: hidden;
         }
 
+        .movieDetail__playerShell::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          z-index: 2;
+          pointer-events: none;
+          background:
+            linear-gradient(to bottom, rgba(255, 255, 255, 0.08), transparent 18%),
+            linear-gradient(to top, rgba(0, 0, 0, 0.35), transparent 28%);
+          opacity: 1;
+          transition: opacity 0.22s ease;
+        }
 
+        .movieDetail__playerShell--started::before {
+          opacity: 0;
+        }
 
-        
-        
-        
         .movieDetail__player {
+          position: relative;
+          z-index: 1;
           width: 100%;
           height: 100%;
           display: block;
@@ -2871,12 +2949,122 @@ export default function HomePage() {
           outline: none;
         }
 
+        .movieDetail__playOverlay {
+          position: absolute;
+          inset: 0;
+          z-index: 5;
+          display: grid;
+          place-items: center;
+          width: 100%;
+          height: 100%;
+          padding: 0;
+          border: none;
+          background: #000;
+          color: rgba(255, 255, 255, 0.96);
+          cursor: pointer;
+          overflow: hidden;
+        }
 
+        .movieDetail__playOverlay:hover .movieDetail__playButton {
+          transform: translateY(-2px) scale(1.04);
+          border-color: rgba(229, 9, 20, 0.72);
+          background: rgba(229, 9, 20, 0.92);
+          box-shadow:
+            0 26px 70px rgba(229, 9, 20, 0.34),
+            0 18px 46px rgba(0, 0, 0, 0.46);
+        }
 
+        .movieDetail__playOverlay:active .movieDetail__playButton {
+          transform: translateY(0) scale(0.98);
+        }
 
-        
-        
-        
+        .movieDetail__playPoster {
+          position: absolute;
+          inset: 0;
+          z-index: 0;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          transform: scale(1.035);
+          filter: saturate(1.05) contrast(1.05);
+        }
+
+        .movieDetail__playShade {
+          position: absolute;
+          inset: 0;
+          z-index: 1;
+          background:
+            radial-gradient(circle at 50% 48%, rgba(229, 9, 20, 0.18), transparent 28%),
+            linear-gradient(to bottom, rgba(0, 0, 0, 0.24), rgba(0, 0, 0, 0.7)),
+            linear-gradient(to right, rgba(0, 0, 0, 0.45), transparent 36%, rgba(0, 0, 0, 0.45));
+          backdrop-filter: blur(1px);
+        }
+
+        .movieDetail__playContent {
+          position: relative;
+          z-index: 2;
+          display: grid;
+          justify-items: center;
+          gap: 14px;
+          padding: 22px;
+          text-align: center;
+          max-width: min(560px, 92%);
+        }
+
+        .movieDetail__playButton {
+          width: clamp(72px, 8vw, 104px);
+          height: clamp(72px, 8vw, 104px);
+          display: grid;
+          place-items: center;
+          border-radius: 999px;
+          border: 1px solid rgba(255, 255, 255, 0.22);
+          background: rgba(229, 9, 20, 0.82);
+          color: #fff;
+          box-shadow:
+            0 24px 64px rgba(229, 9, 20, 0.26),
+            0 18px 46px rgba(0, 0, 0, 0.42);
+          transition:
+            transform 0.16s ease,
+            border-color 0.16s ease,
+            background 0.16s ease,
+            box-shadow 0.16s ease;
+        }
+
+        .movieDetail__playButton svg {
+          width: 58%;
+          height: 58%;
+          margin-left: 5%;
+          display: block;
+          filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.35));
+        }
+
+        .movieDetail__playText {
+          display: grid;
+          gap: 5px;
+          text-shadow: 0 8px 26px rgba(0, 0, 0, 0.68);
+        }
+
+        .movieDetail__playText strong {
+          max-width: 100%;
+          color: rgba(255, 255, 255, 0.96);
+          font-size: clamp(18px, 2.3vw, 32px);
+          font-weight: 950;
+          line-height: 1.08;
+          letter-spacing: -0.035em;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .movieDetail__playText em {
+          color: rgba(255, 255, 255, 0.68);
+          font-size: 13px;
+          font-style: normal;
+          font-weight: 800;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+        }
+
         .movieDetail__fallback {
           width: 100%;
           height: 100%;
