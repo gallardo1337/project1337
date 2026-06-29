@@ -3034,7 +3034,7 @@ export default function HomePage() {
           width: 50%;
           height: 50%;
           display: block;
-          transform: translateX(2px);
+          transform: translateX(-2px);
           transform-origin: center;
           filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.35));
         }
