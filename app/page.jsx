@@ -666,11 +666,6 @@ function getCountryFlag(origin) {
     "united states": "us",
     amerika: "us",
     america: "us",
-    kuba: "cu",
-    cuba: "cu",
-    kubanisch: "cu",
-    cuban: "cu",
-    cu: "cu",
     kanada: "ca",
     canada: "ca",
     uk: "gb",
@@ -742,6 +737,11 @@ function getCountryFlag(origin) {
     "new zealand": "nz",
     mexiko: "mx",
     mexico: "mx",
+    kuba: "cu",
+    cuba: "cu",
+    kubanisch: "cu",
+    cuban: "cu",
+    cu: "cu",
     brasilien: "br",
     brazil: "br",
     argentinien: "ar",
@@ -4626,7 +4626,13 @@ export default function HomePage() {
             <div className="sectionHead">
               {selectedActor ? (
                 <>
-                  <div />
+                  <button
+                    type="button"
+                    className="btn btn--ghost"
+                    onClick={handleBackToActors}
+                  >
+                    Zurück
+                  </button>
                   <SortControl />
                 </>
               ) : (
