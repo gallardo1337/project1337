@@ -3031,10 +3031,11 @@ export default function HomePage() {
         }
 
         .movieDetail__playButton svg {
-          width: 58%;
-          height: 58%;
-          margin-left: 5%;
+          width: 50%;
+          height: 50%;
           display: block;
+          transform: translateX(2px);
+          transform-origin: center;
           filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.35));
         }
 
