@@ -1811,6 +1811,17 @@ export default function HomePage() {
     return movies.find((movie) => String(movie.id) === String(selectedMovieId)) || null;
   }, [movies, selectedMovieId]);
 
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    if (selectedMovie?.title) {
+      document.title = `${selectedMovie.title} | 1337 Library`;
+      return;
+    }
+
+    document.title = "1337 Library";
+  }, [selectedMovie?.title]);
+
   const handleOpenMovie = (movie) => {
     if (!movie?.id) return;
 
