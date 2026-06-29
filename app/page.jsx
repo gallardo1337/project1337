@@ -1815,12 +1815,17 @@ export default function HomePage() {
     if (typeof document === "undefined") return;
 
     if (selectedMovie?.title) {
-      document.title = `${selectedMovie.title} | 1337 Library`;
+      document.title = `${selectedMovie.title} | my1337.de`;
       return;
     }
 
-    document.title = "1337 Library";
-  }, [selectedMovie?.title]);
+    if (selectedActor?.name && viewMode === "movies") {
+      document.title = `${selectedActor.name} | my1337.de`;
+      return;
+    }
+
+    document.title = "Home | my1337.de";
+  }, [selectedMovie?.title, selectedActor?.name, viewMode]);
 
   const handleOpenMovie = (movie) => {
     if (!movie?.id) return;
