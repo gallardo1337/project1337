@@ -8,15 +8,6 @@ const supabaseKey =
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-const actorMovieTableCandidates = [
-  "movie_actors",
-  "movies_actors",
-  "actor_movies",
-  "actors_movies",
-  "movie_actor",
-  "actor_movie",
-];
-
 function normalizeVideoUrl(value) {
   if (!value) return "";
 
@@ -77,67 +68,50 @@ function getStudioName(movie, studioMap) {
   return null;
 }
 
-function getMovieIdFromRelation(row) {
-  return (
-    row.movie_id ||
-    row.movieId ||
-    row.movies_id ||
-    row.moviesId ||
-    row.film_id ||
-    row.filmId ||
-    row.id_movie ||
-    row.idMovie ||
-    null
-  );
-}
+function movieMatchesActor(movie, actorId, actorName) {
+  const id = String(actorId).trim();
+  const name = String(actorName || "").trim().toLowerCase();
 
-function rowMatchesActor(row, actorId) {
-  const possibleActorIds = [
-    row.actor_id,
-    row.actorId,
-    row.actors_id,
-    row.actorsId,
-    row.performer_id,
-    row.performerId,
-    row.id_actor,
-    row.idActor,
+  const possibleIdValues = [
+    movie.actor_id,
+    movie.actorId,
+    movie.main_actor_id,
+    movie.mainActorId,
+    movie.hauptdarsteller_id,
+    movie.hauptdarstellerId,
+    movie.performer_id,
+    movie.performerId,
+    movie.actor,
+    movie.main_actor,
+    movie.hauptdarsteller,
   ]
     .filter(Boolean)
-    .map(String);
+    .map((value) => String(value).trim());
 
-  return possibleActorIds.includes(String(actorId));
-}
-
-async function loadActorMovieRows(supabase, actorId) {
-  const tried = [];
-
-  for (const tableName of actorMovieTableCandidates) {
-    tried.push(tableName);
-
-    const { data, error } = await supabase
-      .from(tableName)
-      .select("*");
-
-    if (error) {
-      continue;
-    }
-
-    const matchingRows = (data || []).filter((row) =>
-      rowMatchesActor(row, actorId)
-    );
-
-    return {
-      tableName,
-      rows: matchingRows,
-      tried,
-    };
+  if (possibleIdValues.includes(id)) {
+    return true;
   }
 
-  return {
-    tableName: null,
-    rows: [],
-    tried,
-  };
+  const possibleNameValues = [
+    movie.actor_name,
+    movie.actorName,
+    movie.main_actor_name,
+    movie.mainActorName,
+    movie.hauptdarsteller_name,
+    movie.hauptdarstellerName,
+    movie.actor,
+    movie.main_actor,
+    movie.hauptdarsteller,
+    movie.actors,
+  ]
+    .filter(Boolean)
+    .map((value) => String(value).trim().toLowerCase());
+
+  if (name && possibleNameValues.some((value) => value.includes(name))) {
+    return true;
+  }
+
+  return false;
 }
 
 export async function GET(request, context) {
@@ -160,35 +134,24 @@ export async function GET(request, context) {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const relationResult = await loadActorMovieRows(supabase, actorId);
+    const { data: actorData, error: actorError } = await supabase
+      .from("actors")
+      .select("*")
+      .eq("id", actorId)
+      .maybeSingle();
 
-    if (!relationResult.tableName) {
+    if (actorError) {
       return NextResponse.json(
-        {
-          error: "Keine passende Hauptdarsteller-Film-Tabelle gefunden",
-          tried: relationResult.tried,
-        },
+        { error: actorError.message },
         { status: 500 }
       );
     }
 
-    const movieIds = [
-      ...new Set(
-        (relationResult.rows || [])
-          .map(getMovieIdFromRelation)
-          .filter(Boolean)
-          .map(String)
-      ),
-    ];
-
-    if (movieIds.length === 0) {
-      return NextResponse.json([]);
-    }
+    const actorName = actorData?.name || actorData?.title || "";
 
     const { data: moviesData, error: moviesError } = await supabase
       .from("movies")
       .select("*")
-      .in("id", movieIds)
       .order("id", { ascending: false });
 
     if (moviesError) {
@@ -233,7 +196,11 @@ export async function GET(request, context) {
       }
     }
 
-    const movies = (moviesData || []).map((movie) => ({
+    const matchingMovies = (moviesData || []).filter((movie) =>
+      movieMatchesActor(movie, actorId, actorName)
+    );
+
+    const movies = matchingMovies.map((movie) => ({
       id: String(movie.id),
       title: movie.title || movie.name || "Ohne Titel",
       year: movie.year || null,
@@ -252,7 +219,7 @@ export async function GET(request, context) {
       ),
       quality: getResolutionName(movie, resolutionMap),
       studio: getStudioName(movie, studioMap),
-      actors: [],
+      actors: actorName ? [actorName] : [],
       tags: [],
     }));
 
