@@ -8,6 +8,15 @@ const supabaseKey =
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+const actorMovieTableCandidates = [
+  "movie_actors",
+  "movies_actors",
+  "actor_movies",
+  "actors_movies",
+  "movie_actor",
+  "actor_movie",
+];
+
 function normalizeVideoUrl(value) {
   if (!value) return "";
 
@@ -59,9 +68,7 @@ function getStudioName(movie, studioMap) {
   if (movie.studio) return movie.studio;
   if (movie.studio_name) return movie.studio_name;
 
-  const studioId =
-    movie.studio_id ||
-    movie.studioId;
+  const studioId = movie.studio_id || movie.studioId;
 
   if (studioId && studioMap[String(studioId)]) {
     return studioMap[String(studioId)];
@@ -75,11 +82,62 @@ function getMovieIdFromRelation(row) {
     row.movie_id ||
     row.movieId ||
     row.movies_id ||
+    row.moviesId ||
     row.film_id ||
     row.filmId ||
     row.id_movie ||
+    row.idMovie ||
     null
   );
+}
+
+function rowMatchesActor(row, actorId) {
+  const possibleActorIds = [
+    row.actor_id,
+    row.actorId,
+    row.actors_id,
+    row.actorsId,
+    row.performer_id,
+    row.performerId,
+    row.id_actor,
+    row.idActor,
+  ]
+    .filter(Boolean)
+    .map(String);
+
+  return possibleActorIds.includes(String(actorId));
+}
+
+async function loadActorMovieRows(supabase, actorId) {
+  const tried = [];
+
+  for (const tableName of actorMovieTableCandidates) {
+    tried.push(tableName);
+
+    const { data, error } = await supabase
+      .from(tableName)
+      .select("*");
+
+    if (error) {
+      continue;
+    }
+
+    const matchingRows = (data || []).filter((row) =>
+      rowMatchesActor(row, actorId)
+    );
+
+    return {
+      tableName,
+      rows: matchingRows,
+      tried,
+    };
+  }
+
+  return {
+    tableName: null,
+    rows: [],
+    tried,
+  };
 }
 
 export async function GET(request, context) {
@@ -102,21 +160,21 @@ export async function GET(request, context) {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { data: actorMovieRows, error: actorMovieError } = await supabase
-      .from("movie_actors")
-      .select("*")
-      .eq("actor_id", actorId);
+    const relationResult = await loadActorMovieRows(supabase, actorId);
 
-    if (actorMovieError) {
+    if (!relationResult.tableName) {
       return NextResponse.json(
-        { error: actorMovieError.message },
+        {
+          error: "Keine passende Hauptdarsteller-Film-Tabelle gefunden",
+          tried: relationResult.tried,
+        },
         { status: 500 }
       );
     }
 
     const movieIds = [
       ...new Set(
-        (actorMovieRows || [])
+        (relationResult.rows || [])
           .map(getMovieIdFromRelation)
           .filter(Boolean)
           .map(String)
