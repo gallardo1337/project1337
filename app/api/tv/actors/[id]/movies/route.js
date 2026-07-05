@@ -68,52 +68,6 @@ function getStudioName(movie, studioMap) {
   return null;
 }
 
-function movieMatchesActor(movie, actorId, actorName) {
-  const id = String(actorId).trim();
-  const name = String(actorName || "").trim().toLowerCase();
-
-  const possibleIdValues = [
-    movie.actor_id,
-    movie.actorId,
-    movie.main_actor_id,
-    movie.mainActorId,
-    movie.hauptdarsteller_id,
-    movie.hauptdarstellerId,
-    movie.performer_id,
-    movie.performerId,
-    movie.actor,
-    movie.main_actor,
-    movie.hauptdarsteller,
-  ]
-    .filter(Boolean)
-    .map((value) => String(value).trim());
-
-  if (possibleIdValues.includes(id)) {
-    return true;
-  }
-
-  const possibleNameValues = [
-    movie.actor_name,
-    movie.actorName,
-    movie.main_actor_name,
-    movie.mainActorName,
-    movie.hauptdarsteller_name,
-    movie.hauptdarstellerName,
-    movie.actor,
-    movie.main_actor,
-    movie.hauptdarsteller,
-    movie.actors,
-  ]
-    .filter(Boolean)
-    .map((value) => String(value).trim().toLowerCase());
-
-  if (name && possibleNameValues.some((value) => value.includes(name))) {
-    return true;
-  }
-
-  return false;
-}
-
 export async function GET(request, context) {
   try {
     if (!supabaseUrl || !supabaseKey) {
@@ -152,7 +106,8 @@ export async function GET(request, context) {
     const { data: moviesData, error: moviesError } = await supabase
       .from("movies")
       .select("*")
-      .order("id", { ascending: false });
+      .contains("main_actor_ids", [actorId])
+      .order("created_at", { ascending: false });
 
     if (moviesError) {
       return NextResponse.json(
@@ -196,11 +151,7 @@ export async function GET(request, context) {
       }
     }
 
-    const matchingMovies = (moviesData || []).filter((movie) =>
-      movieMatchesActor(movie, actorId, actorName)
-    );
-
-    const movies = matchingMovies.map((movie) => ({
+    const movies = (moviesData || []).map((movie) => ({
       id: String(movie.id),
       title: movie.title || movie.name || "Ohne Titel",
       year: movie.year || null,
