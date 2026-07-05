@@ -37,35 +37,32 @@ function normalizeThumbUrl(value) {
   return cleanValue;
 }
 
-function getResolutionName(movie, resolutionMap) {
-  if (movie.quality) return movie.quality;
-  if (movie.resolution) return movie.resolution;
-  if (movie.resolution_name) return movie.resolution_name;
+function makeMap(rows) {
+  const map = {};
 
-  const resolutionId =
-    movie.resolution_id ||
-    movie.resolutionId ||
-    movie.quality_id ||
-    movie.qualityId;
+  for (const row of rows || []) {
+    const name =
+      row.name ||
+      row.title ||
+      row.label ||
+      row.value ||
+      row.display_name ||
+      null;
 
-  if (resolutionId && resolutionMap[String(resolutionId)]) {
-    return resolutionMap[String(resolutionId)];
+    if (row.id && name) {
+      map[String(row.id)] = name;
+    }
   }
 
-  return null;
+  return map;
 }
 
-function getStudioName(movie, studioMap) {
-  if (movie.studio) return movie.studio;
-  if (movie.studio_name) return movie.studio_name;
+function getNamesFromIds(ids, map) {
+  if (!Array.isArray(ids)) return [];
 
-  const studioId = movie.studio_id || movie.studioId;
-
-  if (studioId && studioMap[String(studioId)]) {
-    return studioMap[String(studioId)];
-  }
-
-  return null;
+  return ids
+    .map((id) => map[String(id)])
+    .filter(Boolean);
 }
 
 export async function GET(request, context) {
@@ -88,21 +85,6 @@ export async function GET(request, context) {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { data: actorData, error: actorError } = await supabase
-      .from("actors")
-      .select("*")
-      .eq("id", actorId)
-      .maybeSingle();
-
-    if (actorError) {
-      return NextResponse.json(
-        { error: actorError.message },
-        { status: 500 }
-      );
-    }
-
-    const actorName = actorData?.name || actorData?.title || "";
-
     const { data: moviesData, error: moviesError } = await supabase
       .from("movies")
       .select("*")
@@ -116,45 +98,31 @@ export async function GET(request, context) {
       );
     }
 
-    const { data: resolutionsData } = await supabase
-      .from("resolutions")
-      .select("*");
+    const [
+      resolutionsResult,
+      studiosResult,
+      tagsResult,
+      mainActorsResult,
+      supportingActorsResult,
+    ] = await Promise.all([
+      supabase.from("resolutions").select("*"),
+      supabase.from("studios").select("*"),
+      supabase.from("tags").select("*"),
+      supabase.from("actors").select("*"),
+      supabase.from("actors2").select("*"),
+    ]);
 
-    const { data: studiosData } = await supabase
-      .from("studios")
-      .select("*");
-
-    const resolutionMap = {};
-    for (const resolution of resolutionsData || []) {
-      const name =
-        resolution.name ||
-        resolution.title ||
-        resolution.label ||
-        resolution.value ||
-        null;
-
-      if (resolution.id && name) {
-        resolutionMap[String(resolution.id)] = name;
-      }
-    }
-
-    const studioMap = {};
-    for (const studio of studiosData || []) {
-      const name =
-        studio.name ||
-        studio.title ||
-        studio.label ||
-        null;
-
-      if (studio.id && name) {
-        studioMap[String(studio.id)] = name;
-      }
-    }
+    const resolutionMap = makeMap(resolutionsResult.data || []);
+    const studioMap = makeMap(studiosResult.data || []);
+    const tagMap = makeMap(tagsResult.data || []);
+    const mainActorMap = makeMap(mainActorsResult.data || []);
+    const supportingActorMap = makeMap(supportingActorsResult.data || []);
 
     const movies = (moviesData || []).map((movie) => ({
       id: String(movie.id),
       title: movie.title || movie.name || "Ohne Titel",
       year: movie.year || null,
+
       thumbnail_url: normalizeThumbUrl(
         movie.thumbnail_url ||
           movie.thumbnail ||
@@ -162,16 +130,33 @@ export async function GET(request, context) {
           movie.image_url ||
           null
       ),
+
       file_url: normalizeVideoUrl(
         movie.file_url ||
           movie.video_url ||
           movie.url ||
           ""
       ),
-      quality: getResolutionName(movie, resolutionMap),
-      studio: getStudioName(movie, studioMap),
-      actors: actorName ? [actorName] : [],
-      tags: [],
+
+      quality:
+        resolutionMap[String(movie.resolution_id)] ||
+        movie.quality ||
+        movie.resolution ||
+        movie.resolution_name ||
+        null,
+
+      studio:
+        studioMap[String(movie.studio_id)] ||
+        movie.studio ||
+        movie.studio_name ||
+        null,
+
+      actors: getNamesFromIds(movie.main_actor_ids, mainActorMap),
+      support_actors: getNamesFromIds(
+        movie.supporting_actor_ids,
+        supportingActorMap
+      ),
+      tags: getNamesFromIds(movie.tag_ids, tagMap),
     }));
 
     return NextResponse.json(movies);
