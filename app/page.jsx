@@ -1689,6 +1689,20 @@ export default function HomePage({ basePath = "/" }) {
     setMoviesSubtitle("");
   };
 
+  const handleShowAllActors = () => {
+    router.replace(rootUrl, { scroll: false });
+    setViewMode("actors_all");
+    setSelectedActor(null);
+    setSelectedMovieId(null);
+    setVisibleMovies([]);
+    setMoviesTitle("Filme");
+    setMoviesSubtitle("");
+
+    requestAnimationFrame(() => {
+      window.scrollTo(0, 0);
+    });
+  };
+
   const handleSwitchToMovies = () => {
     router.replace(rootUrl, { scroll: false });
     const filtered = applyAdvancedFilters(movies);
@@ -1944,6 +1958,7 @@ export default function HomePage({ basePath = "/" }) {
         onLogin={handleLogin}
         onLogout={handleLogout}
         onDiscover={handleBackToActors}
+        onShowActors={handleShowAllActors}
         onShowMovies={handleSwitchToMovies}
         onShowActor={handleShowMoviesForActor}
         onOpenMovie={handleOpenMovie}
