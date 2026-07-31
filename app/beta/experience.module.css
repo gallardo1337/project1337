@@ -1080,11 +1080,260 @@
   width: 18px;
 }
 
-/* Film archive */
+/* Film and talent archives */
 .archivePage,
+.actorArchivePage,
 .profilePage,
 .detailPage {
   padding-top: 92px;
+}
+
+.actorArchivePage {
+  min-height: 100vh;
+  background: #080808;
+}
+
+.actorArchiveIntro {
+  position: relative;
+  min-height: 570px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+  padding: 82px clamp(24px, 7vw, 120px);
+  border-bottom: 1px solid var(--line);
+  background:
+    radial-gradient(circle at 77% 40%, rgba(255, 43, 69, 0.16), transparent 25%),
+    linear-gradient(112deg, #0b0b0d, #141012);
+}
+
+.actorArchiveLabel {
+  position: relative;
+  z-index: 2;
+  color: rgba(255,255,255,.4);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+}
+
+.actorArchiveIntro h1 {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  width: max-content;
+  margin: 28px 0 24px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(82px, 11vw, 175px);
+  font-weight: 400;
+  line-height: .62;
+  letter-spacing: -.09em;
+}
+
+.actorArchiveIntro h1 em {
+  margin-left: .64em;
+  color: var(--red);
+  font-weight: 400;
+}
+
+.actorArchiveIntro > p {
+  position: relative;
+  z-index: 2;
+  max-width: 540px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.actorArchiveStats {
+  position: absolute;
+  z-index: 2;
+  right: clamp(24px, 7vw, 120px);
+  bottom: 70px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(130px, 1fr));
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.actorArchiveStats > div {
+  display: grid;
+  gap: 7px;
+  padding: 20px 26px;
+  border-right: 1px solid var(--line);
+}
+
+.actorArchiveStats > div:last-child {
+  border-right: 0;
+}
+
+.actorArchiveStats strong {
+  font-family: Georgia, serif;
+  font-size: 34px;
+  font-weight: 400;
+}
+
+.actorArchiveStats span {
+  color: rgba(255,255,255,.35);
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+}
+
+.actorArchiveWord {
+  position: absolute;
+  right: -2vw;
+  top: 50%;
+  color: rgba(255,255,255,.025);
+  font-family: Georgia, serif;
+  font-size: 19vw;
+  line-height: 1;
+  letter-spacing: -.08em;
+  transform: translateY(-53%);
+  user-select: none;
+}
+
+.actorArchiveToolbar {
+  min-height: 104px;
+  display: grid;
+  grid-template-columns: minmax(260px, 520px) 1fr auto;
+  align-items: center;
+  gap: 24px;
+  padding: 22px clamp(24px, 4vw, 72px);
+  border-bottom: 1px solid var(--line);
+  background: #0b0b0c;
+}
+
+.actorArchiveSearch {
+  height: 50px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 15px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.035);
+}
+
+.actorArchiveSearch:focus-within {
+  border-color: rgba(255,43,69,.65);
+}
+
+.actorArchiveSearch svg {
+  width: 18px;
+  flex: 0 0 18px;
+  color: rgba(255,255,255,.44);
+}
+
+.actorArchiveSearch input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: white;
+  font-size: 12px;
+}
+
+.actorArchiveSearch input::placeholder {
+  color: rgba(255,255,255,.32);
+}
+
+.actorArchiveResult {
+  display: grid;
+  gap: 4px;
+  justify-self: end;
+  text-align: right;
+}
+
+.actorArchiveResult span {
+  color: rgba(255,255,255,.34);
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.actorArchiveResult strong {
+  font-family: Georgia, serif;
+  font-size: 17px;
+  font-weight: 400;
+}
+
+.actorArchiveToolbar > select {
+  height: 50px;
+  padding: 0 36px 0 15px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 0;
+  outline: 0;
+  background: #141416;
+  color: white;
+  font-size: 10px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.actorArchiveGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 58px 14px;
+  padding: 70px clamp(24px, 4vw, 72px) 150px;
+}
+
+.actorArchiveItem {
+  position: relative;
+  min-width: 0;
+  padding-top: 27px;
+}
+
+.actorArchiveItem .actorCard {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+}
+
+.actorArchivePosition {
+  position: absolute;
+  top: 0;
+  left: 0;
+  color: rgba(255,255,255,.35);
+  font-family: Georgia, serif;
+  font-size: 13px;
+  font-style: italic;
+}
+
+.actorArchiveItem:nth-child(8n + 1) .actorCard,
+.actorArchiveItem:nth-child(8n + 6) .actorCard {
+  aspect-ratio: 3 / 4.35;
+}
+
+.actorArchiveEmpty {
+  min-height: 450px;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  padding: 40px;
+  text-align: center;
+}
+
+.actorArchiveEmpty strong {
+  font-family: Georgia, serif;
+  font-size: 40px;
+  font-weight: 400;
+}
+
+.actorArchiveEmpty span {
+  color: var(--muted);
+}
+
+.actorArchiveEmpty button {
+  margin-top: 12px;
+  padding: 12px 18px;
+  border: 1px solid rgba(255,255,255,.18);
+  background: transparent;
+  color: white;
+  cursor: pointer;
 }
 
 .archiveIntro {
@@ -1945,6 +2194,10 @@
     grid-template-columns: repeat(3, minmax(0,1fr));
   }
 
+  .actorArchiveGrid {
+    grid-template-columns: repeat(3, minmax(0,1fr));
+  }
+
   .actorMosaic {
     grid-template-columns: repeat(3, minmax(0,1fr));
   }
@@ -2064,9 +2317,30 @@
   }
 
   .archivePage,
+  .actorArchivePage,
   .profilePage,
   .detailPage {
     padding-top: 78px;
+  }
+
+  .actorArchiveStats {
+    position: relative;
+    right: auto;
+    bottom: auto;
+    width: max-content;
+    margin-top: 36px;
+  }
+
+  .actorArchiveToolbar {
+    grid-template-columns: 1fr auto;
+  }
+
+  .actorArchiveResult {
+    display: none;
+  }
+
+  .actorArchiveGrid {
+    grid-template-columns: repeat(2, minmax(0,1fr));
   }
 
   .archiveGrid {
@@ -2311,9 +2585,79 @@
   }
 
   .archivePage,
+  .actorArchivePage,
   .profilePage,
   .detailPage {
     padding-top: 70px;
+  }
+
+  .actorArchiveIntro {
+    min-height: 520px;
+    padding: 62px 18px;
+  }
+
+  .actorArchiveIntro h1 {
+    font-size: 78px;
+  }
+
+  .actorArchiveIntro > p {
+    max-width: 95%;
+  }
+
+  .actorArchiveStats {
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+  }
+
+  .actorArchiveStats > div {
+    padding: 16px 12px;
+  }
+
+  .actorArchiveStats strong {
+    font-size: 27px;
+  }
+
+  .actorArchiveToolbar {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 16px;
+  }
+
+  .actorArchiveToolbar > select {
+    width: 100%;
+  }
+
+  .actorArchiveGrid {
+    gap: 36px 9px;
+    padding: 38px 12px 90px;
+  }
+
+  .actorArchiveItem {
+    padding-top: 22px;
+  }
+
+  .actorArchiveItem .actorCopy {
+    right: 34px;
+    bottom: 14px;
+    left: 12px;
+  }
+
+  .actorArchiveItem .actorCopy strong {
+    font-size: 16px;
+  }
+
+  .actorArchiveItem .actorCopy small {
+    font-size: 6px;
+  }
+
+  .actorArchiveItem .actorArrow {
+    right: 12px;
+    bottom: 15px;
+  }
+
+  .actorArchiveItem .actorNumber {
+    top: 12px;
+    right: 12px;
   }
 
   .archiveIntro {
