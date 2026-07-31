@@ -1126,8 +1126,9 @@ function ActorHero({ actor, movieCount, movies: actorMovies = [] }) {
   );
 }
 
-export default function HomePage() {
+export default function HomePage({ basePath = "/" }) {
   const router = useRouter();
+  const rootUrl = basePath === "/" ? "/" : basePath.replace(/\/$/, "");
 
   const [movies, setMovies] = useState([]);
   const [actors, setActors] = useState([]);
@@ -1413,7 +1414,7 @@ export default function HomePage() {
             if (isUuid(actorParam) && actor.slug) {
               const sp = new URLSearchParams(window.location.search || "");
               sp.set("actor", actor.slug);
-              router.replace(`/?${sp.toString()}`, { scroll: false });
+              router.replace(`${rootUrl}?${sp.toString()}`, { scroll: false });
             }
 
             setSelectedActor(actor);
@@ -1447,7 +1448,7 @@ export default function HomePage() {
     };
 
     void load();
-  }, [loggedIn, router]);
+  }, [loggedIn, rootUrl, router]);
 
   const allTags = useMemo(() => {
     const set = new Set();
@@ -1607,7 +1608,7 @@ export default function HomePage() {
   const handleShowMoviesForActor = (actorId, actorName, actorSlug) => {
     const actor = actors.find((a) => String(a.id) === String(actorId)) || null;
     const urlVal = actorSlug ? actorSlug : actorId;
-    router.replace(`/?actor=${encodeURIComponent(urlVal)}`, { scroll: false });
+    router.replace(`${rootUrl}?actor=${encodeURIComponent(urlVal)}`, { scroll: false });
 
     requestAnimationFrame(() => {
       window.scrollTo(0, 0);
@@ -1640,7 +1641,7 @@ export default function HomePage() {
         setSelectedMovieId(null);
         setViewMode("movies");
       } else {
-        router.replace("/", { scroll: false });
+        router.replace(rootUrl, { scroll: false });
         setSelectedActor(null);
         setSelectedMovieId(null);
         setViewMode("actors");
@@ -1651,7 +1652,7 @@ export default function HomePage() {
       return;
     }
 
-    router.replace("/", { scroll: false });
+    router.replace(rootUrl, { scroll: false });
 
     const q = trimmed.toLowerCase();
     const raw = movies.filter((movie) => {
@@ -1677,7 +1678,7 @@ export default function HomePage() {
   };
 
   const handleBackToActors = () => {
-    router.replace("/", { scroll: false });
+    router.replace(rootUrl, { scroll: false });
     setViewMode("actors");
     setSelectedActor(null);
     setSelectedMovieId(null);
@@ -1687,7 +1688,7 @@ export default function HomePage() {
   };
 
   const handleSwitchToMovies = () => {
-    router.replace("/", { scroll: false });
+    router.replace(rootUrl, { scroll: false });
     const filtered = applyAdvancedFilters(movies);
     setSelectedActor(null);
     setSelectedMovieId(null);
@@ -1743,7 +1744,7 @@ export default function HomePage() {
       window.localStorage.removeItem("auth_1337_flag");
       window.localStorage.removeItem("auth_1337_user");
     }
-    router.replace("/", { scroll: false });
+    router.replace(rootUrl, { scroll: false });
     setLoggedIn(false);
     setSearch("");
     setSelectedActor(null);
@@ -1777,7 +1778,7 @@ export default function HomePage() {
   const applyFiltersNow = () => {
     if (search.trim()) handleSearchChange(search);
     else {
-      router.replace("/", { scroll: false });
+      router.replace(rootUrl, { scroll: false });
       const filtered = applyAdvancedFilters(movies);
       setSelectedActor(null);
       setViewMode("movies");
@@ -1859,7 +1860,7 @@ export default function HomePage() {
 
     const sp = new URLSearchParams();
     sp.set("movie", String(movie.id));
-    router.replace(`/?${sp.toString()}`, { scroll: false });
+    router.replace(`${rootUrl}?${sp.toString()}`, { scroll: false });
     setSelectedMovieId(String(movie.id));
 
     requestAnimationFrame(() => {
@@ -1872,9 +1873,9 @@ export default function HomePage() {
 
     if (selectedActor) {
       const urlVal = selectedActor.slug ? selectedActor.slug : selectedActor.id;
-      router.replace(`/?actor=${encodeURIComponent(urlVal)}`, { scroll: false });
+      router.replace(`${rootUrl}?actor=${encodeURIComponent(urlVal)}`, { scroll: false });
     } else {
-      router.replace("/", { scroll: false });
+      router.replace(rootUrl, { scroll: false });
     }
 
     requestAnimationFrame(() => {
@@ -4611,7 +4612,7 @@ export default function HomePage() {
             type="button"
             className="logoBtn"
             onClick={() => {
-              router.replace("/", { scroll: false });
+              router.replace(rootUrl, { scroll: false });
               setViewMode("actors");
               setSelectedActor(null);
               setSelectedMovieId(null);
