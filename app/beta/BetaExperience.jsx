@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import styles from "./experience.module.css";
 
 function Icon({ name, className = "" }) {
@@ -454,7 +454,10 @@ function Discovery({ movies, actors, onOpenMovie, onShowMovies, onShowActors, on
     () => [...movies].sort((a, b) => new Date(b.addedAt || 0) - new Date(a.addedAt || 0)),
     [movies]
   );
-  const featured = sortedMovies.find((movie) => movie.thumbnailUrl) || sortedMovies[0];
+  const featuredMovies = useMemo(() => sortedMovies.slice(0, 5), [sortedMovies]);
+  const [activeFeature, setActiveFeature] = useState(0);
+  const [previousFeature, setPreviousFeature] = useState(-1);
+  const featured = featuredMovies[activeFeature] || featuredMovies[0];
   const recent = sortedMovies.slice(0, 9);
   const topActors = useMemo(
     () => [...actors].sort((a, b) => b.movieCount - a.movieCount).slice(0, 7),
@@ -464,15 +467,65 @@ function Discovery({ movies, actors, onOpenMovie, onShowMovies, onShowActors, on
   const yearValues = movies.map((movie) => Number(movie.year)).filter(Boolean);
   const yearRange = yearValues.length ? `${Math.min(...yearValues)}—${Math.max(...yearValues)}` : "CURATED";
 
+  useEffect(() => {
+    setActiveFeature(0);
+    setPreviousFeature(-1);
+  }, [featuredMovies.length]);
+
+  useEffect(() => {
+    if (featuredMovies.length <= 1) return undefined;
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => {
+      setPreviousFeature(activeFeature);
+      setActiveFeature((activeFeature + 1) % featuredMovies.length);
+    }, 10000);
+
+    return () => window.clearTimeout(timer);
+  }, [activeFeature, featuredMovies.length]);
+
+  const showFeature = (index) => {
+    if (index === activeFeature) return;
+    setPreviousFeature(activeFeature);
+    setActiveFeature(index);
+  };
+
   return (
     <main>
       <section className={styles.spotlight}>
         <div className={styles.spotlightMedia}>
-          <MediaImage src={featured?.thumbnailUrl} alt={featured?.title || "Featured Film"} priority />
+          {featuredMovies.length ? (
+            featuredMovies.map((movie, index) => (
+              <div
+                className={`${styles.spotlightSlide} ${
+                  index === activeFeature ? styles.spotlightSlideActive : ""
+                } ${
+                  index === previousFeature ? styles.spotlightSlidePrevious : ""
+                }`}
+                key={movie.id}
+                aria-hidden={index !== activeFeature}
+              >
+                <MediaImage
+                  src={movie.thumbnailUrl}
+                  alt={index === activeFeature ? movie.title || "Featured Film" : ""}
+                  priority={index === 0}
+                />
+              </div>
+            ))
+          ) : (
+            <MediaImage src={null} alt="Project1337" priority />
+          )}
         </div>
         <div className={styles.spotlightWash} />
-        <div className={styles.spotlightCount}>01 / FEATURED</div>
-        <div className={styles.spotlightCopy}>
+        <div className={styles.spotlightCount}>
+          {String(activeFeature + 1).padStart(2, "0")} / {String(Math.max(featuredMovies.length, 1)).padStart(2, "0")}
+        </div>
+        <div className={styles.spotlightCopy} key={featured?.id || "empty-feature"}>
           <div className={styles.kicker}><Icon name="spark" /> Neu in der Collection</div>
           <h1>{featured?.title || "Your private cinema"}</h1>
           <div className={styles.spotlightMeta}>
@@ -490,6 +543,22 @@ function Discovery({ movies, actors, onOpenMovie, onShowMovies, onShowActors, on
             <button type="button" className={styles.secondaryAction} onClick={onShowMovies}>Gesamtes Archiv <Icon name="arrow" /></button>
           </div>
         </div>
+        {featuredMovies.length > 1 ? (
+          <div className={styles.spotlightControls} aria-label="Featured Filme">
+            {featuredMovies.map((movie, index) => (
+              <button
+                type="button"
+                key={`feature-control-${movie.id}`}
+                className={index === activeFeature ? styles.spotlightControlActive : ""}
+                onClick={() => showFeature(index)}
+                aria-label={`${movie.title || `Film ${index + 1}`} anzeigen`}
+                aria-current={index === activeFeature ? "true" : undefined}
+              >
+                <span />
+              </button>
+            ))}
+          </div>
+        ) : null}
         <div className={styles.libraryStrip}>
           <div><strong>{movies.length}</strong><span>Filme im Archiv</span></div>
           <div><strong>{actors.length}</strong><span>Featured Talents</span></div>
