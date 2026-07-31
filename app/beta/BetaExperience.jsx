@@ -276,6 +276,7 @@ function AppHeader({
   loginUser,
   onSearch,
   onDiscover,
+  onShowActors,
   onShowMovies,
   onDashboard,
   onLogout,
@@ -283,15 +284,9 @@ function AppHeader({
 }) {
   const [accountOpen, setAccountOpen] = useState(false);
 
-  const scrollToActors = () => {
-    onDiscover();
-    window.setTimeout(() => {
-      document.getElementById("beta-actors")?.scrollIntoView({ behavior: "smooth" });
-    }, 50);
-  };
-
   const discoverActive = viewMode === "actors" && !selectedActor && !selectedMovieId;
   const moviesActive = viewMode === "movies" && !selectedActor && !selectedMovieId;
+  const actorsActive = viewMode === "actors_all" && !selectedActor && !selectedMovieId;
 
   return (
     <header className={styles.header}>
@@ -303,7 +298,7 @@ function AppHeader({
       <nav className={styles.nav} aria-label="Hauptnavigation">
         <button className={discoverActive ? styles.navActive : ""} onClick={onDiscover}>Entdecken</button>
         <button className={moviesActive ? styles.navActive : ""} onClick={onShowMovies}>Filme</button>
-        <button onClick={scrollToActors}>Darsteller</button>
+        <button className={actorsActive ? styles.navActive : ""} onClick={onShowActors}>Darsteller</button>
       </nav>
 
       <div className={styles.headerTools}>
@@ -454,7 +449,7 @@ function FilterDrawer({
   );
 }
 
-function Discovery({ movies, actors, onOpenMovie, onShowMovies, onShowActor }) {
+function Discovery({ movies, actors, onOpenMovie, onShowMovies, onShowActors, onShowActor }) {
   const sortedMovies = useMemo(
     () => [...movies].sort((a, b) => new Date(b.addedAt || 0) - new Date(a.addedAt || 0)),
     [movies]
@@ -511,7 +506,7 @@ function Discovery({ movies, actors, onOpenMovie, onShowMovies, onShowActor }) {
       </section>
 
       <section className={`${styles.contentSection} ${styles.talentSection}`} id="beta-actors">
-        <SectionHeading index="02" eyebrow="The faces" title="Talents der Collection" />
+        <SectionHeading index="02" eyebrow="The faces" title="Talents der Collection" action="Alle Darsteller" onAction={onShowActors} />
         <div className={styles.actorMosaic}>
           {topActors.map((actor, index) => <ActorCard key={actor.id} actor={actor} onOpen={onShowActor} feature={index === 0} />)}
         </div>
@@ -557,6 +552,117 @@ function MovieArchive({ movies, title, subtitle, movieSort, setMovieSort, onOpen
         </div>
       ) : (
         <div className={styles.emptyState}><strong>Keine Filme gefunden.</strong><span>Ändere Suche oder Filter und versuche es erneut.</span></div>
+      )}
+    </main>
+  );
+}
+
+function ActorArchive({ actors, onShowActor }) {
+  const [actorSearch, setActorSearch] = useState("");
+  const [actorSort, setActorSort] = useState("films_desc");
+
+  const visibleActors = useMemo(() => {
+    const query = actorSearch.trim().toLocaleLowerCase("de");
+    const list = query
+      ? actors.filter((actor) =>
+          [actor.name, actor.origin]
+            .filter(Boolean)
+            .join(" ")
+            .toLocaleLowerCase("de")
+            .includes(query)
+        )
+      : [...actors];
+
+    list.sort((a, b) => {
+      if (actorSort === "name_asc") {
+        return String(a.name || "").localeCompare(String(b.name || ""), "de", {
+          sensitivity: "base",
+        });
+      }
+
+      if (actorSort === "name_desc") {
+        return String(b.name || "").localeCompare(String(a.name || ""), "de", {
+          sensitivity: "base",
+        });
+      }
+
+      return (
+        Number(b.movieCount || 0) - Number(a.movieCount || 0) ||
+        String(a.name || "").localeCompare(String(b.name || ""), "de", {
+          sensitivity: "base",
+        })
+      );
+    });
+
+    return list;
+  }, [actors, actorSearch, actorSort]);
+
+  const movieTotal = actors.reduce(
+    (sum, actor) => sum + Number(actor.movieCount || 0),
+    0
+  );
+
+  return (
+    <main className={styles.actorArchivePage}>
+      <section className={styles.actorArchiveIntro}>
+        <div className={styles.actorArchiveLabel}>Complete talent directory / 1337</div>
+        <h1>
+          Talent
+          <em>Index</em>
+        </h1>
+        <p>
+          Alle Hauptdarsteller der Collection – vollständig, durchsuchbar und
+          nach Name oder Filmanzahl sortierbar.
+        </p>
+        <div className={styles.actorArchiveStats}>
+          <div><strong>{String(actors.length).padStart(2, "0")}</strong><span>Darsteller</span></div>
+          <div><strong>{String(movieTotal).padStart(3, "0")}</strong><span>Filmzuordnungen</span></div>
+        </div>
+        <div className={styles.actorArchiveWord} aria-hidden="true">FACES</div>
+      </section>
+
+      <div className={styles.actorArchiveToolbar}>
+        <label className={styles.actorArchiveSearch}>
+          <Icon name="search" />
+          <input
+            value={actorSearch}
+            onChange={(event) => setActorSearch(event.target.value)}
+            placeholder="Darsteller oder Herkunft suchen"
+            aria-label="Darsteller suchen"
+          />
+        </label>
+        <div className={styles.actorArchiveResult}>
+          <span>Directory</span>
+          <strong>{visibleActors.length} von {actors.length}</strong>
+        </div>
+        <select
+          value={actorSort}
+          onChange={(event) => setActorSort(event.target.value)}
+          aria-label="Darsteller sortieren"
+        >
+          <option value="films_desc">Meiste Filme</option>
+          <option value="name_asc">Name A–Z</option>
+          <option value="name_desc">Name Z–A</option>
+        </select>
+      </div>
+
+      {visibleActors.length ? (
+        <div className={styles.actorArchiveGrid}>
+          {visibleActors.map((actor, index) => (
+            <div className={styles.actorArchiveItem} key={actor.id}>
+              <div className={styles.actorArchivePosition}>
+                {String(index + 1).padStart(2, "0")}
+              </div>
+              <ActorCard actor={actor} onOpen={onShowActor} />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className={styles.actorArchiveEmpty}>
+          <strong>Keine Darsteller gefunden.</strong>
+          <span>Versuche einen anderen Namen oder lösche die Suche.</span>
+          <button type="button" onClick={() => setActorSearch("")}>Suche löschen</button>
+        </div>
       )}
     </main>
   );
@@ -701,6 +807,7 @@ export default function BetaExperience({
   onLogin,
   onLogout,
   onDiscover,
+  onShowActors,
   onShowMovies,
   onShowActor,
   onOpenMovie,
@@ -732,6 +839,18 @@ export default function BetaExperience({
   onToggleMainActor,
   onToggleSupportingActor,
 }) {
+  const [actorBackTarget, setActorBackTarget] = useState("discover");
+
+  const openActorFromDiscover = (id, name, slug) => {
+    setActorBackTarget("discover");
+    onShowActor(id, name, slug);
+  };
+
+  const openActorFromArchive = (id, name, slug) => {
+    setActorBackTarget("archive");
+    onShowActor(id, name, slug);
+  };
+
   if (!loggedIn) {
     return (
       <div className={styles.experience}>
@@ -758,6 +877,10 @@ export default function BetaExperience({
         loginUser={loginUser}
         onSearch={onSearch}
         onDiscover={onDiscover}
+        onShowActors={() => {
+          setActorBackTarget("archive");
+          onShowActors();
+        }}
         onShowMovies={onShowMovies}
         onDashboard={onDashboard}
         onLogout={onLogout}
@@ -769,13 +892,15 @@ export default function BetaExperience({
       {loading ? (
         <LoadingScreen />
       ) : selectedMovieId ? (
-        selectedMovie ? <MovieDetail movie={selectedMovie} onBack={onCloseMovie} onShowActor={onShowActor} /> : <div className={styles.emptyState}><strong>Film nicht gefunden.</strong><button type="button" onClick={onCloseMovie}>Zurück</button></div>
+        selectedMovie ? <MovieDetail movie={selectedMovie} onBack={onCloseMovie} onShowActor={openActorFromDiscover} /> : <div className={styles.emptyState}><strong>Film nicht gefunden.</strong><button type="button" onClick={onCloseMovie}>Zurück</button></div>
       ) : selectedActor ? (
-        <ActorProfile actor={selectedActor} movies={movieList} movieSort={movieSort} setMovieSort={setMovieSort} onBack={onDiscover} onOpenMovie={onOpenMovie} />
+        <ActorProfile actor={selectedActor} movies={movieList} movieSort={movieSort} setMovieSort={setMovieSort} onBack={actorBackTarget === "archive" ? onShowActors : onDiscover} onOpenMovie={onOpenMovie} />
+      ) : viewMode === "actors_all" ? (
+        <ActorArchive actors={actors} onShowActor={openActorFromArchive} />
       ) : viewMode === "movies" ? (
         <MovieArchive movies={movieList} title={moviesTitle} subtitle={moviesSubtitle} movieSort={movieSort} setMovieSort={setMovieSort} onOpenMovie={onOpenMovie} onOpenFilters={() => setFiltersOpen(true)} hasAnyFilter={hasAnyFilter} />
       ) : (
-        <Discovery movies={movies} actors={actors} onOpenMovie={onOpenMovie} onShowMovies={onShowMovies} onShowActor={onShowActor} />
+        <Discovery movies={movies} actors={actors} onOpenMovie={onOpenMovie} onShowMovies={onShowMovies} onShowActors={onShowActors} onShowActor={openActorFromDiscover} />
       )}
 
       <FilterDrawer
