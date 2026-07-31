@@ -1129,6 +1129,7 @@ function ActorHero({ actor, movieCount, movies: actorMovies = [] }) {
 export default function HomePage({ basePath = "/" }) {
   const router = useRouter();
   const rootUrl = basePath === "/" ? "/" : basePath.replace(/\/$/, "");
+  const isBeta = rootUrl !== "/";
 
   const [movies, setMovies] = useState([]);
   const [actors, setActors] = useState([]);
@@ -1916,7 +1917,7 @@ export default function HomePage({ basePath = "/" }) {
   );
 
   return (
-    <div className="nfx">
+    <div className={`nfx ${isBeta ? "nfx--redesign" : ""}`}>
       <style jsx global>{`
         :root {
           --bg: #0b0b0f;
@@ -3964,6 +3965,82 @@ export default function HomePage({ basePath = "/" }) {
         }
       `}</style>
 
+      {isBeta ? (
+        <aside className="betaRail" aria-label="Beta-Navigation">
+          <button
+            type="button"
+            className="betaRail__brand"
+            onClick={handleBackToActors}
+            title="Zur Beta-Startseite"
+            aria-label="Zur Beta-Startseite"
+          >
+            <img src="/logo.png" alt="" aria-hidden="true" />
+          </button>
+
+          <nav className="betaRail__nav" aria-label="Bibliothek">
+            <button
+              type="button"
+              className={`betaRail__item ${
+                viewMode === "actors" && !selectedMovieId
+                  ? "betaRail__item--active"
+                  : ""
+              }`}
+              onClick={handleBackToActors}
+              disabled={!loggedIn}
+            >
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path
+                  d="M8.5 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM15.5 10a3 3 0 1 0 0-6"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M2.5 20c.4-4 2.4-6 6-6s5.6 2 6 6M14 14c4.2-.4 6.7 1.6 7.5 5.5"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
+              </svg>
+              <span>Darsteller</span>
+            </button>
+
+            <button
+              type="button"
+              className={`betaRail__item ${
+                viewMode === "movies" && !selectedActor
+                  ? "betaRail__item--active"
+                  : ""
+              }`}
+              onClick={handleSwitchToMovies}
+              disabled={!loggedIn}
+            >
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <rect
+                  x="3"
+                  y="5"
+                  width="18"
+                  height="14"
+                  rx="3"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                />
+                <path
+                  d="m10 9 5 3-5 3V9Z"
+                  fill="currentColor"
+                />
+              </svg>
+              <span>Filme</span>
+            </button>
+          </nav>
+
+          <div className="betaRail__status">
+            <span aria-hidden="true" />
+            <strong>BETA 2</strong>
+          </div>
+        </aside>
+      ) : null}
+
       <div className="topbar">
         <div className="topbar__left" />
 
@@ -4607,24 +4684,89 @@ export default function HomePage({ basePath = "/" }) {
       ) : null}
 
       <div className="wrap">
-        <div className="logoSolo">
-          <button
-            type="button"
-            className="logoBtn"
-            onClick={() => {
-              router.replace(rootUrl, { scroll: false });
-              setViewMode("actors");
-              setSelectedActor(null);
-              setSelectedMovieId(null);
-              setVisibleMovies([]);
-              setSearch("");
-            }}
-            title="Zur Hauptseite"
-            aria-label="Zur Hauptseite"
-          >
-            <img className="logoSolo__img" src="/logo.png" alt="Project1337 Logo" />
-          </button>
-        </div>
+        {isBeta && !selectedMovieId && !selectedActor && viewMode === "actors" ? (
+          <section className="betaHero" aria-label="Project1337 Beta">
+            <div className="betaHero__copy">
+              <div className="betaHero__eyebrow">
+                <span aria-hidden="true" />
+                Private Cinema · Redesign 2026
+              </div>
+
+              <h1>
+                Deine Library.
+                <em>Neu inszeniert.</em>
+              </h1>
+
+              <p>
+                Eine neue, fokussierte Oberfläche für deine persönliche
+                Sammlung – schneller entdecken, klarer filtern und direkt
+                abspielen.
+              </p>
+
+              {loggedIn ? (
+                <>
+                  <div className="betaHero__actions">
+                    <button
+                      type="button"
+                      className="btn btn--primary betaHero__primary"
+                      onClick={handleSwitchToMovies}
+                    >
+                      Alle Filme ansehen
+                    </button>
+                    <span>Persönlich kuratiert</span>
+                  </div>
+
+                  <div className="betaHero__stats" aria-label="Bibliothek-Statistik">
+                    <div>
+                      <strong>{movies.length}</strong>
+                      <span>Filme</span>
+                    </div>
+                    <div>
+                      <strong>{actors.length}</strong>
+                      <span>Hauptdarsteller</span>
+                    </div>
+                    <div>
+                      <strong>{allStudios.length}</strong>
+                      <span>Studios</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="betaHero__locked">
+                  <span aria-hidden="true">●</span>
+                  Private Sammlung · Login erforderlich
+                </div>
+              )}
+            </div>
+
+            <div className="betaHero__visual" aria-hidden="true">
+              <div className="betaHero__orbit betaHero__orbit--one" />
+              <div className="betaHero__orbit betaHero__orbit--two" />
+              <div className="betaHero__halo" />
+              <img src="/logo.png" alt="" />
+              <div className="betaHero__edition">KH7 · EDITION 02</div>
+            </div>
+          </section>
+        ) : !isBeta ? (
+          <div className="logoSolo">
+            <button
+              type="button"
+              className="logoBtn"
+              onClick={() => {
+                router.replace(rootUrl, { scroll: false });
+                setViewMode("actors");
+                setSelectedActor(null);
+                setSelectedMovieId(null);
+                setVisibleMovies([]);
+                setSearch("");
+              }}
+              title="Zur Hauptseite"
+              aria-label="Zur Hauptseite"
+            >
+              <img className="logoSolo__img" src="/logo.png" alt="Project1337 Logo" />
+            </button>
+          </div>
+        ) : null}
 
         {loginErr ? <div className="errorBanner">{loginErr}</div> : null}
         {err ? <div className="errorBanner">{err}</div> : null}
