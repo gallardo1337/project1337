@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabaseClient"; // app/page.jsx -> ../lib/supabaseClient
+import BetaExperience from "./beta/BetaExperience";
 
 function Pill({ children }) {
   return <span className="pill">{children}</span>;
@@ -1915,6 +1916,67 @@ export default function HomePage({ basePath = "/" }) {
         <option value="quality_desc">Qualität</option>
       </select>
   );
+
+  if (isBeta) {
+    return (
+      <BetaExperience
+        movies={movies}
+        actors={actors}
+        selectedActor={selectedActor}
+        selectedMovie={selectedMovie}
+        selectedMovieId={selectedMovieId}
+        movieList={movieList}
+        viewMode={viewMode}
+        moviesTitle={moviesTitle}
+        moviesSubtitle={moviesSubtitle}
+        movieSort={movieSort}
+        setMovieSort={setMovieSort}
+        search={search}
+        loggedIn={loggedIn}
+        loading={loading}
+        error={err}
+        loginError={loginErr}
+        loginUser={loginUser}
+        loginPassword={loginPassword}
+        loginLoading={loginLoading}
+        setLoginUser={setLoginUser}
+        setLoginPassword={setLoginPassword}
+        onLogin={handleLogin}
+        onLogout={handleLogout}
+        onDiscover={handleBackToActors}
+        onShowMovies={handleSwitchToMovies}
+        onShowActor={handleShowMoviesForActor}
+        onOpenMovie={handleOpenMovie}
+        onCloseMovie={handleCloseMovie}
+        onSearch={handleSearchChange}
+        onDashboard={() => safeOpen("/dashboard")}
+        filtersOpen={filtersOpen}
+        setFiltersOpen={setFiltersOpen}
+        hasAnyFilter={hasAnyFilter}
+        onApplyFilters={applyFiltersNow}
+        onResetFilters={resetFilters}
+        allTags={allTags}
+        allStudios={allStudios}
+        allResolutions={allResolutions}
+        mainActorOptions={mainActorOptions}
+        supportingActorOptions={supportingActorOptions}
+        selectedTags={selectedTags}
+        selectedStudio={selectedStudio}
+        selectedResolution={selectedResolution}
+        yearFrom={yearFrom}
+        yearTo={yearTo}
+        selectedMainActors={selectedMainActors}
+        selectedSupportingActors={selectedSupportingActors}
+        setSelectedStudio={setSelectedStudio}
+        setSelectedResolution={setSelectedResolution}
+        setYearFrom={setYearFrom}
+        setYearTo={setYearTo}
+        onToggleTag={toggleTag}
+        onToggleMainActor={toggleMainActor}
+        onToggleSupportingActor={toggleSupportingActor}
+      />
+    );
+  }
 
   return (
     <div className={`nfx ${isBeta ? "nfx--redesign" : ""}`}>
