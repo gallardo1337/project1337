@@ -1148,7 +1148,9 @@ function MovieDetail({ movie, onBack, onShowActor, onRateMovie, onRecordView }) 
       <section className={styles.detailDashboard}>
         <div className={styles.detailInfo}>
           <div className={styles.detailTitleBlock}>
-            <span>{movie.studio || "Project1337"} · {movie.year || "–"}</span>
+            <span>
+              {[movie.studio || "Project1337", movie.year || "–", movie.resolution || "–"].join(" · ")}
+            </span>
             <h1>{movie.title || "Unbenannt"}</h1>
           </div>
           {movie.tags?.length ? <div className={styles.detailTags}>{movie.tags.map((tag) => <span key={tag}>{tag}</span>)}</div> : null}
@@ -1186,12 +1188,6 @@ function MovieDetail({ movie, onBack, onShowActor, onRateMovie, onRecordView }) 
             </div>
             {metricError ? <div className={styles.metricError}>{metricError}</div> : null}
           </aside>
-        </div>
-
-        <div className={styles.detailFacts}>
-          <div><small>Qualität</small><strong>{movie.resolution || "–"}</strong></div>
-          <div><small>Jahr</small><strong>{movie.year || "–"}</strong></div>
-          <div><small>Studio</small><strong>{movie.studio || "–"}</strong></div>
         </div>
 
         {mainCast.length || supportCast.length ? (
