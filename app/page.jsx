@@ -1619,6 +1619,27 @@ export default function HomePage({ basePath = "/" }) {
         return (getQualityRank(b) - getQualityRank(a)) || (getAddedTime(b) - getAddedTime(a)) || String(a.title || "").localeCompare(String(b.title || ""), "de", { sensitivity: "base" });
       }
 
+      if (movieSort === "views_desc") {
+        return (
+          (Math.max(0, Number(b.viewCount) || 0) - Math.max(0, Number(a.viewCount) || 0)) ||
+          (getAddedTime(b) - getAddedTime(a)) ||
+          String(a.title || "").localeCompare(String(b.title || ""), "de", { sensitivity: "base" })
+        );
+      }
+
+      if (movieSort === "rating_desc") {
+        const rawRatingA = Number(a.rating);
+        const rawRatingB = Number(b.rating);
+        const ratingA = Number.isInteger(rawRatingA) && rawRatingA >= 1 && rawRatingA <= 10 ? rawRatingA : -1;
+        const ratingB = Number.isInteger(rawRatingB) && rawRatingB >= 1 && rawRatingB <= 10 ? rawRatingB : -1;
+        return (
+          (ratingB - ratingA) ||
+          (Math.max(0, Number(b.viewCount) || 0) - Math.max(0, Number(a.viewCount) || 0)) ||
+          (getAddedTime(b) - getAddedTime(a)) ||
+          String(a.title || "").localeCompare(String(b.title || ""), "de", { sensitivity: "base" })
+        );
+      }
+
       return (getAddedTime(b) - getAddedTime(a)) || String(a.title || "").localeCompare(String(b.title || ""), "de", { sensitivity: "base" });
     });
 
