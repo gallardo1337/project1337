@@ -526,6 +526,46 @@ function buildActorStats(movies) {
   };
 }
 
+function addActorMetrics(actors, movies) {
+  const metricsByActorId = new Map(
+    (Array.isArray(actors) ? actors : []).map((actor) => [
+      String(actor.id),
+      { totalViews: 0, ratingTotal: 0, ratedMovies: 0 },
+    ])
+  );
+
+  (Array.isArray(movies) ? movies : []).forEach((movie) => {
+    const rating = Number(movie.rating);
+    const hasRating = Number.isInteger(rating) && rating >= 1 && rating <= 10;
+    const actorIds = new Set(
+      (Array.isArray(movie.mainActorIds) ? movie.mainActorIds : []).map(String)
+    );
+
+    actorIds.forEach((actorId) => {
+      const metric = metricsByActorId.get(actorId);
+      if (!metric) return;
+
+      metric.totalViews += Math.max(0, Number(movie.viewCount) || 0);
+      if (hasRating) {
+        metric.ratingTotal += rating;
+        metric.ratedMovies += 1;
+      }
+    });
+  });
+
+  return (Array.isArray(actors) ? actors : []).map((actor) => {
+    const metric = metricsByActorId.get(String(actor.id));
+    return {
+      ...actor,
+      totalViews: metric?.totalViews || 0,
+      averageRating: metric?.ratedMovies
+        ? metric.ratingTotal / metric.ratedMovies
+        : null,
+      ratedMovies: metric?.ratedMovies || 0,
+    };
+  });
+}
+
 function MovieCard({ movie, onOpen, large = false, index }) {
   return (
     <button
@@ -1032,6 +1072,8 @@ function MovieArchive({ movies, title, subtitle, movieSort, setMovieSort, onOpen
             <option value="added_desc">Zuletzt hinzugefügt</option>
             <option value="year_desc">Erscheinungsdatum</option>
             <option value="quality_desc">Qualität</option>
+            <option value="views_desc">Meiste Aufrufe</option>
+            <option value="rating_desc">Beste Bewertung</option>
           </select>
           <button type="button" className={hasAnyFilter ? styles.filterActive : ""} onClick={onOpenFilters}>
             <Icon name="filter" /> Filter {hasAnyFilter ? "aktiv" : ""}
@@ -1079,6 +1121,29 @@ function ActorArchive({ actors, onShowActor }) {
         });
       }
 
+      if (actorSort === "views_desc") {
+        return (
+          Number(b.totalViews || 0) - Number(a.totalViews || 0) ||
+          Number(b.movieCount || 0) - Number(a.movieCount || 0) ||
+          String(a.name || "").localeCompare(String(b.name || ""), "de", {
+            sensitivity: "base",
+          })
+        );
+      }
+
+      if (actorSort === "rating_desc") {
+        const ratingA = a.averageRating == null ? -1 : Number(a.averageRating);
+        const ratingB = b.averageRating == null ? -1 : Number(b.averageRating);
+        return (
+          ratingB - ratingA ||
+          Number(b.ratedMovies || 0) - Number(a.ratedMovies || 0) ||
+          Number(b.totalViews || 0) - Number(a.totalViews || 0) ||
+          String(a.name || "").localeCompare(String(b.name || ""), "de", {
+            sensitivity: "base",
+          })
+        );
+      }
+
       return (
         Number(b.movieCount || 0) - Number(a.movieCount || 0) ||
         String(a.name || "").localeCompare(String(b.name || ""), "de", {
@@ -1105,7 +1170,7 @@ function ActorArchive({ actors, onShowActor }) {
         </h1>
         <p>
           Alle Hauptdarsteller der Collection – vollständig, durchsuchbar und
-          nach Name oder Filmanzahl sortierbar.
+          nach Name, Filmanzahl, Aufrufen oder Bewertung sortierbar.
         </p>
         <div className={styles.actorArchiveStats}>
           <div><strong>{String(actors.length).padStart(2, "0")}</strong><span>Darsteller</span></div>
@@ -1134,6 +1199,8 @@ function ActorArchive({ actors, onShowActor }) {
           aria-label="Darsteller sortieren"
         >
           <option value="films_desc">Meiste Filme</option>
+          <option value="views_desc">Meiste Aufrufe</option>
+          <option value="rating_desc">Beste Ø-Bewertung</option>
           <option value="name_asc">Name A–Z</option>
           <option value="name_desc">Name Z–A</option>
         </select>
@@ -1327,6 +1394,8 @@ function ActorProfile({ actor, movies, movieSort, setMovieSort, onBack, onOpenMo
             <option value="added_desc">Zuletzt hinzugefügt</option>
             <option value="year_desc">Erscheinungsdatum</option>
             <option value="quality_desc">Qualität</option>
+            <option value="views_desc">Meiste Aufrufe</option>
+            <option value="rating_desc">Beste Bewertung</option>
           </select>
         </div>
         <div className={styles.profileMovieGrid}>
@@ -1549,6 +1618,10 @@ export default function BetaExperience({
   onToggleSupportingActor,
 }) {
   const [actorBackTarget, setActorBackTarget] = useState("discover");
+  const actorsWithMetrics = useMemo(
+    () => addActorMetrics(actors, movies),
+    [actors, movies]
+  );
 
   const openActorFromDiscover = (id, name, slug) => {
     setActorBackTarget("discover");
@@ -1613,11 +1686,11 @@ export default function BetaExperience({
       ) : selectedActor ? (
         <ActorProfile actor={selectedActor} movies={movieList} movieSort={movieSort} setMovieSort={setMovieSort} onBack={actorBackTarget === "archive" ? onShowActors : onDiscover} onOpenMovie={onOpenMovie} />
       ) : viewMode === "actors_all" ? (
-        <ActorArchive actors={actors} onShowActor={openActorFromArchive} />
+        <ActorArchive actors={actorsWithMetrics} onShowActor={openActorFromArchive} />
       ) : viewMode === "movies" ? (
         <MovieArchive movies={movieList} title={moviesTitle} subtitle={moviesSubtitle} movieSort={movieSort} setMovieSort={setMovieSort} onOpenMovie={onOpenMovie} onOpenFilters={() => setFiltersOpen(true)} hasAnyFilter={hasAnyFilter} />
       ) : (
-        <Discovery movies={movies} actors={actors} onOpenMovie={onOpenMovie} onShowMovies={onShowMovies} onShowActors={onShowActors} onShowActor={openActorFromDiscover} />
+        <Discovery movies={movies} actors={actorsWithMetrics} onOpenMovie={onOpenMovie} onShowMovies={onShowMovies} onShowActors={onShowActors} onShowActor={openActorFromDiscover} />
       )}
 
       <FilterDrawer
