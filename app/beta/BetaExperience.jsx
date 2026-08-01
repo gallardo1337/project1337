@@ -1145,87 +1145,78 @@ function MovieDetail({ movie, onBack, onShowActor, onRateMovie, onRecordView }) 
         <div className={styles.theaterLabel}>PRIVATE SCREENING / 1337</div>
       </section>
 
-      <section className={styles.detailInfo}>
-        <div className={styles.detailTitleBlock}>
-          <span>{movie.studio || "Project1337"} · {movie.year || "–"}</span>
-          <h1>{movie.title || "Unbenannt"}</h1>
+      <section className={styles.detailDashboard}>
+        <div className={styles.detailInfo}>
+          <div className={styles.detailTitleBlock}>
+            <span>{movie.studio || "Project1337"} · {movie.year || "–"}</span>
+            <h1>{movie.title || "Unbenannt"}</h1>
+          </div>
+          {movie.tags?.length ? <div className={styles.detailTags}>{movie.tags.map((tag) => <span key={tag}>{tag}</span>)}</div> : null}
+          <aside className={styles.compactRating}>
+            <div className={styles.ratingHeader}>
+              <span>Personal score</span>
+              <strong>{visibleRating ? `${visibleRating}/10` : "–/10"}</strong>
+              <small>{draftRating ? "Deine Bewertung" : "Noch nicht bewertet"}</small>
+            </div>
+            <div
+              className={styles.ratingStars}
+              onMouseLeave={() => setHoverRating(0)}
+              aria-label="Film von 1 bis 10 bewerten"
+            >
+              {Array.from({ length: 10 }, (_, index) => index + 1).map((rating) => (
+                <button
+                  type="button"
+                  key={rating}
+                  className={rating <= visibleRating ? styles.ratingStarActive : ""}
+                  onMouseEnter={() => setHoverRating(rating)}
+                  onFocus={() => setHoverRating(rating)}
+                  onBlur={() => setHoverRating(0)}
+                  onClick={() => saveRating(rating)}
+                  aria-label={`${rating} von 10 Sternen`}
+                  aria-pressed={draftRating === rating}
+                  disabled={ratingSaving}
+                >
+                  <Icon name="star" />
+                </button>
+              ))}
+            </div>
+            <div className={styles.ratingMeta}>
+              <span>{ratingSaving ? "Speichert…" : "Stern auswählen"}</span>
+              <span><Icon name="play" /> {formatNumber(movie.viewCount)} Aufrufe</span>
+            </div>
+            {metricError ? <div className={styles.metricError}>{metricError}</div> : null}
+          </aside>
         </div>
+
         <div className={styles.detailFacts}>
           <div><small>Qualität</small><strong>{movie.resolution || "–"}</strong></div>
           <div><small>Jahr</small><strong>{movie.year || "–"}</strong></div>
           <div><small>Studio</small><strong>{movie.studio || "–"}</strong></div>
         </div>
-        {movie.tags?.length ? <div className={styles.detailTags}>{movie.tags.map((tag) => <span key={tag}>{tag}</span>)}</div> : null}
-      </section>
 
-      <section className={styles.ratingSection}>
-        <div className={styles.ratingIntro}>
-          <span>Personal score / 10</span>
-          <h2>Deine<br /><em>Bewertung.</em></h2>
-          <p>Ein persönlicher Wert für deine Collection – jederzeit neu bewertbar.</p>
-        </div>
-
-        <div className={styles.ratingPanel}>
-          <div
-            className={styles.ratingStars}
-            onMouseLeave={() => setHoverRating(0)}
-            aria-label="Film von 1 bis 10 bewerten"
-          >
-            {Array.from({ length: 10 }, (_, index) => index + 1).map((rating) => (
-              <button
-                type="button"
-                key={rating}
-                className={rating <= visibleRating ? styles.ratingStarActive : ""}
-                onMouseEnter={() => setHoverRating(rating)}
-                onFocus={() => setHoverRating(rating)}
-                onBlur={() => setHoverRating(0)}
-                onClick={() => saveRating(rating)}
-                aria-label={`${rating} von 10 Sternen`}
-                aria-pressed={draftRating === rating}
-                disabled={ratingSaving}
-              >
-                <Icon name="star" />
-                <span>{String(rating).padStart(2, "0")}</span>
-              </button>
-            ))}
-          </div>
-
-          <div className={styles.ratingSummary}>
-            <div>
-              <small>Aktuelle Bewertung</small>
-              <strong>{draftRating ? `${draftRating}/10` : "Noch offen"}</strong>
-              <span>{ratingSaving ? "Wird gespeichert…" : "Sterne auswählen"}</span>
+        {mainCast.length || supportCast.length ? (
+          <div className={styles.detailCast}>
+            <div className={styles.detailCastHeader}>
+              <div><span>On screen</span><h2>Cast</h2></div>
+              <small>{mainCast.length + supportCast.length} Personen</small>
             </div>
-            <div>
-              <small>Aufrufe</small>
-              <strong>{formatNumber(movie.viewCount)}</strong>
-              <span>Startet beim ersten Play</span>
+            <div className={styles.castRail}>
+              {mainCast.map((person) => (
+                <button type="button" key={`main-${person.id}`} onClick={() => onShowActor(person.id, person.name, person.slug)}>
+                  <span><MediaImage src={person.profileImage} alt={person.name} sizes="200px" /></span>
+                  <strong>{person.name}</strong><small>Main</small>
+                </button>
+              ))}
+              {supportCast.map((person) => (
+                <div key={`support-${person.id}`}>
+                  <span><MediaImage src={person.profileImage} alt={person.name} sizes="200px" /></span>
+                  <strong>{person.name}</strong><small>Supporting</small>
+                </div>
+              ))}
             </div>
           </div>
-
-          {metricError ? <div className={styles.metricError}>{metricError}</div> : null}
-        </div>
+        ) : null}
       </section>
-
-      {mainCast.length || supportCast.length ? (
-        <section className={styles.castSection}>
-          <SectionHeading index="01" eyebrow="On screen" title="Cast" />
-          <div className={styles.castRail}>
-            {mainCast.map((person) => (
-              <button type="button" key={`main-${person.id}`} onClick={() => onShowActor(person.id, person.name, person.slug)}>
-                <span><MediaImage src={person.profileImage} alt={person.name} sizes="160px" /></span>
-                <strong>{person.name}</strong><small>Main</small>
-              </button>
-            ))}
-            {supportCast.map((person) => (
-              <div key={`support-${person.id}`}>
-                <span><MediaImage src={person.profileImage} alt={person.name} sizes="160px" /></span>
-                <strong>{person.name}</strong><small>Supporting</small>
-              </div>
-            ))}
-          </div>
-        </section>
-      ) : null}
     </main>
   );
 }
