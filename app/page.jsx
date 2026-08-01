@@ -2058,7 +2058,7 @@ export default function HomePage({ basePath = "/" }) {
         onRateMovie={handleRateMovie}
         onRecordMovieView={handleRecordMovieView}
         onSearch={handleSearchChange}
-        onDashboard={() => safeOpen("/dashboard")}
+        onDashboard={() => safeOpen("/dashboard/beta")}
         filtersOpen={filtersOpen}
         setFiltersOpen={setFiltersOpen}
         hasAnyFilter={hasAnyFilter}
