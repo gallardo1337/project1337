@@ -2235,7 +2235,7 @@
 .theaterBack {
   top: 26px;
   border-color: rgba(255,255,255,.13);
-  border-radius: 999px;
+  border-radius: 0;
   background: rgba(9,9,10,.58);
   box-shadow: 0 12px 32px rgba(0,0,0,.28);
 }
@@ -2380,7 +2380,7 @@
 
 .playerCenterButton svg {
   width: 30px;
-  margin-left: 3px;
+  transform: translateX(-1px);
 }
 
 .playerCenterButton small {
