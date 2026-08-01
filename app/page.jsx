@@ -1977,6 +1977,73 @@ export default function HomePage() {
           backdrop-filter: blur(14px);
           border-bottom: 1px solid rgba(255, 255, 255, 0.06);
         }
+        .topbar__left {
+          justify-self: start;
+          display: flex;
+          align-items: center;
+          min-width: 0;
+        }
+        .betaSwitch {
+          display: inline-flex;
+          min-height: 42px;
+          align-items: center;
+          gap: 9px;
+          padding: 0 13px;
+          border: 1px solid rgba(229, 9, 20, 0.48);
+          border-radius: 12px;
+          background: linear-gradient(
+            135deg,
+            rgba(229, 9, 20, 0.16),
+            rgba(255, 255, 255, 0.035)
+          );
+          color: rgba(255, 255, 255, 0.94);
+          text-decoration: none;
+          box-shadow: 0 14px 36px rgba(229, 9, 20, 0.12);
+          transition: transform 0.16s ease, border-color 0.16s ease,
+            background 0.16s ease, box-shadow 0.16s ease;
+          white-space: nowrap;
+        }
+        .betaSwitch:hover {
+          transform: translateY(-1px);
+          border-color: rgba(255, 42, 53, 0.82);
+          background: linear-gradient(
+            135deg,
+            rgba(229, 9, 20, 0.28),
+            rgba(255, 255, 255, 0.055)
+          );
+          box-shadow: 0 18px 42px rgba(229, 9, 20, 0.2);
+        }
+        .betaSwitch__dot {
+          width: 7px;
+          height: 7px;
+          flex: 0 0 auto;
+          border-radius: 50%;
+          background: #ff3541;
+          box-shadow: 0 0 0 4px rgba(229, 9, 20, 0.14),
+            0 0 16px rgba(255, 53, 65, 0.72);
+        }
+        .betaSwitch__copy {
+          display: grid;
+          gap: 2px;
+          line-height: 1;
+        }
+        .betaSwitch__copy strong {
+          font-size: 10px;
+          font-weight: 900;
+          letter-spacing: 0.16em;
+          text-transform: uppercase;
+        }
+        .betaSwitch__copy small {
+          color: rgba(255, 255, 255, 0.46);
+          font-size: 8px;
+          font-weight: 700;
+          letter-spacing: 0.04em;
+        }
+        .betaSwitch svg {
+          width: 14px;
+          height: 14px;
+          color: rgba(255, 255, 255, 0.54);
+        }
         .topbar__mid {
           justify-self: center;
           width: 100%;
@@ -3904,6 +3971,13 @@ export default function HomePage() {
           .topbar {
             grid-template-columns: 1fr auto;
           }
+          .betaSwitch {
+            min-height: 40px;
+            padding: 0 11px;
+          }
+          .betaSwitch__copy small {
+            display: none;
+          }
           .topbar__mid {
             display: none;
           }
@@ -3964,7 +4038,28 @@ export default function HomePage() {
       `}</style>
 
       <div className="topbar">
-        <div className="topbar__left" />
+        <div className="topbar__left">
+          <a
+            className="betaSwitch"
+            href="https://project1337-git-agent-beta-home-m-9d032b-kevs-projects-9ed6f156.vercel.app/beta"
+            title="Das neue Project1337 Design testen"
+          >
+            <span className="betaSwitch__dot" aria-hidden="true" />
+            <span className="betaSwitch__copy">
+              <strong>Beta</strong>
+              <small>Neues Design testen</small>
+            </span>
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path
+                d="M5 12h14M13 6l6 6-6 6"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </a>
+        </div>
 
         <div className="topbar__mid">
           {loggedIn ? (
