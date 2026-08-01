@@ -1626,16 +1626,21 @@
 .archiveGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-flow: row dense;
+  align-items: start;
   gap: 54px 15px;
   padding: 55px clamp(24px, 4vw, 72px) 140px;
 }
 
 .archiveGrid .movieCard {
   min-width: 0;
+  align-self: start;
+  align-content: start;
 }
 
 .archiveGrid .movieCardLarge {
   grid-column: span 2;
+  grid-row: span 2;
 }
 
 .archiveGrid .movieCardLarge .movieVisual {
@@ -3308,6 +3313,10 @@
 
   .archiveGrid {
     grid-template-columns: repeat(2, minmax(0,1fr));
+  }
+
+  .archiveGrid .movieCardLarge {
+    grid-row: auto;
   }
 
   .profileHero {
