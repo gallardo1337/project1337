@@ -510,11 +510,17 @@ function Discovery({ movies, actors, onOpenMovie, onShowMovies, onShowActors, on
                 key={movie.id}
                 aria-hidden={index !== activeFeature}
               >
-                <MediaImage
-                  src={movie.thumbnailUrl}
-                  alt={index === activeFeature ? movie.title || "Featured Film" : ""}
-                  priority={index === 0}
-                />
+                <div className={styles.spotlightBackdrop} aria-hidden="true">
+                  <MediaImage src={movie.thumbnailUrl} alt="" />
+                </div>
+                <div className={styles.spotlightFrame}>
+                  <MediaImage
+                    src={movie.thumbnailUrl}
+                    alt={index === activeFeature ? movie.title || "Featured Film" : ""}
+                    priority={index === 0}
+                    sizes="(max-width: 900px) 100vw, 78vw"
+                  />
+                </div>
               </div>
             ))
           ) : (
