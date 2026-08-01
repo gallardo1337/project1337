@@ -1257,6 +1257,7 @@ export default function HomePage({ basePath = "/" }) {
           studiosRes,
           tagsRes,
           resolutionsRes,
+          metricsResponse,
         ] = await Promise.all([
           supabase.from("movies").select("*"),
           supabase.from("actors").select("*"),
@@ -1264,6 +1265,9 @@ export default function HomePage({ basePath = "/" }) {
           supabase.from("studios").select("*"),
           supabase.from("tags").select("*"),
           supabase.from("resolutions").select("*"),
+          isBeta
+            ? fetch("/api/movie-metrics", { cache: "no-store" }).catch(() => null)
+            : Promise.resolve(null),
         ]);
 
         if (moviesRes.error) throw moviesRes.error;
@@ -1279,6 +1283,14 @@ export default function HomePage({ basePath = "/" }) {
         const studios = studiosRes.data || [];
         const tags = tagsRes.data || [];
         const resolutions = resolutionsRes.data || [];
+        const metricsPayload = metricsResponse?.ok
+          ? await metricsResponse.json()
+          : { metrics: [] };
+        const metricsByMovieId = new Map(
+          (Array.isArray(metricsPayload?.metrics) ? metricsPayload.metrics : []).map(
+            (metric) => [String(metric.movie_id), metric]
+          )
+        );
 
         const mainActorById = Object.fromEntries(
           mainActors.map((a) => [a.id, a])
@@ -1295,6 +1307,7 @@ export default function HomePage({ basePath = "/" }) {
         );
 
         const mappedMovies = (moviesData || []).map((m) => {
+          const metric = metricsByMovieId.get(String(m.id));
           const mainIds = Array.isArray(m.main_actor_ids) ? m.main_actor_ids : [];
           const supportIds = Array.isArray(m.supporting_actor_ids)
             ? m.supporting_actor_ids
@@ -1330,6 +1343,11 @@ export default function HomePage({ basePath = "/" }) {
             resolution: resolutionName,
             thumbnailUrl: m.thumbnail_url || null,
             addedAt: m.created_at || m.inserted_at || m.createdAt || null,
+            rating:
+              metric?.rating != null && Number.isInteger(Number(metric.rating))
+                ? Number(metric.rating)
+                : null,
+            viewCount: Math.max(0, Number(metric?.view_count) || 0),
             actors: allActors,
             tags: tagNames,
             mainActorIds: mainIds,
@@ -1450,7 +1468,7 @@ export default function HomePage({ basePath = "/" }) {
     };
 
     void load();
-  }, [loggedIn, rootUrl, router]);
+  }, [isBeta, loggedIn, rootUrl, router]);
 
   const allTags = useMemo(() => {
     const set = new Set();
@@ -1871,6 +1889,59 @@ export default function HomePage({ basePath = "/" }) {
     document.title = "Home | my1337.de";
   }, [selectedMovie?.title, selectedActor?.name, viewMode]);
 
+  const patchMovieMetric = (movieId, patch) => {
+    const matchesMovie = (movie) => String(movie.id) === String(movieId);
+    const patchList = (list) =>
+      list.map((movie) => (matchesMovie(movie) ? { ...movie, ...patch } : movie));
+
+    setMovies((previous) => patchList(previous));
+    setVisibleMovies((previous) => patchList(previous));
+  };
+
+  const handleRateMovie = async (movieId, rating) => {
+    const response = await fetch(
+      `/api/movie-metrics/${encodeURIComponent(movieId)}/rating`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rating }),
+      }
+    );
+    const payload = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(
+        response.status === 401
+          ? "Bitte melde dich erneut an."
+          : payload?.error || "Bewertung konnte nicht gespeichert werden."
+      );
+    }
+
+    const nextRating = Number(payload?.metric?.rating);
+    patchMovieMetric(movieId, { rating: nextRating });
+    return nextRating;
+  };
+
+  const handleRecordMovieView = async (movieId) => {
+    const response = await fetch(
+      `/api/movie-metrics/${encodeURIComponent(movieId)}/view`,
+      { method: "POST" }
+    );
+    const payload = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(
+        response.status === 401
+          ? "Bitte melde dich erneut an."
+          : payload?.error || "Aufruf konnte nicht gespeichert werden."
+      );
+    }
+
+    const nextViewCount = Math.max(0, Number(payload?.view_count) || 0);
+    patchMovieMetric(movieId, { viewCount: nextViewCount });
+    return nextViewCount;
+  };
+
   const handleOpenMovie = (movie) => {
     if (!movie?.id) return;
 
@@ -1963,6 +2034,8 @@ export default function HomePage({ basePath = "/" }) {
         onShowActor={handleShowMoviesForActor}
         onOpenMovie={handleOpenMovie}
         onCloseMovie={handleCloseMovie}
+        onRateMovie={handleRateMovie}
+        onRecordMovieView={handleRecordMovieView}
         onSearch={handleSearchChange}
         onDashboard={() => safeOpen("/dashboard")}
         filtersOpen={filtersOpen}
