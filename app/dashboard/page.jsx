@@ -177,7 +177,7 @@ const chipClass = (active) =>
 // Dashboard
 // -------------------------------
 
-export default function DashboardPage() {
+export function DashboardExperience({ beta = false }) {
   const router = useRouter();
 
   // Header / Suche
@@ -1299,7 +1299,7 @@ export default function DashboardPage() {
   const SidebarContent = (
     <>
       {/* Bereiche */}
-      <div className="rounded-3xl border border-neutral-800 bg-gradient-to-b from-neutral-950/90 to-black/90 px-5 py-5 shadow-2xl shadow-black/70">
+      <div className="dashSidebarNav rounded-3xl border border-neutral-800 bg-gradient-to-b from-neutral-950/90 to-black/90 px-5 py-5 shadow-2xl shadow-black/70">
         <div className="flex flex-col gap-2">
           {/* Filme */}
           <button
@@ -1382,7 +1382,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Überblick */}
-      <div className="rounded-3xl border border-neutral-800 bg-neutral-950/90 px-5 py-4 text-sm shadow-xl shadow-black/70">
+      <div className="dashSidebarOverview rounded-3xl border border-neutral-800 bg-neutral-950/90 px-5 py-4 text-sm shadow-xl shadow-black/70">
         <div className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">
           Überblick
         </div>
@@ -1427,7 +1427,7 @@ export default function DashboardPage() {
   );
 
   return (
-    <div className="page min-h-screen bg-gradient-to-br from-neutral-950 via-black to-neutral-900 text-neutral-100 text-[15px]">
+    <div className={`${beta ? "adminBeta " : ""}page min-h-screen bg-gradient-to-br from-neutral-950 via-black to-neutral-900 text-neutral-100 text-[15px]`}>
       <style jsx global>{`
         :root {
           --dash-text: rgba(255, 255, 255, 0.92);
@@ -1788,7 +1788,22 @@ export default function DashboardPage() {
 
       {/* Header */}
         <div className="dashTopbar">
-            <div className="dashTopbar__left" />
+            <div className="dashTopbar__left">
+              {beta ? (
+                <button
+                  type="button"
+                  className="adminBrand"
+                  onClick={() => router.push("/beta")}
+                  title="Zur Beta-Hauptseite"
+                >
+                  <img src="/logo.png" alt="Project1337" />
+                  <span>
+                    Control Room
+                    <small>Admin Beta / 01</small>
+                  </span>
+                </button>
+              ) : null}
+            </div>
 
           <div className="dashTopbar__mid">
           {loggedIn ? (
@@ -1886,12 +1901,27 @@ export default function DashboardPage() {
                       role="menuitem"
                       onClick={() => {
                         setUserMenuOpen(false);
-                        router.push("/");
+                        router.push(beta ? "/beta" : "/");
                       }}
                       title="Zur Hauptseite"
                     >
                       Hauptseite
                     </button>
+
+                    {beta ? (
+                      <button
+                        type="button"
+                        className="dashUserMenu__item"
+                        role="menuitem"
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          router.push("/dashboard");
+                        }}
+                        title="Zum klassischen Dashboard"
+                      >
+                        Klassisches Dashboard
+                      </button>
+                    ) : null}
 
                     <div style={{ height: 8 }} />
 
@@ -2009,7 +2039,7 @@ export default function DashboardPage() {
         </div>
       ) : null}
 
-      <main className="px-4 pb-10 pt-6 md:px-6">
+      <main className="dashMain px-4 pb-10 pt-6 md:px-6">
         {!loggedIn ? (
           <section className="mx-auto mt-16 max-w-md rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950 to-black/90 p-8 text-center shadow-2xl shadow-black/70">
             <p className="mb-3 text-base text-neutral-200">
@@ -2023,7 +2053,7 @@ export default function DashboardPage() {
             )}
           </section>
         ) : (
-          <section className="mx-auto max-w-7xl space-y-5">
+          <section className="dashWorkspace mx-auto max-w-7xl space-y-5">
             {error && (
               <div className="rounded-xl border border-red-700/80 bg-red-950/80 px-4 py-3 text-base text-red-100 shadow shadow-red-900/70">
                 Fehler: {error}
@@ -2036,17 +2066,73 @@ export default function DashboardPage() {
                 <span>Lade Daten…</span>
               </div>
             ) : (
-              <div className="relative">
+              <>
+                {beta ? (
+                  <section className="adminHero" aria-labelledby="admin-beta-title">
+                    <div className="adminHero__copy">
+                      <span className="adminEyebrow">Project1337 / Archive Operations</span>
+                      <h1 id="admin-beta-title">
+                        Das Archiv.<br />
+                        <em>Unter Kontrolle.</em>
+                      </h1>
+                      <p>
+                        Inhalte pflegen, Darsteller organisieren und den gesamten
+                        Katalog aus einer konzentrierten Arbeitsfläche steuern.
+                      </p>
+                    </div>
+
+                    <div className="adminHero__actions">
+                      <button
+                        type="button"
+                        className="adminPrimaryAction"
+                        onClick={() => {
+                          setActiveFilmSection("new");
+                          setMetaMenuOpen(false);
+                        }}
+                      >
+                        <span>+</span> Film hinzufügen
+                      </button>
+                      <button
+                        type="button"
+                        className="adminSecondaryAction"
+                        onClick={() => router.push("/beta")}
+                      >
+                        Beta ansehen <span>↗</span>
+                      </button>
+                    </div>
+
+                    <div className="adminHero__metrics" aria-label="Archivübersicht">
+                      <div>
+                        <strong>{filme.length}</strong>
+                        <span>Filme</span>
+                      </div>
+                      <div>
+                        <strong>{hauptdarsteller.length + nebendarsteller.length}</strong>
+                        <span>Darsteller</span>
+                      </div>
+                      <div>
+                        <strong>{studios.length}</strong>
+                        <span>Studios</span>
+                      </div>
+                      <div>
+                        <strong>{tags.length}</strong>
+                        <span>Tags</span>
+                      </div>
+                    </div>
+                  </section>
+                ) : null}
+
+              <div className="dashLayout relative">
                 {/* Mobile: Sidebar oberhalb der Hauptbox */}
-                <div className="mb-5 w-full space-y-4 lg:hidden">
+                <div className="dashMobileSidebar mb-5 w-full space-y-4 lg:hidden">
                   {SidebarContent}
                 </div>
 
                 {/* Hauptbox: EXAKT horizontal zentriert */}
-                <section className="space-y-5 max-w-5xl mx-auto w-full">
+                <section className="dashContent space-y-5 max-w-5xl mx-auto w-full">
                   {/* Tab: Neuer Film */}
                   {activeFilmSection === "new" && (
-                    <div className="group rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950/95 to-black/95 p-6 shadow-2xl shadow-black/70 transition-transform duration-200">
+                    <div className="dashPanel dashPanel--form group rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950/95 to-black/95 p-6 shadow-2xl shadow-black/70 transition-transform duration-200">
                       <div className="mb-4 flex items-center justify-between gap-2">
                         <div>
                           <h2 className="text-xl font-semibold text-neutral-50">
@@ -2338,7 +2424,7 @@ export default function DashboardPage() {
 
                   {/* Tab: Filmestatistik */}
                   {activeFilmSection === "stats" && (
-                    <div className="rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950 to-black/95 p-6 shadow-2xl shadow-black/70 space-y-4">
+                    <div className="dashPanel dashPanel--library rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950 to-black/95 p-6 shadow-2xl shadow-black/70 space-y-4">
                       <div className="flex items-center justify-between">
                         <div>
                           <h2 className="text-xl font-semibold text-neutral-50">
@@ -2368,7 +2454,7 @@ export default function DashboardPage() {
                           {filteredFilme.map((f) => (
                             <details
                               key={f.id}
-                              className="group rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4 shadow-sm shadow-black/60 transition-all hover:border-red-500/70"
+                              className="dashMovieRow group rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4 shadow-sm shadow-black/60 transition-all hover:border-red-500/70"
                             >
                               <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
                                 <div className="flex items-center gap-2">
@@ -2509,7 +2595,7 @@ export default function DashboardPage() {
 
                   {/* Tab: Stammdaten */}
                   {activeFilmSection === "meta" && (
-                    <section className="rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950 to-black/95 p-6 text-sm text-neutral-100 shadow-2xl shadow-black/70 space-y-5">
+                    <section className="dashPanel dashPanel--meta rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950 to-black/95 p-6 text-sm text-neutral-100 shadow-2xl shadow-black/70 space-y-5">
                       <div className="flex items-center justify-between gap-4">
                         <div>
                           <h2 className="text-xl font-semibold text-neutral-50">
@@ -3228,10 +3314,11 @@ export default function DashboardPage() {
                 </section>
 
                 {/* Desktop: Sidebar links von der zentrierten Hauptbox, Position ignoriert die Zentrierung */}
-                <aside className="hidden lg:flex lg:flex-col lg:space-y-4 lg:absolute lg:-left-72 lg:top-0 lg:w-64">
+                <aside className="dashSidebarDesktop hidden lg:flex lg:flex-col lg:space-y-4 lg:absolute lg:-left-72 lg:top-0 lg:w-64">
                   {SidebarContent}
                 </aside>
               </div>
+              </>
             )}
           </section>
         )}
@@ -3243,4 +3330,8 @@ export default function DashboardPage() {
       </div>
     </div>
   );
+}
+
+export default function DashboardPage() {
+  return <DashboardExperience />;
 }
