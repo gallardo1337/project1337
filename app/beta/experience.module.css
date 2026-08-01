@@ -324,10 +324,9 @@
   inset: 0 0 auto;
   z-index: 80;
   height: 92px;
-  display: grid;
-  grid-template-columns: minmax(180px, 0.8fr) auto minmax(330px, 1fr);
+  display: flex;
   align-items: center;
-  gap: 28px;
+  justify-content: space-between;
   padding: 0 clamp(24px, 4vw, 72px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(7, 7, 7, 0.82);
@@ -362,10 +361,14 @@
 }
 
 .nav {
+  position: absolute;
+  top: 0;
+  left: 50%;
   height: 100%;
   display: flex;
   align-items: stretch;
   gap: 34px;
+  transform: translateX(-50%);
 }
 
 .nav button {
