@@ -1076,6 +1076,7 @@ function ActorProfile({ actor, movies, movieSort, setMovieSort, onBack, onOpenMo
 function MovieDetail({ movie, onBack, onShowActor, onRateMovie, onRecordView }) {
   const mainCast = Array.isArray(movie.mainCast) ? movie.mainCast : [];
   const supportCast = Array.isArray(movie.supportCast) ? movie.supportCast : [];
+  const castCount = mainCast.length + supportCast.length;
   const [draftRating, setDraftRating] = useState(Number(movie.rating) || 0);
   const [hoverRating, setHoverRating] = useState(0);
   const [ratingSaving, setRatingSaving] = useState(false);
@@ -1145,7 +1146,7 @@ function MovieDetail({ movie, onBack, onShowActor, onRateMovie, onRecordView }) 
         <div className={styles.theaterLabel}>PRIVATE SCREENING / 1337</div>
       </section>
 
-      <section className={styles.detailDashboard}>
+      <section className={`${styles.detailDashboard}${castCount ? "" : ` ${styles.detailDashboardSolo}`}`}>
         <div className={styles.detailInfo}>
           <div className={styles.detailTitleBlock}>
             <span>
@@ -1194,7 +1195,7 @@ function MovieDetail({ movie, onBack, onShowActor, onRateMovie, onRecordView }) 
           <div className={styles.detailCast}>
             <div className={styles.detailCastHeader}>
               <div><span>On screen</span><h2>Cast</h2></div>
-              <small>{mainCast.length + supportCast.length} Personen</small>
+              <small>{castCount} Personen</small>
             </div>
             <div className={styles.castRail}>
               {mainCast.map((person) => (
