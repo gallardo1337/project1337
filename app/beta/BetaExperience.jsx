@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "./experience.module.css";
 
 function Icon({ name, className = "" }) {
@@ -26,6 +26,7 @@ function Icon({ name, className = "" }) {
       </>
     ),
     spark: <path d="M12 3l1.4 5.6L19 10l-5.6 1.4L12 17l-1.4-5.6L5 10l5.6-1.4L12 3Zm6 13 .6 2.4L21 19l-2.4.6L18 22l-.6-2.4L15 19l2.4-.6L18 16Z" />,
+    star: <path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6-5.4-2.8-5.4 2.8 1-6-4.4-4.3 6.1-.9L12 3Z" />,
     user: (
       <>
         <circle cx="12" cy="8" r="4" />
@@ -80,6 +81,14 @@ function formatDate(value) {
     month: "long",
     year: "numeric",
   }).format(date);
+}
+
+function formatNumber(value) {
+  return new Intl.NumberFormat("de-DE").format(Math.max(0, Number(value) || 0));
+}
+
+function formatRating(value) {
+  return Number(value).toFixed(1).replace(".", ",");
 }
 
 function getAge(value) {
@@ -214,9 +223,21 @@ function buildActorStats(movies) {
     (tag) => !isHairColorTag(tag) && !isFinishTag(tag)
   );
   const resolutions = list.map((movie) => movie.resolution).filter(Boolean);
+  const ratings = list
+    .map((movie) => Number(movie.rating))
+    .filter((rating) => Number.isInteger(rating) && rating >= 1 && rating <= 10);
+  const totalViews = list.reduce(
+    (sum, movie) => sum + Math.max(0, Number(movie.viewCount) || 0),
+    0
+  );
 
   return {
     yearRange,
+    averageRating: ratings.length
+      ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length
+      : null,
+    ratedMovies: ratings.length,
+    totalViews,
     hairColors: withStatPercent(countStatValues(hairTags).slice(0, 5), hairTags.length),
     qualities: withStatPercent(countStatValues(resolutions), resolutions.length),
     studios: countStatValues(list.map((movie) => movie.studio)).slice(0, 5),
@@ -920,7 +941,9 @@ function ActorStatsModal({ actor, movies, stats, onClose }) {
           <div>
             <span>Collection intelligence</span>
             <h2 id="actor-stats-title">{actor.name}</h2>
-            <p>{movies.length} Filme · {stats.yearRange} · vollständige Profilstatistik</p>
+            <p>
+              {movies.length} Filme · {stats.yearRange} · {formatNumber(stats.totalViews)} Aufrufe
+            </p>
           </div>
           <button
             type="button"
@@ -985,6 +1008,31 @@ function ActorProfile({ actor, movies, movieSort, setMovieSort, onBack, onOpenMo
             <div><small>Geboren</small><strong>{formatDate(actor.birthDate)}{age ? ` · ${age}` : ""}</strong></div>
             <div><small>Collection</small><strong>{movies.length} Filme</strong></div>
           </div>
+          <div className={styles.profileMetrics}>
+            <div>
+              <Icon name="star" />
+              <span>
+                <small>Ø Bewertung</small>
+                <strong>
+                  {stats.averageRating != null ? formatRating(stats.averageRating) : "–"}
+                  <em>/10</em>
+                </strong>
+              </span>
+              <i>
+                {stats.ratedMovies
+                  ? `${stats.ratedMovies} bewertet`
+                  : "Noch keine Bewertung"}
+              </i>
+            </div>
+            <div>
+              <Icon name="play" />
+              <span>
+                <small>Gesamtaufrufe</small>
+                <strong>{formatNumber(stats.totalViews)}</strong>
+              </span>
+              <i>{movies.length} Filme</i>
+            </div>
+          </div>
           <div className={styles.profileLinks}>
             <button
               type="button"
@@ -1025,9 +1073,54 @@ function ActorProfile({ actor, movies, movieSort, setMovieSort, onBack, onOpenMo
   );
 }
 
-function MovieDetail({ movie, onBack, onShowActor }) {
+function MovieDetail({ movie, onBack, onShowActor, onRateMovie, onRecordView }) {
   const mainCast = Array.isArray(movie.mainCast) ? movie.mainCast : [];
   const supportCast = Array.isArray(movie.supportCast) ? movie.supportCast : [];
+  const [draftRating, setDraftRating] = useState(Number(movie.rating) || 0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [ratingSaving, setRatingSaving] = useState(false);
+  const [metricError, setMetricError] = useState("");
+  const viewRecordedRef = useRef(false);
+
+  useEffect(() => {
+    setDraftRating(Number(movie.rating) || 0);
+  }, [movie.rating]);
+
+  useEffect(() => {
+    viewRecordedRef.current = false;
+    setHoverRating(0);
+    setMetricError("");
+  }, [movie.id]);
+
+  const saveRating = async (rating) => {
+    if (ratingSaving || rating === draftRating) return;
+
+    const previousRating = draftRating;
+    setDraftRating(rating);
+    setRatingSaving(true);
+    setMetricError("");
+
+    try {
+      await onRateMovie(movie.id, rating);
+    } catch (error) {
+      setDraftRating(previousRating);
+      setMetricError(error?.message || "Bewertung konnte nicht gespeichert werden.");
+    } finally {
+      setRatingSaving(false);
+    }
+  };
+
+  const recordView = () => {
+    if (viewRecordedRef.current || !movie.fileUrl) return;
+    viewRecordedRef.current = true;
+    setMetricError("");
+
+    void onRecordView(movie.id).catch((error) => {
+      setMetricError(error?.message || "Aufruf konnte nicht gespeichert werden.");
+    });
+  };
+
+  const visibleRating = hoverRating || draftRating;
 
   return (
     <main className={styles.detailPage}>
@@ -1035,7 +1128,13 @@ function MovieDetail({ movie, onBack, onShowActor }) {
         <button type="button" className={styles.theaterBack} onClick={onBack}><Icon name="back" /> Zurück</button>
         <div className={styles.videoFrame}>
           {movie.fileUrl ? (
-            <video controls playsInline preload="metadata" poster={movie.thumbnailUrl || undefined}>
+            <video
+              controls
+              playsInline
+              preload="metadata"
+              poster={movie.thumbnailUrl || undefined}
+              onPlay={recordView}
+            >
               <source src={movie.fileUrl} type={getVideoMimeType(movie.fileUrl)} />
               Dein Browser unterstützt dieses Videoformat nicht.
             </video>
@@ -1057,6 +1156,55 @@ function MovieDetail({ movie, onBack, onShowActor }) {
           <div><small>Studio</small><strong>{movie.studio || "–"}</strong></div>
         </div>
         {movie.tags?.length ? <div className={styles.detailTags}>{movie.tags.map((tag) => <span key={tag}>{tag}</span>)}</div> : null}
+      </section>
+
+      <section className={styles.ratingSection}>
+        <div className={styles.ratingIntro}>
+          <span>Personal score / 10</span>
+          <h2>Deine<br /><em>Bewertung.</em></h2>
+          <p>Ein persönlicher Wert für deine Collection – jederzeit neu bewertbar.</p>
+        </div>
+
+        <div className={styles.ratingPanel}>
+          <div
+            className={styles.ratingStars}
+            onMouseLeave={() => setHoverRating(0)}
+            aria-label="Film von 1 bis 10 bewerten"
+          >
+            {Array.from({ length: 10 }, (_, index) => index + 1).map((rating) => (
+              <button
+                type="button"
+                key={rating}
+                className={rating <= visibleRating ? styles.ratingStarActive : ""}
+                onMouseEnter={() => setHoverRating(rating)}
+                onFocus={() => setHoverRating(rating)}
+                onBlur={() => setHoverRating(0)}
+                onClick={() => saveRating(rating)}
+                aria-label={`${rating} von 10 Sternen`}
+                aria-pressed={draftRating === rating}
+                disabled={ratingSaving}
+              >
+                <Icon name="star" />
+                <span>{String(rating).padStart(2, "0")}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className={styles.ratingSummary}>
+            <div>
+              <small>Aktuelle Bewertung</small>
+              <strong>{draftRating ? `${draftRating}/10` : "Noch offen"}</strong>
+              <span>{ratingSaving ? "Wird gespeichert…" : "Sterne auswählen"}</span>
+            </div>
+            <div>
+              <small>Aufrufe</small>
+              <strong>{formatNumber(movie.viewCount)}</strong>
+              <span>Startet beim ersten Play</span>
+            </div>
+          </div>
+
+          {metricError ? <div className={styles.metricError}>{metricError}</div> : null}
+        </div>
       </section>
 
       {mainCast.length || supportCast.length ? (
@@ -1112,6 +1260,8 @@ export default function BetaExperience({
   onShowActor,
   onOpenMovie,
   onCloseMovie,
+  onRateMovie,
+  onRecordMovieView,
   onSearch,
   onDashboard,
   filtersOpen,
@@ -1192,7 +1342,15 @@ export default function BetaExperience({
       {loading ? (
         <LoadingScreen />
       ) : selectedMovieId ? (
-        selectedMovie ? <MovieDetail movie={selectedMovie} onBack={onCloseMovie} onShowActor={openActorFromDiscover} /> : <div className={styles.emptyState}><strong>Film nicht gefunden.</strong><button type="button" onClick={onCloseMovie}>Zurück</button></div>
+        selectedMovie ? (
+          <MovieDetail
+            movie={selectedMovie}
+            onBack={onCloseMovie}
+            onShowActor={openActorFromDiscover}
+            onRateMovie={onRateMovie}
+            onRecordView={onRecordMovieView}
+          />
+        ) : <div className={styles.emptyState}><strong>Film nicht gefunden.</strong><button type="button" onClick={onCloseMovie}>Zurück</button></div>
       ) : selectedActor ? (
         <ActorProfile actor={selectedActor} movies={movieList} movieSort={movieSort} setMovieSort={setMovieSort} onBack={actorBackTarget === "archive" ? onShowActors : onDiscover} onOpenMovie={onOpenMovie} />
       ) : viewMode === "actors_all" ? (
