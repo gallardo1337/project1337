@@ -111,7 +111,9 @@ function qualityTone(quality) {
 }
 
 function pickRandomMovies(movies, limit) {
-  const pool = [...movies];
+  const pool = movies.filter(
+    (movie) => !String(movie.resolution || "").toLowerCase().includes("retro")
+  );
 
   for (let index = pool.length - 1; index > 0; index -= 1) {
     const randomIndex = Math.floor(Math.random() * (index + 1));
@@ -119,6 +121,15 @@ function pickRandomMovies(movies, limit) {
   }
 
   return pool.slice(0, limit);
+}
+
+function spotlightTitleClass(title) {
+  const length = String(title || "").trim().length;
+
+  if (length > 80) return styles.spotlightTitleExtreme;
+  if (length > 52) return styles.spotlightTitleVeryLong;
+  if (length > 32) return styles.spotlightTitleLong;
+  return "";
 }
 
 function MovieCard({ movie, onOpen, large = false, index }) {
@@ -544,7 +555,9 @@ function Discovery({ movies, actors, onOpenMovie, onShowMovies, onShowActors, on
         </div>
         <div className={styles.spotlightCopy} key={featured?.id || "empty-feature"}>
           <div className={styles.kicker}><Icon name="spark" /> Aus dem Archiv</div>
-          <h1>{featured?.title || "Your private cinema"}</h1>
+          <h1 className={spotlightTitleClass(featured?.title)}>
+            {featured?.title || "Your private cinema"}
+          </h1>
           <div className={styles.spotlightMeta}>
             <span>{featured?.year || "2026"}</span><i />
             <span>{featured?.studio || "Project1337"}</span><i />
