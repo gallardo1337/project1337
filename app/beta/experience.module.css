@@ -1014,7 +1014,7 @@
 
 .moviePlay svg {
   width: 21px;
-  margin-left: 2px;
+  transform: translateX(-1px);
 }
 
 .movieCard:hover .movieVisual > img {
