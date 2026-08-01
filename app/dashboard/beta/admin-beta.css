@@ -1,0 +1,769 @@
+.adminBeta {
+  --admin-red: #f04444;
+  --admin-red-deep: #a6161d;
+  --admin-ink: #070708;
+  --admin-panel: #0d0d0f;
+  --admin-panel-soft: #121215;
+  --admin-line: rgba(255, 255, 255, 0.11);
+  --admin-muted: rgba(255, 255, 255, 0.48);
+  position: relative;
+  min-height: 100vh;
+  overflow-x: clip;
+  background:
+    radial-gradient(circle at 88% 4%, rgba(240, 68, 68, 0.13), transparent 23rem),
+    linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+    #070708 !important;
+  background-size: auto, 44px 44px, 44px 44px, auto !important;
+}
+
+.adminBeta::before {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 60;
+  width: 3px;
+  content: "";
+  background: linear-gradient(180deg, var(--admin-red), transparent 72%);
+  pointer-events: none;
+}
+
+.adminBeta *,
+.adminBeta *::before,
+.adminBeta *::after {
+  box-sizing: border-box;
+}
+
+.adminBeta button,
+.adminBeta input,
+.adminBeta select,
+.adminBeta textarea {
+  font: inherit;
+}
+
+.adminBeta button,
+.adminBeta [class*="rounded-"] {
+  border-radius: 2px !important;
+}
+
+.adminBeta .dashTopbar {
+  min-height: 82px !important;
+  padding: 13px clamp(18px, 3vw, 48px) !important;
+  grid-template-columns: minmax(210px, 0.65fr) minmax(320px, 1.5fr) minmax(220px, 0.65fr) !important;
+  gap: clamp(18px, 3vw, 46px) !important;
+  background: rgba(7, 7, 8, 0.88) !important;
+  border-bottom: 1px solid var(--admin-line) !important;
+  backdrop-filter: blur(22px) saturate(130%) !important;
+}
+
+.adminBeta .dashTopbar::after {
+  position: absolute;
+  right: clamp(18px, 3vw, 48px);
+  bottom: -1px;
+  left: clamp(18px, 3vw, 48px);
+  height: 1px;
+  content: "";
+  background: linear-gradient(90deg, var(--admin-red) 0 76px, transparent 76px);
+}
+
+.adminBeta .adminBrand {
+  display: inline-flex;
+  align-items: center;
+  gap: 13px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.adminBeta .adminBrand img {
+  display: block;
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 18px rgba(240, 68, 68, 0.26));
+}
+
+.adminBeta .adminBrand > span {
+  display: grid;
+  gap: 2px;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
+
+.adminBeta .adminBrand small {
+  color: var(--admin-red);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.adminBeta .dashInput {
+  height: 46px !important;
+  min-height: 46px !important;
+  max-height: 46px !important;
+  border-color: var(--admin-line) !important;
+  border-radius: 2px !important;
+  background: rgba(255, 255, 255, 0.035) !important;
+  padding: 0 16px !important;
+}
+
+.adminBeta .dashInput::after {
+  align-self: center;
+  padding-left: 12px;
+  border-left: 1px solid var(--admin-line);
+  color: rgba(255, 255, 255, 0.26);
+  content: "⌘ K";
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.adminBeta .dashInput:focus-within {
+  border-color: rgba(240, 68, 68, 0.72) !important;
+  background: rgba(255, 255, 255, 0.055) !important;
+  box-shadow: 0 0 0 1px rgba(240, 68, 68, 0.16);
+}
+
+.adminBeta .dashInput input {
+  line-height: 46px !important;
+}
+
+.adminBeta .dashAuth__label {
+  color: rgba(255, 255, 255, 0.62) !important;
+  font-size: 11px !important;
+  letter-spacing: 0.04em;
+}
+
+.adminBeta .dashUserMenu__btn,
+.adminBeta .dashIconBtn {
+  width: 40px !important;
+  height: 40px !important;
+  border-color: var(--admin-line) !important;
+  border-radius: 2px !important;
+  background: transparent !important;
+}
+
+.adminBeta .dashUserMenu__btn:hover,
+.adminBeta .dashIconBtn:hover {
+  border-color: var(--admin-red) !important;
+  background: rgba(240, 68, 68, 0.08) !important;
+  transform: none !important;
+}
+
+.adminBeta .dashUserMenu__panel,
+.adminBeta .dashMSearch__panel {
+  border-color: var(--admin-line) !important;
+  border-radius: 2px !important;
+  background: rgba(9, 9, 10, 0.98) !important;
+}
+
+.adminBeta .dashUserMenu__item {
+  border: 0 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+.adminBeta .dashUserMenu__item:hover {
+  padding-left: 16px;
+  color: var(--admin-red) !important;
+  transform: none !important;
+}
+
+.adminBeta .dashAuthField,
+.adminBeta .dashBtn {
+  border-radius: 2px !important;
+}
+
+.adminBeta .dashMain {
+  padding: clamp(28px, 4vw, 58px) clamp(18px, 3vw, 48px) 80px !important;
+}
+
+.adminBeta .dashWorkspace {
+  width: 100%;
+  max-width: 1540px !important;
+  margin-inline: auto;
+}
+
+.adminBeta .adminHero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(250px, 0.65fr);
+  gap: 30px clamp(34px, 6vw, 100px);
+  margin-bottom: clamp(38px, 6vw, 78px);
+  padding: clamp(24px, 4vw, 54px) 0 0;
+}
+
+.adminBeta .adminHero::before {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 76px;
+  height: 2px;
+  content: "";
+  background: var(--admin-red);
+  box-shadow: 82px 0 0 rgba(255, 255, 255, 0.2);
+}
+
+.adminBeta .adminHero__copy {
+  max-width: 820px;
+}
+
+.adminBeta .adminEyebrow {
+  display: block;
+  margin-bottom: 22px;
+  color: var(--admin-red);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.adminBeta .adminHero h1 {
+  max-width: 900px;
+  margin: 0;
+  color: #f4f1eb;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(52px, 7.4vw, 116px);
+  font-weight: 400;
+  line-height: 0.82;
+  letter-spacing: -0.068em;
+}
+
+.adminBeta .adminHero h1 em {
+  color: rgba(244, 241, 235, 0.35);
+  font-weight: 400;
+}
+
+.adminBeta .adminHero__copy p {
+  max-width: 580px;
+  margin: 28px 0 0;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.adminBeta .adminHero__actions {
+  display: flex;
+  flex-direction: column;
+  justify-content: end;
+  gap: 10px;
+  padding-bottom: 4px;
+}
+
+.adminBeta .adminPrimaryAction,
+.adminBeta .adminSecondaryAction {
+  display: flex;
+  min-height: 54px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 0 19px;
+  border: 1px solid transparent;
+  border-radius: 2px !important;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.035em;
+  cursor: pointer;
+  transition: color 180ms ease, background 180ms ease, border-color 180ms ease;
+}
+
+.adminBeta .adminPrimaryAction {
+  background: var(--admin-red);
+  color: #080808;
+}
+
+.adminBeta .adminPrimaryAction:hover {
+  background: #ff5d5d;
+}
+
+.adminBeta .adminPrimaryAction > span {
+  font-size: 20px;
+  font-weight: 400;
+}
+
+.adminBeta .adminSecondaryAction {
+  border-color: var(--admin-line);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.76);
+}
+
+.adminBeta .adminSecondaryAction:hover {
+  border-color: rgba(255, 255, 255, 0.36);
+  color: #fff;
+}
+
+.adminBeta .adminHero__metrics {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  margin-top: clamp(10px, 2vw, 24px);
+  border-top: 1px solid var(--admin-line);
+  border-bottom: 1px solid var(--admin-line);
+}
+
+.adminBeta .adminHero__metrics > div {
+  display: flex;
+  min-height: 104px;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 19px clamp(14px, 2vw, 28px);
+  border-right: 1px solid var(--admin-line);
+}
+
+.adminBeta .adminHero__metrics > div:first-child {
+  padding-left: 0;
+}
+
+.adminBeta .adminHero__metrics > div:last-child {
+  border-right: 0;
+  padding-right: 0;
+}
+
+.adminBeta .adminHero__metrics strong {
+  color: #f4f1eb;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(38px, 4vw, 62px);
+  font-weight: 400;
+  line-height: 0.85;
+  letter-spacing: -0.055em;
+}
+
+.adminBeta .adminHero__metrics span {
+  padding-bottom: 2px;
+  color: var(--admin-muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.adminBeta .dashLayout {
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr);
+  align-items: start;
+  gap: clamp(24px, 3vw, 52px);
+}
+
+.adminBeta .dashContent {
+  grid-row: 1;
+  grid-column: 2;
+  width: 100%;
+  max-width: none !important;
+  margin: 0 !important;
+}
+
+.adminBeta .dashSidebarDesktop {
+  position: sticky !important;
+  top: 112px !important;
+  left: auto !important;
+  grid-row: 1;
+  grid-column: 1;
+  width: 100% !important;
+  height: max-content;
+}
+
+.adminBeta .dashSidebarNav,
+.adminBeta .dashSidebarOverview {
+  border-color: var(--admin-line) !important;
+  border-radius: 2px !important;
+  background: rgba(10, 10, 11, 0.88) !important;
+  box-shadow: none !important;
+}
+
+.adminBeta .dashSidebarNav {
+  padding: 9px !important;
+}
+
+.adminBeta .dashSidebarNav button {
+  min-height: 44px;
+  border: 0 !important;
+  border-left: 2px solid transparent !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: rgba(255, 255, 255, 0.58) !important;
+  box-shadow: none !important;
+  font-size: 11px !important;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.adminBeta .dashSidebarNav button:hover {
+  background: rgba(255, 255, 255, 0.035) !important;
+  color: #fff !important;
+}
+
+.adminBeta .dashSidebarNav button[class*="bg-red-"] {
+  border-left-color: var(--admin-red) !important;
+  background: rgba(240, 68, 68, 0.08) !important;
+  color: #fff !important;
+}
+
+.adminBeta .dashSidebarNav button span[class*="rounded-full"] {
+  border-radius: 0 !important;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.adminBeta .dashSidebarOverview {
+  padding: 20px !important;
+}
+
+.adminBeta .dashSidebarOverview > div:first-child {
+  margin-bottom: 16px !important;
+  color: var(--admin-red) !important;
+  font-size: 9px !important;
+  letter-spacing: 0.22em !important;
+}
+
+.adminBeta .dashSidebarOverview .space-y-2 > div {
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+}
+
+.adminBeta .dashSidebarOverview .space-y-2 > div:last-child {
+  border-bottom: 0;
+}
+
+.adminBeta .dashSidebarOverview span:first-child {
+  color: rgba(255, 255, 255, 0.46) !important;
+  font-size: 11px;
+}
+
+.adminBeta .dashSidebarOverview span:last-child {
+  color: #fff !important;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 17px;
+  font-weight: 400 !important;
+}
+
+.adminBeta .dashPanel {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--admin-line) !important;
+  border-radius: 2px !important;
+  background: rgba(10, 10, 11, 0.94) !important;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.28) !important;
+  padding: clamp(20px, 3vw, 38px) !important;
+}
+
+.adminBeta .dashPanel::before {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 58px;
+  height: 2px;
+  content: "";
+  background: var(--admin-red);
+}
+
+.adminBeta .dashPanel h2 {
+  color: #f4f1eb !important;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(27px, 3vw, 42px) !important;
+  font-weight: 400 !important;
+  letter-spacing: -0.04em;
+}
+
+.adminBeta .dashPanel h3 {
+  color: rgba(255, 255, 255, 0.88) !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.adminBeta .dashPanel p[class*="text-neutral-500"] {
+  color: var(--admin-muted) !important;
+}
+
+.adminBeta .dashPanel :where(input, select, textarea) {
+  min-height: 46px;
+  border-color: rgba(255, 255, 255, 0.13) !important;
+  border-radius: 2px !important;
+  background: #080809 !important;
+  color: rgba(255, 255, 255, 0.88) !important;
+  outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.adminBeta .dashPanel textarea {
+  min-height: 104px;
+}
+
+.adminBeta .dashPanel :where(input, select, textarea):focus {
+  border-color: rgba(240, 68, 68, 0.76) !important;
+  box-shadow: 0 0 0 1px rgba(240, 68, 68, 0.18);
+}
+
+.adminBeta .dashPanel :where(input, textarea)::placeholder {
+  color: rgba(255, 255, 255, 0.25) !important;
+}
+
+.adminBeta .dashPanel label {
+  color: rgba(255, 255, 255, 0.58);
+}
+
+.adminBeta .dashPanel button {
+  border-radius: 2px !important;
+}
+
+.adminBeta .dashPanel button[class*="bg-red-"] {
+  background: var(--admin-red) !important;
+  color: #080808 !important;
+  box-shadow: none !important;
+}
+
+.adminBeta .dashPanel button[class*="bg-red-"]:hover {
+  background: #ff5d5d !important;
+}
+
+.adminBeta .dashPanel button[class*="border-neutral-"] {
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  background: transparent;
+}
+
+.adminBeta .dashPanel button[class*="border-neutral-"]:hover {
+  border-color: rgba(255, 255, 255, 0.36) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+.adminBeta .dashPanel [class*="rounded-full"] {
+  border-radius: 2px !important;
+}
+
+.adminBeta .dashMovieRow {
+  position: relative;
+  border: 0 !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.085) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 18px 10px !important;
+}
+
+.adminBeta .dashMovieRow:last-child {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.085) !important;
+}
+
+.adminBeta .dashMovieRow:hover,
+.adminBeta .dashMovieRow[open] {
+  border-color: rgba(240, 68, 68, 0.42) !important;
+  background: rgba(240, 68, 68, 0.035) !important;
+}
+
+.adminBeta .dashMovieRow summary {
+  min-height: 38px;
+}
+
+.adminBeta .dashMovieRow summary > div:first-child::before {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.27);
+  content: "";
+}
+
+.adminBeta .dashMovieRow[open] summary > div:first-child::before {
+  background: var(--admin-red);
+  box-shadow: 0 0 12px rgba(240, 68, 68, 0.65);
+}
+
+.adminBeta .dashMovieRow summary span[class*="text-base"] {
+  font-size: 15px !important;
+  font-weight: 650 !important;
+}
+
+.adminBeta .dashMovieRow > div {
+  margin-top: 18px !important;
+  padding: 20px !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  border-radius: 2px !important;
+  background: rgba(0, 0, 0, 0.28) !important;
+}
+
+.adminBeta .dashPanel--meta form,
+.adminBeta .dashPanel--meta form + div,
+.adminBeta .dashPanel--meta div[class*="border-neutral-"] {
+  border-color: rgba(255, 255, 255, 0.09) !important;
+  border-radius: 2px !important;
+  background: rgba(255, 255, 255, 0.018) !important;
+  box-shadow: none !important;
+}
+
+.adminBeta .dashPanel--meta img,
+.adminBeta .dashPanel--form img {
+  border-radius: 2px !important;
+}
+
+.adminBeta .dashMobileSidebar {
+  margin-bottom: 22px !important;
+}
+
+.adminBeta .fixed.bottom-4.right-4 button {
+  border-color: var(--admin-line) !important;
+  border-radius: 2px !important;
+  background: rgba(9, 9, 10, 0.94) !important;
+}
+
+.adminBeta .changelogPanel {
+  border-radius: 2px !important;
+  background: rgba(9, 9, 10, 0.98) !important;
+}
+
+@media (max-width: 1120px) {
+  .adminBeta .dashTopbar {
+    grid-template-columns: minmax(190px, 0.55fr) minmax(280px, 1.25fr) auto !important;
+  }
+
+  .adminBeta .adminHero {
+    grid-template-columns: minmax(0, 1fr) 230px;
+  }
+
+  .adminBeta .dashLayout {
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 24px;
+  }
+}
+
+@media (max-width: 1023px) {
+  .adminBeta .dashLayout {
+    display: block;
+  }
+
+  .adminBeta .dashContent {
+    display: block;
+  }
+}
+
+@media (max-width: 760px) {
+  .adminBeta .dashTopbar {
+    min-height: 68px !important;
+    grid-template-columns: 1fr auto !important;
+    padding: 10px 16px !important;
+  }
+
+  .adminBeta .dashTopbar::after {
+    right: 16px;
+    left: 16px;
+  }
+
+  .adminBeta .adminBrand img {
+    width: 30px;
+    height: 30px;
+  }
+
+  .adminBeta .adminBrand > span {
+    font-size: 12px;
+  }
+
+  .adminBeta .adminBrand small {
+    font-size: 8px;
+  }
+
+  .adminBeta .dashMain {
+    padding: 26px 14px 72px !important;
+  }
+
+  .adminBeta .adminHero {
+    display: block;
+    margin-bottom: 36px;
+    padding-top: 28px;
+  }
+
+  .adminBeta .adminHero__copy p {
+    margin-top: 20px;
+  }
+
+  .adminBeta .adminHero__actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    margin-top: 26px;
+  }
+
+  .adminBeta .adminHero__metrics {
+    grid-template-columns: repeat(2, 1fr);
+    margin-top: 28px;
+  }
+
+  .adminBeta .adminHero__metrics > div {
+    min-height: 88px;
+    padding: 16px !important;
+  }
+
+  .adminBeta .adminHero__metrics > div:nth-child(2) {
+    border-right: 0;
+  }
+
+  .adminBeta .adminHero__metrics > div:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--admin-line);
+  }
+
+  .adminBeta .adminHero__metrics > div:nth-child(odd) {
+    padding-left: 0 !important;
+  }
+
+  .adminBeta .adminHero__metrics > div:nth-child(even) {
+    padding-right: 0 !important;
+  }
+
+  .adminBeta .dashPanel {
+    padding: 20px 16px !important;
+  }
+
+  .adminBeta .dashMovieRow {
+    padding-inline: 4px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .adminBeta .adminBrand > span {
+    max-width: 104px;
+  }
+
+  .adminBeta .adminHero h1 {
+    font-size: clamp(44px, 14vw, 62px);
+    line-height: 0.88;
+  }
+
+  .adminBeta .adminHero__actions {
+    grid-template-columns: 1fr;
+  }
+
+  .adminBeta .adminPrimaryAction,
+  .adminBeta .adminSecondaryAction {
+    min-height: 50px;
+  }
+
+  .adminBeta .adminHero__metrics > div {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .adminBeta .adminHero__metrics strong {
+    font-size: 38px;
+  }
+
+  .adminBeta .dashPanel h2 {
+    font-size: 28px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adminBeta *,
+  .adminBeta *::before,
+  .adminBeta *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
