@@ -528,6 +528,10 @@
   inset: 0;
 }
 
+.spotlightMedia {
+  z-index: 0;
+}
+
 .spotlightSlide {
   position: absolute;
   inset: -1%;
@@ -553,11 +557,58 @@
   transform: translateX(-5%);
 }
 
-.spotlightMedia img {
+.spotlightBackdrop {
+  position: absolute;
+  inset: -12%;
+  z-index: 0;
+  overflow: hidden;
+  opacity: .52;
+  filter: blur(32px);
+  transform: scale(1.08);
+}
+
+.spotlightBackdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 5, 6, .2);
+}
+
+.spotlightBackdrop img {
   object-fit: cover;
-  object-position: center 28%;
-  filter: saturate(.8) contrast(1.06);
-  transform: scale(1.025);
+  object-position: center;
+  filter: saturate(.72) contrast(1.08);
+}
+
+.spotlightFrame {
+  position: absolute;
+  z-index: 1;
+  top: 49%;
+  right: -1px;
+  width: min(76vw, 1180px);
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  transform: translateY(-50%);
+  border-top: 1px solid rgba(255,255,255,.1);
+  border-bottom: 1px solid rgba(255,255,255,.1);
+  background: #080809;
+  box-shadow:
+    -30px 35px 90px rgba(0,0,0,.5),
+    0 0 100px rgba(255,43,69,.05);
+}
+
+.spotlightFrame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 70px rgba(0,0,0,.16);
+  pointer-events: none;
+}
+
+.spotlightFrame img {
+  object-fit: contain;
+  object-position: center;
+  filter: saturate(.9) contrast(1.03);
 }
 
 .spotlightWash {
@@ -2361,6 +2412,21 @@
     margin: 0 24px 160px;
   }
 
+  .spotlightFrame {
+    top: 78px;
+    right: 0;
+    left: 0;
+    width: 100%;
+    transform: none;
+    border-top: 0;
+  }
+
+  .spotlightBackdrop {
+    inset: -10%;
+    opacity: .46;
+    filter: blur(25px);
+  }
+
   .spotlightControls {
     right: 24px;
     bottom: 145px;
@@ -2566,8 +2632,16 @@
     min-height: 740px;
   }
 
-  .spotlightMedia img {
-    object-position: 64% center;
+  .spotlightFrame {
+    top: 70px;
+  }
+
+  .spotlightFrame img {
+    object-position: center;
+  }
+
+  .spotlightBackdrop img {
+    object-position: center;
   }
 
   .spotlightCount {
