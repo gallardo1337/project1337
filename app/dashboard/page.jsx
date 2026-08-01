@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
+import AdminBetaOverview from "./beta/AdminBetaOverview.jsx";
 
 // ActorImageUploader nur im Client laden (wegen react-easy-crop / Canvas)
 const ActorImageUploader = dynamic(() => import("./ActorImageUploader.jsx"), {
@@ -173,6 +174,65 @@ const chipClass = (active) =>
     ? "bg-red-500 border-red-600 text-black"
     : "bg-neutral-900/90 border-neutral-700 text-neutral-100 hover:border-neutral-400 transition-colors");
 
+const AdminNavIcon = ({ name }) => {
+  const paths = {
+    overview: (
+      <>
+        <rect x="3" y="3" width="7" height="7" rx="1" />
+        <rect x="14" y="3" width="7" height="7" rx="1" />
+        <rect x="3" y="14" width="7" height="7" rx="1" />
+        <rect x="14" y="14" width="7" height="7" rx="1" />
+      </>
+    ),
+    movies: (
+      <>
+        <rect x="3" y="5" width="18" height="14" rx="1" />
+        <path d="M3 9h18M8 5l3 4M14 5l3 4" />
+      </>
+    ),
+    add: <path d="M12 3v18M3 12h18" />,
+    mainActors: (
+      <>
+        <circle cx="12" cy="8" r="4" />
+        <path d="M4.5 21c.7-5 3.2-7.5 7.5-7.5s6.8 2.5 7.5 7.5" />
+      </>
+    ),
+    supportActors: (
+      <>
+        <circle cx="9" cy="8" r="3.5" />
+        <path d="M2.5 20c.6-4.3 2.8-6.5 6.5-6.5 2.1 0 3.8.7 4.9 2.1" />
+        <circle cx="17" cy="10" r="2.5" />
+        <path d="M14.5 15c3.9-.9 6.2.8 6.8 5" />
+      </>
+    ),
+    studios: (
+      <>
+        <path d="M4 21V8l8-5 8 5v13" />
+        <path d="M8 21v-7h8v7M8 9h.01M12 9h.01M16 9h.01" />
+      </>
+    ),
+    tags: (
+      <>
+        <path d="M20.5 13.5 13 21l-10-10V3h8l9.5 9.5a1.4 1.4 0 0 1 0 2Z" />
+        <circle cx="7.5" cy="7.5" r="1" />
+      </>
+    ),
+  };
+
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <g
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        {paths[name]}
+      </g>
+    </svg>
+  );
+};
+
 // -------------------------------
 // Dashboard
 // -------------------------------
@@ -198,7 +258,9 @@ export function DashboardExperience({ beta = false }) {
   const [loginLoading, setLoginLoading] = useState(false);
 
   // Tabs: Filme / Neuer Film / Stammdaten
-  const [activeFilmSection, setActiveFilmSection] = useState("stats"); // "stats" | "new" | "meta"
+  const [activeFilmSection, setActiveFilmSection] = useState(
+    beta ? "overview" : "stats"
+  ); // "overview" | "stats" | "new" | "meta"
   const [metaMenuOpen, setMetaMenuOpen] = useState(false);
   const [activeMetaSection, setActiveMetaSection] = useState("mainActors"); // "mainActors" | "supportActors" | "studios" | "tags"
 
@@ -209,6 +271,7 @@ export function DashboardExperience({ beta = false }) {
   const [tags, setTags] = useState([]);
   const [filme, setFilme] = useState([]);
   const [resolutions, setResolutions] = useState([]);
+  const [movieMetrics, setMovieMetrics] = useState([]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -335,6 +398,7 @@ export function DashboardExperience({ beta = false }) {
         setTags([]);
         setFilme([]);
         setResolutions([]);
+        setMovieMetrics([]);
         setLoading(false);
         return;
       }
@@ -343,6 +407,23 @@ export function DashboardExperience({ beta = false }) {
         setLoading(true);
         setError(null);
 
+        const metricsPromise = beta
+          ? fetch("/api/movie-metrics", { cache: "no-store" })
+              .then(async (response) => {
+                const payload = await response.json();
+                return response.ok && Array.isArray(payload?.metrics)
+                  ? payload.metrics
+                  : [];
+              })
+              .catch((metricsError) => {
+                console.warn(
+                  "Filmstatistiken konnten nicht geladen werden.",
+                  metricsError
+                );
+                return [];
+              })
+          : Promise.resolve([]);
+
         const [
           actorsRes,
           actors2Res,
@@ -350,6 +431,7 @@ export function DashboardExperience({ beta = false }) {
           tagsRes,
           moviesRes,
           resolutionsRes,
+          metricsData,
         ] = await Promise.all([
           supabase.from("actors").select("*").order("name"),
           supabase.from("actors2").select("*").order("name"),
@@ -360,6 +442,7 @@ export function DashboardExperience({ beta = false }) {
             .select("*")
             .order("created_at", { ascending: false }),
           supabase.from("resolutions").select("*").order("name"),
+          metricsPromise,
         ]);
 
         if (actorsRes.error) throw actorsRes.error;
@@ -375,6 +458,7 @@ export function DashboardExperience({ beta = false }) {
         setTags(tagsRes.data || []);
         setFilme(moviesRes.data || []);
         setResolutions(resolutionsRes.data || []);
+        setMovieMetrics(metricsData);
 
         if (!editingFilmId) {
           const fullHd = (resolutionsRes.data || []).find(
@@ -419,6 +503,11 @@ export function DashboardExperience({ beta = false }) {
   const resolutionMap = useMemo(
     () => Object.fromEntries(resolutions.map((r) => [r.id, r])),
     [resolutions]
+  );
+
+  const movieMetricMap = useMemo(
+    () => Object.fromEntries(movieMetrics.map((metric) => [metric.movie_id, metric])),
+    [movieMetrics]
   );
 
   const filteredFilme = useMemo(() => {
@@ -1296,7 +1385,17 @@ export function DashboardExperience({ beta = false }) {
       ? "bg-red-500/95 text-black shadow-lg shadow-red-900/50"
       : "bg-neutral-950/80 text-neutral-300 hover:bg-neutral-800 hover:text-neutral-50");
 
-  const SidebarContent = (
+  const openAdminView = (section, metaSection = null) => {
+    setActiveFilmSection(section);
+    if (section === "meta" && metaSection) {
+      setActiveMetaSection(metaSection);
+      setMetaMenuOpen(true);
+    } else {
+      setMetaMenuOpen(false);
+    }
+  };
+
+  const ClassicSidebarContent = (
     <>
       {/* Bereiche */}
       <div className="dashSidebarNav rounded-3xl border border-neutral-800 bg-gradient-to-b from-neutral-950/90 to-black/90 px-5 py-5 shadow-2xl shadow-black/70">
@@ -1425,6 +1524,106 @@ export function DashboardExperience({ beta = false }) {
       </div>
     </>
   );
+
+  const betaNavItems = [
+    { key: "overview", label: "Übersicht", icon: "overview", section: "overview" },
+    { key: "stats", label: "Filmarchiv", icon: "movies", section: "stats", count: filme.length },
+    { key: "new", label: editingFilmId ? "Film bearbeiten" : "Film hinzufügen", icon: "add", section: "new" },
+    { key: "mainActors", label: "Hauptdarsteller", icon: "mainActors", section: "meta", meta: "mainActors", count: hauptdarsteller.length },
+    { key: "supportActors", label: "Nebendarsteller", icon: "supportActors", section: "meta", meta: "supportActors", count: nebendarsteller.length },
+    { key: "studios", label: "Studios", icon: "studios", section: "meta", meta: "studios", count: studios.length },
+    { key: "tags", label: "Tags", icon: "tags", section: "meta", meta: "tags", count: tags.length },
+  ];
+
+  const BetaSidebarContent = (
+    <nav className="adminBetaRail" aria-label="Adminbereiche">
+      <div className="adminBetaRail__group">
+        <span className="adminBetaRail__label">Arbeitsbereich</span>
+        {betaNavItems.slice(0, 3).map((item) => {
+          const active = activeFilmSection === item.section;
+          return (
+            <button
+              key={item.key}
+              type="button"
+              className={active ? "is-active" : ""}
+              onClick={() => openAdminView(item.section, item.meta)}
+            >
+              <AdminNavIcon name={item.icon} />
+              <span>{item.label}</span>
+              {item.count != null ? <small>{item.count}</small> : null}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="adminBetaRail__group">
+        <span className="adminBetaRail__label">Stammdaten</span>
+        {betaNavItems.slice(3).map((item) => {
+          const active =
+            activeFilmSection === "meta" && activeMetaSection === item.meta;
+          return (
+            <button
+              key={item.key}
+              type="button"
+              className={active ? "is-active" : ""}
+              onClick={() => openAdminView(item.section, item.meta)}
+            >
+              <AdminNavIcon name={item.icon} />
+              <span>{item.label}</span>
+              <small>{item.count}</small>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="adminBetaRail__system">
+        <span className="adminBetaRail__status" />
+        <div>
+          <strong>Datenbank verbunden</strong>
+          <small>{filme.length + hauptdarsteller.length + nebendarsteller.length} Kerneinträge geladen</small>
+        </div>
+      </div>
+    </nav>
+  );
+
+  const SidebarContent = beta ? BetaSidebarContent : ClassicSidebarContent;
+
+  const betaWorkspace =
+    activeFilmSection === "stats"
+      ? {
+          eyebrow: "Bibliothek",
+          title: "Filmarchiv",
+          description: `${filteredFilme.length} ${
+            dashboardSearch.trim() ? "Treffer" : "Filme"
+          } verwalten, prüfen und bearbeiten.`,
+        }
+      : activeFilmSection === "new"
+      ? {
+          eyebrow: editingFilmId ? "Editor / Bearbeitung" : "Editor / Neuer Eintrag",
+          title: editingFilmId ? filmTitel || "Film bearbeiten" : "Film hinzufügen",
+          description: editingFilmId
+            ? "Alle Filmdaten und Zuordnungen zentral aktualisieren."
+            : "Metadaten, Medienpfad, Thumbnail, Cast und Tags vollständig anlegen.",
+        }
+      : {
+          eyebrow: "Stammdaten",
+          title:
+            activeMetaSection === "mainActors"
+              ? "Hauptdarsteller"
+              : activeMetaSection === "supportActors"
+              ? "Nebendarsteller"
+              : activeMetaSection === "studios"
+              ? "Studios"
+              : "Tags",
+          description:
+            activeMetaSection === "mainActors"
+              ? `${hauptdarsteller.length} Hauptdarsteller mit Profil- und Bilddaten verwalten.`
+              : activeMetaSection === "supportActors"
+              ? `${nebendarsteller.length} Nebendarsteller anlegen, bearbeiten und löschen.`
+              : activeMetaSection === "studios"
+              ? `${studios.length} Studios samt Bildmaterial pflegen.`
+              : `${tags.length} Tags für die Katalogisierung verwalten.`,
+        };
 
   return (
     <div className={`${beta ? "adminBeta " : ""}page min-h-screen bg-gradient-to-br from-neutral-950 via-black to-neutral-900 text-neutral-100 text-[15px]`}>
@@ -1793,8 +1992,8 @@ export function DashboardExperience({ beta = false }) {
                 <button
                   type="button"
                   className="adminBrand"
-                  onClick={() => router.push("/beta")}
-                  title="Zur Beta-Hauptseite"
+                  onClick={() => openAdminView("overview")}
+                  title="Zur Admin-Übersicht"
                 >
                   <img src="/logo.png" alt="Project1337" />
                   <span>
@@ -1847,6 +2046,15 @@ export function DashboardExperience({ beta = false }) {
         <div className="dashTopbar__right">
           {loggedIn ? (
             <>
+              {beta ? (
+                <button
+                  type="button"
+                  className="adminTopCreate"
+                  onClick={() => openAdminView("new")}
+                >
+                  <span>+</span> Film
+                </button>
+              ) : null}
               <button
                 type="button"
                 className="dashIconBtn dashMOnly"
@@ -2066,62 +2274,6 @@ export function DashboardExperience({ beta = false }) {
                 <span>Lade Daten…</span>
               </div>
             ) : (
-              <>
-                {beta ? (
-                  <section className="adminHero" aria-labelledby="admin-beta-title">
-                    <div className="adminHero__copy">
-                      <span className="adminEyebrow">Project1337 / Archive Operations</span>
-                      <h1 id="admin-beta-title">
-                        Das Archiv.<br />
-                        <em>Unter Kontrolle.</em>
-                      </h1>
-                      <p>
-                        Inhalte pflegen, Darsteller organisieren und den gesamten
-                        Katalog aus einer konzentrierten Arbeitsfläche steuern.
-                      </p>
-                    </div>
-
-                    <div className="adminHero__actions">
-                      <button
-                        type="button"
-                        className="adminPrimaryAction"
-                        onClick={() => {
-                          setActiveFilmSection("new");
-                          setMetaMenuOpen(false);
-                        }}
-                      >
-                        <span>+</span> Film hinzufügen
-                      </button>
-                      <button
-                        type="button"
-                        className="adminSecondaryAction"
-                        onClick={() => router.push("/beta")}
-                      >
-                        Beta ansehen <span>↗</span>
-                      </button>
-                    </div>
-
-                    <div className="adminHero__metrics" aria-label="Archivübersicht">
-                      <div>
-                        <strong>{filme.length}</strong>
-                        <span>Filme</span>
-                      </div>
-                      <div>
-                        <strong>{hauptdarsteller.length + nebendarsteller.length}</strong>
-                        <span>Darsteller</span>
-                      </div>
-                      <div>
-                        <strong>{studios.length}</strong>
-                        <span>Studios</span>
-                      </div>
-                      <div>
-                        <strong>{tags.length}</strong>
-                        <span>Tags</span>
-                      </div>
-                    </div>
-                  </section>
-                ) : null}
-
               <div className="dashLayout relative">
                 {/* Mobile: Sidebar oberhalb der Hauptbox */}
                 <div className="dashMobileSidebar mb-5 w-full space-y-4 lg:hidden">
@@ -2130,10 +2282,63 @@ export function DashboardExperience({ beta = false }) {
 
                 {/* Hauptbox: EXAKT horizontal zentriert */}
                 <section className="dashContent space-y-5 max-w-5xl mx-auto w-full">
+                  {beta && activeFilmSection === "overview" ? (
+                    <AdminBetaOverview
+                      movies={filme}
+                      mainActors={hauptdarsteller}
+                      supportActors={nebendarsteller}
+                      studios={studios}
+                      tags={tags}
+                      resolutions={resolutions}
+                      metricMap={movieMetricMap}
+                      studioMap={studioMap}
+                      resolutionMap={resolutionMap}
+                      onNavigate={openAdminView}
+                      onEditMovie={handleEditFilm}
+                    />
+                  ) : null}
+
+                  {beta && activeFilmSection !== "overview" ? (
+                    <header className="adminWorkspaceHeader">
+                      <div>
+                        <span>{betaWorkspace.eyebrow}</span>
+                        <h1>{betaWorkspace.title}</h1>
+                        <p>{betaWorkspace.description}</p>
+                      </div>
+                      <div className="adminWorkspaceHeader__actions">
+                        {activeFilmSection === "stats" ? (
+                          <button
+                            type="button"
+                            className="adminWorkspaceHeader__primary"
+                            onClick={() => openAdminView("new")}
+                          >
+                            <span>+</span> Film hinzufügen
+                          </button>
+                        ) : null}
+                        {activeFilmSection === "new" && editingFilmId ? (
+                          <button
+                            type="button"
+                            className="adminWorkspaceHeader__secondary"
+                            onClick={handleCancelEdit}
+                          >
+                            Bearbeitung abbrechen
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          className="adminWorkspaceHeader__secondary"
+                          onClick={() => router.push("/beta")}
+                        >
+                          Seite ansehen <span>↗</span>
+                        </button>
+                      </div>
+                    </header>
+                  ) : null}
+
                   {/* Tab: Neuer Film */}
                   {activeFilmSection === "new" && (
                     <div className="dashPanel dashPanel--form group rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950/95 to-black/95 p-6 shadow-2xl shadow-black/70 transition-transform duration-200">
-                      <div className="mb-4 flex items-center justify-between gap-2">
+                      <div className="dashPanel__legacyHeader mb-4 flex items-center justify-between gap-2">
                         <div>
                           <h2 className="text-xl font-semibold text-neutral-50">
                             {editingFilmId
@@ -2425,7 +2630,7 @@ export function DashboardExperience({ beta = false }) {
                   {/* Tab: Filmestatistik */}
                   {activeFilmSection === "stats" && (
                     <div className="dashPanel dashPanel--library rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950 to-black/95 p-6 shadow-2xl shadow-black/70 space-y-4">
-                      <div className="flex items-center justify-between">
+                      <div className="dashPanel__legacyHeader flex items-center justify-between">
                         <div>
                           <h2 className="text-xl font-semibold text-neutral-50">
                             Filme
@@ -2457,18 +2662,50 @@ export function DashboardExperience({ beta = false }) {
                               className="dashMovieRow group rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4 shadow-sm shadow-black/60 transition-all hover:border-red-500/70"
                             >
                               <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-base font-medium text-neutral-50">
-                                    {f.title}
-                                  </span>
-                                  {f.year && (
-                                    <span className="text-xs text-neutral-400">
-                                      {f.year}
+                                <div className="dashMovieIdentity flex items-center gap-2">
+                                  {beta ? (
+                                    <div className="dashMovieIdentity__cover">
+                                      {f.thumbnail_url ? (
+                                        <img src={f.thumbnail_url} alt="" loading="lazy" />
+                                      ) : (
+                                        <span>{f.title?.slice(0, 1) || "?"}</span>
+                                      )}
+                                    </div>
+                                  ) : null}
+                                  <div className="dashMovieIdentity__text">
+                                    <span className="text-base font-medium text-neutral-50">
+                                      {f.title}
                                     </span>
-                                  )}
+                                    {beta ? (
+                                      <small>
+                                        {studioMap[f.studio_id]?.name || "Kein Studio"} · {f.year || "Jahr offen"}
+                                      </small>
+                                    ) : f.year ? (
+                                      <span className="text-xs text-neutral-400">
+                                        {f.year}
+                                      </span>
+                                    ) : null}
+                                  </div>
                                 </div>
-                                <div className="flex items-center gap-1 text-xs text-neutral-500 group-open:text-red-400">
-                                  <span>Details</span>
+                                <div className={beta ? "adminMovieColumns" : "flex items-center gap-1 text-xs text-neutral-500 group-open:text-red-400"}>
+                                  {beta ? (
+                                    <>
+                                      <span>
+                                        <strong>{resolutionMap[f.resolution_id]?.name || "–"}</strong>
+                                        <small>Qualität</small>
+                                      </span>
+                                      <span>
+                                        <strong>{Number(movieMetricMap[f.id]?.view_count || 0).toLocaleString("de-DE")}</strong>
+                                        <small>Aufrufe</small>
+                                      </span>
+                                      <span>
+                                        <strong>{movieMetricMap[f.id]?.rating || "–"}</strong>
+                                        <small>Bewertung</small>
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <span>Details</span>
+                                  )}
                                   <svg
                                     className="h-3 w-3 transform transition-transform group-open:rotate-90"
                                     viewBox="0 0 20 20"
@@ -2570,6 +2807,16 @@ export function DashboardExperience({ beta = false }) {
                                 )}
 
                                 <div className="mt-3 flex gap-2">
+                                  {f.file_url ? (
+                                    <a
+                                      href={f.file_url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="adminFileAction rounded-lg border border-neutral-600 px-3 py-1.5 text-xs text-neutral-100 hover:bg-neutral-800"
+                                    >
+                                      Datei öffnen
+                                    </a>
+                                  ) : null}
                                   <button
                                     type="button"
                                     onClick={() => handleEditFilm(f)}
@@ -2596,7 +2843,7 @@ export function DashboardExperience({ beta = false }) {
                   {/* Tab: Stammdaten */}
                   {activeFilmSection === "meta" && (
                     <section className="dashPanel dashPanel--meta rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950 to-black/95 p-6 text-sm text-neutral-100 shadow-2xl shadow-black/70 space-y-5">
-                      <div className="flex items-center justify-between gap-4">
+                      <div className="dashPanel__legacyHeader flex items-center justify-between gap-4">
                         <div>
                           <h2 className="text-xl font-semibold text-neutral-50">
                             {activeMetaSection === "mainActors"
@@ -3318,7 +3565,6 @@ export function DashboardExperience({ beta = false }) {
                   {SidebarContent}
                 </aside>
               </div>
-              </>
             )}
           </section>
         )}
