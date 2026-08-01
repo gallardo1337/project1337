@@ -132,6 +132,106 @@ function spotlightTitleClass(title) {
   return "";
 }
 
+function normalizeStatValue(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+const HAIR_COLOR_TAGS = [
+  "Blonde",
+  "Brunette",
+  "Dark Hair",
+  "Red Hair",
+].map(normalizeStatValue);
+
+const FINISH_TAGS = [
+  "Anal Creampie",
+  "Creampie",
+  "Cum in Mouth",
+  "Cum on Ass",
+  "Cum on Belly",
+  "Cum on Pussy",
+  "Cum on Tits",
+  "Swallow",
+  "Facial",
+].map(normalizeStatValue);
+
+function isHairColorTag(tag) {
+  return HAIR_COLOR_TAGS.includes(normalizeStatValue(tag));
+}
+
+function isFinishTag(tag) {
+  return FINISH_TAGS.includes(normalizeStatValue(tag));
+}
+
+function countStatValues(values) {
+  const counts = new Map();
+
+  values
+    .filter(Boolean)
+    .map((value) => String(value).trim())
+    .filter(Boolean)
+    .forEach((value) => counts.set(value, (counts.get(value) || 0) + 1));
+
+  return [...counts.entries()]
+    .map(([value, count]) => ({ value, count }))
+    .sort((a, b) =>
+      b.count - a.count ||
+      a.value.localeCompare(b.value, "de", { sensitivity: "base" })
+    );
+}
+
+function withStatPercent(items, total) {
+  return items.map((item) => ({
+    ...item,
+    percent: total ? Math.round((item.count / total) * 100) : 0,
+  }));
+}
+
+function buildActorStats(movies) {
+  const list = Array.isArray(movies) ? movies : [];
+  const years = list
+    .map((movie) => Number.parseInt(movie.year, 10))
+    .filter(Number.isFinite);
+  const minYear = years.length ? Math.min(...years) : null;
+  const maxYear = years.length ? Math.max(...years) : null;
+  const yearRange = minYear && maxYear
+    ? minYear === maxYear
+      ? String(minYear)
+      : `${minYear}–${maxYear}`
+    : "–";
+  const allTags = list.flatMap((movie) =>
+    Array.isArray(movie.tags) ? movie.tags : []
+  );
+  const hairTags = allTags.filter(isHairColorTag);
+  const finishTags = allTags.filter(isFinishTag);
+  const regularTags = allTags.filter(
+    (tag) => !isHairColorTag(tag) && !isFinishTag(tag)
+  );
+  const resolutions = list.map((movie) => movie.resolution).filter(Boolean);
+
+  return {
+    yearRange,
+    hairColors: withStatPercent(countStatValues(hairTags).slice(0, 5), hairTags.length),
+    qualities: withStatPercent(countStatValues(resolutions), resolutions.length),
+    studios: countStatValues(list.map((movie) => movie.studio)).slice(0, 5),
+    supportingActors: countStatValues(
+      list.flatMap((movie) =>
+        Array.isArray(movie.supportingActorNames)
+          ? movie.supportingActorNames
+          : []
+      )
+    ).slice(0, 5),
+    tags: countStatValues(regularTags).slice(0, 5),
+    finishes: countStatValues(finishTags).slice(0, 5),
+  };
+}
+
 function MovieCard({ movie, onOpen, large = false, index }) {
   return (
     <button
@@ -767,15 +867,106 @@ function ActorArchive({ actors, onShowActor }) {
   );
 }
 
+function StatsGroup({ index, title, items, percentage = false }) {
+  return (
+    <section className={styles.statsCard}>
+      <header className={styles.statsCardHeader}>
+        <span>{index}</span>
+        <h3>{title}</h3>
+      </header>
+
+      {items.length ? (
+        <div className={styles.statsList}>
+          {items.map((item, position) => (
+            <div className={styles.statsItem} key={`${item.value}-${position}`}>
+              <div className={styles.statsItemLine}>
+                <span className={styles.statsRank}>{String(position + 1).padStart(2, "0")}</span>
+                <strong>{item.value}</strong>
+                <em>{percentage ? `${item.percent}%` : String(item.count).padStart(2, "0")}</em>
+              </div>
+              {percentage ? (
+                <div className={styles.statsBar} aria-hidden="true">
+                  <span style={{ width: `${item.percent}%` }} />
+                </div>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className={styles.statsEmpty}>Keine Daten hinterlegt</div>
+      )}
+    </section>
+  );
+}
+
+function ActorStatsModal({ actor, movies, stats, onClose }) {
+  return (
+    <div
+      className={styles.statsLayer}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="actor-stats-title"
+    >
+      <button
+        type="button"
+        className={styles.statsBackdrop}
+        onClick={onClose}
+        aria-label="Statistiken schließen"
+      />
+
+      <div className={styles.statsPanel}>
+        <header className={styles.statsHeader}>
+          <div className={styles.statsHeaderIndex}>1337 / DATA</div>
+          <div>
+            <span>Collection intelligence</span>
+            <h2 id="actor-stats-title">{actor.name}</h2>
+            <p>{movies.length} Filme · {stats.yearRange} · vollständige Profilstatistik</p>
+          </div>
+          <button
+            type="button"
+            className={styles.statsClose}
+            onClick={onClose}
+            aria-label="Statistiken schließen"
+            autoFocus
+          >
+            <Icon name="close" />
+          </button>
+        </header>
+
+        <div className={styles.statsGrid}>
+          <StatsGroup index="01" title="Haarfarbe" items={stats.hairColors} percentage />
+          <StatsGroup index="02" title="Qualität" items={stats.qualities} percentage />
+          <StatsGroup index="03" title="Top 5 Studios" items={stats.studios} />
+          <StatsGroup index="04" title="Top 5 Nebendarsteller" items={stats.supportingActors} />
+          <StatsGroup index="05" title="Top 5 Tags" items={stats.tags} />
+          <StatsGroup index="06" title="Top 5 Finish" items={stats.finishes} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ActorProfile({ actor, movies, movieSort, setMovieSort, onBack, onOpenMovie }) {
   const age = getAge(actor.birthDate);
-  const studios = useMemo(() => {
-    const counts = new Map();
-    movies.forEach((movie) => {
-      if (movie.studio) counts.set(movie.studio, (counts.get(movie.studio) || 0) + 1);
-    });
-    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
-  }, [movies]);
+  const [statsOpen, setStatsOpen] = useState(false);
+  const stats = useMemo(() => buildActorStats(movies), [movies]);
+
+  useEffect(() => {
+    if (!statsOpen) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") setStatsOpen(false);
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [statsOpen]);
 
   return (
     <main className={styles.profilePage}>
@@ -795,6 +986,13 @@ function ActorProfile({ actor, movies, movieSort, setMovieSort, onBack, onOpenMo
             <div><small>Collection</small><strong>{movies.length} Filme</strong></div>
           </div>
           <div className={styles.profileLinks}>
+            <button
+              type="button"
+              className={styles.profileStatsButton}
+              onClick={() => setStatsOpen(true)}
+            >
+              <Icon name="spark" /> Alle Statistiken
+            </button>
             {actor.iafdUrl ? <a href={actor.iafdUrl} target="_blank" rel="noreferrer">IAFD <Icon name="arrow" /></a> : null}
             {actor.planetsuzyUrl ? <a href={actor.planetsuzyUrl} target="_blank" rel="noreferrer">PlanetSuzy <Icon name="arrow" /></a> : null}
           </div>
@@ -810,16 +1008,19 @@ function ActorProfile({ actor, movies, movieSort, setMovieSort, onBack, onOpenMo
             <option value="quality_desc">Qualität</option>
           </select>
         </div>
-        {studios.length ? (
-          <div className={styles.profileStudioLine}>
-            <span>Top Studios</span>
-            {studios.map(([studio, count]) => <div key={studio}><strong>{studio}</strong><small>{count}</small></div>)}
-          </div>
-        ) : null}
         <div className={styles.profileMovieGrid}>
           {movies.map((movie, index) => <MovieCard key={movie.id} movie={movie} onOpen={onOpenMovie} index={index} />)}
         </div>
       </section>
+
+      {statsOpen ? (
+        <ActorStatsModal
+          actor={actor}
+          movies={movies}
+          stats={stats}
+          onClose={() => setStatsOpen(false)}
+        />
+      ) : null}
     </main>
   );
 }
