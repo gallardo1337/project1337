@@ -19,6 +19,35 @@ function Icon({ name, className = "" }) {
       </>
     ),
     play: <path d="m9 7 9 5-9 5V7Z" />,
+    pause: (
+      <>
+        <path d="M9 7v10" />
+        <path d="M15 7v10" />
+      </>
+    ),
+    volume: (
+      <>
+        <path d="M5 10v4h3l4 3V7l-4 3H5Z" />
+        <path d="M15 9.5c.8.7 1.2 1.5 1.2 2.5s-.4 1.8-1.2 2.5" />
+        <path d="M17.5 7c1.5 1.4 2.3 3 2.3 5s-.8 3.6-2.3 5" />
+      </>
+    ),
+    muted: (
+      <>
+        <path d="M5 10v4h3l4 3V7l-4 3H5Z" />
+        <path d="m16 10 4 4M20 10l-4 4" />
+      </>
+    ),
+    fullscreen: (
+      <>
+        <path d="M9 4H4v5M15 4h5v5M20 15v5h-5M4 15v5h5" />
+      </>
+    ),
+    fullscreenExit: (
+      <>
+        <path d="M4 9h5V4M20 9h-5V4M15 20v-5h5M9 20v-5H4" />
+      </>
+    ),
     search: (
       <>
         <circle cx="11" cy="11" r="6.5" />
@@ -109,6 +138,250 @@ function getVideoMimeType(url) {
   if (clean.endsWith(".webm")) return "video/webm";
   if (clean.endsWith(".mov")) return "video/quicktime";
   return "video/mp4";
+}
+
+function formatMediaTime(value) {
+  const totalSeconds = Math.max(0, Math.floor(Number(value) || 0));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours) {
+    return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  }
+
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+function ModernVideoPlayer({ src, poster, title, quality, onPlay }) {
+  const frameRef = useRef(null);
+  const videoRef = useRef(null);
+  const hideControlsTimerRef = useRef(null);
+  const [playing, setPlaying] = useState(false);
+  const [showControls, setShowControls] = useState(true);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(1);
+  const [muted, setMuted] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
+
+  const clearHideControlsTimer = () => {
+    if (hideControlsTimerRef.current) {
+      window.clearTimeout(hideControlsTimerRef.current);
+      hideControlsTimerRef.current = null;
+    }
+  };
+
+  const queueControlsHide = () => {
+    clearHideControlsTimer();
+    hideControlsTimerRef.current = window.setTimeout(() => setShowControls(false), 2800);
+  };
+
+  const revealControls = () => {
+    setShowControls(true);
+    if (videoRef.current && !videoRef.current.paused) queueControlsHide();
+  };
+
+  useEffect(() => {
+    const syncFullscreen = () => setFullscreen(document.fullscreenElement === frameRef.current);
+    document.addEventListener("fullscreenchange", syncFullscreen);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", syncFullscreen);
+      clearHideControlsTimer();
+    };
+  }, []);
+
+  const togglePlay = () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (video.paused) {
+      video.play().catch(() => {});
+    } else {
+      video.pause();
+    }
+  };
+
+  const seekTo = (value) => {
+    const video = videoRef.current;
+    if (!video) return;
+    const nextTime = Math.min(Math.max(Number(value) || 0, 0), duration || 0);
+    video.currentTime = nextTime;
+    setCurrentTime(nextTime);
+  };
+
+  const changeVolume = (value) => {
+    const video = videoRef.current;
+    if (!video) return;
+    const nextVolume = Math.min(Math.max(Number(value) || 0, 0), 1);
+    video.volume = nextVolume;
+    video.muted = nextVolume === 0;
+    setVolume(nextVolume);
+    setMuted(nextVolume === 0);
+  };
+
+  const toggleMute = () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (video.muted || video.volume === 0) {
+      if (video.volume === 0) video.volume = 0.7;
+      video.muted = false;
+    } else {
+      video.muted = true;
+    }
+  };
+
+  const toggleFullscreen = () => {
+    const frame = frameRef.current;
+    const video = videoRef.current;
+    if (!frame || !video) return;
+
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.();
+      return;
+    }
+
+    if (frame.requestFullscreen) {
+      frame.requestFullscreen();
+    } else if (frame.webkitRequestFullscreen) {
+      frame.webkitRequestFullscreen();
+    } else if (video.webkitEnterFullscreen) {
+      video.webkitEnterFullscreen();
+    }
+  };
+
+  const handleKeyDown = (event) => {
+    if (event.target instanceof HTMLInputElement || event.target instanceof HTMLButtonElement) return;
+
+    if (event.key === " " || event.key.toLowerCase() === "k") {
+      event.preventDefault();
+      togglePlay();
+    } else if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      seekTo(currentTime - 10);
+    } else if (event.key === "ArrowRight") {
+      event.preventDefault();
+      seekTo(currentTime + 10);
+    } else if (event.key.toLowerCase() === "m") {
+      toggleMute();
+    } else if (event.key.toLowerCase() === "f") {
+      toggleFullscreen();
+    }
+  };
+
+  const progress = duration ? Math.min(100, (currentTime / duration) * 100) : 0;
+  const audibleVolume = muted ? 0 : volume;
+
+  return (
+    <div
+      ref={frameRef}
+      className={`${styles.videoFrame}${showControls || !playing ? ` ${styles.videoFrameActive}` : ""}`}
+      onPointerMove={revealControls}
+      onPointerDown={revealControls}
+      onMouseLeave={() => {
+        if (playing) setShowControls(false);
+      }}
+      onFocusCapture={revealControls}
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
+      aria-label={`Videoplayer: ${title || "Film"}`}
+    >
+      <video
+        ref={videoRef}
+        playsInline
+        preload="metadata"
+        poster={poster || undefined}
+        onClick={togglePlay}
+        onLoadedMetadata={(event) => {
+          setDuration(Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : 0);
+          setVolume(event.currentTarget.volume);
+          setMuted(event.currentTarget.muted);
+        }}
+        onDurationChange={(event) => setDuration(Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : 0)}
+        onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)}
+        onPlay={() => {
+          setPlaying(true);
+          setShowControls(true);
+          queueControlsHide();
+          onPlay?.();
+        }}
+        onPause={() => {
+          clearHideControlsTimer();
+          setPlaying(false);
+          setShowControls(true);
+        }}
+        onEnded={() => {
+          clearHideControlsTimer();
+          setPlaying(false);
+          setShowControls(true);
+        }}
+        onVolumeChange={(event) => {
+          setVolume(event.currentTarget.volume);
+          setMuted(event.currentTarget.muted);
+        }}
+      >
+        <source src={src} type={getVideoMimeType(src)} />
+        Dein Browser unterstützt dieses Videoformat nicht.
+      </video>
+
+      <div className={styles.playerTopbar} aria-hidden="true">
+        <div>
+          <span>Now screening</span>
+          <strong>{title || "Unbenannt"}</strong>
+        </div>
+        <small>{quality || "1337"}</small>
+      </div>
+
+      {!playing ? (
+        <button type="button" className={styles.playerCenterButton} onClick={togglePlay} aria-label="Video abspielen">
+          <span><Icon name="play" /></span>
+          <small>Film starten</small>
+        </button>
+      ) : null}
+
+      <div className={styles.playerChrome}>
+        <input
+          className={`${styles.playerRange} ${styles.playerProgress}`}
+          type="range"
+          min="0"
+          max={Math.max(duration, 0.01)}
+          step="0.1"
+          value={Math.min(currentTime, duration || 0)}
+          onChange={(event) => seekTo(event.target.value)}
+          style={{ "--player-progress": `${progress}%` }}
+          aria-label="Wiedergabeposition"
+        />
+        <div className={styles.playerControlBar}>
+          <button type="button" onClick={togglePlay} aria-label={playing ? "Video pausieren" : "Video abspielen"}>
+            <Icon name={playing ? "pause" : "play"} />
+          </button>
+          <span className={styles.playerTime}>{formatMediaTime(currentTime)} <i>/</i> {formatMediaTime(duration)}</span>
+          <div className={styles.playerControlSpacer} />
+          <div className={styles.playerVolume}>
+            <button type="button" onClick={toggleMute} aria-label={muted ? "Ton einschalten" : "Ton ausschalten"}>
+              <Icon name={muted || volume === 0 ? "muted" : "volume"} />
+            </button>
+            <input
+              className={`${styles.playerRange} ${styles.playerVolumeRange}`}
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value={audibleVolume}
+              onChange={(event) => changeVolume(event.target.value)}
+              style={{ "--player-volume": `${audibleVolume * 100}%` }}
+              aria-label="Lautstärke"
+            />
+          </div>
+          <button type="button" onClick={toggleFullscreen} aria-label={fullscreen ? "Vollbild verlassen" : "Vollbild öffnen"}>
+            <Icon name={fullscreen ? "fullscreenExit" : "fullscreen"} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function qualityTone(quality) {
@@ -1127,22 +1400,20 @@ function MovieDetail({ movie, onBack, onShowActor, onRateMovie, onRecordView }) 
     <main className={styles.detailPage}>
       <section className={styles.theater}>
         <button type="button" className={styles.theaterBack} onClick={onBack}><Icon name="back" /> Zurück</button>
-        <div className={styles.videoFrame}>
-          {movie.fileUrl ? (
-            <video
-              controls
-              playsInline
-              preload="metadata"
-              poster={movie.thumbnailUrl || undefined}
-              onPlay={recordView}
-            >
-              <source src={movie.fileUrl} type={getVideoMimeType(movie.fileUrl)} />
-              Dein Browser unterstützt dieses Videoformat nicht.
-            </video>
-          ) : (
+        {movie.fileUrl ? (
+          <ModernVideoPlayer
+            key={movie.id}
+            src={movie.fileUrl}
+            poster={movie.thumbnailUrl}
+            title={movie.title}
+            quality={movie.resolution}
+            onPlay={recordView}
+          />
+        ) : (
+          <div className={styles.videoFrame}>
             <div className={styles.noVideo}><Icon name="play" /><span>Keine Videodatei hinterlegt</span></div>
-          )}
-        </div>
+          </div>
+        )}
         <div className={styles.theaterLabel}>PRIVATE SCREENING / 1337</div>
       </section>
 
