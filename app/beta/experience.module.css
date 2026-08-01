@@ -2208,23 +2208,69 @@
   min-height: 720px;
   display: grid;
   place-items: center;
+  isolation: isolate;
+  overflow: hidden;
   padding: 78px clamp(24px, 7vw, 120px) 70px;
   background:
-    radial-gradient(circle at 50% 45%, rgba(255,43,69,.09), transparent 35%),
-    #050505;
+    radial-gradient(circle at 50% 48%, rgba(255,43,69,.13), transparent 33%),
+    radial-gradient(circle at 18% 18%, rgba(255,255,255,.035), transparent 22%),
+    #050506;
+}
+
+.theater::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: min(1120px, 76vw);
+  aspect-ratio: 16 / 8;
+  border: 1px solid rgba(255,255,255,.055);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 80px rgba(255,255,255,.009),
+    0 0 0 170px rgba(255,255,255,.006);
+  filter: blur(.2px);
+  transform: rotate(-5deg);
 }
 
 .theaterBack {
   top: 26px;
+  border-color: rgba(255,255,255,.13);
+  border-radius: 999px;
+  background: rgba(9,9,10,.58);
+  box-shadow: 0 12px 32px rgba(0,0,0,.28);
 }
 
 .videoFrame {
+  position: relative;
+  z-index: 1;
   width: min(1280px, 100%);
   aspect-ratio: 16 / 9;
   overflow: hidden;
-  border: 1px solid rgba(255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 20px;
+  outline: 1px solid rgba(255,255,255,.035);
+  outline-offset: 6px;
   background: #000;
-  box-shadow: 0 45px 100px rgba(0,0,0,.72), 0 0 90px rgba(255,43,69,.05);
+  box-shadow:
+    0 55px 120px rgba(0,0,0,.78),
+    0 0 110px rgba(255,43,69,.075),
+    inset 0 0 0 1px rgba(255,255,255,.025);
+  transition: border-color 300ms ease, box-shadow 300ms ease;
+}
+
+.videoFrame:focus-visible {
+  outline: 1px solid rgba(255,80,101,.7);
+  outline-offset: 7px;
+}
+
+.videoFrame:fullscreen,
+.videoFrame:-webkit-full-screen {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  border: 0;
+  border-radius: 0;
+  outline: 0;
 }
 
 .videoFrame video {
@@ -2233,6 +2279,249 @@
   display: block;
   object-fit: contain;
   background: #000;
+  cursor: pointer;
+}
+
+.videoFrame:not(.videoFrameActive),
+.videoFrame:not(.videoFrameActive) video {
+  cursor: none;
+}
+
+.playerTopbar {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 2;
+  min-height: 112px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px 26px 44px;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(0,0,0,.72), transparent);
+  opacity: 1;
+  transition: opacity 260ms ease, transform 260ms ease;
+}
+
+.playerTopbar > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.playerTopbar span {
+  color: var(--red);
+  font-size: 7px;
+  font-weight: 850;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+}
+
+.playerTopbar strong {
+  max-width: min(680px, 64vw);
+  overflow: hidden;
+  color: rgba(255,255,255,.86);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.playerTopbar > small {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 999px;
+  background: rgba(8,8,9,.48);
+  color: rgba(255,255,255,.68);
+  font-size: 7px;
+  font-weight: 850;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  backdrop-filter: blur(14px);
+}
+
+.playerCenterButton {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 4;
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: white;
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+}
+
+.playerCenterButton > span {
+  width: 82px;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.22);
+  border-radius: 50%;
+  background: rgba(12,12,14,.6);
+  box-shadow: 0 18px 48px rgba(0,0,0,.42), inset 0 0 0 8px rgba(255,255,255,.025);
+  backdrop-filter: blur(18px);
+  transition: transform 220ms ease, border-color 220ms ease, background 220ms ease;
+}
+
+.playerCenterButton:hover > span,
+.playerCenterButton:focus-visible > span {
+  border-color: rgba(255,75,97,.76);
+  background: rgba(255,43,69,.82);
+  transform: scale(1.06);
+}
+
+.playerCenterButton svg {
+  width: 30px;
+  margin-left: 3px;
+}
+
+.playerCenterButton small {
+  color: rgba(255,255,255,.62);
+  font-size: 7px;
+  font-weight: 850;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  text-shadow: 0 2px 12px #000;
+}
+
+.playerChrome {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 5;
+  display: grid;
+  gap: 13px;
+  padding: 76px 24px 19px;
+  background: linear-gradient(0deg, rgba(0,0,0,.9) 0%, rgba(0,0,0,.53) 48%, transparent 100%);
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 260ms ease, transform 260ms ease;
+}
+
+.videoFrame:not(.videoFrameActive) .playerTopbar {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+.videoFrame:not(.videoFrameActive) .playerChrome {
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.playerRange {
+  width: 100%;
+  height: 4px;
+  margin: 0;
+  border: 0;
+  border-radius: 999px;
+  outline: 0;
+  appearance: none;
+  background: rgba(255,255,255,.2);
+  cursor: pointer;
+}
+
+.playerProgress {
+  background: linear-gradient(90deg, var(--red) 0 var(--player-progress), rgba(255,255,255,.2) var(--player-progress) 100%);
+}
+
+.playerVolumeRange {
+  width: 76px;
+  height: 3px;
+  background: linear-gradient(90deg, white 0 var(--player-volume), rgba(255,255,255,.2) var(--player-volume) 100%);
+}
+
+.playerRange::-webkit-slider-thumb {
+  width: 13px;
+  height: 13px;
+  border: 2px solid white;
+  border-radius: 50%;
+  appearance: none;
+  background: var(--red);
+  box-shadow: 0 0 0 4px rgba(255,43,69,.16);
+  transform: scale(.78);
+  transition: transform 180ms ease;
+}
+
+.playerRange::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  border: 2px solid white;
+  border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 0 4px rgba(255,43,69,.16);
+  transition: transform 180ms ease;
+}
+
+.playerRange:hover::-webkit-slider-thumb,
+.playerRange:focus-visible::-webkit-slider-thumb,
+.playerRange:hover::-moz-range-thumb,
+.playerRange:focus-visible::-moz-range-thumb {
+  transform: scale(1);
+}
+
+.playerControlBar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.playerControlBar button {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  color: rgba(255,255,255,.82);
+  cursor: pointer;
+  transition: color 180ms ease, background 180ms ease, border-color 180ms ease;
+}
+
+.playerControlBar button:hover,
+.playerControlBar button:focus-visible {
+  border-color: rgba(255,255,255,.12);
+  background: rgba(255,255,255,.09);
+  color: white;
+}
+
+.playerControlBar button svg {
+  width: 19px;
+}
+
+.playerTime {
+  color: rgba(255,255,255,.55);
+  font-variant-numeric: tabular-nums;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+
+.playerTime i {
+  margin: 0 4px;
+  color: rgba(255,255,255,.22);
+  font-style: normal;
+}
+
+.playerControlSpacer {
+  flex: 1 1 auto;
+}
+
+.playerVolume {
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .noVideo {
@@ -2253,10 +2542,22 @@
   position: absolute;
   right: clamp(24px, 7vw, 120px);
   bottom: 26px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   color: rgba(255,255,255,.25);
   font-size: 8px;
   font-weight: 800;
   letter-spacing: .22em;
+}
+
+.theaterLabel::before {
+  content: "";
+  width: 5px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 12px rgba(255,43,69,.7);
 }
 
 .detailDashboard {
@@ -3555,6 +3856,65 @@
   .videoFrame {
     border-right: 0;
     border-left: 0;
+    border-radius: 0;
+    outline: 0;
+  }
+
+  .playerTopbar {
+    min-height: 84px;
+    padding: 15px 16px 34px;
+  }
+
+  .playerTopbar strong {
+    max-width: 62vw;
+    font-size: 11px;
+  }
+
+  .playerTopbar > small {
+    padding: 6px 8px;
+    font-size: 6px;
+  }
+
+  .playerCenterButton {
+    gap: 8px;
+  }
+
+  .playerCenterButton > span {
+    width: 62px;
+  }
+
+  .playerCenterButton svg {
+    width: 23px;
+  }
+
+  .playerCenterButton small {
+    font-size: 6px;
+  }
+
+  .playerChrome {
+    gap: 9px;
+    padding: 54px 11px 8px;
+  }
+
+  .playerControlBar {
+    gap: 4px;
+  }
+
+  .playerControlBar button {
+    width: 34px;
+    height: 34px;
+  }
+
+  .playerControlBar button svg {
+    width: 17px;
+  }
+
+  .playerTime {
+    font-size: 8px;
+  }
+
+  .playerVolumeRange {
+    display: none;
   }
 
   .theaterLabel {
