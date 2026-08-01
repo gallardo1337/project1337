@@ -110,6 +110,17 @@ function qualityTone(quality) {
   return "";
 }
 
+function pickRandomMovies(movies, limit) {
+  const pool = [...movies];
+
+  for (let index = pool.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [pool[index], pool[randomIndex]] = [pool[randomIndex], pool[index]];
+  }
+
+  return pool.slice(0, limit);
+}
+
 function MovieCard({ movie, onOpen, large = false, index }) {
   return (
     <button
@@ -454,7 +465,7 @@ function Discovery({ movies, actors, onOpenMovie, onShowMovies, onShowActors, on
     () => [...movies].sort((a, b) => new Date(b.addedAt || 0) - new Date(a.addedAt || 0)),
     [movies]
   );
-  const featuredMovies = useMemo(() => sortedMovies.slice(0, 5), [sortedMovies]);
+  const featuredMovies = useMemo(() => pickRandomMovies(movies, 5), [movies]);
   const [activeFeature, setActiveFeature] = useState(0);
   const [previousFeature, setPreviousFeature] = useState(-1);
   const featured = featuredMovies[activeFeature] || featuredMovies[0];
@@ -470,7 +481,7 @@ function Discovery({ movies, actors, onOpenMovie, onShowMovies, onShowActors, on
   useEffect(() => {
     setActiveFeature(0);
     setPreviousFeature(-1);
-  }, [featuredMovies.length]);
+  }, [featuredMovies]);
 
   useEffect(() => {
     if (featuredMovies.length <= 1) return undefined;
@@ -532,7 +543,7 @@ function Discovery({ movies, actors, onOpenMovie, onShowMovies, onShowActors, on
           {String(activeFeature + 1).padStart(2, "0")} / {String(Math.max(featuredMovies.length, 1)).padStart(2, "0")}
         </div>
         <div className={styles.spotlightCopy} key={featured?.id || "empty-feature"}>
-          <div className={styles.kicker}><Icon name="spark" /> Neu in der Collection</div>
+          <div className={styles.kicker}><Icon name="spark" /> Aus dem Archiv</div>
           <h1>{featured?.title || "Your private cinema"}</h1>
           <div className={styles.spotlightMeta}>
             <span>{featured?.year || "2026"}</span><i />
@@ -550,7 +561,7 @@ function Discovery({ movies, actors, onOpenMovie, onShowMovies, onShowActors, on
           </div>
         </div>
         {featuredMovies.length > 1 ? (
-          <div className={styles.spotlightControls} aria-label="Featured Filme">
+          <div className={styles.spotlightControls} aria-label="Cinema Showcase">
             {featuredMovies.map((movie, index) => (
               <button
                 type="button"
