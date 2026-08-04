@@ -6,6 +6,9 @@ const formatRating = (value) => {
   return Number.isFinite(rating) ? rating.toFixed(1).replace(".", ",") : "–";
 };
 
+const hasCompleteMp4Path = (value) =>
+  typeof value === "string" && value.trim().toLowerCase().endsWith(".mp4");
+
 const movieDate = (movie) => {
   const value = movie?.created_at || movie?.inserted_at || movie?.createdAt;
   if (!value) return "Ohne Datum";
@@ -54,7 +57,9 @@ export default function AdminBetaOverview({
     (movie) =>
       !Array.isArray(movie.main_actor_ids) || movie.main_actor_ids.length === 0
   ).length;
-  const moviesWithoutFile = movies.filter((movie) => !movie.file_url).length;
+  const moviesWithoutFile = movies.filter(
+    (movie) => !hasCompleteMp4Path(movie.file_url)
+  ).length;
 
   const completenessFields = movies.length * 5;
   const completedFields = movies.reduce(
@@ -62,7 +67,7 @@ export default function AdminBetaOverview({
       sum +
       Number(Boolean(movie.thumbnail_url)) +
       Number(Boolean(movie.studio_id)) +
-      Number(Boolean(movie.file_url)) +
+      Number(hasCompleteMp4Path(movie.file_url)) +
       Number(Boolean(movie.resolution_id)) +
       Number(
         Array.isArray(movie.main_actor_ids) && movie.main_actor_ids.length > 0
@@ -273,7 +278,7 @@ export default function AdminBetaOverview({
               <strong>{moviesWithoutCast}</strong>
             </button>
             <button type="button" onClick={() => onNavigate("stats")}>
-              <span>Ohne Dateipfad</span>
+              <span>Dateipfad nicht vollständig</span>
               <strong>{moviesWithoutFile}</strong>
             </button>
           </div>
