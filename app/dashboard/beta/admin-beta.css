@@ -1106,6 +1106,27 @@
   white-space: nowrap;
 }
 
+.adminBeta .adminKpi__action {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: rgba(240, 68, 68, 0.72);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.adminBeta .adminKpi__action:hover:not(:disabled) {
+  color: #ff6f6f;
+}
+
+.adminBeta .adminKpi__action:disabled {
+  color: rgba(255, 255, 255, 0.18);
+  cursor: default;
+}
+
 .adminBeta .adminKpi > strong {
   display: block;
   overflow: hidden;

@@ -42,3 +42,40 @@ export async function POST(_request, { params }) {
     );
   }
 }
+
+export async function DELETE(_request, { params }) {
+  if (!(await hasLibrarySession())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const { id } = await params;
+
+    if (!id) {
+      return NextResponse.json({ error: "Film-ID fehlt." }, { status: 400 });
+    }
+
+    const supabase = createServerSupabase();
+    const { data, error } = await supabase
+      .from("movie_metrics")
+      .update({
+        view_count: 0,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("movie_id", id)
+      .select("movie_id,rating,view_count")
+      .maybeSingle();
+
+    if (error) throw error;
+
+    return NextResponse.json({
+      metric: data || { movie_id: id, view_count: 0 },
+    });
+  } catch (error) {
+    console.error("Movie views could not be reset:", error);
+    return NextResponse.json(
+      { error: "Aufrufe konnten nicht zurückgesetzt werden." },
+      { status: 500 }
+    );
+  }
+}

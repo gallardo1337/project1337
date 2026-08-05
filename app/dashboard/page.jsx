@@ -272,6 +272,7 @@ export function DashboardExperience({ beta = false }) {
   const [filme, setFilme] = useState([]);
   const [resolutions, setResolutions] = useState([]);
   const [movieMetrics, setMovieMetrics] = useState([]);
+  const [resettingViews, setResettingViews] = useState(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -1369,6 +1370,78 @@ export function DashboardExperience({ beta = false }) {
     }
   };
 
+  const handleResetMovieViews = async (film = null) => {
+    const resetAll = !film;
+    const currentViews = resetAll
+      ? movieMetrics.reduce(
+          (sum, metric) => sum + (Number(metric.view_count) || 0),
+          0
+        )
+      : Number(movieMetricMap[film.id]?.view_count) || 0;
+
+    if (currentViews === 0) return;
+
+    const confirmed = window.confirm(
+      resetAll
+        ? `Wirklich alle ${currentViews.toLocaleString("de-DE")} Aufrufe auf 0 setzen? Bewertungen bleiben erhalten.`
+        : `Die ${currentViews.toLocaleString("de-DE")} Aufrufe von „${film.title}“ auf 0 setzen?`
+    );
+
+    if (!confirmed) return;
+
+    const resetKey = resetAll ? "all" : film.id;
+    setResettingViews(resetKey);
+    setError(null);
+
+    try {
+      const endpoint = resetAll
+        ? "/api/movie-metrics/views"
+        : `/api/movie-metrics/${film.id}/view`;
+      const response = await fetch(endpoint, { method: "DELETE" });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          payload?.error || "Aufrufe konnten nicht zurückgesetzt werden."
+        );
+      }
+
+      setMovieMetrics((previous) => {
+        if (resetAll) {
+          return previous.map((metric) => ({ ...metric, view_count: 0 }));
+        }
+
+        const existing = previous.some(
+          (metric) => metric.movie_id === film.id
+        );
+
+        if (!existing) {
+          return [
+            ...previous,
+            {
+              movie_id: film.id,
+              rating: null,
+              view_count: 0,
+            },
+          ];
+        }
+
+        return previous.map((metric) =>
+          metric.movie_id === film.id
+            ? { ...metric, view_count: 0 }
+            : metric
+        );
+      });
+    } catch (resetError) {
+      console.error(resetError);
+      setError(
+        resetError.message || "Aufrufe konnten nicht zurückgesetzt werden."
+      );
+    } finally {
+      setResettingViews(null);
+    }
+  };
+
   // ---------------- Render ----------------
 
   // Sidebar-Inhalt (einmal definieren, dann mobil + desktop nutzen)
@@ -2295,6 +2368,8 @@ export function DashboardExperience({ beta = false }) {
                       resolutionMap={resolutionMap}
                       onNavigate={openAdminView}
                       onEditMovie={handleEditFilm}
+                      onResetAllViews={() => handleResetMovieViews()}
+                      resettingViews={resettingViews === "all"}
                     />
                   ) : null}
 
@@ -2307,13 +2382,30 @@ export function DashboardExperience({ beta = false }) {
                       </div>
                       <div className="adminWorkspaceHeader__actions">
                         {activeFilmSection === "stats" ? (
-                          <button
-                            type="button"
-                            className="adminWorkspaceHeader__primary"
-                            onClick={() => openAdminView("new")}
-                          >
-                            <span>+</span> Film hinzufügen
-                          </button>
+                          <>
+                            <button
+                              type="button"
+                              className="adminWorkspaceHeader__secondary"
+                              onClick={() => handleResetMovieViews()}
+                              disabled={
+                                resettingViews !== null ||
+                                !movieMetrics.some(
+                                  (metric) => Number(metric.view_count) > 0
+                                )
+                              }
+                            >
+                              {resettingViews === "all"
+                                ? "Aufrufe werden gelöscht…"
+                                : "Alle Aufrufe zurücksetzen"}
+                            </button>
+                            <button
+                              type="button"
+                              className="adminWorkspaceHeader__primary"
+                              onClick={() => openAdminView("new")}
+                            >
+                              <span>+</span> Film hinzufügen
+                            </button>
+                          </>
                         ) : null}
                         {activeFilmSection === "new" && editingFilmId ? (
                           <button
@@ -2824,6 +2916,23 @@ export function DashboardExperience({ beta = false }) {
                                   >
                                     Bearbeiten
                                   </button>
+                                  {beta ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleResetMovieViews(f)}
+                                      disabled={
+                                        resettingViews !== null ||
+                                        !Number(
+                                          movieMetricMap[f.id]?.view_count
+                                        )
+                                      }
+                                      className="rounded-lg border border-amber-700 px-3 py-1.5 text-xs text-amber-200 hover:bg-amber-900/50 disabled:cursor-not-allowed disabled:opacity-40"
+                                    >
+                                      {resettingViews === f.id
+                                        ? "Wird zurückgesetzt…"
+                                        : "Aufrufe zurücksetzen"}
+                                    </button>
+                                  ) : null}
                                   <button
                                     type="button"
                                     onClick={() => handleDeleteFilm(f.id)}

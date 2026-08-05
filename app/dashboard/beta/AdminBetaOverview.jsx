@@ -35,6 +35,8 @@ export default function AdminBetaOverview({
   resolutionMap,
   onNavigate,
   onEditMovie,
+  onResetAllViews,
+  resettingViews,
 }) {
   const totalViews = movies.reduce(
     (sum, movie) => sum + (Number(metricMap[movie.id]?.view_count) || 0),
@@ -151,7 +153,14 @@ export default function AdminBetaOverview({
         <article className="adminKpi">
           <div className="adminKpi__topline">
             <span>Reichweite</span>
-            <small>Alle Filme</small>
+            <button
+              type="button"
+              className="adminKpi__action"
+              onClick={onResetAllViews}
+              disabled={resettingViews || totalViews === 0}
+            >
+              {resettingViews ? "Wird gelöscht…" : "Zurücksetzen"}
+            </button>
           </div>
           <strong>{formatNumber(totalViews)}</strong>
           <p>Gespeicherte Aufrufe</p>
