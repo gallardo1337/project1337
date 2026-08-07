@@ -47,6 +47,44 @@ function failedCheck(message, checkedAt, extra = {}) {
   };
 }
 
+async function probeMediaUrl(mediaUrl, signal, retry = false) {
+  const response = await fetch(mediaUrl, {
+    method: "GET",
+    headers: {
+      Range: "bytes=0-1",
+      ...(retry ? { "Cache-Control": "no-cache" } : {}),
+      "User-Agent": "Project1337-MediaHealth/1.1",
+    },
+    redirect: "manual",
+    cache: "no-store",
+    signal,
+  });
+
+  const contentType = response.headers.get("content-type");
+  const contentRange = response.headers.get("content-range");
+  const contentLength = response.headers.get("content-length");
+  const acceptRanges = response.headers.get("accept-ranges");
+  const result = {
+    ok: response.ok,
+    status: response.status,
+    contentType,
+    contentRange,
+    acceptRanges,
+    redirectLocation: response.headers.get("location"),
+    rangeSupported:
+      response.status === 206 &&
+      /^bytes\s+\d+-\d+\/\d+$/i.test(contentRange || ""),
+    contentTypeValid: /^video\/mp4(?:;|$)/i.test(contentType || ""),
+    fileSize: getFileSize(contentRange, contentLength, response.status),
+  };
+
+  if (response.body) {
+    await response.body.cancel().catch(() => {});
+  }
+
+  return result;
+}
+
 export async function POST(_request, { params }) {
   if (!(await hasLibrarySession())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -112,56 +150,49 @@ export async function POST(_request, { params }) {
     const startedAt = Date.now();
 
     try {
-      const response = await fetch(mediaUrl, {
-        method: "GET",
-        headers: {
-          Range: "bytes=0-1",
-          "User-Agent": "Project1337-MediaHealth/1.0",
-        },
-        redirect: "manual",
-        cache: "no-store",
-        signal: controller.signal,
-      });
+      let probe = await probeMediaUrl(mediaUrl, controller.signal);
+      let rangeRetried = false;
+
+      if (
+        !probe.rangeSupported &&
+        probe.status === 200 &&
+        /\bbytes\b/i.test(probe.acceptRanges || "")
+      ) {
+        rangeRetried = true;
+        const firstProbe = probe;
+        try {
+          probe = await probeMediaUrl(mediaUrl, controller.signal, true);
+        } catch {
+          probe = firstProbe;
+        }
+      }
 
       const responseTimeMs = Date.now() - startedAt;
-      const contentType = response.headers.get("content-type");
-      const contentRange = response.headers.get("content-range");
-      const contentLength = response.headers.get("content-length");
-      const acceptRanges = response.headers.get("accept-ranges");
-      const rangeSupported =
-        response.status === 206 && /^bytes\s+\d+-\d+\/\d+$/i.test(contentRange || "");
-      const contentTypeValid = /^video\/mp4(?:;|$)/i.test(contentType || "");
-      const fileSize = getFileSize(
-        contentRange,
-        contentLength,
-        response.status
-      );
-      const redirectLocation = response.headers.get("location");
-
-      await response.body?.cancel().catch(() => {});
-
-      const isRedirect = response.status >= 300 && response.status < 400;
-      const reachable = response.ok && !isRedirect;
+      const isRedirect = probe.status >= 300 && probe.status < 400;
+      const reachable = probe.ok && !isRedirect;
 
       return NextResponse.json(
         {
           movie_id: id,
           check: {
             reachable,
-            rangeSupported,
-            contentTypeValid,
-            status: response.status,
-            contentType,
-            fileSize,
+            rangeSupported: probe.rangeSupported,
+            contentTypeValid: probe.contentTypeValid,
+            status: probe.status,
+            contentType: probe.contentType,
+            fileSize: probe.fileSize,
             responseTimeMs,
             checkedAt,
             error: isRedirect
-              ? `Weiterleitung erkannt${redirectLocation ? `: ${redirectLocation}` : "."}`
+              ? `Weiterleitung erkannt${
+                  probe.redirectLocation ? `: ${probe.redirectLocation}` : "."
+                }`
               : reachable
               ? null
-              : `Videohost antwortet mit HTTP ${response.status}.`,
-            acceptRanges,
-            contentRange,
+              : `Videohost antwortet mit HTTP ${probe.status}.`,
+            acceptRanges: probe.acceptRanges,
+            contentRange: probe.contentRange,
+            rangeRetried,
           },
         },
         { headers: { "Cache-Control": "no-store" } }
