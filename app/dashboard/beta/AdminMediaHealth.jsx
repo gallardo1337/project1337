@@ -73,9 +73,25 @@ function rememberAllPairs(movies, seenPairs) {
   }
 }
 
-function createDuplicateGroups(movies, liveResults) {
+function pairKeysForMovies(movies) {
+  const keys = [];
+
+  for (let leftIndex = 0; leftIndex < movies.length; leftIndex += 1) {
+    for (
+      let rightIndex = leftIndex + 1;
+      rightIndex < movies.length;
+      rightIndex += 1
+    ) {
+      keys.push(pairKey([movies[leftIndex], movies[rightIndex]]));
+    }
+  }
+
+  return keys;
+}
+
+function createDuplicateGroups(movies, liveResults, ignoredPairs) {
   const groups = [];
-  const seenPairs = new Set();
+  const seenPairs = new Set(ignoredPairs);
   const pathMap = new Map();
 
   movies.forEach((movie) => {
@@ -87,6 +103,7 @@ function createDuplicateGroups(movies, liveResults) {
 
   pathMap.forEach((items) => {
     if (items.length < 2) return;
+    if (pairKeysForMovies(items).every((key) => ignoredPairs.has(key))) return;
     const key = pairKey(items);
     rememberAllPairs(items, seenPairs);
     groups.push({
@@ -315,6 +332,14 @@ export default function AdminMediaHealth({
   const [checkingIds, setCheckingIds] = useState(new Set());
   const [scanState, setScanState] = useState({ running: false, done: 0, total: 0 });
   const [scanError, setScanError] = useState(null);
+  const [ignoredPairs, setIgnoredPairs] = useState(new Set());
+  const [duplicateAction, setDuplicateAction] = useState({
+    loading: true,
+    saving: null,
+    error: null,
+    notice: null,
+    undo: null,
+  });
   const cancelScanRef = useRef(false);
 
   useEffect(() => {
@@ -334,9 +359,56 @@ export default function AdminMediaHealth({
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(liveResults));
   }, [liveResults, storageReady]);
 
+  useEffect(() => {
+    let active = true;
+
+    const loadIgnoredPairs = async () => {
+      try {
+        const response = await fetch("/api/media-health/duplicates", {
+          cache: "no-store",
+        });
+        const payload = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            payload?.error || "Duplikatentscheidungen konnten nicht geladen werden."
+          );
+        }
+
+        if (!active) return;
+        const keys = (payload.ignored_pairs || []).map((pair) =>
+          [String(pair.movie_id_a), String(pair.movie_id_b)].sort().join(":")
+        );
+        setIgnoredPairs(new Set(keys));
+        setDuplicateAction((current) => ({
+          ...current,
+          loading: false,
+          error: null,
+        }));
+      } catch (error) {
+        if (!active) return;
+        setDuplicateAction((current) => ({
+          ...current,
+          loading: false,
+          error:
+            error?.message ||
+            "Duplikatentscheidungen konnten nicht geladen werden.",
+        }));
+      }
+    };
+
+    loadIgnoredPairs();
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const duplicateGroups = useMemo(
-    () => createDuplicateGroups(movies, liveResults),
-    [movies, liveResults]
+    () =>
+      duplicateAction.loading
+        ? []
+        : createDuplicateGroups(movies, liveResults, ignoredPairs),
+    [movies, liveResults, ignoredPairs, duplicateAction.loading]
   );
 
   const duplicateGroupsByMovie = useMemo(() => {
@@ -521,6 +593,104 @@ export default function AdminMediaHealth({
     if (confirmed) setLiveResults({});
   };
 
+  const dismissDuplicateGroup = async (group) => {
+    if (duplicateAction.saving) return;
+
+    const movieIds = group.movies.map((movie) => movie.id);
+    const confirmed = window.confirm(
+      "Diesen Hinweis als „Kein Duplikat“ bestätigen? Die Filme bleiben unverändert und werden künftig nicht mehr zusammen markiert."
+    );
+    if (!confirmed) return;
+
+    setDuplicateAction((current) => ({
+      ...current,
+      saving: group.id,
+      error: null,
+      notice: null,
+      undo: null,
+    }));
+
+    try {
+      const response = await fetch("/api/media-health/duplicates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ movie_ids: movieIds }),
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload?.error || "Entscheidung konnte nicht gespeichert werden.");
+      }
+
+      const keys = pairKeysForMovies(group.movies);
+      setIgnoredPairs((current) => {
+        const next = new Set(current);
+        keys.forEach((key) => next.add(key));
+        return next;
+      });
+      setDuplicateAction({
+        loading: false,
+        saving: null,
+        error: null,
+        notice: "Bestätigt: Diese Filme sind kein Duplikat.",
+        undo: { movieIds, keys },
+      });
+    } catch (error) {
+      setDuplicateAction((current) => ({
+        ...current,
+        saving: null,
+        error: error?.message || "Entscheidung konnte nicht gespeichert werden.",
+      }));
+    }
+  };
+
+  const restoreDuplicateGroup = async () => {
+    const undo = duplicateAction.undo;
+    if (!undo || duplicateAction.saving) return;
+
+    setDuplicateAction((current) => ({
+      ...current,
+      saving: "undo",
+      error: null,
+    }));
+
+    try {
+      const response = await fetch("/api/media-health/duplicates", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ movie_ids: undo.movieIds }),
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          payload?.error || "Entscheidung konnte nicht rückgängig gemacht werden."
+        );
+      }
+
+      setIgnoredPairs((current) => {
+        const next = new Set(current);
+        undo.keys.forEach((key) => next.delete(key));
+        return next;
+      });
+      setDuplicateAction({
+        loading: false,
+        saving: null,
+        error: null,
+        notice: "Der Duplikatverdacht wird wieder angezeigt.",
+        undo: null,
+      });
+    } catch (error) {
+      setDuplicateAction((current) => ({
+        ...current,
+        saving: null,
+        error:
+          error?.message ||
+          "Entscheidung konnte nicht rückgängig gemacht werden.",
+      }));
+    }
+  };
+
   const filters = [
     { key: "issues", label: "Alle Hinweise", count: summary.errors + summary.warnings },
     { key: "errors", label: "Fehler", count: summary.errors },
@@ -610,6 +780,38 @@ export default function AdminMediaHealth({
         </article>
       </section>
 
+      {duplicateAction.error || duplicateAction.notice ? (
+        <div
+          className={`mediaHealth__decision ${
+            duplicateAction.error ? "is-error" : "is-success"
+          }`}
+        >
+          <span>{duplicateAction.error || duplicateAction.notice}</span>
+          {duplicateAction.undo && !duplicateAction.error ? (
+            <button
+              type="button"
+              onClick={restoreDuplicateGroup}
+              disabled={duplicateAction.saving === "undo"}
+            >
+              {duplicateAction.saving === "undo" ? "Wird zurückgesetzt…" : "Rückgängig"}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() =>
+                setDuplicateAction((current) => ({
+                  ...current,
+                  error: null,
+                  notice: null,
+                }))
+              }
+            >
+              Schließen
+            </button>
+          )}
+        </div>
+      ) : null}
+
       {duplicateGroups.length ? (
         <section className="mediaHealth__duplicatePanel">
           <div className="mediaHealth__sectionHeading">
@@ -634,7 +836,18 @@ export default function AdminMediaHealth({
                     </span>
                     <strong>{group.reason}</strong>
                   </div>
-                  <small>{group.movies.length} Treffer</small>
+                  <div className="mediaHealth__duplicateActions">
+                    <small>{group.movies.length} Treffer</small>
+                    <button
+                      type="button"
+                      onClick={() => dismissDuplicateGroup(group)}
+                      disabled={duplicateAction.saving === group.id}
+                    >
+                      {duplicateAction.saving === group.id
+                        ? "Wird gespeichert…"
+                        : "Kein Duplikat"}
+                    </button>
+                  </div>
                 </header>
                 <p>{group.detail}</p>
                 <div>
