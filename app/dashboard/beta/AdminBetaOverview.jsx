@@ -7,7 +7,8 @@ const formatRating = (value) => {
 };
 
 const hasCompleteMp4Path = (value) =>
-  typeof value === "string" && value.trim().toLowerCase().endsWith(".mp4");
+  typeof value === "string" &&
+  value.trim().split(/[?#]/)[0].toLowerCase().endsWith(".mp4");
 
 const movieDate = (movie) => {
   const value = movie?.created_at || movie?.inserted_at || movie?.createdAt;
@@ -261,6 +262,9 @@ export default function AdminBetaOverview({
               <span>Katalogpflege</span>
               <h2>Offene Punkte</h2>
             </div>
+            <button type="button" onClick={() => onNavigate("health")}>
+              Prüfen <span>→</span>
+            </button>
           </div>
 
           <div
@@ -274,19 +278,19 @@ export default function AdminBetaOverview({
           </div>
 
           <div className="adminIssueList">
-            <button type="button" onClick={() => onNavigate("stats")}>
+            <button type="button" onClick={() => onNavigate("health")}>
               <span>Ohne Thumbnail</span>
               <strong>{moviesWithoutThumbnail}</strong>
             </button>
-            <button type="button" onClick={() => onNavigate("stats")}>
+            <button type="button" onClick={() => onNavigate("health")}>
               <span>Ohne Studio</span>
               <strong>{moviesWithoutStudio}</strong>
             </button>
-            <button type="button" onClick={() => onNavigate("stats")}>
+            <button type="button" onClick={() => onNavigate("health")}>
               <span>Ohne Hauptdarsteller</span>
               <strong>{moviesWithoutCast}</strong>
             </button>
-            <button type="button" onClick={() => onNavigate("stats")}>
+            <button type="button" onClick={() => onNavigate("health")}>
               <span>Dateipfad nicht vollständig</span>
               <strong>{moviesWithoutFile}</strong>
             </button>
