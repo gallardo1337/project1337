@@ -7,6 +7,18 @@ import dynamic from "next/dynamic";
 import AdminBetaOverview from "./beta/AdminBetaOverview.jsx";
 import AdminMediaHealth from "./beta/AdminMediaHealth.jsx";
 
+const AdminThumbnailStudio = dynamic(
+  () => import("./beta/AdminThumbnailStudio.jsx"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="text-xs text-neutral-500">
+        Lade Thumbnail Studio…
+      </div>
+    ),
+  }
+);
+
 // ActorImageUploader nur im Client laden (wegen react-easy-crop / Canvas)
 const ActorImageUploader = dynamic(() => import("./ActorImageUploader.jsx"), {
   ssr: false,
@@ -195,6 +207,13 @@ const AdminNavIcon = ({ name }) => {
       <>
         <path d="M4 5h16v14H4z" />
         <path d="M7 12h2l1.4-3.5 2.2 7 1.5-3.5H17" />
+      </>
+    ),
+    thumbnail: (
+      <>
+        <rect x="3" y="4" width="18" height="16" rx="1" />
+        <circle cx="9" cy="9" r="2" />
+        <path d="m5 17 4.5-4.5 3 3 2.5-2.5 4 4" />
       </>
     ),
     add: <path d="M12 3v18M3 12h18" />,
@@ -1609,6 +1628,7 @@ export function DashboardExperience({ beta = false }) {
     { key: "overview", label: "Übersicht", icon: "overview", section: "overview" },
     { key: "stats", label: "Filmarchiv", icon: "movies", section: "stats", count: filme.length },
     { key: "health", label: "Medienprüfung", icon: "health", section: "health" },
+    { key: "thumbnails", label: "Thumbnail Studio", icon: "thumbnail", section: "thumbnails" },
     { key: "new", label: editingFilmId ? "Film bearbeiten" : "Film hinzufügen", icon: "add", section: "new" },
     { key: "mainActors", label: "Hauptdarsteller", icon: "mainActors", section: "meta", meta: "mainActors", count: hauptdarsteller.length },
     { key: "supportActors", label: "Nebendarsteller", icon: "supportActors", section: "meta", meta: "supportActors", count: nebendarsteller.length },
@@ -1620,7 +1640,7 @@ export function DashboardExperience({ beta = false }) {
     <nav className="adminBetaRail" aria-label="Adminbereiche">
       <div className="adminBetaRail__group">
         <span className="adminBetaRail__label">Arbeitsbereich</span>
-        {betaNavItems.slice(0, 4).map((item) => {
+        {betaNavItems.slice(0, 5).map((item) => {
           const active = activeFilmSection === item.section;
           return (
             <button
@@ -1639,7 +1659,7 @@ export function DashboardExperience({ beta = false }) {
 
       <div className="adminBetaRail__group">
         <span className="adminBetaRail__label">Stammdaten</span>
-        {betaNavItems.slice(4).map((item) => {
+        {betaNavItems.slice(5).map((item) => {
           const active =
             activeFilmSection === "meta" && activeMetaSection === item.meta;
           return (
@@ -1676,6 +1696,13 @@ export function DashboardExperience({ beta = false }) {
           title: "Medienprüfung",
           description:
             "Dateipfade, Erreichbarkeit, Streaming-Kompatibilität, Metadaten und mögliche Duplikate kontrollieren.",
+        }
+      : activeFilmSection === "thumbnails"
+      ? {
+          eyebrow: "Creative Tools / Thumbnail Generator",
+          title: "Thumbnail Studio",
+          description:
+            "Filmszenen erfassen, automatisch Varianten erzeugen und das beste 16:9-Cover direkt speichern.",
         }
       : activeFilmSection === "stats"
       ? {
@@ -2448,6 +2475,24 @@ export function DashboardExperience({ beta = false }) {
                       actorMap={actorMap}
                       studioMap={studioMap}
                       resolutionMap={resolutionMap}
+                      onEditMovie={handleEditFilm}
+                    />
+                  ) : null}
+
+                  {beta && activeFilmSection === "thumbnails" ? (
+                    <AdminThumbnailStudio
+                      movies={filme}
+                      studioMap={studioMap}
+                      resolutionMap={resolutionMap}
+                      onThumbnailSaved={(movieId, thumbnailUrl) =>
+                        setFilme((current) =>
+                          current.map((movie) =>
+                            movie.id === movieId
+                              ? { ...movie, thumbnail_url: thumbnailUrl }
+                              : movie
+                          )
+                        )
+                      }
                       onEditMovie={handleEditFilm}
                     />
                   ) : null}
