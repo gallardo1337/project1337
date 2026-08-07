@@ -5,6 +5,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import AdminBetaOverview from "./beta/AdminBetaOverview.jsx";
+import AdminMediaHealth from "./beta/AdminMediaHealth.jsx";
 
 // ActorImageUploader nur im Client laden (wegen react-easy-crop / Canvas)
 const ActorImageUploader = dynamic(() => import("./ActorImageUploader.jsx"), {
@@ -190,6 +191,12 @@ const AdminNavIcon = ({ name }) => {
         <path d="M3 9h18M8 5l3 4M14 5l3 4" />
       </>
     ),
+    health: (
+      <>
+        <path d="M4 5h16v14H4z" />
+        <path d="M7 12h2l1.4-3.5 2.2 7 1.5-3.5H17" />
+      </>
+    ),
     add: <path d="M12 3v18M3 12h18" />,
     mainActors: (
       <>
@@ -260,7 +267,7 @@ export function DashboardExperience({ beta = false }) {
   // Tabs: Filme / Neuer Film / Stammdaten
   const [activeFilmSection, setActiveFilmSection] = useState(
     beta ? "overview" : "stats"
-  ); // "overview" | "stats" | "new" | "meta"
+  ); // "overview" | "health" | "stats" | "new" | "meta"
   const [metaMenuOpen, setMetaMenuOpen] = useState(false);
   const [activeMetaSection, setActiveMetaSection] = useState("mainActors"); // "mainActors" | "supportActors" | "studios" | "tags"
 
@@ -1601,6 +1608,7 @@ export function DashboardExperience({ beta = false }) {
   const betaNavItems = [
     { key: "overview", label: "Übersicht", icon: "overview", section: "overview" },
     { key: "stats", label: "Filmarchiv", icon: "movies", section: "stats", count: filme.length },
+    { key: "health", label: "Medienprüfung", icon: "health", section: "health" },
     { key: "new", label: editingFilmId ? "Film bearbeiten" : "Film hinzufügen", icon: "add", section: "new" },
     { key: "mainActors", label: "Hauptdarsteller", icon: "mainActors", section: "meta", meta: "mainActors", count: hauptdarsteller.length },
     { key: "supportActors", label: "Nebendarsteller", icon: "supportActors", section: "meta", meta: "supportActors", count: nebendarsteller.length },
@@ -1612,7 +1620,7 @@ export function DashboardExperience({ beta = false }) {
     <nav className="adminBetaRail" aria-label="Adminbereiche">
       <div className="adminBetaRail__group">
         <span className="adminBetaRail__label">Arbeitsbereich</span>
-        {betaNavItems.slice(0, 3).map((item) => {
+        {betaNavItems.slice(0, 4).map((item) => {
           const active = activeFilmSection === item.section;
           return (
             <button
@@ -1631,7 +1639,7 @@ export function DashboardExperience({ beta = false }) {
 
       <div className="adminBetaRail__group">
         <span className="adminBetaRail__label">Stammdaten</span>
-        {betaNavItems.slice(3).map((item) => {
+        {betaNavItems.slice(4).map((item) => {
           const active =
             activeFilmSection === "meta" && activeMetaSection === item.meta;
           return (
@@ -1662,7 +1670,14 @@ export function DashboardExperience({ beta = false }) {
   const SidebarContent = beta ? BetaSidebarContent : ClassicSidebarContent;
 
   const betaWorkspace =
-    activeFilmSection === "stats"
+    activeFilmSection === "health"
+      ? {
+          eyebrow: "Media Health Center",
+          title: "Medienprüfung",
+          description:
+            "Dateipfade, Erreichbarkeit, Streaming-Kompatibilität, Metadaten und mögliche Duplikate kontrollieren.",
+        }
+      : activeFilmSection === "stats"
       ? {
           eyebrow: "Bibliothek",
           title: "Filmarchiv",
@@ -2425,6 +2440,16 @@ export function DashboardExperience({ beta = false }) {
                         </button>
                       </div>
                     </header>
+                  ) : null}
+
+                  {beta && activeFilmSection === "health" ? (
+                    <AdminMediaHealth
+                      movies={filme}
+                      actorMap={actorMap}
+                      studioMap={studioMap}
+                      resolutionMap={resolutionMap}
+                      onEditMovie={handleEditFilm}
+                    />
                   ) : null}
 
                   {/* Tab: Neuer Film */}
