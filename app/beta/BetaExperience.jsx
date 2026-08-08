@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styles from "./experience.module.css";
 
 function Icon({ name, className = "" }) {
@@ -52,6 +52,16 @@ function Icon({ name, className = "" }) {
       <>
         <circle cx="11" cy="11" r="6.5" />
         <path d="m16 16 4 4" />
+      </>
+    ),
+    dice: (
+      <>
+        <rect x="4" y="4" width="16" height="16" rx="3" />
+        <circle cx="8.5" cy="8.5" r="1" fill="currentColor" stroke="none" />
+        <circle cx="15.5" cy="8.5" r="1" fill="currentColor" stroke="none" />
+        <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
+        <circle cx="8.5" cy="15.5" r="1" fill="currentColor" stroke="none" />
+        <circle cx="15.5" cy="15.5" r="1" fill="currentColor" stroke="none" />
       </>
     ),
     spark: <path d="M12 3l1.4 5.6L19 10l-5.6 1.4L12 17l-1.4-5.6L5 10l5.6-1.4L12 3Zm6 13 .6 2.4L21 19l-2.4.6L18 22l-.6-2.4L15 19l2.4-.6L18 16Z" />,
@@ -737,6 +747,7 @@ function AppHeader({
   onDashboard,
   onOpenArchive,
   onLogout,
+  onOpenRoulette,
   onOpenFilters,
 }) {
   const [accountOpen, setAccountOpen] = useState(false);
@@ -768,6 +779,15 @@ function AppHeader({
             aria-label="Library durchsuchen"
           />
         </label>
+        <button
+          type="button"
+          className={`${styles.toolButton} ${styles.rouletteHeaderButton}`}
+          onClick={onOpenRoulette}
+          aria-label="Film-Roulette öffnen"
+          title="Film-Roulette"
+        >
+          <Icon name="dice" />
+        </button>
         <button type="button" className={styles.toolButton} onClick={onOpenFilters} aria-label="Filter öffnen">
           <Icon name="filter" />
         </button>
@@ -791,6 +811,341 @@ function AppHeader({
         </div>
       </div>
     </header>
+  );
+}
+
+function getRouletteCastNames(movie) {
+  return [
+    ...(Array.isArray(movie?.mainCast) ? movie.mainCast : []),
+    ...(Array.isArray(movie?.supportCast) ? movie.supportCast : []),
+  ]
+    .map((person) => String(person?.name || "").trim())
+    .filter(Boolean);
+}
+
+function uniqueSorted(values) {
+  return [...new Set(values.map((value) => String(value || "").trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
+}
+
+function hasPlayableMp4(movie) {
+  const cleanUrl = String(movie?.fileUrl || "")
+    .split(/[?#]/)[0]
+    .trim()
+    .toLowerCase();
+  return cleanUrl.endsWith(".mp4");
+}
+
+function FilmRoulette({ open, movies, onClose, onOpenMovie }) {
+  const spinIntervalRef = useRef(null);
+  const spinTimeoutRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+  const [spinning, setSpinning] = useState(false);
+  const [previewMovie, setPreviewMovie] = useState(null);
+  const [selectedMovie, setSelectedMovie] = useState(null);
+  const [historyIds, setHistoryIds] = useState([]);
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
+  const [selectedResolution, setSelectedResolution] = useState("");
+  const [selectedStudio, setSelectedStudio] = useState("");
+  const [selectedActor, setSelectedActor] = useState("");
+  const [selectedTag, setSelectedTag] = useState("");
+  const [minimumRating, setMinimumRating] = useState("0");
+  const [includeRetro, setIncludeRetro] = useState(false);
+
+  const clearSpinTimers = useCallback(() => {
+    if (spinIntervalRef.current) {
+      window.clearInterval(spinIntervalRef.current);
+      spinIntervalRef.current = null;
+    }
+    if (spinTimeoutRef.current) {
+      window.clearTimeout(spinTimeoutRef.current);
+      spinTimeoutRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const handleEscape = (event) => {
+      if (event.key === "Escape") onCloseRef.current();
+    };
+    window.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleEscape);
+      clearSpinTimers();
+    };
+  }, [open, clearSpinTimers]);
+
+  const filterOptions = useMemo(() => {
+    const source = Array.isArray(movies) ? movies : [];
+    return {
+      resolutions: uniqueSorted(source.map((movie) => movie.resolution)),
+      studios: uniqueSorted(source.map((movie) => movie.studio)),
+      actors: uniqueSorted(source.flatMap((movie) => getRouletteCastNames(movie))),
+      tags: uniqueSorted(source.flatMap((movie) => Array.isArray(movie.tags) ? movie.tags : [])),
+    };
+  }, [movies]);
+
+  const candidates = useMemo(() => {
+    const minRating = Math.max(0, Number(minimumRating) || 0);
+    return (Array.isArray(movies) ? movies : []).filter((movie) => {
+      if (!hasPlayableMp4(movie)) return false;
+      if (!includeRetro && String(movie.resolution || "").toLowerCase().includes("retro")) return false;
+      if (selectedResolution && String(movie.resolution || "") !== selectedResolution) return false;
+      if (selectedStudio && String(movie.studio || "") !== selectedStudio) return false;
+      if (selectedActor && !getRouletteCastNames(movie).includes(selectedActor)) return false;
+      if (selectedTag && !(Array.isArray(movie.tags) && movie.tags.includes(selectedTag))) return false;
+      if (minRating > 0 && Number(movie.rating) < minRating) return false;
+      return true;
+    });
+  }, [movies, includeRetro, selectedResolution, selectedStudio, selectedActor, selectedTag, minimumRating]);
+
+  useEffect(() => {
+    clearSpinTimers();
+    setSpinning(false);
+    setPreviewMovie(null);
+    setSelectedMovie(null);
+  }, [includeRetro, selectedResolution, selectedStudio, selectedActor, selectedTag, minimumRating, clearSpinTimers]);
+
+  const spin = () => {
+    if (spinning || candidates.length === 0) return;
+
+    clearSpinTimers();
+    setSpinning(true);
+    setSelectedMovie(null);
+    let previousPreviewId = null;
+
+    const showNextPreview = () => {
+      const alternatives = candidates.filter((movie) => String(movie.id) !== previousPreviewId);
+      const previewPool = alternatives.length ? alternatives : candidates;
+      const nextPreview = previewPool[Math.floor(Math.random() * previewPool.length)];
+      previousPreviewId = String(nextPreview.id);
+      setPreviewMovie(nextPreview);
+    };
+
+    showNextPreview();
+    spinIntervalRef.current = window.setInterval(showNextPreview, 135);
+    spinTimeoutRef.current = window.setTimeout(() => {
+      clearSpinTimers();
+      const freshPool = candidates.filter((movie) => !historyIds.includes(String(movie.id)));
+      const finalPool = freshPool.length ? freshPool : candidates;
+      const winner = finalPool[Math.floor(Math.random() * finalPool.length)];
+
+      setPreviewMovie(winner);
+      setSelectedMovie(winner);
+      setHistoryIds((current) => [
+        String(winner.id),
+        ...current.filter((id) => id !== String(winner.id)),
+      ].slice(0, 5));
+      setSpinning(false);
+    }, 2100);
+  };
+
+  const resetFilters = () => {
+    setSelectedResolution("");
+    setSelectedStudio("");
+    setSelectedActor("");
+    setSelectedTag("");
+    setMinimumRating("0");
+    setIncludeRetro(false);
+  };
+
+  if (!open) return null;
+
+  const activeMovie = previewMovie || selectedMovie;
+  const activeCast = activeMovie ? getRouletteCastNames(activeMovie).slice(0, 4) : [];
+  const activeFilterCount = [
+    selectedResolution,
+    selectedStudio,
+    selectedActor,
+    selectedTag,
+    Number(minimumRating) > 0 ? minimumRating : "",
+    includeRetro ? "retro" : "",
+  ].filter(Boolean).length;
+
+  return (
+    <div className={styles.rouletteLayer} role="dialog" aria-modal="true" aria-label="Film-Roulette">
+      <div className={styles.rouletteBackdrop} aria-hidden="true">
+        {activeMovie ? <MediaImage src={activeMovie.thumbnailUrl} alt="" priority sizes="100vw" /> : null}
+        <span />
+      </div>
+
+      <div className={styles.rouletteTopbar}>
+        <div>
+          <span>Project1337 / Random Screening</span>
+          <strong>Film-Roulette</strong>
+        </div>
+        <button type="button" onClick={onClose} aria-label="Film-Roulette schließen">
+          <Icon name="close" />
+        </button>
+      </div>
+
+      <div className={styles.rouletteStage}>
+        <section className={`${styles.rouletteFeature} ${spinning ? styles.rouletteFeatureSpinning : ""}`}>
+          <div className={styles.roulettePoster}>
+            {activeMovie ? (
+              <MediaImage
+                src={activeMovie.thumbnailUrl}
+                alt={activeMovie.title || "Ausgewählter Film"}
+                priority
+                sizes="(max-width: 900px) 100vw, 66vw"
+              />
+            ) : (
+              <div className={styles.rouletteEmptyVisual}>
+                <Icon name="dice" />
+                <span>Bereit für die Auslosung</span>
+              </div>
+            )}
+            <div className={styles.roulettePosterShade} />
+            {spinning ? <div className={styles.rouletteScanline} aria-hidden="true" /> : null}
+            <div className={styles.roulettePosterCopy}>
+              <span>{spinning ? "Wird ausgelost…" : selectedMovie ? "Dein Film" : "Random Screening"}</span>
+              <h2 title={activeMovie?.title || ""}>{activeMovie?.title || "Was schaust du heute?"}</h2>
+              {activeMovie ? (
+                <p>{[activeMovie.studio || "Independent", activeMovie.year || "–", activeMovie.resolution || "HD"].join(" · ")}</p>
+              ) : (
+                <p>Ein Würfel. Deine Library. Keine endlose Suche.</p>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <aside className={styles.roulettePanel}>
+          <div className={styles.roulettePanelIntro}>
+            <span>{String(candidates.length).padStart(3, "0")} mögliche Filme</span>
+            <h3>{spinning ? "Die Library entscheidet." : selectedMovie ? "Treffer." : "Bereit?"}</h3>
+            <p>
+              {spinning
+                ? "Die Auswahl läuft – einen kurzen Moment noch."
+                : selectedMovie
+                  ? "Ansehen oder das Schicksal noch einmal herausfordern."
+                  : "Retro ist standardmäßig ausgeschlossen. Nur gültige MP4-Dateien nehmen teil."}
+            </p>
+          </div>
+
+          {selectedMovie && !spinning ? (
+            <div className={styles.rouletteFacts}>
+              <div><span>Bewertung</span><strong>{Number(selectedMovie.rating) > 0 ? `${formatRating(selectedMovie.rating)} / 10` : "–"}</strong></div>
+              <div><span>Aufrufe</span><strong>{formatNumber(selectedMovie.viewCount)}</strong></div>
+              {activeCast.length ? <p><span>Cast</span>{activeCast.join(", ")}</p> : null}
+              {selectedMovie.tags?.length ? <p><span>Tags</span>{selectedMovie.tags.slice(0, 5).join(", ")}</p> : null}
+            </div>
+          ) : null}
+
+          <div className={styles.rouletteActions}>
+            {selectedMovie && !spinning ? (
+              <button
+                type="button"
+                className={styles.rouletteWatchButton}
+                onClick={() => {
+                  onClose();
+                  onOpenMovie(selectedMovie);
+                }}
+              >
+                <Icon name="play" /> Film ansehen
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className={styles.rouletteSpinButton}
+              onClick={spin}
+              disabled={spinning || candidates.length === 0}
+            >
+              <Icon name="dice" />
+              <span>{spinning ? "Läuft…" : selectedMovie ? "Neu auslosen" : "Auslosen"}</span>
+            </button>
+            <button
+              type="button"
+              className={styles.rouletteFilterButton}
+              onClick={() => setFiltersExpanded((current) => !current)}
+              aria-expanded={filtersExpanded}
+            >
+              <Icon name="filter" /> Filter anpassen
+              {activeFilterCount ? <b>{activeFilterCount}</b> : null}
+            </button>
+          </div>
+
+          {filtersExpanded ? (
+            <div className={styles.rouletteFilters}>
+              <label>
+                <span>Qualität</span>
+                <select
+                  value={selectedResolution}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setSelectedResolution(value);
+                    if (value.toLowerCase().includes("retro")) setIncludeRetro(true);
+                  }}
+                >
+                  <option value="">Alle</option>
+                  {filterOptions.resolutions.map((resolution) => <option key={resolution} value={resolution}>{resolution}</option>)}
+                </select>
+              </label>
+              <label>
+                <span>Studio</span>
+                <select value={selectedStudio} onChange={(event) => setSelectedStudio(event.target.value)}>
+                  <option value="">Alle</option>
+                  {filterOptions.studios.map((studio) => <option key={studio} value={studio}>{studio}</option>)}
+                </select>
+              </label>
+              <label>
+                <span>Darsteller</span>
+                <select value={selectedActor} onChange={(event) => setSelectedActor(event.target.value)}>
+                  <option value="">Alle</option>
+                  {filterOptions.actors.map((actor) => <option key={actor} value={actor}>{actor}</option>)}
+                </select>
+              </label>
+              <label>
+                <span>Tag</span>
+                <select value={selectedTag} onChange={(event) => setSelectedTag(event.target.value)}>
+                  <option value="">Alle</option>
+                  {filterOptions.tags.map((tag) => <option key={tag} value={tag}>{tag}</option>)}
+                </select>
+              </label>
+              <label>
+                <span>Mindestbewertung</span>
+                <select value={minimumRating} onChange={(event) => setMinimumRating(event.target.value)}>
+                  <option value="0">Egal</option>
+                  <option value="6">Ab 6</option>
+                  <option value="7">Ab 7</option>
+                  <option value="8">Ab 8</option>
+                  <option value="9">Ab 9</option>
+                </select>
+              </label>
+              <label className={styles.rouletteRetroToggle}>
+                <input
+                  type="checkbox"
+                  checked={includeRetro}
+                  onChange={(event) => {
+                    setIncludeRetro(event.target.checked);
+                    if (!event.target.checked && selectedResolution.toLowerCase().includes("retro")) {
+                      setSelectedResolution("");
+                    }
+                  }}
+                />
+                <span>Retro zulassen</span>
+              </label>
+              <div className={styles.rouletteFilterFoot}>
+                <span>{candidates.length} Treffer</span>
+                <button type="button" onClick={resetFilters}>Zurücksetzen</button>
+              </div>
+            </div>
+          ) : null}
+
+          {candidates.length === 0 ? (
+            <div className={styles.rouletteNoResults}>Keine passenden, abspielbaren Filme gefunden. Passe die Filter an.</div>
+          ) : null}
+        </aside>
+      </div>
+    </div>
   );
 }
 
@@ -1621,6 +1976,7 @@ export default function BetaExperience({
   onToggleSupportingActor,
 }) {
   const [actorBackTarget, setActorBackTarget] = useState("discover");
+  const [rouletteOpen, setRouletteOpen] = useState(false);
   const actorsWithMetrics = useMemo(
     () => addActorMetrics(actors, movies),
     [actors, movies]
@@ -1670,6 +2026,7 @@ export default function BetaExperience({
         onDashboard={onDashboard}
         onOpenArchive={onOpenArchive}
         onLogout={onLogout}
+        onOpenRoulette={() => setRouletteOpen(true)}
         onOpenFilters={() => setFiltersOpen(true)}
       />
 
@@ -1696,6 +2053,13 @@ export default function BetaExperience({
       ) : (
         <Discovery movies={movies} actors={actorsWithMetrics} onOpenMovie={onOpenMovie} onShowMovies={onShowMovies} onShowActors={onShowActors} onShowActor={openActorFromDiscover} />
       )}
+
+      <FilmRoulette
+        open={rouletteOpen}
+        movies={movies}
+        onClose={() => setRouletteOpen(false)}
+        onOpenMovie={onOpenMovie}
+      />
 
       <FilterDrawer
         open={filtersOpen}

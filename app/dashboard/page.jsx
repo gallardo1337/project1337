@@ -68,6 +68,17 @@ function normalizeMovieFileUrl(value) {
 
 const CHANGELOG = [
   {
+    version: "2.1.0",
+    date: "2026-08-08",
+    items: [
+      "Film-Roulette als neue bildschirmfüllende Kinoansicht hinzugefügt",
+      "Kompakter Würfel-Button ohne Text direkt im v2-Header integriert",
+      "Roulette-Filter für Qualität, Studio, Darsteller, Tags und Mindestbewertung ergänzt",
+      "Retro standardmäßig ausgeschlossen und nur gültige MP4-Dateien für die Auslosung zugelassen",
+      "Die letzten fünf Roulette-Ergebnisse werden bei weiteren Auslosungen nach Möglichkeit vermieden",
+    ],
+  },
+  {
     version: "2.0.2",
     date: "2026-08-08",
     items: [

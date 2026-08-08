@@ -464,6 +464,10 @@
   width: 18px;
 }
 
+.rouletteHeaderButton svg {
+  width: 19px;
+}
+
 .account {
   position: relative;
 }
@@ -3037,6 +3041,436 @@
   width: 17px;
 }
 
+/* Film roulette */
+.rouletteLayer {
+  position: fixed;
+  inset: 0;
+  z-index: 180;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: #070708;
+  color: #fff;
+}
+
+.rouletteBackdrop {
+  position: fixed;
+  inset: -8%;
+  z-index: 0;
+  opacity: .26;
+  filter: blur(52px) saturate(.8);
+  transform: scale(1.08);
+  pointer-events: none;
+}
+
+.rouletteBackdrop img {
+  object-fit: cover;
+}
+
+.rouletteBackdrop > span {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(4,4,5,.25), rgba(4,4,5,.75)),
+    linear-gradient(0deg, #070708 0%, rgba(7,7,8,.3) 80%);
+}
+
+.rouletteTopbar {
+  position: relative;
+  z-index: 3;
+  min-height: 92px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 clamp(24px, 4vw, 72px);
+  border-bottom: 1px solid rgba(255,255,255,.12);
+  background: rgba(7,7,8,.72);
+  backdrop-filter: blur(22px);
+}
+
+.rouletteTopbar > div {
+  display: grid;
+  gap: 7px;
+}
+
+.rouletteTopbar span {
+  color: rgba(255,255,255,.35);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+.rouletteTopbar strong {
+  font-family: Georgia, serif;
+  font-size: 25px;
+  font-style: italic;
+  font-weight: 500;
+}
+
+.rouletteTopbar button {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.04);
+  color: #fff;
+  cursor: pointer;
+}
+
+.rouletteTopbar button:hover {
+  border-color: rgba(255,43,69,.7);
+  background: rgba(255,43,69,.12);
+}
+
+.rouletteTopbar button svg {
+  width: 19px;
+}
+
+.rouletteStage {
+  position: relative;
+  z-index: 2;
+  min-height: calc(100svh - 92px);
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(360px, .55fr);
+}
+
+.rouletteFeature {
+  min-width: 0;
+  padding: clamp(22px, 3vw, 48px);
+  border-right: 1px solid rgba(255,255,255,.1);
+}
+
+.roulettePoster {
+  position: sticky;
+  top: 116px;
+  min-height: calc(100svh - 140px);
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.13);
+  background: #0b0b0d;
+  box-shadow: 0 35px 100px rgba(0,0,0,.52);
+}
+
+.roulettePoster > img {
+  object-fit: contain;
+  background: #09090a;
+}
+
+.roulettePosterShade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(0deg, rgba(5,5,6,.97) 0%, rgba(5,5,6,.36) 45%, transparent 72%),
+    linear-gradient(90deg, rgba(5,5,6,.45), transparent 35%);
+  pointer-events: none;
+}
+
+.rouletteEmptyVisual {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 24px;
+  color: rgba(255,255,255,.18);
+  background:
+    radial-gradient(circle at 50% 45%, rgba(255,43,69,.12), transparent 32%),
+    linear-gradient(135deg, #101012, #080809);
+}
+
+.rouletteEmptyVisual svg {
+  width: clamp(80px, 12vw, 150px);
+}
+
+.rouletteEmptyVisual span {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+}
+
+.roulettePosterCopy {
+  position: absolute;
+  right: clamp(22px, 4vw, 70px);
+  bottom: clamp(28px, 5vw, 72px);
+  left: clamp(22px, 4vw, 70px);
+  z-index: 3;
+}
+
+.roulettePosterCopy > span {
+  display: block;
+  margin-bottom: 14px;
+  color: var(--red);
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+}
+
+.roulettePosterCopy h2 {
+  max-width: 100%;
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-family: Georgia, serif;
+  font-size: clamp(42px, 5.2vw, 92px);
+  font-style: italic;
+  font-weight: 500;
+  line-height: .93;
+  letter-spacing: -.055em;
+  text-wrap: balance;
+}
+
+.roulettePosterCopy p {
+  margin: 20px 0 0;
+  color: rgba(255,255,255,.56);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.rouletteFeatureSpinning .roulettePoster > img {
+  animation: rouletteImagePulse 135ms ease-in-out infinite alternate;
+}
+
+.rouletteScanline {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: linear-gradient(0deg, transparent, rgba(255,255,255,.08), transparent);
+  background-size: 100% 18%;
+  animation: rouletteScan 700ms linear infinite;
+  pointer-events: none;
+}
+
+@keyframes rouletteImagePulse {
+  to { opacity: .78; transform: scale(1.012); }
+}
+
+@keyframes rouletteScan {
+  from { background-position: 0 -30vh; }
+  to { background-position: 0 100vh; }
+}
+
+.roulettePanel {
+  align-self: start;
+  min-width: 0;
+  display: grid;
+  gap: 24px;
+  padding: clamp(34px, 4vw, 72px) clamp(24px, 3vw, 52px) 48px;
+  background: rgba(10,10,12,.82);
+  backdrop-filter: blur(24px);
+}
+
+.roulettePanelIntro > span {
+  color: var(--red);
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+.roulettePanelIntro h3 {
+  margin: 12px 0 14px;
+  font-family: Georgia, serif;
+  font-size: clamp(38px, 4vw, 58px);
+  font-style: italic;
+  font-weight: 500;
+  line-height: .95;
+  letter-spacing: -.045em;
+}
+
+.roulettePanelIntro p {
+  margin: 0;
+  color: rgba(255,255,255,.48);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.rouletteFacts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid rgba(255,255,255,.1);
+}
+
+.rouletteFacts > div {
+  display: grid;
+  gap: 7px;
+  padding: 17px;
+}
+
+.rouletteFacts > div + div {
+  border-left: 1px solid rgba(255,255,255,.1);
+}
+
+.rouletteFacts span {
+  color: rgba(255,255,255,.36);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.rouletteFacts strong {
+  font-size: 15px;
+}
+
+.rouletteFacts p {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 15px 17px;
+  border-top: 1px solid rgba(255,255,255,.1);
+  color: rgba(255,255,255,.72);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.rouletteActions {
+  display: grid;
+  gap: 9px;
+}
+
+.rouletteActions button {
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  border: 1px solid rgba(255,255,255,.12);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: .06em;
+  cursor: pointer;
+}
+
+.rouletteActions button svg {
+  width: 18px;
+}
+
+.rouletteWatchButton {
+  background: var(--red);
+}
+
+.rouletteSpinButton {
+  background: rgba(255,255,255,.07);
+}
+
+.rouletteSpinButton:hover,
+.rouletteFilterButton:hover {
+  border-color: rgba(255,43,69,.65);
+  background: rgba(255,43,69,.1);
+}
+
+.rouletteActions button:disabled {
+  opacity: .4;
+  cursor: default;
+}
+
+.rouletteFilterButton {
+  position: relative;
+  background: transparent;
+}
+
+.rouletteFilterButton b {
+  min-width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  margin-left: 3px;
+  background: var(--red);
+  font-size: 9px;
+}
+
+.rouletteFilters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding-top: 22px;
+  border-top: 1px solid rgba(255,255,255,.11);
+}
+
+.rouletteFilters label {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.rouletteFilters label > span {
+  color: rgba(255,255,255,.4);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.rouletteFilters select {
+  min-width: 0;
+  width: 100%;
+  height: 43px;
+  padding: 0 10px;
+  border: 1px solid rgba(255,255,255,.12);
+  outline: 0;
+  background: #141416;
+  color: #fff;
+  font-size: 10px;
+}
+
+.rouletteRetroToggle {
+  align-self: end;
+  min-height: 43px;
+  display: flex !important;
+  grid-column: auto;
+  grid-template-columns: 18px 1fr;
+  align-items: center;
+  gap: 10px !important;
+  padding: 0 12px;
+  border: 1px solid rgba(255,255,255,.12);
+  cursor: pointer;
+}
+
+.rouletteRetroToggle input {
+  accent-color: var(--red);
+}
+
+.rouletteRetroToggle span {
+  color: rgba(255,255,255,.7) !important;
+}
+
+.rouletteFilterFoot {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  color: rgba(255,255,255,.38);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.rouletteFilterFoot button {
+  padding: 8px 0;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.rouletteNoResults {
+  padding: 15px;
+  border: 1px solid rgba(255,43,69,.28);
+  background: rgba(255,43,69,.08);
+  color: rgba(255,255,255,.72);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
 /* Loading */
 .loadingScreen {
   min-height: 100svh;
@@ -3180,6 +3614,32 @@
     height: 78px;
     grid-template-columns: auto 1fr auto;
     padding: 0 20px;
+  }
+
+  .rouletteTopbar {
+    min-height: 78px;
+    padding: 0 22px;
+  }
+
+  .rouletteStage {
+    min-height: calc(100svh - 78px);
+    grid-template-columns: 1fr;
+  }
+
+  .rouletteFeature {
+    padding: 22px;
+    border-right: 0;
+    border-bottom: 1px solid rgba(255,255,255,.1);
+  }
+
+  .roulettePoster {
+    position: relative;
+    top: auto;
+    min-height: min(68svh, 720px);
+  }
+
+  .roulettePanel {
+    padding: 44px 28px 56px;
   }
 
   .brand img {
@@ -3460,6 +3920,66 @@
   .accountButton {
     width: 38px;
     height: 38px;
+  }
+
+  .rouletteTopbar {
+    min-height: 70px;
+    padding: 0 16px;
+  }
+
+  .rouletteTopbar span {
+    display: none;
+  }
+
+  .rouletteTopbar strong {
+    font-size: 21px;
+  }
+
+  .rouletteTopbar button {
+    width: 40px;
+    height: 40px;
+  }
+
+  .rouletteFeature {
+    padding: 0;
+  }
+
+  .roulettePoster {
+    min-height: 62svh;
+    border-right: 0;
+    border-left: 0;
+  }
+
+  .roulettePosterCopy {
+    right: 20px;
+    bottom: 28px;
+    left: 20px;
+  }
+
+  .roulettePosterCopy h2 {
+    font-size: clamp(38px, 12vw, 60px);
+  }
+
+  .roulettePosterCopy p {
+    margin-top: 14px;
+    font-size: 9px;
+  }
+
+  .roulettePanel {
+    gap: 20px;
+    padding: 36px 20px 48px;
+  }
+
+  .roulettePanelIntro h3 {
+    font-size: 42px;
+  }
+
+  .rouletteFilters {
+    grid-template-columns: 1fr;
+  }
+
+  .rouletteFilterFoot {
+    grid-column: 1;
   }
 
   .searchBox input {
@@ -4001,6 +4521,21 @@
   .filterColumns,
   .yearFields {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .header .brand {
+    display: none;
+  }
+
+  .header .nav {
+    left: 12px;
+    transform: none;
+  }
+
+  .rouletteFacts {
+    grid-template-columns: 1fr 1fr;
   }
 }
 
