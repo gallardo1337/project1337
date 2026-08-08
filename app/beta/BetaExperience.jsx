@@ -669,7 +669,7 @@ function LoginGate({
     <div className={styles.loginGate}>
       <header className={styles.gateHeader}>
         <Image src="/logo.png" alt="Project1337" width={128} height={62} priority />
-        <span>Private Preview · 03</span>
+        <span>Private Cinema · v2</span>
       </header>
 
       <div className={styles.gateStage}>
