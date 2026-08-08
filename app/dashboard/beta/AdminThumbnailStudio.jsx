@@ -5,6 +5,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 const UPLOAD_URL = process.env.NEXT_PUBLIC_MOVIE_UPLOAD_URL;
 const OUTPUT_WIDTH = 1280;
 const OUTPUT_HEIGHT = 720;
+const ANALYSIS_WIDTH = 192;
+const ANALYSIS_HEIGHT = 108;
+const SAMPLES_PER_BAND = 5;
+const SUGGESTION_COUNT = 6;
 const CHAPTER_POINTS = [0.12, 0.26, 0.4, 0.54, 0.68, 0.82];
 const SUGGESTION_BANDS = [
   [0.07, 0.18],
@@ -15,10 +19,188 @@ const SUGGESTION_BANDS = [
   [0.76, 0.9],
 ];
 
-function createSuggestionPoints() {
-  return SUGGESTION_BANDS.map(
-    ([start, end]) => start + Math.random() * (end - start)
+function createAnalysisPoints() {
+  return SUGGESTION_BANDS.flatMap(([start, end], bandIndex) => {
+    const sliceSize = (end - start) / SAMPLES_PER_BAND;
+
+    return Array.from({ length: SAMPLES_PER_BAND }, (_, sampleIndex) => ({
+      bandIndex,
+      point:
+        start +
+        sliceSize * (sampleIndex + 0.16 + Math.random() * 0.68),
+    }));
+  });
+}
+
+function waitForFramePaint() {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(resolve));
+  });
+}
+
+function createDifferenceHash(luminance, width, height) {
+  const hash = [];
+
+  for (let row = 0; row < 8; row += 1) {
+    const y = Math.min(height - 1, Math.floor(((row + 0.5) * height) / 8));
+
+    for (let column = 0; column < 8; column += 1) {
+      const leftX = Math.min(
+        width - 1,
+        Math.floor(((column + 0.5) * width) / 9)
+      );
+      const rightX = Math.min(
+        width - 1,
+        Math.floor(((column + 1.5) * width) / 9)
+      );
+      hash.push(
+        luminance[y * width + leftX] > luminance[y * width + rightX]
+      );
+    }
+  }
+
+  return hash;
+}
+
+function hashDistance(left, right) {
+  if (!left?.length || left.length !== right?.length) return 1;
+
+  let differences = 0;
+  for (let index = 0; index < left.length; index += 1) {
+    if (left[index] !== right[index]) differences += 1;
+  }
+  return differences / left.length;
+}
+
+function analyzeVideoFrame(video, canvas, focusX, focusY) {
+  const ctx = canvas.getContext("2d", {
+    alpha: false,
+    willReadFrequently: true,
+  });
+  if (!ctx) throw new Error("Die Bildanalyse konnte nicht gestartet werden.");
+
+  ctx.fillStyle = "#050506";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  drawCover(ctx, video, canvas.width, canvas.height, focusX, focusY);
+
+  const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  const pixelCount = canvas.width * canvas.height;
+  const luminance = new Float32Array(pixelCount);
+  let luminanceTotal = 0;
+  let luminanceSquareTotal = 0;
+  let colorTotal = 0;
+  let darkPixels = 0;
+  let brightPixels = 0;
+
+  for (let pixelIndex = 0; pixelIndex < pixelCount; pixelIndex += 1) {
+    const dataIndex = pixelIndex * 4;
+    const red = pixels[dataIndex];
+    const green = pixels[dataIndex + 1];
+    const blue = pixels[dataIndex + 2];
+    const value = red * 0.2126 + green * 0.7152 + blue * 0.0722;
+
+    luminance[pixelIndex] = value;
+    luminanceTotal += value;
+    luminanceSquareTotal += value * value;
+    colorTotal += Math.max(red, green, blue) - Math.min(red, green, blue);
+    if (value < 22) darkPixels += 1;
+    if (value > 242) brightPixels += 1;
+  }
+
+  const mean = luminanceTotal / pixelCount;
+  const variance = Math.max(
+    0,
+    luminanceSquareTotal / pixelCount - mean * mean
   );
+  const contrast = Math.sqrt(variance);
+  let detailSquareTotal = 0;
+  let centerDetailSquareTotal = 0;
+  let detailCount = 0;
+  let centerDetailCount = 0;
+
+  for (let y = 1; y < canvas.height - 1; y += 1) {
+    for (let x = 1; x < canvas.width - 1; x += 1) {
+      const index = y * canvas.width + x;
+      const laplacian =
+        luminance[index] * 4 -
+        luminance[index - 1] -
+        luminance[index + 1] -
+        luminance[index - canvas.width] -
+        luminance[index + canvas.width];
+      const detailSquare = laplacian * laplacian;
+
+      detailSquareTotal += detailSquare;
+      detailCount += 1;
+
+      if (
+        x > canvas.width * 0.2 &&
+        x < canvas.width * 0.8 &&
+        y > canvas.height * 0.18 &&
+        y < canvas.height * 0.82
+      ) {
+        centerDetailSquareTotal += detailSquare;
+        centerDetailCount += 1;
+      }
+    }
+  }
+
+  const detail = Math.sqrt(detailSquareTotal / Math.max(1, detailCount));
+  const centerDetail = Math.sqrt(
+    centerDetailSquareTotal / Math.max(1, centerDetailCount)
+  );
+  const darkRatio = darkPixels / pixelCount;
+  const brightRatio = brightPixels / pixelCount;
+  const exposureScore = Math.max(0, 1 - Math.abs(mean - 126) / 112);
+  const contrastScore = Math.min(1, contrast / 68);
+  const detailScore = Math.min(1, detail / 62);
+  const colorScore = Math.min(1, colorTotal / pixelCount / 82);
+  const centerScore = Math.min(1, centerDetail / Math.max(1, detail) / 1.25);
+  let score =
+    detailScore * 0.4 +
+    contrastScore * 0.24 +
+    exposureScore * 0.2 +
+    colorScore * 0.08 +
+    centerScore * 0.08;
+
+  if (darkRatio > 0.45) score -= (darkRatio - 0.45) * 1.45;
+  if (brightRatio > 0.34) score -= (brightRatio - 0.34) * 0.9;
+  if (mean < 25 || mean > 232) score -= 0.5;
+  if (contrast < 14) score -= 0.28;
+
+  return {
+    score,
+    hash: createDifferenceHash(luminance, canvas.width, canvas.height),
+  };
+}
+
+function chooseBestFrames(analyses) {
+  const ranked = [...analyses].sort((left, right) => right.score - left.score);
+  const selected = [];
+  const passes = [
+    { minimumDistance: 0.07, minimumHashDistance: 0.14 },
+    { minimumDistance: 0.05, minimumHashDistance: 0.1 },
+    { minimumDistance: 0.035, minimumHashDistance: 0.06 },
+    { minimumDistance: 0, minimumHashDistance: 0 },
+  ];
+
+  for (const pass of passes) {
+    for (const analysis of ranked) {
+      if (selected.includes(analysis)) continue;
+
+      const isDifferentEnough = selected.every(
+        (current) =>
+          Math.abs(current.point - analysis.point) >= pass.minimumDistance &&
+          hashDistance(current.hash, analysis.hash) >= pass.minimumHashDistance
+      );
+
+      if (isDifferentEnough) selected.push(analysis);
+      if (selected.length === SUGGESTION_COUNT) {
+        return selected.sort((left, right) => left.point - right.point);
+      }
+    }
+  }
+
+  return selected.sort((left, right) => left.point - right.point);
 }
 
 function formatTime(value) {
@@ -213,7 +395,13 @@ export default function AdminThumbnailStudio({
   const [focusY, setFocusY] = useState(50);
   const [candidates, setCandidates] = useState([]);
   const [selectedCandidateId, setSelectedCandidateId] = useState(null);
-  const [generating, setGenerating] = useState({ active: false, done: 0 });
+  const [previewCandidateId, setPreviewCandidateId] = useState(null);
+  const [generating, setGenerating] = useState({
+    active: false,
+    phase: "idle",
+    done: 0,
+    total: 0,
+  });
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState(null);
   const [error, setError] = useState(null);
@@ -256,11 +444,23 @@ export default function AdminThumbnailStudio({
     [candidates, selectedCandidateId]
   );
 
+  const previewCandidate = useMemo(
+    () =>
+      candidates.find((candidate) => candidate.id === previewCandidateId) ||
+      null,
+    [candidates, previewCandidateId]
+  );
+
+  const previewCandidateNumber = previewCandidate
+    ? candidates.findIndex((candidate) => candidate.id === previewCandidate.id) + 1
+    : 0;
+
   const resetCandidates = () => {
     generatedUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
     generatedUrlsRef.current.clear();
     setCandidates([]);
     setSelectedCandidateId(null);
+    setPreviewCandidateId(null);
   };
 
   const clearLocalSource = () => {
@@ -329,6 +529,38 @@ export default function AdminThumbnailStudio({
     },
     []
   );
+
+  useEffect(() => {
+    if (!previewCandidateId) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setPreviewCandidateId(null);
+        return;
+      }
+
+      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+
+      const currentIndex = candidates.findIndex(
+        (candidate) => candidate.id === previewCandidateId
+      );
+      if (currentIndex < 0 || candidates.length < 2) return;
+
+      const direction = event.key === "ArrowRight" ? 1 : -1;
+      const nextIndex =
+        (currentIndex + direction + candidates.length) % candidates.length;
+      setPreviewCandidateId(candidates[nextIndex].id);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [candidates, previewCandidateId]);
 
   const videoSource = localSource?.url || selectedMovie?.file_url || "";
   const canCapture = Boolean(
@@ -436,29 +668,84 @@ export default function AdminThumbnailStudio({
 
     setError(null);
     setNotice(null);
-    setGenerating({ active: true, done: 0 });
+    const analysisPoints = createAnalysisPoints();
+    setGenerating({
+      active: true,
+      phase: "analysis",
+      done: 0,
+      total: analysisPoints.length,
+    });
 
     const originalTime = video.currentTime;
     const wasPaused = video.paused;
-    const suggestionPoints = createSuggestionPoints();
     video.pause();
 
     try {
+      const analysisCanvas = document.createElement("canvas");
+      analysisCanvas.width = ANALYSIS_WIDTH;
+      analysisCanvas.height = ANALYSIS_HEIGHT;
+      const analyses = [];
+
+      for (let index = 0; index < analysisPoints.length; index += 1) {
+        const analysisPoint = analysisPoints[index];
+        await waitForSeek(video, duration * analysisPoint.point);
+        await waitForFramePaint();
+        const result = analyzeVideoFrame(
+          video,
+          analysisCanvas,
+          focusX,
+          focusY
+        );
+        analyses.push({ ...analysisPoint, ...result });
+        setGenerating({
+          active: true,
+          phase: "analysis",
+          done: index + 1,
+          total: analysisPoints.length,
+        });
+      }
+
+      const bestFrames = chooseBestFrames(analyses);
+      if (bestFrames.length < SUGGESTION_COUNT) {
+        throw new Error("Es konnten nicht genug unterschiedliche Frames gefunden werden.");
+      }
+
+      setGenerating({
+        active: true,
+        phase: "capture",
+        done: 0,
+        total: bestFrames.length,
+      });
       let firstCandidate = null;
 
-      for (let index = 0; index < suggestionPoints.length; index += 1) {
-        await waitForSeek(video, duration * suggestionPoints[index]);
-        await new Promise((resolve) => requestAnimationFrame(resolve));
+      for (let index = 0; index < bestFrames.length; index += 1) {
+        await waitForSeek(video, duration * bestFrames[index].point);
+        await waitForFramePaint();
         const candidate = await captureCurrentFrame({ select: false });
         if (!firstCandidate) firstCandidate = candidate;
-        setGenerating({ active: true, done: index + 1 });
+        setGenerating({
+          active: true,
+          phase: "capture",
+          done: index + 1,
+          total: bestFrames.length,
+        });
       }
 
       if (firstCandidate) setSelectedCandidateId(firstCandidate.id);
       setNotice(
-        "Sechs neue Vorschläge sind fertig. Alte und neue Frames kannst du direkt vergleichen."
+        `${analysisPoints.length} Szenen geprüft: Die sechs stärksten, möglichst unterschiedlichen Frames sind fertig.`
       );
     } catch (generationError) {
+      if (
+        generationError?.name === "SecurityError" ||
+        /tainted|cross-origin|insecure/i.test(generationError?.message || "")
+      ) {
+        setRemoteAccess("playback-only");
+        setError(
+          "Der Videohost erlaubt keine Bildanalyse. Wähle dieselbe MP4-Datei unten lokal aus."
+        );
+        return;
+      }
       setError(
         generationError?.message || "Vorschläge konnten nicht erzeugt werden."
       );
@@ -469,8 +756,18 @@ export default function AdminThumbnailStudio({
       } catch {
         // Die Vorschläge bleiben auch dann nutzbar, wenn das Zurückspringen scheitert.
       }
-      setGenerating({ active: false, done: 0 });
+      setGenerating({ active: false, phase: "idle", done: 0, total: 0 });
     }
+  };
+
+  const stepPreview = (direction) => {
+    if (!previewCandidate || candidates.length < 2) return;
+    const currentIndex = candidates.findIndex(
+      (candidate) => candidate.id === previewCandidate.id
+    );
+    const nextIndex =
+      (currentIndex + direction + candidates.length) % candidates.length;
+    setPreviewCandidateId(candidates[nextIndex].id);
   };
 
   const seekBy = (seconds) => {
@@ -564,6 +861,22 @@ export default function AdminThumbnailStudio({
       setSaving(false);
     }
   };
+
+  const generationCounter = generating.active
+    ? `${generating.done}/${generating.total}`
+    : "✦";
+  const generationTitle = generating.active
+    ? generating.phase === "analysis"
+      ? "Filmszenen werden analysiert"
+      : "Beste Frames werden erstellt"
+    : candidates.length
+      ? "6 weitere Vorschläge erzeugen"
+      : "6 Vorschläge erzeugen";
+  const generationActionLabel = generating.active
+    ? generating.phase === "analysis"
+      ? `${generating.done}/${generating.total} Szenen geprüft…`
+      : `${generating.done}/${generating.total} Frames werden erstellt…`
+    : "6 neue Vorschläge";
 
   return (
     <section className="thumbnailStudio">
@@ -835,16 +1148,10 @@ export default function AdminThumbnailStudio({
                   onClick={generateSuggestions}
                   disabled={!canCapture || generating.active || saving}
                 >
-                  <span>{generating.active ? `${generating.done}/6` : "✦"}</span>
+                  <span>{generationCounter}</span>
                   <div>
-                    <strong>
-                      {generating.active
-                        ? "Vorschläge werden erzeugt"
-                        : candidates.length
-                          ? "6 weitere Vorschläge erzeugen"
-                          : "6 Vorschläge erzeugen"}
-                    </strong>
-                    <small>Bei jedem Klick neu über den Film verteilt</small>
+                    <strong>{generationTitle}</strong>
+                    <small>30 Szenen · Schärfe · Licht · Kontrast · Vielfalt</small>
                   </div>
                 </button>
                 <button
@@ -873,9 +1180,7 @@ export default function AdminThumbnailStudio({
                       onClick={generateSuggestions}
                       disabled={!canCapture || saving || generating.active}
                     >
-                      {generating.active
-                        ? `${generating.done}/6 werden erzeugt…`
-                        : "6 neue Vorschläge"}
+                      {generationActionLabel}
                     </button>
                     <button
                       type="button"
@@ -891,17 +1196,32 @@ export default function AdminThumbnailStudio({
               {candidates.length ? (
                 <div className="thumbnailStudio__candidates">
                   {candidates.map((candidate, index) => (
-                    <button
-                      type="button"
+                    <div
                       key={candidate.id}
-                      className={candidate.id === selectedCandidateId ? "is-active" : ""}
-                      onClick={() => setSelectedCandidateId(candidate.id)}
+                      className="thumbnailStudio__candidateCard"
                     >
-                      <img src={candidate.url} alt={`Thumbnail-Vorschlag ${index + 1}`} />
-                      <span>{String(index + 1).padStart(2, "0")}</span>
-                      <small>{formatTime(candidate.time)}</small>
-                      <i>{candidate.id === selectedCandidateId ? "Ausgewählt" : "Wählen"}</i>
-                    </button>
+                      <button
+                        type="button"
+                        className={`thumbnailStudio__candidateSelect${
+                          candidate.id === selectedCandidateId ? " is-active" : ""
+                        }`}
+                        onClick={() => setSelectedCandidateId(candidate.id)}
+                      >
+                        <img src={candidate.url} alt={`Thumbnail-Vorschlag ${index + 1}`} />
+                        <span>{String(index + 1).padStart(2, "0")}</span>
+                        <small>{formatTime(candidate.time)}</small>
+                        <i>{candidate.id === selectedCandidateId ? "Ausgewählt" : "Wählen"}</i>
+                      </button>
+                      <button
+                        type="button"
+                        className="thumbnailStudio__candidateZoom"
+                        onClick={() => setPreviewCandidateId(candidate.id)}
+                        aria-label={`Thumbnail-Vorschlag ${index + 1} vergrößern`}
+                        title="Groß ansehen"
+                      >
+                        ⛶
+                      </button>
+                    </div>
                   ))}
                 </div>
               ) : (
@@ -961,6 +1281,83 @@ export default function AdminThumbnailStudio({
           )}
         </div>
       </div>
+
+      {previewCandidate ? (
+        <div
+          className="thumbnailStudio__lightbox"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="thumbnail-preview-title"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setPreviewCandidateId(null);
+            }
+          }}
+        >
+          <div className="thumbnailStudio__lightboxPanel">
+            <header>
+              <div>
+                <span>Detailansicht · {String(previewCandidateNumber).padStart(2, "0")}/{String(candidates.length).padStart(2, "0")}</span>
+                <h3 id="thumbnail-preview-title">
+                  {selectedMovie?.title || "Thumbnail-Vorschlag"}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewCandidateId(null)}
+                aria-label="Detailansicht schließen"
+              >
+                ×
+              </button>
+            </header>
+
+            <div className="thumbnailStudio__lightboxStage">
+              {candidates.length > 1 ? (
+                <button
+                  type="button"
+                  className="is-previous"
+                  onClick={() => stepPreview(-1)}
+                  aria-label="Vorherigen Vorschlag anzeigen"
+                >
+                  ←
+                </button>
+              ) : null}
+              <img
+                src={previewCandidate.url}
+                alt={`Vergrößerter Thumbnail-Vorschlag ${previewCandidateNumber}`}
+              />
+              {candidates.length > 1 ? (
+                <button
+                  type="button"
+                  className="is-next"
+                  onClick={() => stepPreview(1)}
+                  aria-label="Nächsten Vorschlag anzeigen"
+                >
+                  →
+                </button>
+              ) : null}
+            </div>
+
+            <footer>
+              <div>
+                <span>Frame bei {formatTime(previewCandidate.time)}</span>
+                <small>Pfeiltasten wechseln · Esc schließt</small>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCandidateId(previewCandidate.id);
+                  setPreviewCandidateId(null);
+                }}
+              >
+                {previewCandidate.id === selectedCandidateId
+                  ? "Bereits ausgewählt"
+                  : "Diesen Frame auswählen"}
+              </button>
+            </footer>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
