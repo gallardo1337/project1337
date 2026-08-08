@@ -909,12 +909,18 @@
 
 .movieRail {
   display: flex;
+  align-items: flex-start;
   gap: 18px;
   padding-bottom: 18px;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   scrollbar-width: thin;
   scrollbar-color: rgba(255,43,69,.5) rgba(255,255,255,.05);
+}
+
+.movieRail .movieCard {
+  align-self: flex-start;
+  align-content: start;
 }
 
 .directedEmpty {

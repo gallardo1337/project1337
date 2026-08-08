@@ -81,6 +81,14 @@ function normalizeMovieFileUrl(value) {
 
 const CHANGELOG = [
   {
+    version: "2.3.2",
+    date: "2026-08-08",
+    items: [
+      "Kartenhöhe der kleineren Filme in gemischten Startseiten-Reihen korrigiert",
+      "Große und kleine Filmkarten strecken ihre Inhalte nicht mehr gegenseitig auseinander",
+    ],
+  },
+  {
     version: "2.3.1",
     date: "2026-08-08",
     items: [
