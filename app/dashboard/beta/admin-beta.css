@@ -1649,6 +1649,503 @@
   color: var(--admin-red);
 }
 
+/* Homepage director */
+.adminBeta .homepageDirector {
+  display: grid;
+  gap: 22px;
+}
+
+.adminBeta .homepageDirectorSummary {
+  display: grid;
+  grid-template-columns: 190px 1fr auto;
+  align-items: stretch;
+  border: 1px solid var(--admin-line);
+  background:
+    linear-gradient(120deg, rgba(204, 20, 43, 0.13), transparent 32%),
+    rgba(255, 255, 255, 0.025);
+}
+
+.adminBeta .homepageDirectorSummary > div {
+  display: grid;
+  align-content: center;
+  gap: 6px;
+  min-height: 122px;
+  padding: 24px 28px;
+}
+
+.adminBeta .homepageDirectorSummary > div + div {
+  border-left: 1px solid var(--admin-line);
+}
+
+.adminBeta .homepageDirectorSummary span,
+.adminBeta .homepageDirectorComposer__head span,
+.adminBeta .homepageDirectorAdd > div span {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.adminBeta .homepageDirectorSummary strong {
+  color: #f4f0e9;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 33px;
+  font-style: italic;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.adminBeta .homepageDirectorSummary strong.is-dirty {
+  color: var(--admin-red);
+}
+
+.adminBeta .homepageDirectorSummary p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.38);
+  font-size: 10px;
+}
+
+.adminBeta .homepageDirectorSummary .homepageDirectorSummary__actions {
+  grid-template-columns: 1fr 1.25fr;
+  align-content: center;
+  gap: 9px;
+  min-width: min(100%, 420px);
+}
+
+.adminBeta .homepageDirectorSummary__actions button {
+  min-height: 48px;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  background: rgba(255, 255, 255, 0.045);
+  color: #f3f0ea;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+}
+
+.adminBeta .homepageDirectorSummary__actions button.is-primary {
+  border-color: var(--admin-red);
+  background: var(--admin-red);
+}
+
+.adminBeta .homepageDirectorSummary__actions button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.adminBeta .homepageDirectorMessage {
+  padding: 14px 17px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 11px;
+}
+
+.adminBeta .homepageDirectorMessage.is-error {
+  border-color: rgba(255, 62, 83, 0.38);
+  background: rgba(255, 43, 69, 0.09);
+  color: #ffb3bd;
+}
+
+.adminBeta .homepageDirectorMessage.is-success {
+  border-color: rgba(80, 204, 139, 0.35);
+  background: rgba(80, 204, 139, 0.08);
+  color: #a9edc8;
+}
+
+.adminBeta .homepageDirectorComposer {
+  border: 1px solid var(--admin-line);
+  background: #0d0d0f;
+}
+
+.adminBeta .homepageDirectorComposer__head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 30px;
+  padding: 30px 32px;
+  border-bottom: 1px solid var(--admin-line);
+}
+
+.adminBeta .homepageDirectorComposer__head h2 {
+  margin: 8px 0;
+  color: #f3efe8;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(28px, 3vw, 42px);
+  font-weight: 400;
+  letter-spacing: -0.035em;
+}
+
+.adminBeta .homepageDirectorComposer__head p {
+  max-width: 650px;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.adminBeta .homepageDirectorComposer__head > small {
+  flex: 0 0 auto;
+  color: rgba(255, 255, 255, 0.28);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.adminBeta .homepageDirectorList {
+  display: grid;
+  gap: 1px;
+  background: var(--admin-line);
+}
+
+.adminBeta .homepageDirectorCard {
+  position: relative;
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  background: #111113;
+  transition: opacity 160ms ease, background 160ms ease;
+}
+
+.adminBeta .homepageDirectorCard.is-disabled {
+  opacity: 0.52;
+}
+
+.adminBeta .homepageDirectorCard.is-dragging {
+  opacity: 0.3;
+  background: rgba(204, 20, 43, 0.16);
+}
+
+.adminBeta .homepageDirectorCard__order {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 13px;
+  padding: 23px 16px;
+  border-right: 1px solid var(--admin-line);
+}
+
+.adminBeta .homepageDirectorDrag {
+  width: 36px;
+  height: 28px;
+  display: grid;
+  grid-template-columns: repeat(2, 3px);
+  grid-auto-rows: 3px;
+  place-content: center;
+  gap: 4px;
+  border: 0;
+  background: transparent;
+  cursor: grab;
+}
+
+.adminBeta .homepageDirectorDrag i {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.adminBeta .homepageDirectorCard__order > strong {
+  color: rgba(255, 255, 255, 0.2);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 25px;
+  font-style: italic;
+  font-weight: 400;
+}
+
+.adminBeta .homepageDirectorCard__order > div {
+  display: flex;
+  gap: 5px;
+}
+
+.adminBeta .homepageDirectorCard__order > div button {
+  width: 27px;
+  height: 27px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.035);
+  color: rgba(255, 255, 255, 0.65);
+  cursor: pointer;
+}
+
+.adminBeta .homepageDirectorCard__order > div button:disabled {
+  opacity: 0.2;
+  cursor: default;
+}
+
+.adminBeta .homepageDirectorCard__main {
+  min-width: 0;
+  display: grid;
+  gap: 20px;
+  padding: 26px 58px 26px 28px;
+}
+
+.adminBeta .homepageDirectorCard__heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 25px;
+}
+
+.adminBeta .homepageDirectorCard__heading > div {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.adminBeta .homepageDirectorCard__heading > div > span {
+  color: var(--admin-red);
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.adminBeta .homepageDirectorCard__heading > div > strong {
+  overflow: hidden;
+  color: #f3efe8;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 23px;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.adminBeta .homepageDirectorCard__heading > div > small {
+  color: rgba(255, 255, 255, 0.34);
+  font-size: 9px;
+}
+
+.adminBeta .homepageDirectorSwitch {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+}
+
+.adminBeta .homepageDirectorSwitch input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.adminBeta .homepageDirectorSwitch > span {
+  position: relative;
+  width: 38px;
+  height: 21px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.adminBeta .homepageDirectorSwitch > span::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  transition: transform 160ms ease, background 160ms ease;
+}
+
+.adminBeta .homepageDirectorSwitch input:checked + span {
+  border-color: rgba(204, 20, 43, 0.7);
+  background: rgba(204, 20, 43, 0.22);
+}
+
+.adminBeta .homepageDirectorSwitch input:checked + span::after {
+  background: var(--admin-red);
+  transform: translateX(17px);
+}
+
+.adminBeta .homepageDirectorSwitch b {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.adminBeta .homepageDirectorFields {
+  display: grid;
+  grid-template-columns: minmax(160px, 1.25fr) minmax(160px, 1fr) 85px;
+  gap: 11px;
+}
+
+.adminBeta .homepageDirectorFields label {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.adminBeta .homepageDirectorFields label > span {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 7px;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.adminBeta .homepageDirectorFields :where(input, select) {
+  min-width: 0;
+  width: 100%;
+  height: 43px;
+  padding: 0 11px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  outline: 0;
+  background: rgba(255, 255, 255, 0.035);
+  color: #f2eee8;
+  font-size: 10px;
+}
+
+.adminBeta .homepageDirectorFields :where(input, select):focus {
+  border-color: rgba(204, 20, 43, 0.65);
+}
+
+.adminBeta .homepageDirectorStudio {
+  grid-column: 1 / span 2;
+}
+
+.adminBeta .homepageDirectorRetro {
+  grid-column: 1 / span 2;
+  min-height: 43px;
+  display: flex !important;
+  align-items: center;
+  align-self: end;
+  gap: 9px !important;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 9px;
+  cursor: pointer;
+}
+
+.adminBeta .homepageDirectorRetro input {
+  width: auto;
+  height: auto;
+  accent-color: var(--admin-red);
+}
+
+.adminBeta .homepageDirectorRetro span {
+  color: inherit !important;
+  font-size: inherit !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+.adminBeta .homepageDirectorCard__remove {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 29px;
+  height: 29px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 17px;
+  cursor: pointer;
+}
+
+.adminBeta .homepageDirectorCard__remove:hover {
+  border-color: rgba(255, 43, 69, 0.5);
+  color: var(--admin-red);
+}
+
+.adminBeta .homepageDirectorAdd {
+  display: grid;
+  grid-template-columns: 1fr minmax(190px, 260px) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 25px 32px;
+  border-top: 1px solid var(--admin-line);
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.adminBeta .homepageDirectorAdd > div {
+  display: grid;
+  gap: 6px;
+}
+
+.adminBeta .homepageDirectorAdd > div strong {
+  color: #f0ece6;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 19px;
+  font-weight: 400;
+}
+
+.adminBeta .homepageDirectorAdd select {
+  height: 45px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  outline: 0;
+  background: #151517;
+  color: #fff;
+  font-size: 10px;
+}
+
+.adminBeta .homepageDirectorAdd button {
+  min-height: 45px;
+  padding: 0 18px;
+  border: 1px solid var(--admin-red);
+  background: transparent;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.adminBeta .homepageDirectorAdd button span {
+  margin-right: 7px;
+  color: var(--admin-red);
+  font-size: 16px;
+}
+
+.adminBeta .homepageDirectorFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 9px;
+}
+
+.adminBeta .homepageDirectorFoot strong {
+  color: rgba(255, 255, 255, 0.48);
+  font-weight: 700;
+}
+
+.adminBeta .homepageDirectorLoading {
+  min-height: 360px;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 15px;
+  border: 1px solid var(--admin-line);
+  background: #0d0d0f;
+}
+
+.adminBeta .homepageDirectorLoading > span {
+  width: 34px;
+  height: 34px;
+  border: 2px solid rgba(255, 255, 255, 0.13);
+  border-top-color: var(--admin-red);
+  border-radius: 50%;
+  animation: adminDirectorSpin 700ms linear infinite;
+}
+
+.adminBeta .homepageDirectorLoading p {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+@keyframes adminDirectorSpin {
+  to { transform: rotate(360deg); }
+}
+
 @media (max-width: 1380px) {
   .adminBeta .adminRecentMovie {
     grid-template-columns: 24px 42px minmax(140px, 1fr) 66px 56px 60px 66px;
@@ -4123,5 +4620,98 @@
 
   .adminBeta .thumbnailStudio__saveBar button {
     width: 100%;
+  }
+}
+
+@media (max-width: 1180px) {
+  .adminBeta .homepageDirectorSummary {
+    grid-template-columns: 160px 1fr;
+  }
+
+  .adminBeta .homepageDirectorSummary .homepageDirectorSummary__actions {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--admin-line);
+    border-left: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .adminBeta .homepageDirectorSummary {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .adminBeta .homepageDirectorSummary > div {
+    min-height: 105px;
+    padding: 20px;
+  }
+
+  .adminBeta .homepageDirectorSummary .homepageDirectorSummary__actions {
+    min-width: 0;
+    grid-template-columns: 1fr;
+  }
+
+  .adminBeta .homepageDirectorComposer__head {
+    align-items: start;
+    flex-direction: column;
+    padding: 24px 20px;
+  }
+
+  .adminBeta .homepageDirectorCard {
+    grid-template-columns: 68px minmax(0, 1fr);
+  }
+
+  .adminBeta .homepageDirectorCard__order {
+    padding-inline: 8px;
+  }
+
+  .adminBeta .homepageDirectorCard__main {
+    padding: 22px 46px 22px 18px;
+  }
+
+  .adminBeta .homepageDirectorCard__heading {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .adminBeta .homepageDirectorFields {
+    grid-template-columns: 1fr;
+  }
+
+  .adminBeta .homepageDirectorStudio,
+  .adminBeta .homepageDirectorRetro {
+    grid-column: 1;
+  }
+
+  .adminBeta .homepageDirectorAdd {
+    grid-template-columns: 1fr;
+    padding: 22px 20px;
+  }
+
+  .adminBeta .homepageDirectorFoot {
+    align-items: start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 480px) {
+  .adminBeta .homepageDirectorSummary {
+    grid-template-columns: 1fr;
+  }
+
+  .adminBeta .homepageDirectorSummary > div + div {
+    border-top: 1px solid var(--admin-line);
+    border-left: 0;
+  }
+
+  .adminBeta .homepageDirectorCard {
+    grid-template-columns: 52px minmax(0, 1fr);
+  }
+
+  .adminBeta .homepageDirectorCard__order > strong {
+    font-size: 19px;
+  }
+
+  .adminBeta .homepageDirectorCard__order > div {
+    flex-direction: column;
   }
 }

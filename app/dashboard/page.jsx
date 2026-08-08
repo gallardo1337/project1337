@@ -7,6 +7,19 @@ import dynamic from "next/dynamic";
 import AdminBetaOverview from "./beta/AdminBetaOverview.jsx";
 import AdminMediaHealth from "./beta/AdminMediaHealth.jsx";
 
+const AdminHomepageDirector = dynamic(
+  () => import("./beta/AdminHomepageDirector.jsx"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="homepageDirectorLoading">
+        <span />
+        <p>Startseiten-Regisseur wird geladen…</p>
+      </div>
+    ),
+  }
+);
+
 const AdminThumbnailStudio = dynamic(
   () => import("./beta/AdminThumbnailStudio.jsx"),
   {
@@ -67,6 +80,16 @@ function normalizeMovieFileUrl(value) {
 // -------------------------------
 
 const CHANGELOG = [
+  {
+    version: "2.2.0",
+    date: "2026-08-08",
+    items: [
+      "Startseiten-Regisseur als neuen Arbeitsbereich im Admin v2 hinzugefügt",
+      "Bereiche der v2-Startseite können sortiert, ausgeblendet, umbenannt und in ihrer Größe angepasst werden",
+      "Neue dynamische Reihen für Top bewertet, Meistgesehen, Zufallsauswahl und Studio-Spotlights ergänzt",
+      "Startseiten-Konfiguration geschützt und zentral in Supabase gespeichert",
+    ],
+  },
   {
     version: "2.1.0",
     date: "2026-08-08",
@@ -274,6 +297,14 @@ const AdminNavIcon = ({ name }) => {
         <rect x="3" y="4" width="18" height="16" rx="1" />
         <circle cx="9" cy="9" r="2" />
         <path d="m5 17 4.5-4.5 3 3 2.5-2.5 4 4" />
+      </>
+    ),
+    director: (
+      <>
+        <path d="M4 6h16M4 12h16M4 18h16" />
+        <circle cx="9" cy="6" r="2" fill="#09090b" />
+        <circle cx="15" cy="12" r="2" fill="#09090b" />
+        <circle cx="11" cy="18" r="2" fill="#09090b" />
       </>
     ),
     add: <path d="M12 3v18M3 12h18" />,
@@ -1744,6 +1775,7 @@ export function DashboardExperience({ beta = false }) {
 
   const betaNavItems = [
     { key: "overview", label: "Übersicht", icon: "overview", section: "overview" },
+    { key: "director", label: "Startseiten-Regisseur", icon: "director", section: "director" },
     { key: "stats", label: "Filmarchiv", icon: "movies", section: "stats", count: filme.length },
     { key: "health", label: "Medienprüfung", icon: "health", section: "health" },
     { key: "thumbnails", label: "Thumbnail Studio", icon: "thumbnail", section: "thumbnails" },
@@ -1758,7 +1790,7 @@ export function DashboardExperience({ beta = false }) {
     <nav className="adminBetaRail" aria-label="Adminbereiche">
       <div className="adminBetaRail__group">
         <span className="adminBetaRail__label">Arbeitsbereich</span>
-        {betaNavItems.slice(0, 5).map((item) => {
+        {betaNavItems.slice(0, 6).map((item) => {
           const active = activeFilmSection === item.section;
           return (
             <button
@@ -1777,7 +1809,7 @@ export function DashboardExperience({ beta = false }) {
 
       <div className="adminBetaRail__group">
         <span className="adminBetaRail__label">Stammdaten</span>
-        {betaNavItems.slice(5).map((item) => {
+        {betaNavItems.slice(6).map((item) => {
           const active =
             activeFilmSection === "meta" && activeMetaSection === item.meta;
           return (
@@ -1808,7 +1840,14 @@ export function DashboardExperience({ beta = false }) {
   const SidebarContent = beta ? BetaSidebarContent : ClassicSidebarContent;
 
   const betaWorkspace =
-    activeFilmSection === "health"
+    activeFilmSection === "director"
+      ? {
+          eyebrow: "Homepage Composition",
+          title: "Startseiten-Regisseur",
+          description:
+            "Reihenfolge, Sichtbarkeit und Inhalt der v2-Startseite zentral inszenieren und veröffentlichen.",
+        }
+      : activeFilmSection === "health"
       ? {
           eyebrow: "Media Health Center",
           title: "Medienprüfung",
@@ -2601,6 +2640,16 @@ export function DashboardExperience({ beta = false }) {
                       studioMap={studioMap}
                       resolutionMap={resolutionMap}
                       onEditMovie={handleEditFilm}
+                    />
+                  ) : null}
+
+                  {beta && activeFilmSection === "director" ? (
+                    <AdminHomepageDirector
+                      movies={filme}
+                      studios={studios}
+                      metricMap={movieMetricMap}
+                      resolutionMap={resolutionMap}
+                      onUnauthorized={handleSessionExpired}
                     />
                   ) : null}
 

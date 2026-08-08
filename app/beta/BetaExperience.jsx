@@ -2,6 +2,10 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  DEFAULT_HOMEPAGE_SECTIONS,
+  normalizeHomepageSections,
+} from "../../lib/homepageSections";
 import styles from "./experience.module.css";
 
 function Icon({ name, className = "" }) {
@@ -402,9 +406,11 @@ function qualityTone(quality) {
   return "";
 }
 
-function pickRandomMovies(movies, limit) {
+function pickRandomMovies(movies, limit, { includeRetro = false } = {}) {
   const pool = movies.filter(
-    (movie) => !String(movie.resolution || "").toLowerCase().includes("retro")
+    (movie) =>
+      includeRetro ||
+      !String(movie.resolution || "").toLowerCase().includes("retro")
   );
 
   for (let index = pool.length - 1; index > 0; index -= 1) {
@@ -1262,20 +1268,86 @@ function FilterDrawer({
   );
 }
 
-function Discovery({ movies, actors, onOpenMovie, onShowMovies, onShowActors, onShowActor }) {
+function Discovery({
+  movies,
+  actors,
+  homepageSections,
+  onOpenMovie,
+  onShowMovies,
+  onShowActors,
+  onShowActor,
+}) {
+  const visibleSections = useMemo(
+    () =>
+      normalizeHomepageSections(homepageSections).filter(
+        (section) => section.enabled
+      ),
+    [homepageSections]
+  );
   const sortedMovies = useMemo(
     () => [...movies].sort((a, b) => new Date(b.addedAt || 0) - new Date(a.addedAt || 0)),
     [movies]
   );
-  const featuredMovies = useMemo(() => pickRandomMovies(movies, 5), [movies]);
+  const showcaseSection = visibleSections.find(
+    (section) => section.type === "showcase"
+  );
+  const featuredMovies = useMemo(
+    () =>
+      showcaseSection
+        ? pickRandomMovies(movies, showcaseSection.itemLimit)
+        : [],
+    [movies, showcaseSection]
+  );
   const [activeFeature, setActiveFeature] = useState(0);
   const [previousFeature, setPreviousFeature] = useState(-1);
   const featured = featuredMovies[activeFeature] || featuredMovies[0];
-  const recent = sortedMovies.slice(0, 9);
-  const topActors = useMemo(
-    () => [...actors].sort((a, b) => b.movieCount - a.movieCount).slice(0, 7),
+  const sortedActors = useMemo(
+    () => [...actors].sort((a, b) => b.movieCount - a.movieCount),
     [actors]
   );
+  const movieRows = useMemo(() => {
+    const rows = new Map();
+
+    visibleSections.forEach((section) => {
+      let source = [];
+
+      if (section.type === "recent") {
+        source = sortedMovies;
+      } else if (section.type === "top_rated") {
+        source = [...movies]
+          .filter((movie) => Number(movie.rating) > 0)
+          .sort(
+            (a, b) =>
+              Number(b.rating) - Number(a.rating) ||
+              Number(b.viewCount) - Number(a.viewCount)
+          );
+      } else if (section.type === "most_viewed") {
+        source = [...movies].sort(
+          (a, b) =>
+            Number(b.viewCount) - Number(a.viewCount) ||
+            Number(b.rating) - Number(a.rating)
+        );
+      } else if (section.type === "random") {
+        source = pickRandomMovies(movies, section.itemLimit, {
+          includeRetro: section.config?.includeRetro === true,
+        });
+      } else if (section.type === "studio") {
+        source = sortedMovies.filter(
+          (movie) => movie.studio === section.config?.studio
+        );
+      }
+
+      if (
+        ["recent", "top_rated", "most_viewed", "random", "studio"].includes(
+          section.type
+        )
+      ) {
+        rows.set(section.id, source.slice(0, section.itemLimit));
+      }
+    });
+
+    return rows;
+  }, [visibleSections, sortedMovies, movies]);
   const studioCount = new Set(movies.map((movie) => movie.studio).filter(Boolean)).size;
   const yearValues = movies.map((movie) => Number(movie.year)).filter(Boolean);
   const yearRange = yearValues.length ? `${Math.min(...yearValues)}—${Math.max(...yearValues)}` : "CURATED";
@@ -1308,9 +1380,12 @@ function Discovery({ movies, actors, onOpenMovie, onShowMovies, onShowActors, on
     setActiveFeature(index);
   };
 
-  return (
-    <main>
-      <section className={styles.spotlight}>
+  const renderShowcase = (section) => (
+      <section
+        className={styles.spotlight}
+        aria-label={section.title}
+        key={section.id}
+      >
         <div className={styles.spotlightMedia}>
           {featuredMovies.length ? (
             featuredMovies.map((movie, index) => (
@@ -1345,7 +1420,7 @@ function Discovery({ movies, actors, onOpenMovie, onShowMovies, onShowActors, on
           {String(activeFeature + 1).padStart(2, "0")} / {String(Math.max(featuredMovies.length, 1)).padStart(2, "0")}
         </div>
         <div className={styles.spotlightCopy} key={featured?.id || "empty-feature"}>
-          <div className={styles.kicker}><Icon name="spark" /> Aus dem Archiv</div>
+          <div className={styles.kicker}><Icon name="spark" /> {section.eyebrow}</div>
           <h1 className={spotlightTitleClass(featured?.title)}>
             {featured?.title || "Your private cinema"}
           </h1>
@@ -1365,7 +1440,7 @@ function Discovery({ movies, actors, onOpenMovie, onShowMovies, onShowActors, on
           </div>
         </div>
         {featuredMovies.length > 1 ? (
-          <div className={styles.spotlightControls} aria-label="Cinema Showcase">
+          <div className={styles.spotlightControls} aria-label={section.title}>
             {featuredMovies.map((movie, index) => (
               <button
                 type="button"
@@ -1387,27 +1462,87 @@ function Discovery({ movies, actors, onOpenMovie, onShowMovies, onShowActors, on
           <div><strong>{yearRange}</strong><span>Collection Range</span></div>
         </div>
       </section>
+  );
 
-      <section className={styles.contentSection}>
-        <SectionHeading index="01" eyebrow="Just added" title="Neu im Archiv" action="Alle Filme" onAction={onShowMovies} />
+  const renderMovieRow = (section, sectionIndex) => {
+    const sectionMovies = movieRows.get(section.id) || [];
+    return (
+      <section className={styles.contentSection} key={section.id}>
+        <SectionHeading
+          index={String(sectionIndex + 1).padStart(2, "0")}
+          eyebrow={section.eyebrow}
+          title={section.title}
+          action="Alle Filme"
+          onAction={onShowMovies}
+        />
         <div className={styles.movieRail}>
-          {recent.map((movie, index) => <MovieCard key={movie.id} movie={movie} index={index} onOpen={onOpenMovie} large={index === 0} />)}
+          {sectionMovies.length ? (
+            sectionMovies.map((movie, index) => (
+              <MovieCard
+                key={movie.id}
+                movie={movie}
+                index={index}
+                onOpen={onOpenMovie}
+                large={index === 0}
+              />
+            ))
+          ) : (
+            <div className={styles.directedEmpty}>
+              Für diese Reihe sind aktuell keine passenden Filme vorhanden.
+            </div>
+          )}
         </div>
       </section>
+    );
+  };
 
-      <section className={`${styles.contentSection} ${styles.talentSection}`} id="v2-actors">
-        <SectionHeading index="02" eyebrow="The faces" title="Talents der Collection" action="Alle Darsteller" onAction={onShowActors} />
+  const renderActors = (section, sectionIndex) => (
+      <section
+        className={`${styles.contentSection} ${styles.talentSection}`}
+        id="v2-actors"
+        key={section.id}
+      >
+        <SectionHeading
+          index={String(sectionIndex + 1).padStart(2, "0")}
+          eyebrow={section.eyebrow}
+          title={section.title}
+          action="Alle Darsteller"
+          onAction={onShowActors}
+        />
         <div className={styles.actorMosaic}>
-          {topActors.map((actor, index) => <ActorCard key={actor.id} actor={actor} onOpen={onShowActor} feature={index === 0} />)}
+          {sortedActors
+            .slice(0, section.itemLimit)
+            .map((actor, index) => (
+              <ActorCard
+                key={actor.id}
+                actor={actor}
+                onOpen={onShowActor}
+                feature={index === 0}
+              />
+            ))}
         </div>
       </section>
+  );
 
-      <section className={styles.manifesto}>
-        <span>03 / THE ARCHIVE</span>
-        <h2>Not streaming.<br /><em>Collecting.</em></h2>
+  const renderManifesto = (section, sectionIndex) => (
+      <section className={styles.manifesto} key={section.id}>
+        <span>{String(sectionIndex + 1).padStart(2, "0")} / THE ARCHIVE</span>
+        <h2>{section.title}<br /><em>{section.eyebrow}</em></h2>
         <p>Eine private Library ohne Algorithmus – persönlich ausgewählt, sauber organisiert und jederzeit abspielbar.</p>
         <button type="button" onClick={onShowMovies}>Collection öffnen <Icon name="arrow" /></button>
       </section>
+  );
+
+  return (
+    <main>
+      {visibleSections.map((section, sectionIndex) => {
+        if (section.type === "showcase") return renderShowcase(section);
+        if (section.type === "actors") return renderActors(section, sectionIndex);
+        if (section.type === "manifesto") {
+          return renderManifesto(section, sectionIndex);
+        }
+        return renderMovieRow(section, sectionIndex);
+      })}
     </main>
   );
 }
@@ -1977,10 +2112,38 @@ export default function BetaExperience({
 }) {
   const [actorBackTarget, setActorBackTarget] = useState("discover");
   const [rouletteOpen, setRouletteOpen] = useState(false);
+  const [homepageSections, setHomepageSections] = useState(() =>
+    normalizeHomepageSections(DEFAULT_HOMEPAGE_SECTIONS)
+  );
   const actorsWithMetrics = useMemo(
     () => addActorMetrics(actors, movies),
     [actors, movies]
   );
+
+  useEffect(() => {
+    if (!loggedIn) return undefined;
+    let cancelled = false;
+
+    const loadHomepageSections = async () => {
+      try {
+        const response = await fetch("/api/homepage-settings", {
+          cache: "no-store",
+        });
+        if (!response.ok) return;
+        const payload = await response.json();
+        if (!cancelled) {
+          setHomepageSections(normalizeHomepageSections(payload?.sections));
+        }
+      } catch {
+        // Die sichere Standardkomposition bleibt aktiv, falls die Konfiguration nicht erreichbar ist.
+      }
+    };
+
+    loadHomepageSections();
+    return () => {
+      cancelled = true;
+    };
+  }, [loggedIn]);
 
   const openActorFromDiscover = (id, name, slug) => {
     setActorBackTarget("discover");
@@ -2051,7 +2214,15 @@ export default function BetaExperience({
       ) : viewMode === "movies" ? (
         <MovieArchive movies={movieList} title={moviesTitle} subtitle={moviesSubtitle} movieSort={movieSort} setMovieSort={setMovieSort} onOpenMovie={onOpenMovie} onOpenFilters={() => setFiltersOpen(true)} hasAnyFilter={hasAnyFilter} />
       ) : (
-        <Discovery movies={movies} actors={actorsWithMetrics} onOpenMovie={onOpenMovie} onShowMovies={onShowMovies} onShowActors={onShowActors} onShowActor={openActorFromDiscover} />
+        <Discovery
+          movies={movies}
+          actors={actorsWithMetrics}
+          homepageSections={homepageSections}
+          onOpenMovie={onOpenMovie}
+          onShowMovies={onShowMovies}
+          onShowActors={onShowActors}
+          onShowActor={openActorFromDiscover}
+        />
       )}
 
       <FilmRoulette
