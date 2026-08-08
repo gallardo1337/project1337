@@ -68,6 +68,14 @@ function normalizeMovieFileUrl(value) {
 
 const CHANGELOG = [
   {
+    version: "2.0.2",
+    date: "2026-08-08",
+    items: [
+      "Verbliebenen Beta-/Vorschau-Button aus dem v1-Archiv entfernt",
+      "Changelog bleibt ausschließlich im Adminbereich verfügbar",
+    ],
+  },
+  {
     version: "2.0.1",
     date: "2026-08-08",
     items: [
