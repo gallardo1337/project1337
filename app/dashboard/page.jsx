@@ -68,6 +68,15 @@ function normalizeMovieFileUrl(value) {
 
 const CHANGELOG = [
   {
+    version: "2.0.1",
+    date: "2026-08-08",
+    items: [
+      "Browser-Verlauf für Darstellerprofile und Filmseiten korrigiert",
+      "Seitentaste, Browser-Zurück und Browser-Vorwärts stellen jetzt die vorherige Library-Ansicht wieder her",
+      "Suche und Filter ersetzen weiterhin nur den aktuellen Eintrag und überladen den Verlauf nicht",
+    ],
+  },
+  {
     version: "2.0.0",
     date: "2026-08-08",
     items: [
