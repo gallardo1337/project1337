@@ -1,0 +1,326 @@
+.picker {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(239, 68, 68, 0.07), transparent 42%),
+    rgba(3, 3, 4, 0.76);
+}
+
+.intro {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 22px;
+}
+
+.intro > div {
+  min-width: 0;
+}
+
+.eyebrow {
+  display: block;
+  margin-bottom: 5px;
+  color: #ef4444;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.intro h3 {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.94);
+  font-size: 17px;
+  font-weight: 750;
+}
+
+.intro p {
+  max-width: 680px;
+  margin: 7px 0 0;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.folderButton {
+  display: inline-flex;
+  min-height: 44px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  padding: 0 16px;
+  border: 1px solid #ef4444;
+  border-radius: 10px;
+  background: #ef4444;
+  color: #09090b;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.folderButton:hover:not(:disabled) {
+  background: #f87171;
+}
+
+.folderButton:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.fallbackInput {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+}
+
+.browser {
+  display: grid;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.browser > header {
+  display: grid;
+  grid-template-columns: minmax(190px, 0.75fr) minmax(190px, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 13px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.browser > header > div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.browser > header strong,
+.browser > header small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.browser > header strong {
+  color: rgba(255, 255, 255, 0.87);
+  font-size: 12px;
+}
+
+.browser > header small {
+  color: rgba(255, 255, 255, 0.38);
+  font-size: 9px;
+}
+
+.browser > header input {
+  min-height: 38px;
+  width: 100%;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 9px;
+  outline: none;
+  background: rgba(20, 20, 22, 0.92);
+  color: #fff;
+  font-family: inherit;
+  font-size: 11px;
+}
+
+.browser > header input:focus {
+  border-color: #ef4444;
+}
+
+.fileList {
+  min-height: 220px;
+  max-height: 390px;
+  overflow-y: auto;
+  scrollbar-color: rgba(239, 68, 68, 0.48) transparent;
+  scrollbar-width: thin;
+}
+
+.fileList > button {
+  display: grid;
+  width: 100%;
+  min-height: 56px;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 13px;
+  border: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.66);
+  text-align: left;
+  cursor: pointer;
+  content-visibility: auto;
+  contain-intrinsic-size: 56px;
+}
+
+.fileList > button:hover:not(:disabled),
+.fileList > button.active {
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.14), transparent);
+  color: #fff;
+}
+
+.fileList > button.existing {
+  background: linear-gradient(90deg, rgba(34, 197, 94, 0.17), transparent 72%);
+  color: #dcfce7;
+}
+
+.fileList > button.existing:hover:not(:disabled) {
+  background: linear-gradient(90deg, rgba(34, 197, 94, 0.23), transparent 76%);
+}
+
+.fileList > button:disabled {
+  cursor: not-allowed;
+  opacity: 0.82;
+}
+
+.fileList > button > i {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 7px;
+  color: rgba(255, 255, 255, 0.44);
+  font-size: 7px;
+  font-style: normal;
+}
+
+.fileList > button.active > i {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.fileList > button.existing > i {
+  border-color: rgba(34, 197, 94, 0.7);
+  color: #4ade80;
+}
+
+.fileList > button > span {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.fileList > button strong,
+.fileList > button small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fileList > button strong {
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.fileList > button small {
+  color: rgba(255, 255, 255, 0.32);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 8px;
+}
+
+.fileList > button.existing small {
+  color: rgba(187, 247, 208, 0.58);
+}
+
+.fileList > button > b {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.fileList > button.active > b {
+  color: #ef4444;
+}
+
+.fileList > button.existing > b {
+  color: #4ade80;
+}
+
+.empty {
+  display: grid;
+  min-height: 220px;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.empty i {
+  display: grid;
+  width: 54px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid rgba(239, 68, 68, 0.26);
+  border-radius: 8px;
+  color: #ef4444;
+  font-size: 10px;
+  font-style: normal;
+}
+
+.empty span {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.limit,
+.error {
+  margin: 0;
+  padding: 9px 13px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  font-size: 9px;
+}
+
+.limit {
+  color: rgba(255, 255, 255, 0.36);
+}
+
+.error {
+  color: #fca5a5;
+}
+
+.hint {
+  margin: -4px 0 0;
+  color: rgba(255, 255, 255, 0.34);
+  font-size: 10px;
+}
+
+@media (max-width: 720px) {
+  .intro {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .folderButton {
+    width: 100%;
+  }
+
+  .browser > header {
+    grid-template-columns: 1fr;
+  }
+
+  .fileList > button {
+    grid-template-columns: 28px minmax(0, 1fr);
+  }
+
+  .fileList > button > b {
+    display: none;
+  }
+}

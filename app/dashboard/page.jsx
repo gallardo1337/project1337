@@ -6,18 +6,13 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import AdminBetaOverview from "./beta/AdminBetaOverview.jsx";
 import AdminMediaHealth from "./beta/AdminMediaHealth.jsx";
-
-const AdminImportAssistant = dynamic(
-  () => import("./beta/AdminImportAssistant.jsx"),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="text-xs text-neutral-500">
-        Lade Import-Assistent…
-      </div>
-    ),
-  }
-);
+import AdminMovieFilePicker from "./AdminMovieFilePicker.jsx";
+import {
+  PUBLIC_VIDEO_BASE,
+  hasExactVideoFile,
+  movieFileUrlKey,
+  normalizeMovieFileUrl,
+} from "../../lib/movieFilePaths.mjs";
 
 const AdminHomepageDirector = dynamic(
   () => import("./beta/AdminHomepageDirector.jsx"),
@@ -65,28 +60,6 @@ const MovieThumbnailUploader = dynamic(
   }
 );
 
-const PUBLIC_VIDEO_BASE = "https://video.my1337.de/";
-const LEGACY_VIDEO_HOST = "192.168.178.58";
-
-function normalizeMovieFileUrl(value) {
-  const trimmedValue = String(value || "").trim();
-  if (!trimmedValue) return null;
-
-  try {
-    const parsedUrl = new URL(trimmedValue);
-    if (parsedUrl.hostname === LEGACY_VIDEO_HOST) {
-      return new URL(
-        `${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`,
-        PUBLIC_VIDEO_BASE
-      ).toString();
-    }
-
-    return trimmedValue;
-  } catch {
-    return new URL(trimmedValue.replace(/^\/+/, ""), PUBLIC_VIDEO_BASE).toString();
-  }
-}
-
 // -------------------------------
 // Version / Changelog
 // -------------------------------
@@ -94,14 +67,13 @@ function normalizeMovieFileUrl(value) {
 const CHANGELOG = [
   {
     version: "2.4.0",
-    date: "2026-08-08",
+    date: "2026-08-09",
     items: [
-      "NAS-Ordner lassen sich lokal auswählen und nach MP4-Dateien durchsuchen, ohne Videos hochzuladen",
-      "IAFD-Filmografien und Titelsuche liefern auswählbare Treffer statt automatisch übernommener Vermutungen",
-      "Bestätigte IAFD-Daten werden auf vorhandene Studios, Hauptdarsteller, Nebendarsteller und Tags abgebildet",
-      "Der bestätigte IAFD-Filmlink bleibt als nachvollziehbare Quelle am Film gespeichert",
-      "Neue IAFD-Studios und Nebendarsteller können beim Import kontrolliert angelegt werden",
-      "Videoauflösung, Laufzeit, Dateigröße und mögliche Duplikate werden vor dem Speichern geprüft",
+      "NAS-Ordnerauswahl direkt in Film hinzufügen integriert",
+      "Alle MP4-Dateien eines ausgewählten Ordners werden übersichtlich und durchsuchbar angezeigt",
+      "Bereits hinzugefügte Videodateien sind grün markiert und für eine erneute Auswahl gesperrt",
+      "Doppelte Videopfade werden auch bei manueller Eingabe vor dem Speichern blockiert",
+      "Eine ausgewählte MP4 bleibt beim späteren Ändern von Darsteller oder Auflösung erhalten",
     ],
   },
   {
@@ -360,12 +332,6 @@ const AdminNavIcon = ({ name }) => {
         <rect x="3" y="4" width="18" height="16" rx="1" />
         <circle cx="9" cy="9" r="2" />
         <path d="m5 17 4.5-4.5 3 3 2.5-2.5 4 4" />
-      </>
-    ),
-    import: (
-      <>
-        <path d="M5 3h9l5 5v13H5z" />
-        <path d="M14 3v5h5M8 14h8M12 10v8M9 5h2" />
       </>
     ),
     director: (
@@ -742,6 +708,18 @@ export function DashboardExperience({ beta = false }) {
     [movieMetrics]
   );
 
+  const filmFileDuplicate = useMemo(() => {
+    const key = movieFileUrlKey(filmFileUrl);
+    if (!key || !hasExactVideoFile(filmFileUrl)) return null;
+
+    return (
+      filme.find(
+        (movie) =>
+          movie.id !== editingFilmId && movieFileUrlKey(movie.file_url) === key
+      ) || null
+    );
+  }, [editingFilmId, filmFileUrl, filme]);
+
   const filteredFilme = useMemo(() => {
     const q = dashboardSearch.trim().toLowerCase();
     if (!q) return filme;
@@ -825,18 +803,22 @@ export function DashboardExperience({ beta = false }) {
         const next = prev.filter((id) => id !== actor.id);
         const firstRemainingActor = getFirstSelectedMainActor(next);
 
-        if (firstRemainingActor) {
-          setFilmFileUrl(
-            buildMovieFolderUrl(firstRemainingActor.name, filmResolutionId)
-          );
-        } else {
-          setFilmFileUrl(DEFAULT_FILE_BASE);
+        if (!hasExactVideoFile(filmFileUrl)) {
+          if (firstRemainingActor) {
+            setFilmFileUrl(
+              buildMovieFolderUrl(firstRemainingActor.name, filmResolutionId)
+            );
+          } else {
+            setFilmFileUrl(DEFAULT_FILE_BASE);
+          }
         }
 
         return next;
       }
 
-      setFilmFileUrl(buildMovieFolderUrl(actor.name, filmResolutionId));
+      if (!hasExactVideoFile(filmFileUrl)) {
+        setFilmFileUrl(buildMovieFolderUrl(actor.name, filmResolutionId));
+      }
       return [...prev, actor.id];
     });
   };
@@ -846,10 +828,12 @@ export function DashboardExperience({ beta = false }) {
 
     const firstSelectedActor = getFirstSelectedMainActor();
 
-    if (firstSelectedActor) {
-      setFilmFileUrl(buildMovieFolderUrl(firstSelectedActor.name, resolutionId));
-    } else {
-      setFilmFileUrl(DEFAULT_FILE_BASE);
+    if (!hasExactVideoFile(filmFileUrl)) {
+      if (firstSelectedActor) {
+        setFilmFileUrl(buildMovieFolderUrl(firstSelectedActor.name, resolutionId));
+      } else {
+        setFilmFileUrl(DEFAULT_FILE_BASE);
+      }
     }
   };
 
@@ -1510,6 +1494,13 @@ export function DashboardExperience({ beta = false }) {
       return;
     }
 
+    if (filmFileDuplicate) {
+      setError(
+        `Diese Videodatei wurde bereits als „${filmFileDuplicate.title}“ hinzugefügt.`
+      );
+      return;
+    }
+
     let year = null;
     if (filmJahr.trim()) {
       const parsed = parseInt(filmJahr.trim(), 10);
@@ -1849,7 +1840,6 @@ export function DashboardExperience({ beta = false }) {
     { key: "stats", label: "Filmarchiv", icon: "movies", section: "stats", count: filme.length },
     { key: "health", label: "Medienprüfung", icon: "health", section: "health" },
     { key: "thumbnails", label: "Thumbnail Studio", icon: "thumbnail", section: "thumbnails" },
-    { key: "import", label: "Import-Assistent", icon: "import", section: "import" },
     { key: "new", label: editingFilmId ? "Film bearbeiten" : "Film hinzufügen", icon: "add", section: "new" },
     { key: "mainActors", label: "Hauptdarsteller", icon: "mainActors", section: "meta", meta: "mainActors", count: hauptdarsteller.length },
     { key: "supportActors", label: "Nebendarsteller", icon: "supportActors", section: "meta", meta: "supportActors", count: nebendarsteller.length },
@@ -1933,13 +1923,6 @@ export function DashboardExperience({ beta = false }) {
           title: "Thumbnail Studio",
           description:
             "Filmszenen erfassen, automatisch Varianten erzeugen und das beste 16:9-Cover direkt speichern.",
-        }
-      : activeFilmSection === "import"
-      ? {
-          eyebrow: "Intelligent Intake / Neuer Film",
-          title: "Import-Assistent",
-          description:
-            "Videopfad prüfen, Metadaten erkennen, Duplikate abgleichen und den fertigen Eintrag kontrolliert anlegen.",
         }
       : activeFilmSection === "stats"
       ? {
@@ -2753,29 +2736,6 @@ export function DashboardExperience({ beta = false }) {
                     />
                   ) : null}
 
-                  {beta && activeFilmSection === "import" ? (
-                    <AdminImportAssistant
-                      movies={filme}
-                      studios={studios}
-                      mainActors={hauptdarsteller}
-                      supportActors={nebendarsteller}
-                      tags={tags}
-                      resolutions={resolutions}
-                      onMovieImported={(movie) =>
-                        setFilme((current) => [
-                          movie,
-                          ...current.filter((item) => item.id !== movie.id),
-                        ])
-                      }
-                      onEditMovie={handleEditFilm}
-                      onOpenThumbnailStudio={(movie) => {
-                        setThumbnailTargetId(movie.id);
-                        openAdminView("thumbnails");
-                      }}
-                      onUnauthorized={handleSessionExpired}
-                    />
-                  ) : null}
-
                   {/* Tab: Neuer Film */}
                   {activeFilmSection === "new" && (
                     <div className="dashPanel dashPanel--form group rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950/95 to-black/95 p-6 shadow-2xl shadow-black/70 transition-transform duration-200">
@@ -2806,6 +2766,18 @@ export function DashboardExperience({ beta = false }) {
                         onSubmit={handleAddOrUpdateFilm}
                         className="space-y-5 text-base"
                       >
+                        <AdminMovieFilePicker
+                          movies={filme}
+                          mainActors={hauptdarsteller}
+                          supportActors={nebendarsteller}
+                          value={filmFileUrl}
+                          editingMovieId={editingFilmId}
+                          onChange={(url) => {
+                            setFilmFileUrl(url);
+                            setError(null);
+                          }}
+                        />
+
                         {/* Titel + Jahr */}
                         <div className="grid grid-cols-[2fr,1fr] gap-4 max-sm:grid-cols-1">
                           <div>
@@ -2936,11 +2908,21 @@ export function DashboardExperience({ beta = false }) {
                               File-URL / NAS-Pfad
                             </label>
                             <input
-                              className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                              className={`mt-1 w-full rounded-xl border bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 placeholder:text-neutral-500 focus:outline-none ${
+                                filmFileDuplicate
+                                  ? "border-green-500 focus:border-green-400"
+                                  : "border-neutral-700 focus:border-red-500"
+                              }`}
                               value={filmFileUrl}
                               onChange={(e) => setFilmFileUrl(e.target.value)}
                               placeholder="https://video.my1337.de/"
                             />
+                            {filmFileDuplicate ? (
+                              <p className="mt-2 text-xs text-green-400">
+                                Bereits als „{filmFileDuplicate.title}“ vorhanden –
+                                dieser Pfad kann nicht erneut gespeichert werden.
+                              </p>
+                            ) : null}
                           </div>
                         </div>
 
@@ -3048,7 +3030,11 @@ export function DashboardExperience({ beta = false }) {
                           <button
                             type="submit"
                             className="rounded-xl bg-red-500 px-5 py-2.5 text-sm font-semibold text-black shadow shadow-red-900/70 hover:bg-red-400 hover:shadow-lg hover:shadow-red-900/70 disabled:opacity-60"
-                            disabled={!filmTitel.trim() || !filmResolutionId}
+                            disabled={
+                              !filmTitel.trim() ||
+                              !filmResolutionId ||
+                              Boolean(filmFileDuplicate)
+                            }
                           >
                             {editingFilmId
                               ? "Film aktualisieren"

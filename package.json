@@ -5,12 +5,10 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "test:iafd": "node --test tests/iafd*.test.mjs"
+    "start": "next start"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.42.1",
-    "cheerio": "1.1.2",
     "next": "^15.5.7",
     "react": "18.3.1",
     "react-dom": "18.3.1",
