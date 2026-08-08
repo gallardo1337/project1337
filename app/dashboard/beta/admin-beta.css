@@ -3527,9 +3527,15 @@
   margin-top: 16px;
 }
 
-.adminBeta .thumbnailStudio__candidates button {
+.adminBeta .thumbnailStudio__candidateCard {
   position: relative;
   aspect-ratio: 16 / 9;
+}
+
+.adminBeta .thumbnailStudio__candidateSelect {
+  position: relative;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: #050506;
@@ -3537,7 +3543,7 @@
   cursor: pointer;
 }
 
-.adminBeta .thumbnailStudio__candidates button::after {
+.adminBeta .thumbnailStudio__candidateSelect::after {
   position: absolute;
   inset: 0;
   border: 2px solid transparent;
@@ -3545,7 +3551,7 @@
   pointer-events: none;
 }
 
-.adminBeta .thumbnailStudio__candidates button.is-active::after {
+.adminBeta .thumbnailStudio__candidateSelect.is-active::after {
   border-color: var(--admin-red);
 }
 
@@ -3556,20 +3562,20 @@
   transition: transform 180ms ease, opacity 180ms ease;
 }
 
-.adminBeta .thumbnailStudio__candidates button:hover img {
+.adminBeta .thumbnailStudio__candidateSelect:hover img {
   transform: scale(1.02);
 }
 
-.adminBeta .thumbnailStudio__candidates button > span,
-.adminBeta .thumbnailStudio__candidates button > small,
-.adminBeta .thumbnailStudio__candidates button > i {
+.adminBeta .thumbnailStudio__candidateSelect > span,
+.adminBeta .thumbnailStudio__candidateSelect > small,
+.adminBeta .thumbnailStudio__candidateSelect > i {
   position: absolute;
   z-index: 2;
   background: rgba(3, 3, 4, 0.84);
   backdrop-filter: blur(6px);
 }
 
-.adminBeta .thumbnailStudio__candidates button > span {
+.adminBeta .thumbnailStudio__candidateSelect > span {
   top: 7px;
   left: 7px;
   display: grid;
@@ -3581,7 +3587,7 @@
   font-size: 10px;
 }
 
-.adminBeta .thumbnailStudio__candidates button > small {
+.adminBeta .thumbnailStudio__candidateSelect > small {
   right: 7px;
   bottom: 7px;
   padding: 5px 6px;
@@ -3590,7 +3596,7 @@
   font-size: 7px;
 }
 
-.adminBeta .thumbnailStudio__candidates button > i {
+.adminBeta .thumbnailStudio__candidateSelect > i {
   bottom: 7px;
   left: 7px;
   padding: 5px 6px;
@@ -3602,9 +3608,184 @@
   text-transform: uppercase;
 }
 
-.adminBeta .thumbnailStudio__candidates button.is-active > i {
+.adminBeta .thumbnailStudio__candidateSelect.is-active > i {
   background: var(--admin-red);
   color: #09090a;
+}
+
+.adminBeta .thumbnailStudio__candidateZoom {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  z-index: 4;
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(3, 3, 4, 0.84);
+  color: #e6e6e9;
+  backdrop-filter: blur(7px);
+  cursor: zoom-in;
+  font-size: 14px;
+  opacity: 0.78;
+  transition: border-color 160ms ease, background 160ms ease, opacity 160ms ease;
+}
+
+.adminBeta .thumbnailStudio__candidateZoom:hover {
+  border-color: var(--admin-red);
+  background: var(--admin-red);
+  color: #09090a;
+  opacity: 1;
+}
+
+.adminBeta .thumbnailStudio__lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.92);
+  padding: clamp(18px, 4vw, 58px);
+  backdrop-filter: blur(14px);
+}
+
+.adminBeta .thumbnailStudio__lightboxPanel {
+  width: min(1280px, 100%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: #09090b;
+  box-shadow: 0 34px 100px rgba(0, 0, 0, 0.7);
+}
+
+.adminBeta .thumbnailStudio__lightboxPanel > header,
+.adminBeta .thumbnailStudio__lightboxPanel > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 15px 17px;
+}
+
+.adminBeta .thumbnailStudio__lightboxPanel > header {
+  border-bottom: 1px solid var(--admin-line);
+}
+
+.adminBeta .thumbnailStudio__lightboxPanel > header > div,
+.adminBeta .thumbnailStudio__lightboxPanel > footer > div {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.adminBeta .thumbnailStudio__lightboxPanel > header span {
+  color: var(--admin-red);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.adminBeta .thumbnailStudio__lightboxPanel > header h3 {
+  overflow: hidden;
+  margin: 0;
+  color: #ececef;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(17px, 2vw, 25px);
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.adminBeta .thumbnailStudio__lightboxPanel > header > button {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: transparent;
+  color: #b8b8be;
+  cursor: pointer;
+  font-size: 23px;
+  line-height: 1;
+}
+
+.adminBeta .thumbnailStudio__lightboxPanel > header > button:hover {
+  border-color: var(--admin-red);
+  color: #fff;
+}
+
+.adminBeta .thumbnailStudio__lightboxStage {
+  position: relative;
+  display: grid;
+  min-height: 0;
+  place-items: center;
+  overflow: hidden;
+  background: #030304;
+}
+
+.adminBeta .thumbnailStudio__lightboxStage img {
+  display: block;
+  width: 100%;
+  max-height: calc(100vh - 210px);
+  aspect-ratio: 16 / 9;
+  object-fit: contain;
+}
+
+.adminBeta .thumbnailStudio__lightboxStage button {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: grid;
+  width: 44px;
+  height: 54px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(3, 3, 4, 0.78);
+  color: #fff;
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  font-size: 19px;
+  transform: translateY(-50%);
+}
+
+.adminBeta .thumbnailStudio__lightboxStage button:hover {
+  border-color: var(--admin-red);
+  background: var(--admin-red);
+  color: #09090a;
+}
+
+.adminBeta .thumbnailStudio__lightboxStage .is-previous {
+  left: 14px;
+}
+
+.adminBeta .thumbnailStudio__lightboxStage .is-next {
+  right: 14px;
+}
+
+.adminBeta .thumbnailStudio__lightboxPanel > footer {
+  border-top: 1px solid var(--admin-line);
+}
+
+.adminBeta .thumbnailStudio__lightboxPanel > footer span {
+  color: #d0d0d5;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+}
+
+.adminBeta .thumbnailStudio__lightboxPanel > footer small {
+  color: #606067;
+  font-size: 8px;
+}
+
+.adminBeta .thumbnailStudio__lightboxPanel > footer button {
+  min-height: 39px;
+  border: 1px solid var(--admin-red);
+  background: var(--admin-red);
+  padding: 0 15px;
+  color: #09090a;
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 850;
 }
 
 .adminBeta .thumbnailStudio__candidateEmpty {
@@ -3904,6 +4085,32 @@
 
   .adminBeta .thumbnailStudio__candidates {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .adminBeta .thumbnailStudio__lightbox {
+    padding: 10px;
+  }
+
+  .adminBeta .thumbnailStudio__lightboxPanel > footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .adminBeta .thumbnailStudio__lightboxPanel > footer button {
+    width: 100%;
+  }
+
+  .adminBeta .thumbnailStudio__lightboxStage button {
+    width: 38px;
+    height: 46px;
+  }
+
+  .adminBeta .thumbnailStudio__lightboxStage .is-previous {
+    left: 7px;
+  }
+
+  .adminBeta .thumbnailStudio__lightboxStage .is-next {
+    right: 7px;
   }
 
   .adminBeta .thumbnailStudio__comparison {
