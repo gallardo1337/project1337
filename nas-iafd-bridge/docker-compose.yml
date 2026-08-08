@@ -1,0 +1,34 @@
+services:
+  iafd-bridge:
+    build:
+      context: .
+    container_name: project1337-iafd-bridge
+    restart: unless-stopped
+    init: true
+    shm_size: "1gb"
+    env_file:
+      - .env
+    environment:
+      PORT: "43137"
+      IAFD_BROWSER_DATA_DIR: /data/chromium
+    ports:
+      - "${IAFD_BRIDGE_BIND:-127.0.0.1}:43137:43137"
+    volumes:
+      - iafd_browser_data:/data
+    read_only: true
+    tmpfs:
+      - /tmp:size=512m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    networks:
+      - project1337_bridge
+
+volumes:
+  iafd_browser_data:
+
+networks:
+  project1337_bridge:
+    name: project1337-bridge

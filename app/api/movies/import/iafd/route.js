@@ -18,6 +18,7 @@ import {
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const preferredRegion = "fra1";
+export const maxDuration = 75;
 
 const MAX_ACTOR_PROFILES = 2;
 const MAX_QUERY_LENGTH = 180;
