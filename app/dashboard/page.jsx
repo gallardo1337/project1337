@@ -81,6 +81,15 @@ function normalizeMovieFileUrl(value) {
 
 const CHANGELOG = [
   {
+    version: "2.3.0",
+    date: "2026-08-08",
+    items: [
+      "Ähnliche Filme als neue kuratierte Reihe auf der Filmseite hinzugefügt",
+      "Empfehlungen werden aus gemeinsamen Darstellern, Tags, Studio, Qualität, Epoche und Bewertung berechnet",
+      "Empfehlungskarten zeigen den wichtigsten Grund für die jeweilige Auswahl",
+    ],
+  },
+  {
     version: "2.2.2",
     date: "2026-08-08",
     items: [

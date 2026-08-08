@@ -406,6 +406,127 @@ function qualityTone(quality) {
   return "";
 }
 
+function normalizeRecommendationValue(value) {
+  return String(value || "")
+    .trim()
+    .toLocaleLowerCase("de-DE");
+}
+
+function recommendationValueSet(values) {
+  return new Set(
+    (Array.isArray(values) ? values : [])
+      .map(normalizeRecommendationValue)
+      .filter(Boolean)
+  );
+}
+
+function getSharedRecommendationValues(source, candidate) {
+  const candidateValues = recommendationValueSet(candidate);
+  return [...recommendationValueSet(source)].filter((value) =>
+    candidateValues.has(value)
+  );
+}
+
+function buildSimilarMovies(currentMovie, movies, limit = 6) {
+  if (!currentMovie || !Array.isArray(movies)) return [];
+
+  const currentStudio = normalizeRecommendationValue(currentMovie.studio);
+  const currentResolution = normalizeRecommendationValue(currentMovie.resolution);
+  const currentYear = Number(currentMovie.year);
+  const currentRating = Number(currentMovie.rating);
+
+  return movies
+    .filter((candidate) => String(candidate.id) !== String(currentMovie.id))
+    .map((candidate) => {
+      const sharedActors = getSharedRecommendationValues(
+        currentMovie.actors,
+        candidate.actors
+      );
+      const sharedTags = getSharedRecommendationValues(
+        currentMovie.tags,
+        candidate.tags
+      );
+      const sameStudio =
+        currentStudio &&
+        currentStudio === normalizeRecommendationValue(candidate.studio);
+      const sameResolution =
+        currentResolution &&
+        currentResolution === normalizeRecommendationValue(candidate.resolution);
+      const candidateYear = Number(candidate.year);
+      const yearDifference =
+        Number.isFinite(currentYear) &&
+        currentYear > 0 &&
+        Number.isFinite(candidateYear) &&
+        candidateYear > 0
+          ? Math.abs(currentYear - candidateYear)
+          : null;
+      const candidateRating = Number(candidate.rating);
+      const ratingDifference =
+        Number.isFinite(currentRating) &&
+        currentRating > 0 &&
+        Number.isFinite(candidateRating) &&
+        candidateRating > 0
+          ? Math.abs(currentRating - candidateRating)
+          : null;
+
+      let yearScore = 0;
+      if (yearDifference === 0) yearScore = 4;
+      else if (yearDifference != null && yearDifference <= 3) yearScore = 3;
+      else if (yearDifference != null && yearDifference <= 7) yearScore = 2;
+      else if (yearDifference != null && yearDifference <= 15) yearScore = 1;
+
+      let ratingScore = 0;
+      if (ratingDifference != null && ratingDifference <= 1) ratingScore = 2;
+      else if (ratingDifference != null && ratingDifference <= 2) ratingScore = 1;
+
+      const score =
+        Math.min(sharedActors.length, 3) * 12 +
+        Math.min(sharedTags.length, 5) * 5 +
+        (sameStudio ? 7 : 0) +
+        (sameResolution ? 2 : 0) +
+        yearScore +
+        ratingScore;
+
+      let reason = "Aus deiner Collection";
+      if (sharedActors.length > 1) reason = `${sharedActors.length} gleiche Darsteller`;
+      else if (sharedActors.length === 1) reason = "Gleicher Cast";
+      else if (sharedTags.length > 1) reason = `${sharedTags.length} gemeinsame Tags`;
+      else if (sharedTags.length === 1) reason = "Gemeinsamer Tag";
+      else if (sameStudio) reason = "Gleiches Studio";
+      else if (yearScore >= 2) reason = "Ähnliche Epoche";
+      else if (sameResolution) reason = "Gleiche Qualität";
+      else if (ratingScore) reason = "Ähnliche Bewertung";
+
+      return { movie: candidate, score, reason };
+    })
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+
+      const ratingDifference = Number(b.movie.rating) - Number(a.movie.rating);
+      if (Number.isFinite(ratingDifference) && ratingDifference !== 0) {
+        return ratingDifference;
+      }
+
+      const viewDifference =
+        Number(b.movie.viewCount || 0) - Number(a.movie.viewCount || 0);
+      if (viewDifference !== 0) return viewDifference;
+
+      const addedDifference =
+        new Date(b.movie.addedAt || 0).getTime() -
+        new Date(a.movie.addedAt || 0).getTime();
+      if (Number.isFinite(addedDifference) && addedDifference !== 0) {
+        return addedDifference;
+      }
+
+      return String(a.movie.title || "").localeCompare(
+        String(b.movie.title || ""),
+        "de",
+        { sensitivity: "base" }
+      );
+    })
+    .slice(0, limit);
+}
+
 function pickRandomMovies(movies, limit, { includeRetro = false } = {}) {
   const pool = movies.filter(
     (movie) =>
@@ -610,6 +731,50 @@ function MovieCard({ movie, onOpen, large = false, index }) {
       <span className={styles.movieCopy}>
         <span className={styles.movieTitle}>{movie.title || "Unbenannt"}</span>
         <span className={styles.movieMeta}>
+          {movie.studio || "Independent"}
+          <i />
+          {movie.year || "–"}
+        </span>
+      </span>
+    </button>
+  );
+}
+
+function SimilarMovieCard({ recommendation, onOpen, index }) {
+  const { movie, reason } = recommendation;
+
+  return (
+    <button
+      type="button"
+      className={styles.similarCard}
+      onClick={() => onOpen(movie)}
+      aria-label={`${movie.title || "Film"} öffnen – ${reason}`}
+    >
+      <span className={styles.similarVisual}>
+        <MediaImage
+          src={movie.thumbnailUrl}
+          alt={movie.title || "Filmcover"}
+          sizes="(max-width: 640px) 82vw, (max-width: 900px) 42vw, 25vw"
+        />
+        <span className={styles.similarShade} />
+        <span className={styles.similarIndex}>
+          {String(index + 1).padStart(2, "0")}
+        </span>
+        <span className={`${styles.quality} ${qualityTone(movie.resolution)}`}>
+          {movie.resolution || "HD"}
+        </span>
+        <span className={styles.similarMatch}>
+          <Icon name="spark" /> {reason}
+        </span>
+        <span className={styles.similarPlay}>
+          <Icon name="play" />
+        </span>
+      </span>
+      <span className={styles.similarCopy}>
+        <strong title={movie.title || "Unbenannt"}>
+          {movie.title || "Unbenannt"}
+        </strong>
+        <span>
           {movie.studio || "Independent"}
           <i />
           {movie.year || "–"}
@@ -1907,10 +2072,22 @@ function ActorProfile({ actor, movies, movieSort, setMovieSort, onBack, onOpenMo
   );
 }
 
-function MovieDetail({ movie, onBack, onShowActor, onRateMovie, onRecordView }) {
+function MovieDetail({
+  movie,
+  movies,
+  onBack,
+  onShowActor,
+  onOpenMovie,
+  onRateMovie,
+  onRecordView,
+}) {
   const mainCast = Array.isArray(movie.mainCast) ? movie.mainCast : [];
   const supportCast = Array.isArray(movie.supportCast) ? movie.supportCast : [];
   const castCount = mainCast.length + supportCast.length;
+  const similarMovies = useMemo(
+    () => buildSimilarMovies(movie, movies, 6),
+    [movie, movies]
+  );
   const [draftRating, setDraftRating] = useState(Number(movie.rating) || 0);
   const [hoverRating, setHoverRating] = useState(0);
   const [ratingSaving, setRatingSaving] = useState(false);
@@ -2046,6 +2223,29 @@ function MovieDetail({ movie, onBack, onShowActor, onRateMovie, onRecordView }) 
           </div>
         ) : null}
       </section>
+
+      {similarMovies.length ? (
+        <section className={styles.similarSection} aria-labelledby="similar-movies-title">
+          <header className={styles.similarHeader}>
+            <div>
+              <span>Curated connections</span>
+              <h2 id="similar-movies-title">Ähnliche Filme</h2>
+              <p>Gewichtet nach Cast, Tags, Studio, Qualität und Epoche.</p>
+            </div>
+            <strong>{String(similarMovies.length).padStart(2, "0")} Empfehlungen</strong>
+          </header>
+          <div className={styles.similarRail}>
+            {similarMovies.map((recommendation, index) => (
+              <SimilarMovieCard
+                key={recommendation.movie.id}
+                recommendation={recommendation}
+                onOpen={onOpenMovie}
+                index={index}
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
     </main>
   );
 }
@@ -2201,8 +2401,10 @@ export default function BetaExperience({
         selectedMovie ? (
           <MovieDetail
             movie={selectedMovie}
+            movies={movies}
             onBack={onCloseMovie}
             onShowActor={openActorFromDiscover}
+            onOpenMovie={onOpenMovie}
             onRateMovie={onRateMovie}
             onRecordView={onRecordMovieView}
           />
