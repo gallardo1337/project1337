@@ -703,7 +703,7 @@ function addActorMetrics(actors, movies) {
   });
 }
 
-function MovieCard({ movie, onOpen, large = false, index }) {
+function MovieCard({ movie, onOpen, large = false, index, showMetrics = false }) {
   return (
     <button
       type="button"
@@ -735,6 +735,19 @@ function MovieCard({ movie, onOpen, large = false, index }) {
           <i />
           {movie.year || "–"}
         </span>
+        {showMetrics ? (
+          <span className={styles.movieMetrics}>
+            <span>
+              <Icon name="star" />
+              {Number(movie.rating) > 0 ? `${formatRating(movie.rating)} / 10` : "– / 10"}
+            </span>
+            <i />
+            <span>
+              <Icon name="play" />
+              {formatNumber(movie.viewCount)} Aufrufe
+            </span>
+          </span>
+        ) : null}
       </span>
     </button>
   );
@@ -1649,6 +1662,7 @@ function Discovery({
                 index={index}
                 onOpen={onOpenMovie}
                 large={index === 0}
+                showMetrics={section.type === "top_rated" || section.type === "most_viewed"}
               />
             ))
           ) : (

@@ -81,6 +81,13 @@ function normalizeMovieFileUrl(value) {
 
 const CHANGELOG = [
   {
+    version: "2.3.1",
+    date: "2026-08-08",
+    items: [
+      "Bewertung und Aufrufzahl direkt auf den Startseiten-Reihen Top bewertet und Meistgesehen ergänzt",
+    ],
+  },
+  {
     version: "2.3.0",
     date: "2026-08-08",
     items: [
