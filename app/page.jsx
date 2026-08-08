@@ -4348,26 +4348,7 @@ export default function HomePage({ basePath = "/", version = "v2" }) {
 
       <div className="topbar">
         <div className="topbar__left">
-          <a
-            className="betaSwitch"
-            href="https://project1337-git-agent-beta-home-m-9d032b-kevs-projects-9ed6f156.vercel.app/beta"
-            title="Das neue Project1337 Design testen"
-          >
-            <span className="betaSwitch__dot" aria-hidden="true" />
-            <span className="betaSwitch__copy">
-              <strong>Beta</strong>
-              <small>Neues Design testen</small>
-            </span>
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path
-                d="M5 12h14M13 6l6 6-6 6"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </a>
+
         </div>
 
         <div className="topbar__mid">
