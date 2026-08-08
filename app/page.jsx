@@ -1584,6 +1584,65 @@ export default function HomePage({ basePath = "/", version = "v2" }) {
     selectedSupportingActors.length,
   ]);
 
+  useEffect(() => {
+    if (!loggedIn || typeof window === "undefined" || movies.length === 0) {
+      return undefined;
+    }
+
+    const restoreViewFromHistory = () => {
+      const params = new URLSearchParams(window.location.search || "");
+      const movieParam = params.get("movie");
+      const actorParam = params.get("actor");
+
+      if (
+        movieParam &&
+        movies.some((movie) => String(movie.id) === String(movieParam))
+      ) {
+        setSelectedMovieId(String(movieParam));
+        setViewMode("movies");
+        requestAnimationFrame(() => window.scrollTo(0, 0));
+        return;
+      }
+
+      if (actorParam) {
+        const actor = isUuid(actorParam)
+          ? actors.find((item) => String(item.id) === String(actorParam))
+          : actors.find((item) => String(item.slug) === String(actorParam));
+
+        if (actor) {
+          const actorMovies = movies.filter(
+            (movie) =>
+              Array.isArray(movie.mainActorIds) &&
+              movie.mainActorIds.includes(actor.id)
+          );
+
+          setSelectedActor(actor);
+          setSelectedMovieId(null);
+          setMoviesTitle(actor.name);
+          setMoviesSubtitle(`${actorMovies.length} Film(e)`);
+          setVisibleMovies(actorMovies);
+          setViewMode("movies");
+          requestAnimationFrame(() => window.scrollTo(0, 0));
+          return;
+        }
+      }
+
+      setSearch("");
+      setSelectedActor(null);
+      setSelectedMovieId(null);
+      setViewMode("actors");
+      setVisibleMovies([]);
+      setMoviesTitle("Filme");
+      setMoviesSubtitle("");
+      requestAnimationFrame(() => window.scrollTo(0, 0));
+    };
+
+    window.addEventListener("popstate", restoreViewFromHistory);
+    return () => {
+      window.removeEventListener("popstate", restoreViewFromHistory);
+    };
+  }, [actors, loggedIn, movies]);
+
   const showMovies = viewMode === "movies";
 
   const getAddedTime = (movie) => {
@@ -1649,7 +1708,7 @@ export default function HomePage({ basePath = "/", version = "v2" }) {
   const handleShowMoviesForActor = (actorId, actorName, actorSlug) => {
     const actor = actors.find((a) => String(a.id) === String(actorId)) || null;
     const urlVal = actorSlug ? actorSlug : actorId;
-    router.replace(`${rootUrl}?actor=${encodeURIComponent(urlVal)}`, { scroll: false });
+    router.push(`${rootUrl}?actor=${encodeURIComponent(urlVal)}`, { scroll: false });
 
     requestAnimationFrame(() => {
       window.scrollTo(0, 0);
@@ -1968,7 +2027,7 @@ export default function HomePage({ basePath = "/", version = "v2" }) {
 
     const sp = new URLSearchParams();
     sp.set("movie", String(movie.id));
-    router.replace(`${rootUrl}?${sp.toString()}`, { scroll: false });
+    router.push(`${rootUrl}?${sp.toString()}`, { scroll: false });
     setSelectedMovieId(String(movie.id));
 
     requestAnimationFrame(() => {
