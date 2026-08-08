@@ -3486,7 +3486,13 @@
   color: #86efac;
 }
 
-.adminBeta .thumbnailStudio__selectionHeader > button {
+.adminBeta .thumbnailStudio__selectionActions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.adminBeta .thumbnailStudio__selectionActions button {
   border: 0;
   background: transparent;
   color: #65656d;
@@ -3494,6 +3500,24 @@
   font-size: 8px;
   text-decoration: underline;
   text-underline-offset: 4px;
+}
+
+.adminBeta .thumbnailStudio__selectionActions .thumbnailStudio__refreshCandidates {
+  border: 1px solid rgba(239, 68, 68, 0.34);
+  background: rgba(239, 68, 68, 0.055);
+  padding: 8px 10px;
+  color: #ef8d8d;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.adminBeta .thumbnailStudio__selectionActions button:hover:not(:disabled) {
+  color: #fff;
+}
+
+.adminBeta .thumbnailStudio__selectionActions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .adminBeta .thumbnailStudio__candidates {
@@ -3865,6 +3889,16 @@
 
   .adminBeta .thumbnailStudio__localSource button,
   .adminBeta .thumbnailStudio__localSource label {
+    width: 100%;
+  }
+
+  .adminBeta .thumbnailStudio__selectionHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .adminBeta .thumbnailStudio__selectionActions {
+    justify-content: space-between;
     width: 100%;
   }
 
