@@ -1,8 +1,0 @@
-{
-  "crons": [
-    {
-      "path": "/api/cron/supabase-keep-alive",
-      "schedule": "17 4 * * *"
-    }
-  ]
-}
