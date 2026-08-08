@@ -81,6 +81,14 @@ function normalizeMovieFileUrl(value) {
 
 const CHANGELOG = [
   {
+    version: "2.2.1",
+    date: "2026-08-08",
+    items: [
+      "Studio-Auswahl im Startseiten-Regisseur unter Windows lesbar gemacht",
+      "Dropdown-Optionen verwenden jetzt einen festen hellen Hintergrund mit dunkler Schrift",
+    ],
+  },
+  {
     version: "2.2.0",
     date: "2026-08-08",
     items: [
