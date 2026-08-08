@@ -282,6 +282,7 @@ export function DashboardExperience({ beta = false }) {
   const [loginPassword, setLoginPassword] = useState("");
   const [loginErr, setLoginErr] = useState(null);
   const [loginLoading, setLoginLoading] = useState(false);
+  const [sessionChecked, setSessionChecked] = useState(false);
 
   // Tabs: Filme / Neuer Film / Stammdaten
   const [activeFilmSection, setActiveFilmSection] = useState(
@@ -359,17 +360,58 @@ export function DashboardExperience({ beta = false }) {
 
   const [editingFilmId, setEditingFilmId] = useState(null);
 
-  // Login-Status aus localStorage laden
+  // Browser-Merker und sicheres Server-Cookie gemeinsam prüfen.
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const flag = window.localStorage.getItem("auth_1337_flag");
-    const user = window.localStorage.getItem("auth_1337_user");
-    if (flag === "1" && user) {
-      setLoggedIn(true);
-      setLoginUser(user);
-    } else {
-      setLoggedIn(false);
-    }
+    let active = true;
+
+    const restoreSession = async () => {
+      if (typeof window === "undefined") return;
+
+      const flag = window.localStorage.getItem("auth_1337_flag");
+      const storedUser = window.localStorage.getItem("auth_1337_user");
+      if (storedUser) setLoginUser(storedUser);
+
+      try {
+        const response = await fetch("/api/login", {
+          method: "GET",
+          cache: "no-store",
+          credentials: "same-origin",
+        });
+        const payload = await response.json().catch(() => null);
+        if (!active) return;
+
+        if (response.ok && payload?.ok) {
+          setLoggedIn(true);
+          setLoginErr(null);
+          window.localStorage.setItem("auth_1337_flag", "1");
+          window.localStorage.setItem(
+            "auth_1337_user",
+            storedUser || "gallardo1337"
+          );
+        } else {
+          setLoggedIn(false);
+          window.localStorage.removeItem("auth_1337_flag");
+          window.localStorage.removeItem("auth_1337_user");
+          if (flag === "1") {
+            setLoginErr(
+              "Deine Sitzung ist abgelaufen. Bitte einmal neu einloggen."
+            );
+          }
+        }
+      } catch (sessionError) {
+        console.error("Admin-Sitzung konnte nicht geprüft werden.", sessionError);
+        if (!active) return;
+        setLoggedIn(false);
+        setLoginErr("Sitzung konnte nicht geprüft werden. Bitte neu einloggen.");
+      } finally {
+        if (active) setSessionChecked(true);
+      }
+    };
+
+    restoreSession();
+    return () => {
+      active = false;
+    };
   }, []);
 
   // Header: Klick außerhalb / Mobile Search / User Menu schließen
@@ -418,6 +460,8 @@ export function DashboardExperience({ beta = false }) {
   // Daten laden, wenn eingeloggt
   useEffect(() => {
     const loadAll = async () => {
+      if (!sessionChecked) return;
+
       if (!loggedIn) {
         setHauptdarsteller([]);
         setNebendarsteller([]);
@@ -505,7 +549,7 @@ export function DashboardExperience({ beta = false }) {
 
     loadAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loggedIn]);
+  }, [loggedIn, sessionChecked]);
 
   const actorMap = useMemo(
     () => Object.fromEntries(hauptdarsteller.map((a) => [a.id, a])),
@@ -669,6 +713,7 @@ export function DashboardExperience({ beta = false }) {
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({
           username: loginUser,
           password: loginPassword,
@@ -689,6 +734,7 @@ export function DashboardExperience({ beta = false }) {
         window.localStorage.setItem("auth_1337_user", loginUser);
       }
       setLoggedIn(true);
+      setSessionChecked(true);
       setLoginErr(null);
       setLoginPassword("");
     } catch (error) {
@@ -716,6 +762,18 @@ export function DashboardExperience({ beta = false }) {
     setMobileSearchOpen(false);
     setUserMenuOpen(false);
     router.replace("/", { scroll: false });
+  };
+
+  const handleSessionExpired = () => {
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem("auth_1337_flag");
+      window.localStorage.removeItem("auth_1337_user");
+    }
+    setLoggedIn(false);
+    setSessionChecked(true);
+    setLoginPassword("");
+    setLoginErr("Deine Sitzung ist abgelaufen. Bitte einmal neu einloggen.");
+    setUserMenuOpen(false);
   };
 
   // ---------------- Stammdaten anlegen ----------------
@@ -2120,7 +2178,9 @@ export function DashboardExperience({ beta = false }) {
             </div>
 
           <div className="dashTopbar__mid">
-          {loggedIn ? (
+          {!sessionChecked ? (
+            <div className="dashAuth__label">Sitzung wird geprüft…</div>
+          ) : loggedIn ? (
             <div className="dashSearchWrap" ref={searchWrapRef}>
               <div className="dashInput" title="Dashboard-Filme suchen">
                 <svg
@@ -2363,7 +2423,12 @@ export function DashboardExperience({ beta = false }) {
       ) : null}
 
       <main className="dashMain px-4 pb-10 pt-6 md:px-6">
-        {!loggedIn ? (
+        {!sessionChecked ? (
+          <section className="mx-auto mt-16 flex max-w-md items-center justify-center gap-3 p-8 text-neutral-300">
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-neutral-500 border-t-transparent" />
+            <span>Sitzung wird geprüft…</span>
+          </section>
+        ) : !loggedIn ? (
           <section className="mx-auto mt-16 max-w-md rounded-3xl border border-neutral-800/80 bg-gradient-to-b from-neutral-950 to-black/90 p-8 text-center shadow-2xl shadow-black/70">
             <p className="mb-3 text-base text-neutral-200">
               Bitte oben einloggen, um das Dashboard zu nutzen.
@@ -2494,6 +2559,7 @@ export function DashboardExperience({ beta = false }) {
                         )
                       }
                       onEditMovie={handleEditFilm}
+                      onUnauthorized={handleSessionExpired}
                     />
                   ) : null}
 
