@@ -3,8 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const UPLOAD_URL = process.env.NEXT_PUBLIC_MOVIE_UPLOAD_URL;
-const OUTPUT_WIDTH = 1280;
-const OUTPUT_HEIGHT = 720;
+const OUTPUT_WIDTH = 1920;
+const OUTPUT_HEIGHT = 1080;
+const JPEG_QUALITY = 0.94;
+const SHARPEN_AMOUNT = 0.12;
 const ANALYSIS_WIDTH = 192;
 const ANALYSIS_HEIGHT = 108;
 const SAMPLES_PER_BAND = 5;
@@ -322,6 +324,33 @@ function drawSmartFit(ctx, video, width, height) {
   ctx.restore();
 }
 
+function applyLightSharpen(ctx, width, height, amount = SHARPEN_AMOUNT) {
+  const imageData = ctx.getImageData(0, 0, width, height);
+  const output = imageData.data;
+  const source = new Uint8ClampedArray(output);
+  const rowStride = width * 4;
+  const centerWeight = 1 + amount * 4;
+
+  for (let y = 1; y < height - 1; y += 1) {
+    let index = (y * width + 1) * 4;
+    const rowEnd = (y * width + width - 1) * 4;
+
+    for (; index < rowEnd; index += 4) {
+      for (let channel = 0; channel < 3; channel += 1) {
+        output[index + channel] =
+          source[index + channel] * centerWeight -
+          amount *
+            (source[index + channel - 4] +
+              source[index + channel + 4] +
+              source[index + channel - rowStride] +
+              source[index + channel + rowStride]);
+      }
+    }
+  }
+
+  ctx.putImageData(imageData, 0, 0);
+}
+
 function frameToBlob(video, mode, focusX, focusY) {
   if (!video.videoWidth || !video.videoHeight) {
     throw new Error("Das Video hat noch kein lesbares Bild geliefert.");
@@ -350,6 +379,8 @@ function frameToBlob(video, mode, focusX, focusY) {
     );
   }
 
+  applyLightSharpen(ctx, OUTPUT_WIDTH, OUTPUT_HEIGHT);
+
   return new Promise((resolve, reject) => {
     try {
       canvas.toBlob(
@@ -361,7 +392,7 @@ function frameToBlob(video, mode, focusX, focusY) {
           resolve(blob);
         },
         "image/jpeg",
-        0.9
+        JPEG_QUALITY
       );
     } catch (error) {
       reject(error);
@@ -891,8 +922,8 @@ export default function AdminThumbnailStudio({
         </div>
         <div className="thumbnailStudio__specs" aria-label="Ausgabeformat">
           <span>JPEG</span>
-          <strong>1280 × 720</strong>
-          <small>16:9 · 90 % Qualität</small>
+          <strong>{OUTPUT_WIDTH} × {OUTPUT_HEIGHT}</strong>
+          <small>16:9 · {Math.round(JPEG_QUALITY * 100)} % Qualität · leicht geschärft</small>
         </div>
       </div>
 
