@@ -2003,10 +2003,16 @@
   border-color: rgba(204, 20, 43, 0.65);
 }
 
+.adminBeta .homepageDirectorFields select,
+.adminBeta .homepageDirectorAdd select {
+  color: var(--admin-red);
+  color-scheme: dark;
+}
+
 .adminBeta .homepageDirectorFields select option,
 .adminBeta .homepageDirectorAdd select option {
-  background: #f5f5f5;
-  color: #111;
+  background: #151517;
+  color: var(--admin-red);
 }
 
 .adminBeta .homepageDirectorStudio {

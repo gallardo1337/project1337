@@ -81,6 +81,13 @@ function normalizeMovieFileUrl(value) {
 
 const CHANGELOG = [
   {
+    version: "2.2.2",
+    date: "2026-08-08",
+    items: [
+      "Studio-Dropdown auf einen dunklen Hintergrund mit roter Schrift umgestellt",
+    ],
+  },
+  {
     version: "2.2.1",
     date: "2026-08-08",
     items: [
