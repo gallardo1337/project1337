@@ -1,5 +1,5 @@
-import { DashboardExperience } from "../page";
+import { redirect } from "next/navigation";
 
-export default function DashboardBetaPage() {
-  return <DashboardExperience beta />;
+export default function LegacyDashboardBetaRedirect() {
+  redirect("/dashboard/v2");
 }

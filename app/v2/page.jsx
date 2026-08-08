@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
-export default function LegacyBetaRedirect() {
+export default function V2Redirect() {
   redirect("/");
 }

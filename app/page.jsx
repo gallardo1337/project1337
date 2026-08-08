@@ -1127,10 +1127,10 @@ function ActorHero({ actor, movieCount, movies: actorMovies = [] }) {
   );
 }
 
-export default function HomePage({ basePath = "/" }) {
+export default function HomePage({ basePath = "/", version = "v2" }) {
   const router = useRouter();
   const rootUrl = basePath === "/" ? "/" : basePath.replace(/\/$/, "");
-  const isBeta = rootUrl !== "/";
+  const isBeta = version === "v2";
 
   const [movies, setMovies] = useState([]);
   const [actors, setActors] = useState([]);
@@ -2058,7 +2058,8 @@ export default function HomePage({ basePath = "/" }) {
         onRateMovie={handleRateMovie}
         onRecordMovieView={handleRecordMovieView}
         onSearch={handleSearchChange}
-        onDashboard={() => safeOpen("/dashboard/beta")}
+        onDashboard={() => safeOpen("/dashboard/v2")}
+        onOpenArchive={() => safeOpen("/v1")}
         filtersOpen={filtersOpen}
         setFiltersOpen={setFiltersOpen}
         hasAnyFilter={hasAnyFilter}
@@ -4137,13 +4138,13 @@ export default function HomePage({ basePath = "/" }) {
       `}</style>
 
       {isBeta ? (
-        <aside className="betaRail" aria-label="Beta-Navigation">
+        <aside className="betaRail" aria-label="v2-Navigation">
           <button
             type="button"
             className="betaRail__brand"
             onClick={handleBackToActors}
-            title="Zur Beta-Startseite"
-            aria-label="Zur Beta-Startseite"
+            title="Zur v2-Startseite"
+            aria-label="Zur v2-Startseite"
           >
             <img src="/logo.png" alt="" aria-hidden="true" />
           </button>
@@ -4207,7 +4208,7 @@ export default function HomePage({ basePath = "/" }) {
 
           <div className="betaRail__status">
             <span aria-hidden="true" />
-            <strong>BETA 2</strong>
+            <strong>v2</strong>
           </div>
         </aside>
       ) : null}
@@ -4856,7 +4857,7 @@ export default function HomePage({ basePath = "/" }) {
 
       <div className="wrap">
         {isBeta && !selectedMovieId && !selectedActor && viewMode === "actors" ? (
-          <section className="betaHero" aria-label="Project1337 Beta">
+          <section className="betaHero" aria-label="Project1337 v2">
             <div className="betaHero__copy">
               <div className="betaHero__eyebrow">
                 <span aria-hidden="true" />

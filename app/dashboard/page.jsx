@@ -67,6 +67,16 @@ function normalizeMovieFileUrl(value) {
 // -------------------------------
 
 const CHANGELOG = [
+  {
+    version: "2.0.0",
+    date: "2026-08-08",
+    items: [
+      "Redesign v2 als neue Hauptseite veröffentlicht",
+      "Klassische Hauptseite dauerhaft als v1-Archiv unter /v1 erhalten",
+      "Bisherigen Vorschau-Schalter entfernt und alle Versionshinweise auf v2 vereinheitlicht",
+      "Modernes Control Room unter /dashboard/v2 erreichbar; klassisches Dashboard bleibt erhalten",
+    ],
+  },
     {
     version: "0.5.1",
     date: "2026-06-07",
@@ -2193,7 +2203,7 @@ export function DashboardExperience({ beta = false }) {
                   <img src="/logo.png" alt="Project1337" />
                   <span>
                     Control Room
-                    <small>Admin Beta / 01</small>
+                    <small>Admin v2 / 02</small>
                   </span>
                 </button>
               ) : null}
@@ -2306,7 +2316,7 @@ export function DashboardExperience({ beta = false }) {
                       role="menuitem"
                       onClick={() => {
                         setUserMenuOpen(false);
-                        router.push(beta ? "/beta" : "/");
+                        router.push("/");
                       }}
                       title="Zur Hauptseite"
                     >
@@ -2548,7 +2558,7 @@ export function DashboardExperience({ beta = false }) {
                         <button
                           type="button"
                           className="adminWorkspaceHeader__secondary"
-                          onClick={() => router.push("/beta")}
+                          onClick={() => router.push("/")}
                         >
                           Seite ansehen <span>↗</span>
                         </button>

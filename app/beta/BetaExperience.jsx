@@ -735,6 +735,7 @@ function AppHeader({
   onShowActors,
   onShowMovies,
   onDashboard,
+  onOpenArchive,
   onLogout,
   onOpenFilters,
 }) {
@@ -748,7 +749,7 @@ function AppHeader({
     <header className={styles.header}>
       <button type="button" className={styles.brand} onClick={onDiscover} aria-label="Entdecken">
         <Image src="/logo.png" alt="Project1337" width={112} height={52} priority />
-        <span>BETA / 03</span>
+        <span>v2</span>
       </button>
 
       <nav className={styles.nav} aria-label="Hauptnavigation">
@@ -782,7 +783,8 @@ function AppHeader({
           {accountOpen ? (
             <div className={styles.accountMenu}>
               <strong>{loginUser}</strong>
-              <button type="button" onClick={onDashboard}>Admin Beta</button>
+              <button type="button" onClick={onDashboard}>Admin v2</button>
+              <button type="button" onClick={onOpenArchive}>v1 · Original ansehen</button>
               <button type="button" onClick={onLogout}>Abmelden</button>
             </div>
           ) : null}
@@ -1038,7 +1040,7 @@ function Discovery({ movies, actors, onOpenMovie, onShowMovies, onShowActors, on
         </div>
       </section>
 
-      <section className={`${styles.contentSection} ${styles.talentSection}`} id="beta-actors">
+      <section className={`${styles.contentSection} ${styles.talentSection}`} id="v2-actors">
         <SectionHeading index="02" eyebrow="The faces" title="Talents der Collection" action="Alle Darsteller" onAction={onShowActors} />
         <div className={styles.actorMosaic}>
           {topActors.map((actor, index) => <ActorCard key={actor.id} actor={actor} onOpen={onShowActor} feature={index === 0} />)}
@@ -1592,6 +1594,7 @@ export default function BetaExperience({
   onRecordMovieView,
   onSearch,
   onDashboard,
+  onOpenArchive,
   filtersOpen,
   setFiltersOpen,
   hasAnyFilter,
@@ -1665,6 +1668,7 @@ export default function BetaExperience({
         }}
         onShowMovies={onShowMovies}
         onDashboard={onDashboard}
+        onOpenArchive={onOpenArchive}
         onLogout={onLogout}
         onOpenFilters={() => setFiltersOpen(true)}
       />
