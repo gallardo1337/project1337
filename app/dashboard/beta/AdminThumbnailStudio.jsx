@@ -5,7 +5,21 @@ import { useEffect, useMemo, useRef, useState } from "react";
 const UPLOAD_URL = process.env.NEXT_PUBLIC_MOVIE_UPLOAD_URL;
 const OUTPUT_WIDTH = 1280;
 const OUTPUT_HEIGHT = 720;
-const SUGGESTION_POINTS = [0.12, 0.26, 0.4, 0.54, 0.68, 0.82];
+const CHAPTER_POINTS = [0.12, 0.26, 0.4, 0.54, 0.68, 0.82];
+const SUGGESTION_BANDS = [
+  [0.07, 0.18],
+  [0.2, 0.32],
+  [0.34, 0.46],
+  [0.48, 0.6],
+  [0.62, 0.74],
+  [0.76, 0.9],
+];
+
+function createSuggestionPoints() {
+  return SUGGESTION_BANDS.map(
+    ([start, end]) => start + Math.random() * (end - start)
+  );
+}
 
 function formatTime(value) {
   const seconds = Math.max(0, Math.floor(Number(value) || 0));
@@ -423,17 +437,17 @@ export default function AdminThumbnailStudio({
     setError(null);
     setNotice(null);
     setGenerating({ active: true, done: 0 });
-    resetCandidates();
 
     const originalTime = video.currentTime;
     const wasPaused = video.paused;
+    const suggestionPoints = createSuggestionPoints();
     video.pause();
 
     try {
       let firstCandidate = null;
 
-      for (let index = 0; index < SUGGESTION_POINTS.length; index += 1) {
-        await waitForSeek(video, duration * SUGGESTION_POINTS[index]);
+      for (let index = 0; index < suggestionPoints.length; index += 1) {
+        await waitForSeek(video, duration * suggestionPoints[index]);
         await new Promise((resolve) => requestAnimationFrame(resolve));
         const candidate = await captureCurrentFrame({ select: false });
         if (!firstCandidate) firstCandidate = candidate;
@@ -441,7 +455,9 @@ export default function AdminThumbnailStudio({
       }
 
       if (firstCandidate) setSelectedCandidateId(firstCandidate.id);
-      setNotice("Sechs Vorschläge sind fertig. Wähle unten deinen Favoriten.");
+      setNotice(
+        "Sechs neue Vorschläge sind fertig. Alte und neue Frames kannst du direkt vergleichen."
+      );
     } catch (generationError) {
       setError(
         generationError?.message || "Vorschläge konnten nicht erzeugt werden."
@@ -722,7 +738,7 @@ export default function AdminThumbnailStudio({
               </div>
 
               <div className="thumbnailStudio__chapters">
-                {SUGGESTION_POINTS.map((point) => (
+                {CHAPTER_POINTS.map((point) => (
                   <button
                     type="button"
                     key={point}
@@ -821,8 +837,14 @@ export default function AdminThumbnailStudio({
                 >
                   <span>{generating.active ? `${generating.done}/6` : "✦"}</span>
                   <div>
-                    <strong>{generating.active ? "Vorschläge werden erzeugt" : "6 Vorschläge erzeugen"}</strong>
-                    <small>Automatisch über den Film verteilt</small>
+                    <strong>
+                      {generating.active
+                        ? "Vorschläge werden erzeugt"
+                        : candidates.length
+                          ? "6 weitere Vorschläge erzeugen"
+                          : "6 Vorschläge erzeugen"}
+                    </strong>
+                    <small>Bei jedem Klick neu über den Film verteilt</small>
                   </div>
                 </button>
                 <button
@@ -844,9 +866,25 @@ export default function AdminThumbnailStudio({
                   <h3>Favorit festlegen</h3>
                 </div>
                 {candidates.length ? (
-                  <button type="button" onClick={resetCandidates} disabled={saving || generating.active}>
-                    Auswahl leeren
-                  </button>
+                  <div className="thumbnailStudio__selectionActions">
+                    <button
+                      type="button"
+                      className="thumbnailStudio__refreshCandidates"
+                      onClick={generateSuggestions}
+                      disabled={!canCapture || saving || generating.active}
+                    >
+                      {generating.active
+                        ? `${generating.done}/6 werden erzeugt…`
+                        : "6 neue Vorschläge"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={resetCandidates}
+                      disabled={saving || generating.active}
+                    >
+                      Auswahl leeren
+                    </button>
+                  </div>
                 ) : null}
               </div>
 
