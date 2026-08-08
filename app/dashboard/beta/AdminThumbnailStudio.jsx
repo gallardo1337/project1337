@@ -179,6 +179,7 @@ export default function AdminThumbnailStudio({
   resolutionMap,
   onThumbnailSaved,
   onEditMovie,
+  onUnauthorized,
 }) {
   const videoRef = useRef(null);
   const generatedUrlsRef = useRef(new Set());
@@ -488,6 +489,20 @@ export default function AdminThumbnailStudio({
     setNotice(null);
 
     try {
+      const sessionResponse = await fetch("/api/login", {
+        method: "GET",
+        cache: "no-store",
+        credentials: "same-origin",
+      });
+      const sessionPayload = await sessionResponse.json().catch(() => null);
+
+      if (!sessionResponse.ok || !sessionPayload?.ok) {
+        onUnauthorized?.();
+        throw new Error(
+          "Deine Admin-Sitzung ist abgelaufen. Bitte einmal neu einloggen."
+        );
+      }
+
       const formData = new FormData();
       const filename = `movie_thumb_${safeFilename(
         selectedMovie.title
@@ -519,6 +534,7 @@ export default function AdminThumbnailStudio({
       const savePayload = await saveResponse.json().catch(() => null);
 
       if (!saveResponse.ok) {
+        if (saveResponse.status === 401) onUnauthorized?.();
         throw new Error(
           savePayload?.error || "Thumbnail konnte dem Film nicht zugeordnet werden."
         );
