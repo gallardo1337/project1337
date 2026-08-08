@@ -4,6 +4,34 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 const PUBLIC_VIDEO_BASE = "https://video.my1337.de/";
 const MAX_FOLDER_FILES = 15000;
+const IAFD_CONNECTOR_SOURCE = "project1337-iafd-connector";
+const IAFD_APP_SOURCE = "project1337-app";
+const IAFD_PAGE_MESSAGE = "PROJECT1337_IAFD_PAGE";
+const IAFD_CONNECTOR_DOWNLOAD = "/downloads/Project1337-IAFD-Connector.zip";
+
+function buildBrowserIafdSearchUrl(query) {
+  const url = new URL("https://www.iafd.com/results.asp");
+  url.searchParams.set("searchtype", "title");
+  url.searchParams.set("searchstring", String(query || "").trim().slice(0, 180));
+  return url.toString();
+}
+
+function isExpectedIafdPage(value, kind) {
+  try {
+    const url = new URL(String(value || ""));
+    if (
+      url.protocol !== "https:" ||
+      !new Set(["iafd.com", "www.iafd.com"]).has(url.hostname.toLowerCase())
+    ) {
+      return false;
+    }
+    return kind === "search"
+      ? /^\/results\.asp$/i.test(url.pathname)
+      : /^\/title\.rme(?:\/|$)/i.test(url.pathname);
+  } catch {
+    return false;
+  }
+}
 
 function normalizeName(value) {
   return String(value || "")
@@ -245,6 +273,10 @@ export default function AdminImportAssistant({
   const fallbackInputRef = useRef(null);
   const latestCheckRef = useRef(0);
   const preIafdDraftRef = useRef(null);
+  const iafdBrowserWindowRef = useRef(null);
+  const pendingIafdRequestRef = useRef(null);
+  const iafdConnectorReadyRef = useRef(false);
+  const iafdPageHandlerRef = useRef(null);
   const [folderFiles, setFolderFiles] = useState([]);
   const [folderName, setFolderName] = useState("");
   const [folderLoading, setFolderLoading] = useState(false);
@@ -265,6 +297,7 @@ export default function AdminImportAssistant({
   const [iafdSearching, setIafdSearching] = useState(false);
   const [iafdLoadingUrl, setIafdLoadingUrl] = useState("");
   const [iafdError, setIafdError] = useState(null);
+  const [iafdConnectorReady, setIafdConnectorReady] = useState(false);
   const [iafdUrl, setIafdUrl] = useState("");
   const [iafdMetadata, setIafdMetadata] = useState(null);
   const [newStudioName, setNewStudioName] = useState("");
@@ -306,50 +339,47 @@ export default function AdminImportAssistant({
     onUnauthorized?.();
   };
 
+  const openIafdBrowserRequest = (request) => {
+    pendingIafdRequestRef.current = request;
+    const popup = window.open(
+      request.url,
+      "project1337-iafd-connector",
+      "popup=yes,width=1280,height=900,resizable=yes,scrollbars=yes"
+    );
+    if (!popup) {
+      pendingIafdRequestRef.current = null;
+      setIafdSearching(false);
+      setIafdLoadingUrl("");
+      setIafdError(
+        "Edge hat das IAFD-Fenster blockiert. Erlaube Pop-ups für Project1337 und versuche es erneut."
+      );
+      return false;
+    }
+    iafdBrowserWindowRef.current = popup;
+    popup.focus();
+    return true;
+  };
+
   const searchIafd = async (nextAnalysis) => {
     const query =
       nextAnalysis?.source?.title ||
       String(nextAnalysis?.source?.filename || "").replace(/\.mp4$/i, "");
     if (!query.trim()) return;
 
-    const actorIds = nextAnalysis?.suggestions?.main_actor_ids || [];
-    const actorUrls = mainActors
-      .filter((actor) => actorIds.includes(actor.id) && actor.iafd_url)
-      .map((actor) => actor.iafd_url);
-    setIafdSearching(true);
     setIafdError(null);
     setIafdSearch(null);
-    try {
-      const response = await fetch("/api/movies/import/iafd", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
-        body: JSON.stringify({
-          action: "search",
-          query,
-          year: nextAnalysis?.suggestions?.year || null,
-          actor_urls: actorUrls,
-        }),
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (response.status === 401) {
-        handleUnauthorized();
-        return;
-      }
-      if (!response.ok) {
-        throw new Error(payload.error || "IAFD konnte nicht durchsucht werden.");
-      }
-      setIafdSearch(payload.search);
-      if (!payload.search?.results?.length) {
-        setIafdError(
-          "IAFD hat keinen sicheren Treffer geliefert. Nutze unten den direkten IAFD-Link."
-        );
-      }
-    } catch (searchError) {
-      setIafdError(searchError?.message || "IAFD konnte nicht durchsucht werden.");
-    } finally {
+    if (!iafdConnectorReadyRef.current) {
       setIafdSearching(false);
+      setIafdError(
+        "Der Project1337 IAFD Connector ist noch nicht aktiv. Installiere ihn einmal und lade diese Seite neu."
+      );
+      return;
     }
+
+    const year = nextAnalysis?.suggestions?.year || null;
+    const url = buildBrowserIafdSearchUrl(query);
+    setIafdSearching(true);
+    openIafdBrowserRequest({ kind: "search", url, query, year });
   };
 
   const requestAnalysis = async ({
@@ -512,20 +542,93 @@ export default function AdminImportAssistant({
     }
   };
 
+  const applyIafdMetadata = (metadata, targetUrl) => {
+    if (!metadata) return;
+    if (!iafdMetadata && draft) {
+      preIafdDraftRef.current = {
+        ...draft,
+        main_actor_ids: [...(draft.main_actor_ids || [])],
+        supporting_actor_ids: [...(draft.supporting_actor_ids || [])],
+        tag_ids: [...(draft.tag_ids || [])],
+      };
+    }
+    setIafdMetadata(metadata);
+    setIafdUrl(metadata.url || targetUrl);
+    setNewStudioName(metadata.studio_match ? "" : metadata.studio || "");
+    setNewSupportingNames(
+      unique((metadata.unmatched_cast || []).map((performer) => performer.name))
+    );
+    setDraft((current) => ({
+      ...current,
+      title: metadata.title || current.title,
+      year: metadata.year || current.year,
+      studio_id: metadata.studio_match?.id || current.studio_id || "",
+      main_actor_ids: unique([
+        ...(current.main_actor_ids || []),
+        ...(metadata.main_actor_ids || []),
+      ]),
+      supporting_actor_ids: unique([
+        ...(current.supporting_actor_ids || []),
+        ...(metadata.supporting_actor_ids || []),
+      ]),
+      tag_ids: unique([
+        ...(current.tag_ids || []),
+        ...(metadata.tag_ids || []),
+      ]),
+    }));
+    setAllowWithoutIafd(false);
+  };
+
   const loadIafdDetails = async (url) => {
     const targetUrl = String(url || iafdUrl).trim();
     if (!targetUrl) {
       setIafdError("Bitte einen IAFD-Filmlink eingeben.");
       return;
     }
+    if (!isExpectedIafdPage(targetUrl, "details")) {
+      setIafdError("Bitte einen gültigen IAFD-Filmlink von iafd.com eingeben.");
+      return;
+    }
+    if (!iafdConnectorReadyRef.current) {
+      setIafdError(
+        "Der Project1337 IAFD Connector ist noch nicht aktiv. Installiere ihn einmal und lade diese Seite neu."
+      );
+      return;
+    }
+
     setIafdLoadingUrl(targetUrl);
     setIafdError(null);
+    openIafdBrowserRequest({
+      kind: "details",
+      url: targetUrl,
+    });
+  };
+
+  const processIafdBrowserPage = async (message) => {
+    const pending = pendingIafdRequestRef.current;
+    if (
+      !pending ||
+      !isExpectedIafdPage(message?.page_url, pending.kind) ||
+      typeof message?.html !== "string" ||
+      !message.html.trim()
+    ) {
+      return;
+    }
+
+    pendingIafdRequestRef.current = null;
     try {
+      const action = pending.kind === "search" ? "search_html" : "details_html";
       const response = await fetch("/api/movies/import/iafd", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ action: "details", url: targetUrl }),
+        body: JSON.stringify({
+          action,
+          page_url: message.page_url,
+          html: message.html,
+          query: pending.query,
+          year: pending.year,
+        }),
       });
       const payload = await response.json().catch(() => ({}));
       if (response.status === 401) {
@@ -533,51 +636,71 @@ export default function AdminImportAssistant({
         return;
       }
       if (!response.ok) {
-        throw new Error(payload.error || "Die IAFD-Filmseite konnte nicht gelesen werden.");
+        throw new Error(
+          payload.error ||
+            (pending.kind === "search"
+              ? "IAFD konnte nicht durchsucht werden."
+              : "Die IAFD-Filmseite konnte nicht gelesen werden.")
+        );
       }
 
-      const metadata = payload.metadata;
-      if (!iafdMetadata && draft) {
-        preIafdDraftRef.current = {
-          ...draft,
-          main_actor_ids: [...(draft.main_actor_ids || [])],
-          supporting_actor_ids: [...(draft.supporting_actor_ids || [])],
-          tag_ids: [...(draft.tag_ids || [])],
-        };
+      if (pending.kind === "search") {
+        setIafdSearch(payload.search);
+        if (!payload.search?.results?.length) {
+          setIafdError(
+            "IAFD hat keinen sicheren Treffer geliefert. Nutze unten den direkten IAFD-Link."
+          );
+        }
+      } else {
+        applyIafdMetadata(payload.metadata, pending.url);
       }
-      setIafdMetadata(metadata);
-      setIafdUrl(metadata.url || targetUrl);
-      setNewStudioName(metadata.studio_match ? "" : metadata.studio || "");
-      setNewSupportingNames(
-        unique((metadata.unmatched_cast || []).map((performer) => performer.name))
-      );
-      setDraft((current) => ({
-        ...current,
-        title: metadata.title || current.title,
-        year: metadata.year || current.year,
-        studio_id: metadata.studio_match?.id || current.studio_id || "",
-        main_actor_ids: unique([
-          ...(current.main_actor_ids || []),
-          ...(metadata.main_actor_ids || []),
-        ]),
-        supporting_actor_ids: unique([
-          ...(current.supporting_actor_ids || []),
-          ...(metadata.supporting_actor_ids || []),
-        ]),
-        tag_ids: unique([
-          ...(current.tag_ids || []),
-          ...(metadata.tag_ids || []),
-        ]),
-      }));
-      setAllowWithoutIafd(false);
-    } catch (detailsError) {
+      iafdBrowserWindowRef.current?.close();
+    } catch (browserError) {
       setIafdError(
-        detailsError?.message || "Die IAFD-Filmseite konnte nicht gelesen werden."
+        browserError?.message || "Die geöffnete IAFD-Seite konnte nicht verarbeitet werden."
       );
     } finally {
+      setIafdSearching(false);
       setIafdLoadingUrl("");
     }
   };
+
+  iafdPageHandlerRef.current = processIafdBrowserPage;
+
+  useEffect(() => {
+    const receiveConnectorMessage = (event) => {
+      if (
+        event.source !== window ||
+        event.data?.source !== IAFD_CONNECTOR_SOURCE
+      ) {
+        return;
+      }
+      if (event.data?.type === "PROJECT1337_IAFD_CONNECTOR_READY") {
+        iafdConnectorReadyRef.current = true;
+        setIafdConnectorReady(true);
+        return;
+      }
+      if (event.data?.type === IAFD_PAGE_MESSAGE) {
+        void iafdPageHandlerRef.current?.(event.data);
+      }
+    };
+
+    window.addEventListener("message", receiveConnectorMessage);
+    const pingConnector = () =>
+      window.postMessage(
+        {
+          source: IAFD_APP_SOURCE,
+          type: "PROJECT1337_IAFD_CONNECTOR_PING",
+        },
+        window.location.origin
+      );
+    pingConnector();
+    const secondPing = window.setTimeout(pingConnector, 1000);
+    return () => {
+      window.clearTimeout(secondPing);
+      window.removeEventListener("message", receiveConnectorMessage);
+    };
+  }, []);
 
   const updateDraft = (key, value) => {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -868,21 +991,53 @@ export default function AdminImportAssistant({
                   {iafdMetadata
                     ? "IAFD-Daten übernommen"
                     : iafdSearching
-                    ? "Filmografie wird durchsucht…"
+                    ? "IAFD ist in Edge geöffnet…"
                     : "Passenden Film auswählen"}
                 </h3>
               </div>
-              {iafdMetadata ? (
-                <a href={iafdMetadata.url} target="_blank" rel="noreferrer">
-                  IAFD öffnen ↗
-                </a>
-              ) : null}
+              <div className="importAssistant__iafdHeaderActions">
+                <span className={iafdConnectorReady ? "is-ready" : "is-missing"}>
+                  {iafdConnectorReady ? "● Edge Connector aktiv" : "○ Connector fehlt"}
+                </span>
+                {iafdMetadata ? (
+                  <a href={iafdMetadata.url} target="_blank" rel="noreferrer">
+                    IAFD öffnen ↗
+                  </a>
+                ) : null}
+              </div>
             </header>
+
+            {!iafdConnectorReady && !iafdMetadata ? (
+              <div className="importAssistant__connectorSetup">
+                <div>
+                  <span>Einmalige Einrichtung</span>
+                  <strong>IAFD mit deinem normalen Edge verbinden</strong>
+                  <p>
+                    Cloudflare blockiert Server-Browser. Der Connector liest deshalb nur
+                    die IAFD-Seite, die du selbst in Edge geöffnet hast. Cookies und
+                    Zugangsdaten bleiben vollständig im Browser.
+                  </p>
+                </div>
+                <ol>
+                  <li>ZIP herunterladen und vollständig entpacken</li>
+                  <li>
+                    <code>edge://extensions</code> öffnen und Entwicklermodus aktivieren
+                  </li>
+                  <li>„Entpackte Erweiterung laden“ und diesen Tab neu laden</li>
+                </ol>
+                <a href={IAFD_CONNECTOR_DOWNLOAD} download>
+                  IAFD Connector herunterladen ↓
+                </a>
+              </div>
+            ) : null}
 
             {iafdSearching ? (
               <div className="importAssistant__iafdLoading">
                 <i />
-                <span>Hauptcast-Filmografie und Titelsuche werden abgeglichen…</span>
+                <span>
+                  Falls Cloudflare fragt, bestätige die Prüfung im geöffneten Fenster.
+                  Die IAFD-Seite wird danach automatisch übernommen.
+                </span>
               </div>
             ) : iafdMetadata ? (
               <div className="importAssistant__iafdApplied">
@@ -916,29 +1071,38 @@ export default function AdminImportAssistant({
                 </button>
               </div>
             ) : (
-              <div className="importAssistant__iafdResults">
-                {(iafdSearch?.results || []).map((result, index) => (
-                  <button
-                    key={result.url}
-                    type="button"
-                    onClick={() => loadIafdDetails(result.url)}
-                    disabled={Boolean(iafdLoadingUrl)}
-                  >
-                    <b>{String(index + 1).padStart(2, "0")}</b>
-                    <span>
-                      <strong>{result.title}</strong>
-                      <small>
-                        {result.year || "Jahr offen"}
-                        {result.studio ? ` · ${result.studio}` : ""} · {result.source}
-                      </small>
-                    </span>
-                    <i>{Math.round((result.score || 0) * 100)} %</i>
-                    <em>
-                      {iafdLoadingUrl === result.url ? "Lädt…" : "Übernehmen →"}
-                    </em>
-                  </button>
-                ))}
-              </div>
+              <>
+                <div className="importAssistant__iafdResults">
+                  {(iafdSearch?.results || []).map((result, index) => (
+                    <button
+                      key={result.url}
+                      type="button"
+                      onClick={() => loadIafdDetails(result.url)}
+                      disabled={Boolean(iafdLoadingUrl)}
+                    >
+                      <b>{String(index + 1).padStart(2, "0")}</b>
+                      <span>
+                        <strong>{result.title}</strong>
+                        <small>
+                          {result.year || "Jahr offen"}
+                          {result.studio ? ` · ${result.studio}` : ""} · {result.source}
+                        </small>
+                      </span>
+                      <i>{Math.round((result.score || 0) * 100)} %</i>
+                      <em>
+                        {iafdLoadingUrl === result.url ? "Lädt…" : "Übernehmen →"}
+                      </em>
+                    </button>
+                  ))}
+                </div>
+                {iafdConnectorReady && !(iafdSearch?.results || []).length ? (
+                  <div className="importAssistant__connectorRetry">
+                    <button type="button" onClick={() => searchIafd(analysis)}>
+                      IAFD-Suche in Edge starten ↗
+                    </button>
+                  </div>
+                ) : null}
+              </>
             )}
 
             {iafdError ? (
@@ -962,7 +1126,7 @@ export default function AdminImportAssistant({
                     placeholder="https://www.iafd.com/title.rme/id=…"
                   />
                   <button type="submit" disabled={!iafdUrl.trim() || Boolean(iafdLoadingUrl)}>
-                    {iafdLoadingUrl === iafdUrl ? "Lädt…" : "IAFD lesen"}
+                    {iafdLoadingUrl === iafdUrl ? "In Edge geöffnet…" : "In Edge öffnen"}
                   </button>
                 </div>
               </form>

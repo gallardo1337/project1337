@@ -104,6 +104,9 @@ const server = http.createServer(async (request, response) => {
         code,
         status,
         duration_ms: Date.now() - startedAt,
+        ...(known && error.diagnostic
+          ? { diagnostic: error.diagnostic }
+          : {}),
       })
     );
   }

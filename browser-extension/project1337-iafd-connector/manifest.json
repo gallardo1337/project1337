@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "Project1337 IAFD Connector",
+  "version": "1.0.0",
+  "description": "Übergibt geöffnete IAFD-Seiten aus Edge oder Chrome sicher an den Project1337-Import-Assistenten.",
+  "permissions": ["tabs"],
+  "host_permissions": [
+    "https://iafd.com/*",
+    "https://www.iafd.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://iafd.com/*",
+        "https://www.iafd.com/*"
+      ],
+      "js": ["iafd-content.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://my1337.de/*",
+        "https://www.my1337.de/*",
+        "https://project1337.vercel.app/*",
+        "https://project1337-git-feature-iafd-import-v2-kevs-projects-9ed6f156.vercel.app/*"
+      ],
+      "js": ["project-content.js"],
+      "run_at": "document_start"
+    }
+  ]
+}

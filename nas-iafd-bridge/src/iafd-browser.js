@@ -1,4 +1,5 @@
 import { chromium } from "playwright";
+import { clearStaleChromiumProfileLocks } from "./chromium-profile.js";
 import { BridgeError } from "./errors.js";
 import {
   isBlockedBrowserUrl,
@@ -6,35 +7,101 @@ import {
   normalizeTargetUrl,
 } from "./security.js";
 
-const BLOCKED_RESOURCE_TYPES = new Set(["image", "media", "font"]);
-const ALLOWED_DOCUMENT_HOSTS = new Set([
-  "iafd.com",
-  "www.iafd.com",
-  "challenges.cloudflare.com",
-]);
+const BLOCKED_RESOURCE_TYPES = new Set(["media"]);
+const CHALLENGE_HOST = "challenges.cloudflare.com";
+const CLEARANCE_SETTLE_MS = 6000;
+
+function isLocalBrowserDocument(value) {
+  return (
+    value === "about:blank" ||
+    value.startsWith("data:") ||
+    value.startsWith("blob:")
+  );
+}
 
 function allowedDocumentUrl(value) {
+  if (isLocalBrowserDocument(value)) return true;
   try {
-    return ALLOWED_DOCUMENT_HOSTS.has(new URL(value).hostname.toLowerCase());
+    const hostname = new URL(value).hostname.toLowerCase();
+    return (
+      hostname === "iafd.com" ||
+      hostname === "www.iafd.com" ||
+      hostname === CHALLENGE_HOST ||
+      hostname.endsWith(`.${CHALLENGE_HOST}`)
+    );
   } catch {
     return false;
   }
 }
 
-function challengeDetected(title, bodyText) {
-  const sample = `${title || ""} ${bodyText || ""}`.toLowerCase().slice(0, 16000);
+export function challengeDetected(title, bodyText) {
+  const sample = `${title || ""} ${bodyText || ""}`.toLowerCase().slice(0, 32000);
   return [
     "just a moment",
     "checking your browser",
     "verify you are human",
     "attention required",
     "performing security verification",
+    "verification successful",
+    "enable javascript and cookies to continue",
   ].some((marker) => sample.includes(marker));
+}
+
+export function responseIsChallenge(response) {
+  const value = response?.headers?.()?.["cf-mitigated"];
+  return String(value || "").toLowerCase() === "challenge";
+}
+
+function challengeFrameDetected(page) {
+  return page.frames().some((frame) => {
+    try {
+      const hostname = new URL(frame.url()).hostname.toLowerCase();
+      return hostname === CHALLENGE_HOST || hostname.endsWith(`.${CHALLENGE_HOST}`);
+    } catch {
+      return false;
+    }
+  });
+}
+
+async function hasClearanceCookie(context) {
+  const cookies = await context
+    .cookies(["https://www.iafd.com", "https://iafd.com"])
+    .catch(() => []);
+  return cookies.some((cookie) => cookie.name === "cf_clearance");
+}
+
+async function readPageState(page, documentResponse) {
+  const [title, bodyText] = await Promise.all([
+    page.title().catch(() => ""),
+    page.locator("body").innerText({ timeout: 2500 }).catch(() => ""),
+  ]);
+  const textChallenge = challengeDetected(title, bodyText);
+  const frameChallenge = challengeFrameDetected(page);
+  const headerChallenge = responseIsChallenge(documentResponse);
+  return {
+    title,
+    bodyText,
+    finalUrl: page.url(),
+    textChallenge,
+    frameChallenge,
+    headerChallenge,
+    challenged: textChallenge || frameChallenge || headerChallenge,
+  };
+}
+
+function pageIsReady(state, documentResponse) {
+  return (
+    Boolean(documentResponse) &&
+    !state.challenged &&
+    isIafdHostname(state.finalUrl) &&
+    state.bodyText.trim().length >= 80
+  );
 }
 
 export class IafdBrowser {
   constructor(config) {
     this.config = config;
+    clearStaleChromiumProfileLocks(this.config.browserDataDir);
     this.contextPromise = null;
     this.queue = Promise.resolve();
     this.cache = new Map();
@@ -130,32 +197,65 @@ export class IafdBrowser {
     try {
       const context = await this.#context();
       page = await context.newPage();
-      const response = await page.goto(url, {
+      let documentResponse = null;
+      const captureDocumentResponse = (response) => {
+        if (
+          response.request().resourceType() === "document" &&
+          response.frame() === page.mainFrame()
+        ) {
+          documentResponse = response;
+        }
+      };
+      page.on("response", captureDocumentResponse);
+
+      const firstResponse = await page.goto(url, {
         waitUntil: "domcontentloaded",
         timeout: this.config.navigationTimeoutMs,
       });
+      documentResponse ||= firstResponse;
 
-      const status = response?.status() || 0;
-      const waitUntil = Date.now() + this.config.challengeWaitMs;
-      let title = "";
-      let bodyText = "";
+      const challengeDeadline = Date.now() + this.config.challengeWaitMs;
       let sawChallenge = false;
-      do {
-        title = await page.title().catch(() => "");
-        bodyText = await page.locator("body").innerText({ timeout: 2500 }).catch(() => "");
-        const challenged = challengeDetected(title, bodyText);
-        sawChallenge ||= challenged;
-        if (!challenged) break;
-        await page.waitForTimeout(1000);
-      } while (Date.now() < waitUntil);
+      let state = await readPageState(page, documentResponse);
 
-      if (challengeDetected(title, bodyText)) {
+      while (!pageIsReady(state, documentResponse)) {
+        sawChallenge ||= state.challenged;
+        if (Date.now() >= challengeDeadline) break;
+        await page.waitForTimeout(750);
+        state = await readPageState(page, documentResponse);
+      }
+
+      sawChallenge ||= state.challenged;
+
+      if (pageIsReady(state, documentResponse)) {
+        // Cloudflare can inject JavaScript detection into the first real HTML
+        // response. Keep the page alive briefly so the persistent profile can
+        // receive cf_clearance before the tab is closed.
+        const settleDeadline = Date.now() + CLEARANCE_SETTLE_MS;
+        let clearanceCookie = await hasClearanceCookie(context);
+        while (!clearanceCookie && Date.now() < settleDeadline) {
+          await page.waitForTimeout(500);
+          clearanceCookie = await hasClearanceCookie(context);
+        }
+        state = await readPageState(page, documentResponse);
+      }
+
+      if (state.challenged || !pageIsReady(state, documentResponse)) {
+        const clearanceCookie = await hasClearanceCookie(context);
         throw new BridgeError(
           "IAFD hat die Browserprüfung nicht freigegeben.",
           "IAFD_CHALLENGE",
-          503
+          503,
+          {
+            cf_mitigated: state.headerChallenge,
+            challenge_text: state.textChallenge,
+            challenge_frame: state.frameChallenge,
+            clearance_cookie: clearanceCookie,
+          }
         );
       }
+
+      const status = documentResponse?.status() || 0;
       if (status >= 400 && !sawChallenge) {
         throw new BridgeError(
           `IAFD antwortet mit HTTP ${status}.`,
@@ -193,7 +293,7 @@ export class IafdBrowser {
       return {
         html,
         final_url: finalUrl,
-        upstream_status: sawChallenge ? 200 : status || 200,
+        upstream_status: status || 200,
       };
     } catch (error) {
       if (error instanceof BridgeError) throw error;

@@ -33,6 +33,21 @@ Die Health-Antwort muss `"ok":true` enthalten. Der erste echte IAFD-Aufruf dauer
 etwas länger, weil Chromium erst dann gestartet wird. Das Browserprofil bleibt im
 Docker-Volume `iafd_browser_data` erhalten.
 
+Chromium läuft im normalen Browsermodus innerhalb eines virtuellen X-Displays
+(`xvfb-run`). Dadurch steht kein sichtbares Browserfenster offen, die Website erhält
+aber nicht den eingeschränkten Headless-Browsermodus.
+
+Beim Start entfernt die Bridge ausschließlich verwaiste Chromium-Sperrdateien
+(`SingletonLock`, `SingletonCookie`, `SingletonSocket`) aus dem persistenten Profil.
+Cookies, Cache und der übrige Browserzustand bleiben dabei erhalten.
+
+Die Browserprüfung darf ihre JavaScript-, Bild-, Schrift-, `data:`- und
+`blob:`-Ressourcen vollständig laden. Private Netzwerkziele bleiben blockiert. Eine
+Seite wird erst in den Cache übernommen, wenn Cloudflares `cf-mitigated`-Header,
+Prüftext und Challenge-Frame verschwunden sind. Nach der ersten echten Seite bleibt
+der Tab kurz offen, damit Chromium ein mögliches `cf_clearance`-Cookie im
+persistenten Profil speichern kann.
+
 ## 2. Über den vorhandenen Cloudflare-Tunnel veröffentlichen
 
 Empfohlener öffentlicher Hostname:

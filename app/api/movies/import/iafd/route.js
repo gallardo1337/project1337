@@ -7,11 +7,13 @@ import {
   IafdError,
   buildIafdSearchUrl,
   fetchIafdHtml,
+  iafdHtmlLooksUnavailable,
   mergeAndRankIafdResults,
   normalizeIafdText,
   parseIafdSearchHtml,
   parseIafdTitleHtml,
   validateIafdPersonUrl,
+  validateIafdSearchUrl,
   validateIafdTitleUrl,
 } from "../../../../../lib/iafd";
 
@@ -22,6 +24,7 @@ export const maxDuration = 75;
 
 const MAX_ACTOR_PROFILES = 2;
 const MAX_QUERY_LENGTH = 180;
+const MAX_BROWSER_HTML_BYTES = 4_000_000;
 const TAG_ALIASES = {
   bathroom: ["bath room"],
   bedroom: ["bed room"],
@@ -107,6 +110,37 @@ function matchTags(pageText, tags) {
     .map((tag) => tag.id);
 }
 
+function browserHtmlFromBody(body, expectedType) {
+  const html = typeof body?.html === "string" ? body.html : "";
+  if (!html.trim()) {
+    throw new IafdError(
+      "Die Browser-Erweiterung hat keine IAFD-Seite übergeben.",
+      "IAFD_BROWSER_HTML_MISSING",
+      400
+    );
+  }
+  if (Buffer.byteLength(html, "utf8") > MAX_BROWSER_HTML_BYTES) {
+    throw new IafdError(
+      "Die übergebene IAFD-Seite ist unerwartet groß.",
+      "IAFD_BROWSER_HTML_TOO_LARGE",
+      413
+    );
+  }
+
+  const pageUrl =
+    expectedType === "search"
+      ? validateIafdSearchUrl(body?.page_url)
+      : validateIafdTitleUrl(body?.page_url);
+  if (iafdHtmlLooksUnavailable(html)) {
+    throw new IafdError(
+      "IAFD zeigt im Browser noch die Sicherheitsprüfung. Bitte dort abschließen.",
+      "IAFD_BROWSER_CHALLENGE",
+      409
+    );
+  }
+  return { html, pageUrl };
+}
+
 async function loadMappingContext(supabase) {
   const [studios, mainActors, supportActors, tags] = await Promise.all([
     supabase.from("studios").select("id,name"),
@@ -186,12 +220,34 @@ async function searchIafd(body) {
   };
 }
 
-async function loadIafdDetails(body, supabase) {
-  const url = validateIafdTitleUrl(body?.url);
-  const [html, context] = await Promise.all([
-    fetchIafdHtml(url, "title"),
-    loadMappingContext(supabase),
-  ]);
+function searchIafdFromBrowser(body) {
+  const query = String(body?.query || "").trim().slice(0, MAX_QUERY_LENGTH);
+  const year = Number(body?.year) || null;
+  if (!query) {
+    throw new IafdError(
+      "Aus dem Dateinamen konnte kein Suchbegriff gebildet werden.",
+      "IAFD_QUERY_MISSING",
+      400
+    );
+  }
+
+  const { html } = browserHtmlFromBody(body, "search");
+  const resultGroups = [
+    parseIafdSearchHtml(html, {
+      query,
+      year,
+      source: "IAFD · Edge/Chrome",
+    }),
+  ];
+  return {
+    query,
+    year,
+    strategy: "browser_title_search",
+    results: mergeAndRankIafdResults(resultGroups, query, year),
+  };
+}
+
+function mapIafdDetails(html, url, context) {
   const details = parseIafdTitleHtml(html, url);
   const studioMatch = bestEntityMatch(details.studio, context.studios, 0.82);
   const mainActorIds = [];
@@ -251,6 +307,21 @@ async function loadIafdDetails(body, supabase) {
   };
 }
 
+async function loadIafdDetails(body, supabase) {
+  const url = validateIafdTitleUrl(body?.url);
+  const [html, context] = await Promise.all([
+    fetchIafdHtml(url, "title"),
+    loadMappingContext(supabase),
+  ]);
+  return mapIafdDetails(html, url, context);
+}
+
+async function loadIafdDetailsFromBrowser(body, supabase) {
+  const { html, pageUrl } = browserHtmlFromBody(body, "title");
+  const context = await loadMappingContext(supabase);
+  return mapIafdDetails(html, pageUrl, context);
+}
+
 export async function POST(request) {
   if (!(await hasLibrarySession())) {
     return json({ error: "Unauthorized" }, { status: 401 });
@@ -261,9 +332,18 @@ export async function POST(request) {
     if (body?.action === "search") {
       return json({ search: await searchIafd(body) });
     }
+    if (body?.action === "search_html") {
+      return json({ search: searchIafdFromBrowser(body) });
+    }
     if (body?.action === "details") {
       const supabase = createServerSupabase();
       return json({ metadata: await loadIafdDetails(body, supabase) });
+    }
+    if (body?.action === "details_html") {
+      const supabase = createServerSupabase();
+      return json({
+        metadata: await loadIafdDetailsFromBrowser(body, supabase),
+      });
     }
     return json({ error: "Unbekannte IAFD-Aktion." }, { status: 400 });
   } catch (error) {

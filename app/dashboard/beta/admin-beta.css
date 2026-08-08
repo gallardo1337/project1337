@@ -5919,13 +5919,111 @@
   letter-spacing: -0.04em;
 }
 
-.adminBeta .importAssistant__iafd > header > a {
+.adminBeta .importAssistant__iafdHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.adminBeta .importAssistant__iafdHeaderActions > span {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.adminBeta .importAssistant__iafdHeaderActions > span.is-ready {
+  color: #73dba6;
+}
+
+.adminBeta .importAssistant__iafdHeaderActions > span.is-missing {
+  color: rgba(255, 198, 109, 0.72);
+}
+
+.adminBeta .importAssistant__iafdHeaderActions > a {
   color: var(--admin-red);
   font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-decoration: none;
   text-transform: uppercase;
+}
+
+.adminBeta .importAssistant__connectorSetup {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.9fr) auto;
+  align-items: center;
+  gap: 28px;
+  padding: 22px 26px;
+  border-bottom: 1px solid rgba(255, 198, 109, 0.2);
+  background: rgba(255, 187, 83, 0.045);
+}
+
+.adminBeta .importAssistant__connectorSetup > div {
+  display: grid;
+  gap: 6px;
+}
+
+.adminBeta .importAssistant__connectorSetup > div > span {
+  color: #ffc66d;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.adminBeta .importAssistant__connectorSetup strong {
+  color: #fff;
+  font-size: 13px;
+}
+
+.adminBeta .importAssistant__connectorSetup p {
+  max-width: 620px;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 9px;
+  line-height: 1.55;
+}
+
+.adminBeta .importAssistant__connectorSetup ol {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.adminBeta .importAssistant__connectorSetup code {
+  color: #fff;
+  font-size: 8px;
+}
+
+.adminBeta .importAssistant__connectorSetup > a,
+.adminBeta .importAssistant__connectorRetry button {
+  display: inline-flex;
+  min-height: 41px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  border: 1px solid rgba(240, 68, 68, 0.42);
+  background: rgba(240, 68, 68, 0.1);
+  color: #fff;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.adminBeta .importAssistant__connectorRetry {
+  display: flex;
+  justify-content: center;
+  padding: 22px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.075);
 }
 
 .adminBeta .importAssistant__iafdLoading {
@@ -6186,7 +6284,8 @@
 
 @media (max-width: 1120px) {
   .adminBeta .importAssistant__source--browser,
-  .adminBeta .importAssistant__iafdApplied {
+  .adminBeta .importAssistant__iafdApplied,
+  .adminBeta .importAssistant__connectorSetup {
     grid-template-columns: 1fr;
   }
 
@@ -6203,7 +6302,8 @@
   }
 
   .adminBeta .importAssistant__iafd > header,
-  .adminBeta .importAssistant__newCast > header {
+  .adminBeta .importAssistant__newCast > header,
+  .adminBeta .importAssistant__iafdHeaderActions {
     align-items: start;
     flex-direction: column;
   }

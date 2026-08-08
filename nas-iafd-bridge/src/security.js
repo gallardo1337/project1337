@@ -104,6 +104,17 @@ export function isBlockedBrowserUrl(value) {
   } catch {
     return true;
   }
+
+  // These schemes do not cause Chromium to contact another host. Cloudflare's
+  // browser challenge may use them for workers and generated resources.
+  if (
+    parsed.protocol === "data:" ||
+    parsed.protocol === "blob:" ||
+    (parsed.protocol === "about:" && parsed.pathname === "blank")
+  ) {
+    return false;
+  }
+
   const hostname = parsed.hostname.toLowerCase();
   return (
     !new Set(["http:", "https:"]).has(parsed.protocol) ||

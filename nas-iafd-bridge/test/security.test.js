@@ -62,4 +62,11 @@ test("blockiert private Browserziele", () => {
   assert.equal(isBlockedBrowserUrl("http://192.168.1.1/"), true);
   assert.equal(isBlockedBrowserUrl("http://nas.local/"), true);
   assert.equal(isBlockedBrowserUrl("https://www.iafd.com/favicon.ico"), false);
+  assert.equal(isBlockedBrowserUrl("about:blank"), false);
+  assert.equal(isBlockedBrowserUrl("data:text/plain,challenge"), false);
+  assert.equal(
+    isBlockedBrowserUrl("blob:https://challenges.cloudflare.com/test"),
+    false
+  );
+  assert.equal(isBlockedBrowserUrl("file:///etc/passwd"), true);
 });
