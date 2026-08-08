@@ -4727,3 +4727,900 @@
     flex-direction: column;
   }
 }
+
+/* -------------------------------------------------------------------------- */
+/* Intelligent Intake: Import-Assistent                                       */
+/* -------------------------------------------------------------------------- */
+
+.adminBeta .importAssistant {
+  display: grid;
+  gap: 22px;
+}
+
+.adminBeta .importAssistant button,
+.adminBeta .importAssistant input,
+.adminBeta .importAssistant select {
+  font: inherit;
+}
+
+.adminBeta .importAssistant__steps {
+  display: grid;
+  min-height: 74px;
+  grid-template-columns: auto minmax(28px, 1fr) auto minmax(28px, 1fr) auto;
+  align-items: center;
+  padding: 0 clamp(18px, 3vw, 34px);
+  border: 1px solid var(--admin-line);
+  background: rgba(10, 10, 11, 0.78);
+}
+
+.adminBeta .importAssistant__steps > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.26);
+}
+
+.adminBeta .importAssistant__steps b {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: inherit;
+  font-size: 9px;
+  font-weight: 850;
+}
+
+.adminBeta .importAssistant__steps span {
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.adminBeta .importAssistant__steps > i {
+  height: 1px;
+  margin: 0 16px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.adminBeta .importAssistant__steps .is-active,
+.adminBeta .importAssistant__steps .is-complete {
+  color: #fff;
+}
+
+.adminBeta .importAssistant__steps .is-active b {
+  border-color: var(--admin-red);
+  background: var(--admin-red);
+  color: #080808;
+}
+
+.adminBeta .importAssistant__steps .is-complete b {
+  border-color: rgba(100, 225, 162, 0.58);
+  color: #73dba6;
+}
+
+.adminBeta .importAssistant__source {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(260px, 0.76fr) minmax(380px, 1.24fr);
+  gap: clamp(28px, 5vw, 84px);
+  padding: clamp(28px, 4vw, 52px);
+  border: 1px solid var(--admin-line);
+  background:
+    linear-gradient(105deg, rgba(240, 68, 68, 0.07), transparent 42%),
+    rgba(9, 9, 10, 0.93);
+  overflow: hidden;
+}
+
+.adminBeta .importAssistant__source::before {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 74px;
+  height: 2px;
+  content: "";
+  background: var(--admin-red);
+}
+
+.adminBeta .importAssistant__eyebrow {
+  display: block;
+  margin-bottom: 12px;
+  color: var(--admin-red);
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.19em;
+  text-transform: uppercase;
+}
+
+.adminBeta .importAssistant__source h2,
+.adminBeta .importAssistant--success h2 {
+  margin: 0;
+  color: #f4f1eb;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(32px, 4vw, 56px);
+  font-weight: 400;
+  line-height: 0.98;
+  letter-spacing: -0.052em;
+}
+
+.adminBeta .importAssistant__source > div > p {
+  max-width: 520px;
+  margin: 18px 0 0;
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.adminBeta .importAssistant__source form {
+  align-self: center;
+}
+
+.adminBeta .importAssistant__source form > label,
+.adminBeta .importAssistant__fields label > span,
+.adminBeta .importAssistant__picker header > div > span {
+  display: block;
+  margin-bottom: 8px;
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 9px;
+  font-weight: 830;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.adminBeta .importAssistant__source form > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.adminBeta .importAssistant__source input,
+.adminBeta .importAssistant__fields :where(input, select),
+.adminBeta .importAssistant__picker input {
+  width: 100%;
+  min-height: 50px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  background: #070708;
+  color: #fff;
+  outline: none;
+}
+
+.adminBeta .importAssistant__source input {
+  padding: 0 16px;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 12px;
+}
+
+.adminBeta .importAssistant__source input:focus,
+.adminBeta .importAssistant__fields :where(input, select):focus,
+.adminBeta .importAssistant__picker input:focus {
+  border-color: rgba(240, 68, 68, 0.76);
+  box-shadow: 0 0 0 1px rgba(240, 68, 68, 0.14);
+}
+
+.adminBeta .importAssistant__source form button,
+.adminBeta .importAssistant__summary > button,
+.adminBeta .importAssistant__successActions .is-primary {
+  display: inline-flex;
+  min-height: 50px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  padding: 0 19px;
+  border: 1px solid var(--admin-red);
+  background: var(--admin-red);
+  color: #080808;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.adminBeta .importAssistant__source form button:hover:not(:disabled),
+.adminBeta .importAssistant__summary > button:hover:not(:disabled),
+.adminBeta .importAssistant__successActions .is-primary:hover {
+  background: #ff5d5d;
+}
+
+.adminBeta .importAssistant button:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
+}
+
+.adminBeta .importAssistant__source form > small {
+  display: block;
+  margin-top: 9px;
+  color: rgba(255, 255, 255, 0.29);
+  font-size: 10px;
+}
+
+.adminBeta .importAssistant__message {
+  padding: 14px 17px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 12px;
+}
+
+.adminBeta .importAssistant__message.is-error {
+  border-color: rgba(240, 68, 68, 0.46);
+  background: rgba(240, 68, 68, 0.08);
+  color: #ff9a9a;
+}
+
+.adminBeta .importAssistant__analysisBar {
+  display: grid;
+  min-height: 76px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 24px;
+  padding: 14px 18px;
+  border: 1px solid var(--admin-line);
+  background: rgba(9, 9, 10, 0.9);
+}
+
+.adminBeta .importAssistant__analysisBar > div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.adminBeta .importAssistant__analysisBar > div > div {
+  display: grid;
+}
+
+.adminBeta .importAssistant__analysisBar strong {
+  color: #fff;
+  font-size: 12px;
+}
+
+.adminBeta .importAssistant__analysisBar small,
+.adminBeta .importAssistant__analysisBar > span {
+  color: rgba(255, 255, 255, 0.38);
+  font-size: 9px;
+}
+
+.adminBeta .importAssistant__pulse {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 50% !important;
+  background: #61dda0;
+  box-shadow: 0 0 18px rgba(97, 221, 160, 0.62);
+}
+
+.adminBeta .importAssistant__analysisBar code {
+  overflow: hidden;
+  padding: 10px 12px;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.57);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.adminBeta .importAssistant__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.48fr) minmax(310px, 0.72fr);
+  align-items: start;
+  gap: 22px;
+}
+
+.adminBeta .importAssistant__editor,
+.adminBeta .importAssistant__review {
+  display: grid;
+  gap: 18px;
+}
+
+.adminBeta .importAssistant__block,
+.adminBeta .importAssistant__picker,
+.adminBeta .importAssistant__review > section,
+.adminBeta .importAssistant__empty,
+.adminBeta .importAssistant--success {
+  border: 1px solid var(--admin-line);
+  background: rgba(9, 9, 10, 0.9);
+}
+
+.adminBeta .importAssistant__block {
+  padding: clamp(22px, 3vw, 34px);
+}
+
+.adminBeta .importAssistant__block > header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 25px;
+}
+
+.adminBeta .importAssistant__block h3,
+.adminBeta .importAssistant__review h3 {
+  margin: 0;
+  color: #f4f1eb;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(25px, 3vw, 36px);
+  font-weight: 400;
+  letter-spacing: -0.04em;
+}
+
+.adminBeta .importAssistant__block > header > small {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 9px;
+}
+
+.adminBeta .importAssistant__fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.adminBeta .importAssistant__fields label.is-wide {
+  grid-column: 1 / -1;
+}
+
+.adminBeta .importAssistant__fields :where(input, select) {
+  padding: 0 14px;
+  color-scheme: dark;
+  font-size: 12px;
+}
+
+.adminBeta .importAssistant__fields label > small {
+  display: block;
+  margin-top: 7px;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 9px;
+}
+
+.adminBeta .importAssistant__picker {
+  overflow: hidden;
+}
+
+.adminBeta .importAssistant__picker > header {
+  display: grid;
+  grid-template-columns: minmax(140px, 0.4fr) minmax(180px, 0.6fr);
+  align-items: center;
+  gap: 18px;
+  padding: 17px 20px;
+  border-bottom: 1px solid var(--admin-line);
+}
+
+.adminBeta .importAssistant__picker header > div > span {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.76);
+}
+
+.adminBeta .importAssistant__picker header > div > small {
+  display: block;
+  margin-top: 3px;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 9px;
+}
+
+.adminBeta .importAssistant__picker input {
+  min-height: 38px;
+  padding: 0 12px;
+  font-size: 10px;
+}
+
+.adminBeta .importAssistant__pickerList {
+  display: flex;
+  max-height: 208px;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 7px;
+  overflow-y: auto;
+  padding: 17px 20px 20px;
+  scrollbar-color: rgba(240, 68, 68, 0.48) transparent;
+  scrollbar-width: thin;
+}
+
+.adminBeta .importAssistant__pickerList button {
+  display: inline-grid;
+  min-height: 34px;
+  grid-template-columns: 18px auto auto;
+  align-items: center;
+  gap: 7px;
+  padding: 0 9px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  background: rgba(255, 255, 255, 0.02);
+  color: rgba(255, 255, 255, 0.58);
+  cursor: pointer;
+}
+
+.adminBeta .importAssistant__pickerList button:hover,
+.adminBeta .importAssistant__pickerList button.is-active {
+  border-color: rgba(240, 68, 68, 0.5);
+  background: rgba(240, 68, 68, 0.08);
+  color: #fff;
+}
+
+.adminBeta .importAssistant__pickerList button i {
+  display: grid;
+  width: 17px;
+  height: 17px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 9px;
+  font-style: normal;
+}
+
+.adminBeta .importAssistant__pickerList button.is-active i {
+  border-color: var(--admin-red);
+  background: var(--admin-red);
+  color: #080808;
+}
+
+.adminBeta .importAssistant__pickerList button > span {
+  font-size: 10px;
+  font-weight: 720;
+}
+
+.adminBeta .importAssistant__pickerList button > small {
+  color: var(--admin-red);
+  font-size: 7px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.adminBeta .importAssistant__pickerList > p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 11px;
+}
+
+.adminBeta .importAssistant__review {
+  position: sticky;
+  top: 112px;
+}
+
+.adminBeta .importAssistant__review > section {
+  padding: 22px;
+}
+
+.adminBeta .importAssistant__review h3 {
+  font-size: 27px;
+}
+
+.adminBeta .importAssistant__findings {
+  display: grid;
+  gap: 0;
+  margin-top: 18px;
+}
+
+.adminBeta .importAssistant__findings > div {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  padding: 9px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.065);
+  color: rgba(255, 255, 255, 0.57);
+  font-size: 10px;
+}
+
+.adminBeta .importAssistant__findings i {
+  display: grid;
+  width: 17px;
+  height: 17px;
+  place-items: center;
+  border: 1px solid rgba(97, 221, 160, 0.42);
+  color: #73dba6;
+  font-size: 8px;
+  font-style: normal;
+}
+
+.adminBeta .importAssistant__findings .is-warning i {
+  border-color: rgba(255, 187, 83, 0.5);
+  color: #ffc66d;
+}
+
+.adminBeta .importAssistant__duplicates {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.adminBeta .importAssistant__duplicate {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid rgba(255, 187, 83, 0.24);
+  background: rgba(255, 187, 83, 0.035);
+}
+
+.adminBeta .importAssistant__duplicate.is-blocking {
+  border-color: rgba(240, 68, 68, 0.4);
+  background: rgba(240, 68, 68, 0.06);
+}
+
+.adminBeta .importAssistant__duplicateCover {
+  display: grid;
+  aspect-ratio: 16 / 9;
+  place-items: center;
+  align-self: start;
+  overflow: hidden;
+  background: #111;
+  color: rgba(255, 255, 255, 0.34);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 23px;
+}
+
+.adminBeta .importAssistant__duplicateCover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.adminBeta .importAssistant__duplicate > div:last-child {
+  display: grid;
+  min-width: 0;
+}
+
+.adminBeta .importAssistant__duplicate small {
+  color: #ffc66d;
+  font-size: 7px;
+  font-weight: 850;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.adminBeta .importAssistant__duplicate.is-blocking small {
+  color: #ff7777;
+}
+
+.adminBeta .importAssistant__duplicate strong {
+  overflow: hidden;
+  margin-top: 2px;
+  color: #fff;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.adminBeta .importAssistant__duplicate span,
+.adminBeta .importAssistant__duplicate p {
+  color: rgba(255, 255, 255, 0.36);
+  font-size: 8px;
+}
+
+.adminBeta .importAssistant__duplicate p {
+  margin: 5px 0 0;
+  line-height: 1.45;
+}
+
+.adminBeta .importAssistant__allClear {
+  margin: 16px 0 0;
+  padding: 13px;
+  border: 1px solid rgba(97, 221, 160, 0.18);
+  background: rgba(97, 221, 160, 0.035);
+  color: rgba(160, 239, 199, 0.68);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.adminBeta .importAssistant__duplicateConfirm {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 10px;
+  margin-top: 14px;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 10px;
+  line-height: 1.45;
+  cursor: pointer;
+}
+
+.adminBeta .importAssistant__duplicateConfirm input {
+  width: 15px;
+  height: 15px;
+  margin: 1px 0 0;
+  accent-color: var(--admin-red);
+}
+
+.adminBeta .importAssistant__summary {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(145deg, rgba(240, 68, 68, 0.11), transparent 55%),
+    rgba(9, 9, 10, 0.96) !important;
+}
+
+.adminBeta .importAssistant__summary::before {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 58px;
+  height: 2px;
+  content: "";
+  background: var(--admin-red);
+}
+
+.adminBeta .importAssistant__summary dl {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  margin: 20px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.adminBeta .importAssistant__summary dl > div {
+  display: grid;
+  gap: 4px;
+  padding: 11px;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.adminBeta .importAssistant__summary dt {
+  color: rgba(255, 255, 255, 0.32);
+  font-size: 7px;
+  font-weight: 850;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.adminBeta .importAssistant__summary dd {
+  overflow: hidden;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.adminBeta .importAssistant__summary > button {
+  width: 100%;
+}
+
+.adminBeta .importAssistant__summary > small {
+  display: block;
+  margin-top: 10px;
+  color: rgba(255, 255, 255, 0.28);
+  font-size: 8px;
+  line-height: 1.45;
+}
+
+.adminBeta .importAssistant__summary > small.is-blocked {
+  color: #ff7777;
+}
+
+.adminBeta .importAssistant__empty {
+  display: grid;
+  min-height: 300px;
+  place-items: center;
+  align-content: center;
+  padding: 36px;
+  text-align: center;
+}
+
+.adminBeta .importAssistant__empty > div {
+  display: grid;
+  width: 86px;
+  height: 58px;
+  place-items: center;
+  margin-bottom: 18px;
+  border: 1px solid rgba(240, 68, 68, 0.32);
+  background: rgba(240, 68, 68, 0.035);
+  color: var(--admin-red);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 19px;
+  letter-spacing: -0.03em;
+}
+
+.adminBeta .importAssistant__empty > span {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 12px;
+  font-weight: 780;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.adminBeta .importAssistant__empty p {
+  max-width: 500px;
+  margin: 10px 0;
+  color: rgba(255, 255, 255, 0.36);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.adminBeta .importAssistant__empty small {
+  color: rgba(255, 255, 255, 0.22);
+  font-size: 9px;
+}
+
+.adminBeta .importAssistant--success {
+  position: relative;
+  min-height: 560px;
+  align-content: center;
+  justify-items: center;
+  overflow: hidden;
+  padding: clamp(38px, 7vw, 90px);
+  text-align: center;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(97, 221, 160, 0.085), transparent 24rem),
+    rgba(9, 9, 10, 0.95);
+}
+
+.adminBeta .importAssistant--success::before {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background: linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+  background-size: 36px 36px;
+  pointer-events: none;
+}
+
+.adminBeta .importAssistant__successMark {
+  display: grid;
+  width: 62px;
+  height: 62px;
+  place-items: center;
+  margin-bottom: 20px;
+  border: 1px solid rgba(97, 221, 160, 0.55);
+  color: #73dba6;
+  font-size: 24px;
+  box-shadow: 0 0 45px rgba(97, 221, 160, 0.1);
+}
+
+.adminBeta .importAssistant--success > p {
+  max-width: 590px;
+  margin: 18px auto 0;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.adminBeta .importAssistant__successFacts {
+  display: grid;
+  width: min(100%, 560px);
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 30px;
+  border-top: 1px solid var(--admin-line);
+  border-bottom: 1px solid var(--admin-line);
+}
+
+.adminBeta .importAssistant__successFacts > div {
+  display: grid;
+  gap: 4px;
+  padding: 16px;
+  border-right: 1px solid var(--admin-line);
+}
+
+.adminBeta .importAssistant__successFacts > div:last-child {
+  border-right: 0;
+}
+
+.adminBeta .importAssistant__successFacts span {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.adminBeta .importAssistant__successFacts strong {
+  color: #fff;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 20px;
+  font-weight: 400;
+}
+
+.adminBeta .importAssistant__successActions {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 26px;
+}
+
+.adminBeta .importAssistant__successActions button {
+  min-height: 48px;
+  padding: 0 17px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 9px;
+  font-weight: 820;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.adminBeta .importAssistant__successActions button:hover {
+  border-color: rgba(255, 255, 255, 0.36);
+  color: #fff;
+}
+
+@media (max-width: 1220px) {
+  .adminBeta .importAssistant__layout {
+    grid-template-columns: minmax(0, 1.25fr) minmax(290px, 0.75fr);
+  }
+}
+
+@media (max-width: 980px) {
+  .adminBeta .importAssistant__source,
+  .adminBeta .importAssistant__layout {
+    grid-template-columns: 1fr;
+  }
+
+  .adminBeta .importAssistant__review {
+    position: static;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .adminBeta .importAssistant__review .importAssistant__summary {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 680px) {
+  .adminBeta .importAssistant__steps {
+    min-height: 62px;
+    padding: 0 12px;
+  }
+
+  .adminBeta .importAssistant__steps span {
+    display: none;
+  }
+
+  .adminBeta .importAssistant__steps > i {
+    margin: 0 9px;
+  }
+
+  .adminBeta .importAssistant__source {
+    padding: 24px 18px;
+  }
+
+  .adminBeta .importAssistant__source form > div,
+  .adminBeta .importAssistant__review,
+  .adminBeta .importAssistant__fields,
+  .adminBeta .importAssistant__picker > header {
+    grid-template-columns: 1fr;
+  }
+
+  .adminBeta .importAssistant__source form button {
+    width: 100%;
+  }
+
+  .adminBeta .importAssistant__analysisBar {
+    grid-template-columns: 1fr auto;
+    gap: 9px;
+  }
+
+  .adminBeta .importAssistant__analysisBar code {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-left: 0;
+  }
+
+  .adminBeta .importAssistant__fields label.is-wide,
+  .adminBeta .importAssistant__review .importAssistant__summary {
+    grid-column: 1;
+  }
+
+  .adminBeta .importAssistant__successFacts {
+    grid-template-columns: 1fr;
+  }
+
+  .adminBeta .importAssistant__successFacts > div {
+    border-right: 0;
+    border-bottom: 1px solid var(--admin-line);
+  }
+
+  .adminBeta .importAssistant__successFacts > div:last-child {
+    border-bottom: 0;
+  }
+
+  .adminBeta .importAssistant__successActions {
+    display: grid;
+    width: 100%;
+  }
+
+  .adminBeta .importAssistant__successActions button {
+    width: 100%;
+  }
+}

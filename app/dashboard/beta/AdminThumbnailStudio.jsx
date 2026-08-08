@@ -404,6 +404,7 @@ export default function AdminThumbnailStudio({
   movies,
   studioMap,
   resolutionMap,
+  initialMovieId,
   onThumbnailSaved,
   onEditMovie,
   onUnauthorized,
@@ -507,9 +508,12 @@ export default function AdminThumbnailStudio({
       return;
     }
 
-    const preferred = movies.find((movie) => !movie.thumbnail_url) || movies[0];
+    const preferred =
+      movies.find((movie) => movie.id === initialMovieId) ||
+      movies.find((movie) => !movie.thumbnail_url) ||
+      movies[0];
     setSelectedMovieId(preferred?.id || null);
-  }, [movies, selectedMovieId]);
+  }, [initialMovieId, movies, selectedMovieId]);
 
   useEffect(() => {
     clearLocalSource();

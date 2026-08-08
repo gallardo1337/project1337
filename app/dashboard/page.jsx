@@ -7,6 +7,18 @@ import dynamic from "next/dynamic";
 import AdminBetaOverview from "./beta/AdminBetaOverview.jsx";
 import AdminMediaHealth from "./beta/AdminMediaHealth.jsx";
 
+const AdminImportAssistant = dynamic(
+  () => import("./beta/AdminImportAssistant.jsx"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="text-xs text-neutral-500">
+        Lade Import-Assistent…
+      </div>
+    ),
+  }
+);
+
 const AdminHomepageDirector = dynamic(
   () => import("./beta/AdminHomepageDirector.jsx"),
   {
@@ -80,6 +92,17 @@ function normalizeMovieFileUrl(value) {
 // -------------------------------
 
 const CHANGELOG = [
+  {
+    version: "2.4.0",
+    date: "2026-08-08",
+    items: [
+      "Intelligenten Import-Assistenten als neuen Admin-v2-Arbeitsbereich hinzugefügt",
+      "MP4-Pfade werden vereinheitlicht, vollständig validiert und auf bestehende Dateipfade geprüft",
+      "Titel, Jahr, Qualität, Studio, Cast und Tags werden aus dem Pfad vorgeschlagen und bleiben editierbar",
+      "Mögliche Titel-Duplikate können nach Sichtprüfung bestätigt werden; identische Dateipfade bleiben blockiert",
+      "Nach erfolgreichem Import kann der neue Film direkt im Thumbnail Studio oder Editor geöffnet werden",
+    ],
+  },
   {
     version: "2.3.2",
     date: "2026-08-08",
@@ -338,6 +361,12 @@ const AdminNavIcon = ({ name }) => {
         <path d="m5 17 4.5-4.5 3 3 2.5-2.5 4 4" />
       </>
     ),
+    import: (
+      <>
+        <path d="M5 3h9l5 5v13H5z" />
+        <path d="M14 3v5h5M8 14h8M12 10v8M9 5h2" />
+      </>
+    ),
     director: (
       <>
         <path d="M4 6h16M4 12h16M4 18h16" />
@@ -430,6 +459,7 @@ export function DashboardExperience({ beta = false }) {
   const [resolutions, setResolutions] = useState([]);
   const [movieMetrics, setMovieMetrics] = useState([]);
   const [resettingViews, setResettingViews] = useState(null);
+  const [thumbnailTargetId, setThumbnailTargetId] = useState(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -1818,18 +1848,21 @@ export function DashboardExperience({ beta = false }) {
     { key: "stats", label: "Filmarchiv", icon: "movies", section: "stats", count: filme.length },
     { key: "health", label: "Medienprüfung", icon: "health", section: "health" },
     { key: "thumbnails", label: "Thumbnail Studio", icon: "thumbnail", section: "thumbnails" },
+    { key: "import", label: "Import-Assistent", icon: "import", section: "import" },
     { key: "new", label: editingFilmId ? "Film bearbeiten" : "Film hinzufügen", icon: "add", section: "new" },
     { key: "mainActors", label: "Hauptdarsteller", icon: "mainActors", section: "meta", meta: "mainActors", count: hauptdarsteller.length },
     { key: "supportActors", label: "Nebendarsteller", icon: "supportActors", section: "meta", meta: "supportActors", count: nebendarsteller.length },
     { key: "studios", label: "Studios", icon: "studios", section: "meta", meta: "studios", count: studios.length },
     { key: "tags", label: "Tags", icon: "tags", section: "meta", meta: "tags", count: tags.length },
   ];
+  const betaWorkspaceItems = betaNavItems.filter((item) => !item.meta);
+  const betaMetadataItems = betaNavItems.filter((item) => item.meta);
 
   const BetaSidebarContent = (
     <nav className="adminBetaRail" aria-label="Adminbereiche">
       <div className="adminBetaRail__group">
         <span className="adminBetaRail__label">Arbeitsbereich</span>
-        {betaNavItems.slice(0, 6).map((item) => {
+        {betaWorkspaceItems.map((item) => {
           const active = activeFilmSection === item.section;
           return (
             <button
@@ -1848,7 +1881,7 @@ export function DashboardExperience({ beta = false }) {
 
       <div className="adminBetaRail__group">
         <span className="adminBetaRail__label">Stammdaten</span>
-        {betaNavItems.slice(6).map((item) => {
+        {betaMetadataItems.map((item) => {
           const active =
             activeFilmSection === "meta" && activeMetaSection === item.meta;
           return (
@@ -1899,6 +1932,13 @@ export function DashboardExperience({ beta = false }) {
           title: "Thumbnail Studio",
           description:
             "Filmszenen erfassen, automatisch Varianten erzeugen und das beste 16:9-Cover direkt speichern.",
+        }
+      : activeFilmSection === "import"
+      ? {
+          eyebrow: "Intelligent Intake / Neuer Film",
+          title: "Import-Assistent",
+          description:
+            "Videopfad prüfen, Metadaten erkennen, Duplikate abgleichen und den fertigen Eintrag kontrolliert anlegen.",
         }
       : activeFilmSection === "stats"
       ? {
@@ -2697,6 +2737,7 @@ export function DashboardExperience({ beta = false }) {
                       movies={filme}
                       studioMap={studioMap}
                       resolutionMap={resolutionMap}
+                      initialMovieId={thumbnailTargetId}
                       onThumbnailSaved={(movieId, thumbnailUrl) =>
                         setFilme((current) =>
                           current.map((movie) =>
@@ -2707,6 +2748,29 @@ export function DashboardExperience({ beta = false }) {
                         )
                       }
                       onEditMovie={handleEditFilm}
+                      onUnauthorized={handleSessionExpired}
+                    />
+                  ) : null}
+
+                  {beta && activeFilmSection === "import" ? (
+                    <AdminImportAssistant
+                      movies={filme}
+                      studios={studios}
+                      mainActors={hauptdarsteller}
+                      supportActors={nebendarsteller}
+                      tags={tags}
+                      resolutions={resolutions}
+                      onMovieImported={(movie) =>
+                        setFilme((current) => [
+                          movie,
+                          ...current.filter((item) => item.id !== movie.id),
+                        ])
+                      }
+                      onEditMovie={handleEditFilm}
+                      onOpenThumbnailStudio={(movie) => {
+                        setThumbnailTargetId(movie.id);
+                        openAdminView("thumbnails");
+                      }}
                       onUnauthorized={handleSessionExpired}
                     />
                   ) : null}
