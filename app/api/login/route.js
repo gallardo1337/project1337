@@ -1,4 +1,16 @@
 import { NextResponse } from "next/server";
+import { hasLibrarySession } from "../../../lib/serverSupabase";
+
+export const dynamic = "force-dynamic";
+
+export async function GET() {
+  const authenticated = await hasLibrarySession();
+
+  return NextResponse.json(
+    { ok: authenticated },
+    { headers: { "Cache-Control": "no-store" } }
+  );
+}
 
 export async function POST(req) {
   try {

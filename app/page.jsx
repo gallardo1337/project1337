@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabaseClient"; // app/page.jsx -> ../lib/supabaseClient
+import BetaExperience from "./beta/BetaExperience";
 
 function Pill({ children }) {
   return <span className="pill">{children}</span>;
@@ -1126,8 +1127,10 @@ function ActorHero({ actor, movieCount, movies: actorMovies = [] }) {
   );
 }
 
-export default function HomePage() {
+export default function HomePage({ basePath = "/", version = "v2" }) {
   const router = useRouter();
+  const rootUrl = basePath === "/" ? "/" : basePath.replace(/\/$/, "");
+  const isBeta = version === "v2";
 
   const [movies, setMovies] = useState([]);
   const [actors, setActors] = useState([]);
@@ -1254,6 +1257,7 @@ export default function HomePage() {
           studiosRes,
           tagsRes,
           resolutionsRes,
+          metricsResponse,
         ] = await Promise.all([
           supabase.from("movies").select("*"),
           supabase.from("actors").select("*"),
@@ -1261,6 +1265,9 @@ export default function HomePage() {
           supabase.from("studios").select("*"),
           supabase.from("tags").select("*"),
           supabase.from("resolutions").select("*"),
+          isBeta
+            ? fetch("/api/movie-metrics", { cache: "no-store" }).catch(() => null)
+            : Promise.resolve(null),
         ]);
 
         if (moviesRes.error) throw moviesRes.error;
@@ -1276,6 +1283,14 @@ export default function HomePage() {
         const studios = studiosRes.data || [];
         const tags = tagsRes.data || [];
         const resolutions = resolutionsRes.data || [];
+        const metricsPayload = metricsResponse?.ok
+          ? await metricsResponse.json()
+          : { metrics: [] };
+        const metricsByMovieId = new Map(
+          (Array.isArray(metricsPayload?.metrics) ? metricsPayload.metrics : []).map(
+            (metric) => [String(metric.movie_id), metric]
+          )
+        );
 
         const mainActorById = Object.fromEntries(
           mainActors.map((a) => [a.id, a])
@@ -1292,6 +1307,7 @@ export default function HomePage() {
         );
 
         const mappedMovies = (moviesData || []).map((m) => {
+          const metric = metricsByMovieId.get(String(m.id));
           const mainIds = Array.isArray(m.main_actor_ids) ? m.main_actor_ids : [];
           const supportIds = Array.isArray(m.supporting_actor_ids)
             ? m.supporting_actor_ids
@@ -1327,6 +1343,11 @@ export default function HomePage() {
             resolution: resolutionName,
             thumbnailUrl: m.thumbnail_url || null,
             addedAt: m.created_at || m.inserted_at || m.createdAt || null,
+            rating:
+              metric?.rating != null && Number.isInteger(Number(metric.rating))
+                ? Number(metric.rating)
+                : null,
+            viewCount: Math.max(0, Number(metric?.view_count) || 0),
             actors: allActors,
             tags: tagNames,
             mainActorIds: mainIds,
@@ -1413,7 +1434,7 @@ export default function HomePage() {
             if (isUuid(actorParam) && actor.slug) {
               const sp = new URLSearchParams(window.location.search || "");
               sp.set("actor", actor.slug);
-              router.replace(`/?${sp.toString()}`, { scroll: false });
+              router.replace(`${rootUrl}?${sp.toString()}`, { scroll: false });
             }
 
             setSelectedActor(actor);
@@ -1447,7 +1468,7 @@ export default function HomePage() {
     };
 
     void load();
-  }, [loggedIn, router]);
+  }, [isBeta, loggedIn, rootUrl, router]);
 
   const allTags = useMemo(() => {
     const set = new Set();
@@ -1598,6 +1619,27 @@ export default function HomePage() {
         return (getQualityRank(b) - getQualityRank(a)) || (getAddedTime(b) - getAddedTime(a)) || String(a.title || "").localeCompare(String(b.title || ""), "de", { sensitivity: "base" });
       }
 
+      if (movieSort === "views_desc") {
+        return (
+          (Math.max(0, Number(b.viewCount) || 0) - Math.max(0, Number(a.viewCount) || 0)) ||
+          (getAddedTime(b) - getAddedTime(a)) ||
+          String(a.title || "").localeCompare(String(b.title || ""), "de", { sensitivity: "base" })
+        );
+      }
+
+      if (movieSort === "rating_desc") {
+        const rawRatingA = Number(a.rating);
+        const rawRatingB = Number(b.rating);
+        const ratingA = Number.isInteger(rawRatingA) && rawRatingA >= 1 && rawRatingA <= 10 ? rawRatingA : -1;
+        const ratingB = Number.isInteger(rawRatingB) && rawRatingB >= 1 && rawRatingB <= 10 ? rawRatingB : -1;
+        return (
+          (ratingB - ratingA) ||
+          (Math.max(0, Number(b.viewCount) || 0) - Math.max(0, Number(a.viewCount) || 0)) ||
+          (getAddedTime(b) - getAddedTime(a)) ||
+          String(a.title || "").localeCompare(String(b.title || ""), "de", { sensitivity: "base" })
+        );
+      }
+
       return (getAddedTime(b) - getAddedTime(a)) || String(a.title || "").localeCompare(String(b.title || ""), "de", { sensitivity: "base" });
     });
 
@@ -1607,7 +1649,7 @@ export default function HomePage() {
   const handleShowMoviesForActor = (actorId, actorName, actorSlug) => {
     const actor = actors.find((a) => String(a.id) === String(actorId)) || null;
     const urlVal = actorSlug ? actorSlug : actorId;
-    router.replace(`/?actor=${encodeURIComponent(urlVal)}`, { scroll: false });
+    router.replace(`${rootUrl}?actor=${encodeURIComponent(urlVal)}`, { scroll: false });
 
     requestAnimationFrame(() => {
       window.scrollTo(0, 0);
@@ -1640,7 +1682,7 @@ export default function HomePage() {
         setSelectedMovieId(null);
         setViewMode("movies");
       } else {
-        router.replace("/", { scroll: false });
+        router.replace(rootUrl, { scroll: false });
         setSelectedActor(null);
         setSelectedMovieId(null);
         setViewMode("actors");
@@ -1651,7 +1693,7 @@ export default function HomePage() {
       return;
     }
 
-    router.replace("/", { scroll: false });
+    router.replace(rootUrl, { scroll: false });
 
     const q = trimmed.toLowerCase();
     const raw = movies.filter((movie) => {
@@ -1677,7 +1719,7 @@ export default function HomePage() {
   };
 
   const handleBackToActors = () => {
-    router.replace("/", { scroll: false });
+    router.replace(rootUrl, { scroll: false });
     setViewMode("actors");
     setSelectedActor(null);
     setSelectedMovieId(null);
@@ -1686,8 +1728,22 @@ export default function HomePage() {
     setMoviesSubtitle("");
   };
 
+  const handleShowAllActors = () => {
+    router.replace(rootUrl, { scroll: false });
+    setViewMode("actors_all");
+    setSelectedActor(null);
+    setSelectedMovieId(null);
+    setVisibleMovies([]);
+    setMoviesTitle("Filme");
+    setMoviesSubtitle("");
+
+    requestAnimationFrame(() => {
+      window.scrollTo(0, 0);
+    });
+  };
+
   const handleSwitchToMovies = () => {
-    router.replace("/", { scroll: false });
+    router.replace(rootUrl, { scroll: false });
     const filtered = applyAdvancedFilters(movies);
     setSelectedActor(null);
     setSelectedMovieId(null);
@@ -1743,7 +1799,7 @@ export default function HomePage() {
       window.localStorage.removeItem("auth_1337_flag");
       window.localStorage.removeItem("auth_1337_user");
     }
-    router.replace("/", { scroll: false });
+    router.replace(rootUrl, { scroll: false });
     setLoggedIn(false);
     setSearch("");
     setSelectedActor(null);
@@ -1777,7 +1833,7 @@ export default function HomePage() {
   const applyFiltersNow = () => {
     if (search.trim()) handleSearchChange(search);
     else {
-      router.replace("/", { scroll: false });
+      router.replace(rootUrl, { scroll: false });
       const filtered = applyAdvancedFilters(movies);
       setSelectedActor(null);
       setViewMode("movies");
@@ -1854,12 +1910,65 @@ export default function HomePage() {
     document.title = "Home | my1337.de";
   }, [selectedMovie?.title, selectedActor?.name, viewMode]);
 
+  const patchMovieMetric = (movieId, patch) => {
+    const matchesMovie = (movie) => String(movie.id) === String(movieId);
+    const patchList = (list) =>
+      list.map((movie) => (matchesMovie(movie) ? { ...movie, ...patch } : movie));
+
+    setMovies((previous) => patchList(previous));
+    setVisibleMovies((previous) => patchList(previous));
+  };
+
+  const handleRateMovie = async (movieId, rating) => {
+    const response = await fetch(
+      `/api/movie-metrics/${encodeURIComponent(movieId)}/rating`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rating }),
+      }
+    );
+    const payload = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(
+        response.status === 401
+          ? "Bitte melde dich erneut an."
+          : payload?.error || "Bewertung konnte nicht gespeichert werden."
+      );
+    }
+
+    const nextRating = Number(payload?.metric?.rating);
+    patchMovieMetric(movieId, { rating: nextRating });
+    return nextRating;
+  };
+
+  const handleRecordMovieView = async (movieId) => {
+    const response = await fetch(
+      `/api/movie-metrics/${encodeURIComponent(movieId)}/view`,
+      { method: "POST" }
+    );
+    const payload = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(
+        response.status === 401
+          ? "Bitte melde dich erneut an."
+          : payload?.error || "Aufruf konnte nicht gespeichert werden."
+      );
+    }
+
+    const nextViewCount = Math.max(0, Number(payload?.view_count) || 0);
+    patchMovieMetric(movieId, { viewCount: nextViewCount });
+    return nextViewCount;
+  };
+
   const handleOpenMovie = (movie) => {
     if (!movie?.id) return;
 
     const sp = new URLSearchParams();
     sp.set("movie", String(movie.id));
-    router.replace(`/?${sp.toString()}`, { scroll: false });
+    router.replace(`${rootUrl}?${sp.toString()}`, { scroll: false });
     setSelectedMovieId(String(movie.id));
 
     requestAnimationFrame(() => {
@@ -1872,9 +1981,9 @@ export default function HomePage() {
 
     if (selectedActor) {
       const urlVal = selectedActor.slug ? selectedActor.slug : selectedActor.id;
-      router.replace(`/?actor=${encodeURIComponent(urlVal)}`, { scroll: false });
+      router.replace(`${rootUrl}?actor=${encodeURIComponent(urlVal)}`, { scroll: false });
     } else {
-      router.replace("/", { scroll: false });
+      router.replace(rootUrl, { scroll: false });
     }
 
     requestAnimationFrame(() => {
@@ -1914,8 +2023,73 @@ export default function HomePage() {
       </select>
   );
 
+  if (isBeta) {
+    return (
+      <BetaExperience
+        movies={movies}
+        actors={actors}
+        selectedActor={selectedActor}
+        selectedMovie={selectedMovie}
+        selectedMovieId={selectedMovieId}
+        movieList={movieList}
+        viewMode={viewMode}
+        moviesTitle={moviesTitle}
+        moviesSubtitle={moviesSubtitle}
+        movieSort={movieSort}
+        setMovieSort={setMovieSort}
+        search={search}
+        loggedIn={loggedIn}
+        loading={loading}
+        error={err}
+        loginError={loginErr}
+        loginUser={loginUser}
+        loginPassword={loginPassword}
+        loginLoading={loginLoading}
+        setLoginUser={setLoginUser}
+        setLoginPassword={setLoginPassword}
+        onLogin={handleLogin}
+        onLogout={handleLogout}
+        onDiscover={handleBackToActors}
+        onShowActors={handleShowAllActors}
+        onShowMovies={handleSwitchToMovies}
+        onShowActor={handleShowMoviesForActor}
+        onOpenMovie={handleOpenMovie}
+        onCloseMovie={handleCloseMovie}
+        onRateMovie={handleRateMovie}
+        onRecordMovieView={handleRecordMovieView}
+        onSearch={handleSearchChange}
+        onDashboard={() => safeOpen("/dashboard/v2")}
+        onOpenArchive={() => safeOpen("/v1")}
+        filtersOpen={filtersOpen}
+        setFiltersOpen={setFiltersOpen}
+        hasAnyFilter={hasAnyFilter}
+        onApplyFilters={applyFiltersNow}
+        onResetFilters={resetFilters}
+        allTags={allTags}
+        allStudios={allStudios}
+        allResolutions={allResolutions}
+        mainActorOptions={mainActorOptions}
+        supportingActorOptions={supportingActorOptions}
+        selectedTags={selectedTags}
+        selectedStudio={selectedStudio}
+        selectedResolution={selectedResolution}
+        yearFrom={yearFrom}
+        yearTo={yearTo}
+        selectedMainActors={selectedMainActors}
+        selectedSupportingActors={selectedSupportingActors}
+        setSelectedStudio={setSelectedStudio}
+        setSelectedResolution={setSelectedResolution}
+        setYearFrom={setYearFrom}
+        setYearTo={setYearTo}
+        onToggleTag={toggleTag}
+        onToggleMainActor={toggleMainActor}
+        onToggleSupportingActor={toggleSupportingActor}
+      />
+    );
+  }
+
   return (
-    <div className="nfx">
+    <div className={`nfx ${isBeta ? "nfx--redesign" : ""}`}>
       <style jsx global>{`
         :root {
           --bg: #0b0b0f;
@@ -4037,6 +4211,82 @@ export default function HomePage() {
         }
       `}</style>
 
+      {isBeta ? (
+        <aside className="betaRail" aria-label="v2-Navigation">
+          <button
+            type="button"
+            className="betaRail__brand"
+            onClick={handleBackToActors}
+            title="Zur v2-Startseite"
+            aria-label="Zur v2-Startseite"
+          >
+            <img src="/logo.png" alt="" aria-hidden="true" />
+          </button>
+
+          <nav className="betaRail__nav" aria-label="Bibliothek">
+            <button
+              type="button"
+              className={`betaRail__item ${
+                viewMode === "actors" && !selectedMovieId
+                  ? "betaRail__item--active"
+                  : ""
+              }`}
+              onClick={handleBackToActors}
+              disabled={!loggedIn}
+            >
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path
+                  d="M8.5 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM15.5 10a3 3 0 1 0 0-6"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M2.5 20c.4-4 2.4-6 6-6s5.6 2 6 6M14 14c4.2-.4 6.7 1.6 7.5 5.5"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
+              </svg>
+              <span>Darsteller</span>
+            </button>
+
+            <button
+              type="button"
+              className={`betaRail__item ${
+                viewMode === "movies" && !selectedActor
+                  ? "betaRail__item--active"
+                  : ""
+              }`}
+              onClick={handleSwitchToMovies}
+              disabled={!loggedIn}
+            >
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <rect
+                  x="3"
+                  y="5"
+                  width="18"
+                  height="14"
+                  rx="3"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                />
+                <path
+                  d="m10 9 5 3-5 3V9Z"
+                  fill="currentColor"
+                />
+              </svg>
+              <span>Filme</span>
+            </button>
+          </nav>
+
+          <div className="betaRail__status">
+            <span aria-hidden="true" />
+            <strong>v2</strong>
+          </div>
+        </aside>
+      ) : null}
+
       <div className="topbar">
         <div className="topbar__left">
           <a
@@ -4701,24 +4951,89 @@ export default function HomePage() {
       ) : null}
 
       <div className="wrap">
-        <div className="logoSolo">
-          <button
-            type="button"
-            className="logoBtn"
-            onClick={() => {
-              router.replace("/", { scroll: false });
-              setViewMode("actors");
-              setSelectedActor(null);
-              setSelectedMovieId(null);
-              setVisibleMovies([]);
-              setSearch("");
-            }}
-            title="Zur Hauptseite"
-            aria-label="Zur Hauptseite"
-          >
-            <img className="logoSolo__img" src="/logo.png" alt="Project1337 Logo" />
-          </button>
-        </div>
+        {isBeta && !selectedMovieId && !selectedActor && viewMode === "actors" ? (
+          <section className="betaHero" aria-label="Project1337 v2">
+            <div className="betaHero__copy">
+              <div className="betaHero__eyebrow">
+                <span aria-hidden="true" />
+                Private Cinema · Redesign 2026
+              </div>
+
+              <h1>
+                Deine Library.
+                <em>Neu inszeniert.</em>
+              </h1>
+
+              <p>
+                Eine neue, fokussierte Oberfläche für deine persönliche
+                Sammlung – schneller entdecken, klarer filtern und direkt
+                abspielen.
+              </p>
+
+              {loggedIn ? (
+                <>
+                  <div className="betaHero__actions">
+                    <button
+                      type="button"
+                      className="btn btn--primary betaHero__primary"
+                      onClick={handleSwitchToMovies}
+                    >
+                      Alle Filme ansehen
+                    </button>
+                    <span>Persönlich kuratiert</span>
+                  </div>
+
+                  <div className="betaHero__stats" aria-label="Bibliothek-Statistik">
+                    <div>
+                      <strong>{movies.length}</strong>
+                      <span>Filme</span>
+                    </div>
+                    <div>
+                      <strong>{actors.length}</strong>
+                      <span>Hauptdarsteller</span>
+                    </div>
+                    <div>
+                      <strong>{allStudios.length}</strong>
+                      <span>Studios</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="betaHero__locked">
+                  <span aria-hidden="true">●</span>
+                  Private Sammlung · Login erforderlich
+                </div>
+              )}
+            </div>
+
+            <div className="betaHero__visual" aria-hidden="true">
+              <div className="betaHero__orbit betaHero__orbit--one" />
+              <div className="betaHero__orbit betaHero__orbit--two" />
+              <div className="betaHero__halo" />
+              <img src="/logo.png" alt="" />
+              <div className="betaHero__edition">KH7 · EDITION 02</div>
+            </div>
+          </section>
+        ) : !isBeta ? (
+          <div className="logoSolo">
+            <button
+              type="button"
+              className="logoBtn"
+              onClick={() => {
+                router.replace(rootUrl, { scroll: false });
+                setViewMode("actors");
+                setSelectedActor(null);
+                setSelectedMovieId(null);
+                setVisibleMovies([]);
+                setSearch("");
+              }}
+              title="Zur Hauptseite"
+              aria-label="Zur Hauptseite"
+            >
+              <img className="logoSolo__img" src="/logo.png" alt="Project1337 Logo" />
+            </button>
+          </div>
+        ) : null}
 
         {loginErr ? <div className="errorBanner">{loginErr}</div> : null}
         {err ? <div className="errorBanner">{err}</div> : null}
