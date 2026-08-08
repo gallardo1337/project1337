@@ -3,6 +3,7 @@ import {
   createServerSupabase,
   hasLibrarySession,
 } from "../../../../lib/serverSupabase";
+import { validateIafdTitleUrl } from "../../../../lib/iafd";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -272,10 +273,13 @@ function findDuplicates(movies, { fileUrl, title, year }) {
     .slice(0, 6);
 }
 
-function suggestResolution(resolutions, pathText) {
-  const wanted = /\b(2160p?|4k|uhd)\b/.test(pathText)
+function suggestResolution(resolutions, pathText, technical = {}) {
+  const height = Number(technical?.height) || 0;
+  const width = Number(technical?.width) || 0;
+  const wanted =
+    height >= 1800 || width >= 3200 || /\b(2160p?|4k|uhd)\b/.test(pathText)
     ? "4k"
-    : /\b(retro|vhs|classic)\b/.test(pathText)
+    : (height > 0 && height < 720) || /\b(retro|vhs|classic)\b/.test(pathText)
     ? "retro"
     : "fullhd";
   return (
@@ -295,7 +299,7 @@ async function loadImportContext(supabase) {
           "id,title,year,studio_id,file_url,thumbnail_url,resolution_id,created_at"
         ),
       supabase.from("studios").select("id,name"),
-      supabase.from("actors").select("id,name"),
+      supabase.from("actors").select("id,name,iafd_url"),
       supabase.from("actors2").select("id,name"),
       supabase.from("tags").select("id,name"),
       supabase.from("resolutions").select("id,name"),
@@ -325,7 +329,8 @@ function analyzeSource(context, fileUrl, overrides = {}) {
   const supportActorIds = matchedIds(context.supportActors, pathText);
   const studioIds = matchedIds(context.studios, pathText, 3);
   const tagIds = matchedIds(context.tags, pathText, 12);
-  const resolutionId = suggestResolution(context.resolutions, pathText);
+  const technical = overrides.technical || {};
+  const resolutionId = suggestResolution(context.resolutions, pathText, technical);
   const duplicates = findDuplicates(context.movies, {
     fileUrl: canonicalUrl,
     title,
@@ -356,6 +361,20 @@ function analyzeSource(context, fileUrl, overrides = {}) {
       } erkannt`,
     });
   }
+  if (Number(technical.width) && Number(technical.height)) {
+    findings.push({
+      type: "success",
+      label: `${Number(technical.width)} × ${Number(
+        technical.height
+      )} Pixel direkt aus der Videodatei gelesen`,
+    });
+  }
+  if (Number(technical.duration_seconds)) {
+    findings.push({
+      type: "success",
+      label: `${Math.round(Number(technical.duration_seconds) / 60)} Minuten Laufzeit erkannt`,
+    });
+  }
   if (!duplicates.length) {
     findings.push({ type: "success", label: "Keine Duplikatwarnung" });
   }
@@ -363,6 +382,12 @@ function analyzeSource(context, fileUrl, overrides = {}) {
   return {
     canonical_url: canonicalUrl,
     source: pathMetadata,
+    technical: {
+      width: Number(technical.width) || null,
+      height: Number(technical.height) || null,
+      duration_seconds: Number(technical.duration_seconds) || null,
+      size_bytes: Number(technical.size_bytes) || null,
+    },
     suggestions: {
       title,
       year,
@@ -397,6 +422,94 @@ function assertKnownIds(ids, items, label) {
   }
 }
 
+function normalizeNewNames(value, limit = 30) {
+  if (!Array.isArray(value)) return [];
+  const names = [
+    ...new Map(
+      value
+        .map((name) => String(name || "").trim().replace(/\s+/g, " "))
+        .filter(Boolean)
+        .map((name) => [normalizeText(name), name])
+    ).values(),
+  ];
+  if (
+    names.length > limit ||
+    names.some((name) => name.length < 2 || name.length > 120)
+  ) {
+    throw new ImportValidationError(
+      "Mindestens ein neuer Darstellername ist ungültig."
+    );
+  }
+  return names;
+}
+
+function normalizeIafdUrl(value) {
+  if (!String(value || "").trim()) return null;
+  try {
+    return validateIafdTitleUrl(value);
+  } catch {
+    throw new ImportValidationError(
+      "Der bestätigte IAFD-Filmlink ist ungültig."
+    );
+  }
+}
+
+async function resolveNewStudio(supabase, context, studioId, studioName) {
+  if (studioId) return studioId;
+  const name = String(studioName || "").trim().replace(/\s+/g, " ");
+  if (!name) return null;
+  if (name.length < 2 || name.length > 120) {
+    throw new ImportValidationError("Der neue Studioname ist ungültig.");
+  }
+
+  const existing = context.studios.find(
+    (studio) => normalizeText(studio.name) === normalizeText(name)
+  );
+  if (existing) return existing.id;
+
+  const { data, error } = await supabase
+    .from("studios")
+    .insert({ name, image_url: null })
+    .select("id,name")
+    .single();
+  if (error) throw error;
+  context.studios.push(data);
+  return data.id;
+}
+
+async function resolveNewSupportingActors(supabase, context, names) {
+  if (!names.length) return [];
+  const mainNames = new Set(
+    context.mainActors.map((actor) => normalizeText(actor.name))
+  );
+  const supportByName = new Map(
+    context.supportActors.map((actor) => [normalizeText(actor.name), actor])
+  );
+  const ids = [];
+  const toCreate = [];
+
+  names.forEach((name) => {
+    const key = normalizeText(name);
+    if (mainNames.has(key)) return;
+    const existing = supportByName.get(key);
+    if (existing) ids.push(existing.id);
+    else toCreate.push({ name, profile_image: null });
+  });
+
+  if (toCreate.length) {
+    const { data, error } = await supabase
+      .from("actors2")
+      .insert(toCreate)
+      .select("id,name");
+    if (error) throw error;
+    (data || []).forEach((actor) => {
+      ids.push(actor.id);
+      context.supportActors.push(actor);
+    });
+  }
+  return [...new Set(ids)];
+}
+
 export async function POST(request) {
   if (!(await hasLibrarySession())) {
     return noStoreJson({ error: "Unauthorized" }, { status: 401 });
@@ -409,6 +522,7 @@ export async function POST(request) {
     const analysis = analyzeSource(context, body?.file_url, {
       title: body?.title,
       year: body?.year,
+      technical: body?.technical,
     });
     return noStoreJson({ analysis });
   } catch (error) {
@@ -437,11 +551,13 @@ export async function PUT(request) {
     const title = String(body?.title || "").trim();
     const fileUrl = canonicalizeVideoUrl(body?.file_url);
     const year = body?.year === "" || body?.year == null ? null : Number(body.year);
-    const studioId = body?.studio_id ? String(body.studio_id) : null;
+    let studioId = body?.studio_id ? String(body.studio_id) : null;
     const resolutionId = String(body?.resolution_id || "");
     const mainActorIds = normalizeIdList(body?.main_actor_ids, 20);
-    const supportActorIds = normalizeIdList(body?.supporting_actor_ids, 50);
+    let supportActorIds = normalizeIdList(body?.supporting_actor_ids, 50);
     const tagIds = normalizeIdList(body?.tag_ids, 50);
+    const newSupportingNames = normalizeNewNames(body?.new_supporting_names);
+    const iafdUrl = normalizeIafdUrl(body?.iafd_url);
 
     if (!title || title.length > TITLE_LIMIT) {
       throw new ImportValidationError(
@@ -489,6 +605,23 @@ export async function PUT(request) {
       );
     }
 
+    studioId = await resolveNewStudio(
+      supabase,
+      context,
+      studioId,
+      body?.new_studio_name
+    );
+    supportActorIds = [
+      ...new Set([
+        ...supportActorIds,
+        ...(await resolveNewSupportingActors(
+          supabase,
+          context,
+          newSupportingNames
+        )),
+      ]),
+    ];
+
     const payload = {
       title,
       year,
@@ -496,6 +629,7 @@ export async function PUT(request) {
       file_url: fileUrl,
       resolution_id: resolutionId,
       thumbnail_url: null,
+      iafd_url: iafdUrl,
       main_actor_ids: mainActorIds,
       supporting_actor_ids: supportActorIds,
       tag_ids: tagIds,

@@ -96,11 +96,12 @@ const CHANGELOG = [
     version: "2.4.0",
     date: "2026-08-08",
     items: [
-      "Intelligenten Import-Assistenten als neuen Admin-v2-Arbeitsbereich hinzugefügt",
-      "MP4-Pfade werden vereinheitlicht, vollständig validiert und auf bestehende Dateipfade geprüft",
-      "Titel, Jahr, Qualität, Studio, Cast und Tags werden aus dem Pfad vorgeschlagen und bleiben editierbar",
-      "Mögliche Titel-Duplikate können nach Sichtprüfung bestätigt werden; identische Dateipfade bleiben blockiert",
-      "Nach erfolgreichem Import kann der neue Film direkt im Thumbnail Studio oder Editor geöffnet werden",
+      "NAS-Ordner lassen sich lokal auswählen und nach MP4-Dateien durchsuchen, ohne Videos hochzuladen",
+      "IAFD-Filmografien und Titelsuche liefern auswählbare Treffer statt automatisch übernommener Vermutungen",
+      "Bestätigte IAFD-Daten werden auf vorhandene Studios, Hauptdarsteller, Nebendarsteller und Tags abgebildet",
+      "Der bestätigte IAFD-Filmlink bleibt als nachvollziehbare Quelle am Film gespeichert",
+      "Neue IAFD-Studios und Nebendarsteller können beim Import kontrolliert angelegt werden",
+      "Videoauflösung, Laufzeit, Dateigröße und mögliche Duplikate werden vor dem Speichern geprüft",
     ],
   },
   {
