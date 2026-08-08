@@ -40,6 +40,28 @@ const MovieThumbnailUploader = dynamic(
   }
 );
 
+const PUBLIC_VIDEO_BASE = "https://video.my1337.de/";
+const LEGACY_VIDEO_HOST = "192.168.178.58";
+
+function normalizeMovieFileUrl(value) {
+  const trimmedValue = String(value || "").trim();
+  if (!trimmedValue) return null;
+
+  try {
+    const parsedUrl = new URL(trimmedValue);
+    if (parsedUrl.hostname === LEGACY_VIDEO_HOST) {
+      return new URL(
+        `${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`,
+        PUBLIC_VIDEO_BASE
+      ).toString();
+    }
+
+    return trimmedValue;
+  } catch {
+    return new URL(trimmedValue.replace(/^\/+/, ""), PUBLIC_VIDEO_BASE).toString();
+  }
+}
+
 // -------------------------------
 // Version / Changelog
 // -------------------------------
@@ -346,7 +368,7 @@ export function DashboardExperience({ beta = false }) {
   const [tagEditName, setTagEditName] = useState("");
 
   // Film Inputs
-  const DEFAULT_FILE_BASE = "http://192.168.178.58:8080/";
+  const DEFAULT_FILE_BASE = PUBLIC_VIDEO_BASE;
 
   const [filmTitel, setFilmTitel] = useState("");
   const [filmJahr, setFilmJahr] = useState("");
@@ -1363,7 +1385,7 @@ export function DashboardExperience({ beta = false }) {
       title,
       year,
       studio_id: filmStudioId || null,
-      file_url: filmFileUrl.trim() || null,
+      file_url: normalizeMovieFileUrl(filmFileUrl),
       resolution_id: filmResolutionId,
       thumbnail_url: filmThumbnailUrl.trim() || null,
       main_actor_ids:
@@ -2726,7 +2748,7 @@ export function DashboardExperience({ beta = false }) {
                               className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
                               value={filmFileUrl}
                               onChange={(e) => setFilmFileUrl(e.target.value)}
-                              placeholder="http://192.168.178.58:8080/"
+                              placeholder="https://video.my1337.de/"
                             />
                           </div>
                         </div>
