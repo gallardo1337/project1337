@@ -413,31 +413,50 @@
 
 .review {
   display: grid;
-  grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.2fr);
+  overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: #0a0a0c;
+  background:
+    radial-gradient(circle at 92% 100%, rgba(239, 68, 68, 0.07), transparent 32%),
+    #0a0a0c;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.22);
 }
 
 .reviewMedia {
   position: relative;
-  min-height: 270px;
+  width: 100%;
+  min-height: 0;
+  aspect-ratio: 16 / 9;
   overflow: hidden;
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   background:
     linear-gradient(130deg, rgba(239, 68, 68, 0.12), transparent 48%),
     #050506;
 }
 
+.reviewMedia::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 28%;
+  background: linear-gradient(to bottom, transparent, rgba(5, 5, 6, 0.58));
+  content: "";
+  pointer-events: none;
+}
+
 .reviewMedia img {
+  display: block;
   width: 100%;
   height: 100%;
-  min-height: 270px;
+  min-height: 0;
   object-fit: cover;
 }
 
 .reviewMediaEmpty {
   display: grid;
-  min-height: 270px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
   place-content: center;
   gap: 7px;
   color: rgba(255, 255, 255, 0.25);
@@ -457,9 +476,14 @@
 
 .reviewContent {
   display: grid;
-  align-content: center;
-  gap: 22px;
-  padding: clamp(22px, 3vw, 38px);
+  grid-template-columns: minmax(230px, 0.72fr) minmax(0, 1.28fr);
+  align-content: start;
+  gap: 22px 30px;
+  padding: clamp(24px, 3vw, 40px);
+}
+
+.reviewTitle {
+  grid-column: 1;
 }
 
 .reviewTitle span {
@@ -487,6 +511,7 @@
 
 .reviewFacts {
   display: grid;
+  grid-column: 1;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1px;
   background: rgba(255, 255, 255, 0.08);
@@ -518,7 +543,12 @@
 
 .reviewGroups {
   display: grid;
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  align-content: start;
   gap: 12px;
+  padding-left: 30px;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .reviewGroup {
@@ -548,6 +578,7 @@
 }
 
 .reviewPath {
+  grid-column: 1 / -1;
   overflow: hidden;
   padding-top: 14px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
@@ -628,14 +659,27 @@
 
 @media (max-width: 900px) {
   .fields,
-  .fieldsSecondary,
-  .review {
+  .fieldsSecondary {
     grid-template-columns: 1fr;
   }
 
-  .reviewMedia {
-    border-right: 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  .reviewContent {
+    grid-template-columns: 1fr;
+  }
+
+  .reviewTitle,
+  .reviewFacts,
+  .reviewGroups,
+  .reviewPath {
+    grid-row: auto;
+    grid-column: 1;
+  }
+
+  .reviewGroups {
+    padding-top: 20px;
+    padding-left: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-left: 0;
   }
 }
 
