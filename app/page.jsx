@@ -2208,7 +2208,6 @@ export default function HomePage({ basePath = "/", version = "v2" }) {
         onToggleFavorite={handleToggleFavorite}
         onSearch={handleSearchChange}
         onDashboard={() => safeOpen("/dashboard/v2")}
-        onOpenArchive={() => safeOpen("/v1")}
         filtersOpen={filtersOpen}
         setFiltersOpen={setFiltersOpen}
         hasAnyFilter={hasAnyFilter}

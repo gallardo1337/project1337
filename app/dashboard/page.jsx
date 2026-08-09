@@ -67,6 +67,15 @@ const MovieThumbnailUploader = dynamic(
 
 const CHANGELOG = [
   {
+    version: "2.5.5",
+    date: "2026-08-09",
+    items: [
+      "V1 vollständig aus der aktiven Website entfernt",
+      "V1 bleibt dauerhaft im separaten Git-Branch archive/v1 erhalten",
+      "Menüeintrag und direkte Route /v1 entfernt",
+    ],
+  },
+  {
     version: "2.5.4",
     date: "2026-08-09",
     items: [

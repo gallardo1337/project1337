@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
 const readProjectFile = (path) =>
@@ -41,10 +41,23 @@ test("V2 verbindet Header, Favoritenansicht und Filmseiten-Schalter", async () =
   assert.match(experience, /Öffne einen Film und markiere ihn über das Herz neben der Bewertung/);
 });
 
-test("Admin-Changelog führt Thumbnail-Vereinfachung und Favoriten fort", async () => {
+test("V1 ist aus der aktiven Website entfernt", async () => {
+  const [page, experience] = await Promise.all([
+    readProjectFile("app/page.jsx"),
+    readProjectFile("app/beta/BetaExperience.jsx"),
+  ]);
+
+  await assert.rejects(access(new URL("../app/v1/page.jsx", import.meta.url)));
+  assert.doesNotMatch(page, /safeOpen\("\/v1"\)/);
+  assert.doesNotMatch(experience, /onOpenArchive/);
+  assert.doesNotMatch(experience, /v1 · Original ansehen/);
+});
+
+test("Admin-Changelog führt V1-Archivierung und Favoriten fort", async () => {
   const dashboard = await readProjectFile("app/dashboard/page.jsx");
 
-  assert.match(dashboard, /const CHANGELOG = \[\s*\{\s*version:\s*"2\.5\.4"/);
+  assert.match(dashboard, /const CHANGELOG = \[\s*\{\s*version:\s*"2\.5\.5"/);
+  assert.match(dashboard, /Git-Branch archive\/v1/);
   assert.match(dashboard, /version:\s*"2\.5\.3"/);
   assert.match(dashboard, /version:\s*"2\.5\.2"/);
   assert.match(dashboard, /horizontale und vertikale Fokusregler/);

@@ -974,7 +974,6 @@ function AppHeader({
   onShowActors,
   onShowMovies,
   onDashboard,
-  onOpenArchive,
   onLogout,
   onOpenRoulette,
   onShowFavorites,
@@ -1047,7 +1046,6 @@ function AppHeader({
             <div className={styles.accountMenu}>
               <strong>{loginUser}</strong>
               <button type="button" onClick={onDashboard}>Admin v2</button>
-              <button type="button" onClick={onOpenArchive}>v1 · Original ansehen</button>
               <button type="button" onClick={onLogout}>Abmelden</button>
             </div>
           ) : null}
@@ -2382,7 +2380,6 @@ export default function BetaExperience({
   onToggleFavorite,
   onSearch,
   onDashboard,
-  onOpenArchive,
   filtersOpen,
   setFiltersOpen,
   hasAnyFilter,
@@ -2489,7 +2486,6 @@ export default function BetaExperience({
         }}
         onShowMovies={onShowMovies}
         onDashboard={onDashboard}
-        onOpenArchive={onOpenArchive}
         onLogout={onLogout}
         onOpenRoulette={() => setRouletteOpen(true)}
         onShowFavorites={onShowFavorites}
