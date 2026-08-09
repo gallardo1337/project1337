@@ -40,6 +40,18 @@ const AdminThumbnailStudio = dynamic(
   }
 );
 
+const AdminNasLibrary = dynamic(
+  () => import("./beta/AdminNasLibrary.jsx"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="text-xs text-neutral-500">
+        Lade NAS-Analyse…
+      </div>
+    ),
+  }
+);
+
 // ActorImageUploader nur im Client laden (wegen react-easy-crop / Canvas)
 const ActorImageUploader = dynamic(() => import("./ActorImageUploader.jsx"), {
   ssr: false,
@@ -66,6 +78,16 @@ const MovieThumbnailUploader = dynamic(
 // -------------------------------
 
 const CHANGELOG = [
+  {
+    version: "2.6.0",
+    date: "2026-08-09",
+    items: [
+      "NAS-Bibliotheksanalyse mit vollständigem Inventar aller Videoformate ergänzt",
+      "Exakten Datenbankabgleich, mögliche Dateinamens-Treffer und offene NAS-Dateien getrennt ausgewiesen",
+      "Aussagekräftige Statistiken nach Hauptdarsteller, Qualität, Dateiformat und MP4-Konvertierungsstand ergänzt",
+      "Geschützten read-only Docker-Scanner für den Hauptordner 1337 vorbereitet",
+    ],
+  },
   {
     version: "2.5.7",
     date: "2026-08-09",
@@ -465,6 +487,14 @@ const AdminNavIcon = ({ name }) => {
         <path d="M7 12h2l1.4-3.5 2.2 7 1.5-3.5H17" />
       </>
     ),
+    nas: (
+      <>
+        <path d="M4 6.5h16v11H4z" />
+        <path d="M7 10h10M7 14h6" />
+        <circle cx="17" cy="14" r="1" />
+        <path d="M8 4h8M8 20h8" />
+      </>
+    ),
     thumbnail: (
       <>
         <rect x="3" y="4" width="18" height="16" rx="1" />
@@ -551,7 +581,7 @@ export function DashboardExperience({ beta = false }) {
   // Tabs: Filme / Neuer Film / Stammdaten
   const [activeFilmSection, setActiveFilmSection] = useState(
     beta ? "overview" : "stats"
-  ); // "overview" | "health" | "stats" | "new" | "meta"
+  ); // "overview" | "nas" | "health" | "stats" | "new" | "meta"
   const [metaMenuOpen, setMetaMenuOpen] = useState(false);
   const [activeMetaSection, setActiveMetaSection] = useState("mainActors"); // "mainActors" | "supportActors" | "studios" | "tags"
 
@@ -2114,6 +2144,7 @@ export function DashboardExperience({ beta = false }) {
     { key: "overview", label: "Übersicht", icon: "overview", section: "overview" },
     { key: "director", label: "Startseiten-Regisseur", icon: "director", section: "director" },
     { key: "stats", label: "Filmarchiv", icon: "movies", section: "stats", count: filme.length },
+    { key: "nas", label: "NAS-Analyse", icon: "nas", section: "nas" },
     { key: "health", label: "Medienprüfung", icon: "health", section: "health" },
     { key: "thumbnails", label: "Thumbnail Studio", icon: "thumbnail", section: "thumbnails" },
     { key: "new", label: editingFilmId ? "Film bearbeiten" : "Film hinzufügen", icon: "add", section: "new" },
@@ -2185,6 +2216,13 @@ export function DashboardExperience({ beta = false }) {
           title: "Startseiten-Regisseur",
           description:
             "Reihenfolge, Sichtbarkeit und Inhalt der v2-Startseite zentral inszenieren und veröffentlichen.",
+        }
+      : activeFilmSection === "nas"
+      ? {
+          eyebrow: "NAS Library Intelligence",
+          title: "NAS-Analyse",
+          description:
+            "Den vollständigen Videoordner 1337 inventarisieren, mit der Datenbank abgleichen und den Erfassungsstand präzise auswerten.",
         }
       : activeFilmSection === "health"
       ? {
@@ -2964,6 +3002,12 @@ export function DashboardExperience({ beta = false }) {
                       studioMap={studioMap}
                       resolutionMap={resolutionMap}
                       onEditMovie={handleEditFilm}
+                    />
+                  ) : null}
+
+                  {beta && activeFilmSection === "nas" ? (
+                    <AdminNasLibrary
+                      onUnauthorized={handleSessionExpired}
                     />
                   ) : null}
 

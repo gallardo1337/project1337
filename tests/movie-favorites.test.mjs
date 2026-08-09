@@ -53,7 +53,7 @@ test("V1 ist aus der aktiven Website entfernt", async () => {
   assert.doesNotMatch(experience, /v1 · Original ansehen/);
 });
 
-test("Admin-Changelog führt V1-Archivierung, Favoriten und Kontomenü fort", async () => {
+test("Admin-Changelog führt NAS-Analyse, V1-Archivierung, Favoriten und Kontomenü fort", async () => {
   const [dashboard, experience, layout, redirectLayout] = await Promise.all([
     readProjectFile("app/dashboard/page.jsx"),
     readProjectFile("app/beta/BetaExperience.jsx"),
@@ -61,7 +61,9 @@ test("Admin-Changelog führt V1-Archivierung, Favoriten und Kontomenü fort", as
     readProjectFile("app/dashboard/beta/layout.jsx"),
   ]);
 
-  assert.match(dashboard, /const CHANGELOG = \[\s*\{\s*version:\s*"2\.5\.7"/);
+  assert.match(dashboard, /const CHANGELOG = \[\s*\{\s*version:\s*"2\.6\.0"/);
+  assert.match(dashboard, /label:\s*"NAS-Analyse"/);
+  assert.match(dashboard, /AdminNasLibrary/);
   assert.match(dashboard, /Git-Branch archive\/v1/);
   assert.match(dashboard, /version:\s*"2\.5\.3"/);
   assert.match(dashboard, /version:\s*"2\.5\.2"/);
