@@ -3249,7 +3249,6 @@
 
 .adminBeta .thumbnailStudio__intro > div:first-child > span,
 .adminBeta .thumbnailStudio__sourceHeader > div:first-child > span,
-.adminBeta .thumbnailStudio__renderSettings > div:first-child > span,
 .adminBeta .thumbnailStudio__selectionHeader > div:first-child > span {
   display: block;
   margin-bottom: 7px;
@@ -3329,7 +3328,6 @@
 
 .adminBeta .thumbnailStudio__library > header,
 .adminBeta .thumbnailStudio__sourceHeader,
-.adminBeta .thumbnailStudio__renderSettings,
 .adminBeta .thumbnailStudio__selectionHeader {
   display: flex;
   align-items: center;
@@ -3357,7 +3355,6 @@
 
 .adminBeta .thumbnailStudio__library h3,
 .adminBeta .thumbnailStudio__sourceHeader h3,
-.adminBeta .thumbnailStudio__renderSettings h3,
 .adminBeta .thumbnailStudio__selectionHeader h3 {
   margin: 0;
   color: #e9e7e2;
@@ -3862,64 +3859,10 @@
   opacity: 0;
 }
 
-.adminBeta .thumbnailStudio__renderSettings,
 .adminBeta .thumbnailStudio__selectionHeader {
   margin-top: 32px;
   padding-top: 25px;
   border-top: 1px solid var(--admin-line);
-}
-
-.adminBeta .thumbnailStudio__modeButtons {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(120px, 1fr));
-  gap: 7px;
-}
-
-.adminBeta .thumbnailStudio__modeButtons button {
-  display: grid;
-  min-height: 52px;
-  gap: 3px;
-  border: 1px solid rgba(255, 255, 255, 0.11);
-  background: transparent;
-  padding: 9px 12px;
-  color: #8b8b92;
-  text-align: left;
-  cursor: pointer;
-}
-
-.adminBeta .thumbnailStudio__modeButtons button.is-active {
-  border-color: rgba(240, 68, 68, 0.66);
-  background: rgba(240, 68, 68, 0.065);
-  color: #f1eeee;
-}
-
-.adminBeta .thumbnailStudio__modeButtons strong {
-  font-size: 9px;
-}
-
-.adminBeta .thumbnailStudio__modeButtons small {
-  color: #5f5f66;
-  font-size: 8px;
-}
-
-.adminBeta .thumbnailStudio__focusControls {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 22px;
-  margin-top: 18px;
-}
-
-.adminBeta .thumbnailStudio__focusControls label {
-  display: grid;
-  grid-template-columns: auto minmax(100px, 1fr);
-  align-items: center;
-  gap: 12px;
-}
-
-.adminBeta .thumbnailStudio__focusControls span {
-  color: #6f6f76;
-  font-size: 8px;
-  white-space: nowrap;
 }
 
 .adminBeta .thumbnailStudio__captureActions {
@@ -4549,10 +4492,6 @@
     max-height: 720px;
   }
 
-  .adminBeta .thumbnailStudio__focusControls {
-    grid-template-columns: 1fr;
-  }
-
   .adminBeta .thumbnailStudio__captureActions {
     grid-template-columns: repeat(2, minmax(200px, 1fr));
   }
@@ -4590,10 +4529,6 @@
     border-right: 1px solid rgba(255, 255, 255, 0.055);
   }
 
-  .adminBeta .thumbnailStudio__renderSettings {
-    align-items: stretch;
-    flex-direction: column;
-  }
 }
 
 @media (max-width: 600px) {
@@ -4638,7 +4573,6 @@
   }
 
   .adminBeta .thumbnailStudio__localSource > div:last-child,
-  .adminBeta .thumbnailStudio__modeButtons,
   .adminBeta .thumbnailStudio__captureActions {
     grid-template-columns: 1fr;
     width: 100%;

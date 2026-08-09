@@ -85,7 +85,7 @@ function hashDistance(left, right) {
   return differences / left.length;
 }
 
-function analyzeVideoFrame(video, canvas, focusX, focusY) {
+function analyzeVideoFrame(video, canvas) {
   const ctx = canvas.getContext("2d", {
     alpha: false,
     willReadFrequently: true,
@@ -94,7 +94,7 @@ function analyzeVideoFrame(video, canvas, focusX, focusY) {
 
   ctx.fillStyle = "#050506";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  drawCover(ctx, video, canvas.width, canvas.height, focusX, focusY);
+  drawFrame(ctx, video, canvas.width, canvas.height);
 
   const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
   const pixelCount = canvas.width * canvas.height;
@@ -278,75 +278,18 @@ function waitForSeek(video, target) {
   });
 }
 
-function drawCover(ctx, video, width, height, focusX = 50, focusY = 50) {
-  const sourceWidth = video.videoWidth;
-  const sourceHeight = video.videoHeight;
-  const outputAspect = width / height;
-  const sourceAspect = sourceWidth / sourceHeight;
-
-  let sourceX = 0;
-  let sourceY = 0;
-  let cropWidth = sourceWidth;
-  let cropHeight = sourceHeight;
-
-  if (sourceAspect > outputAspect) {
-    cropWidth = sourceHeight * outputAspect;
-    sourceX = (sourceWidth - cropWidth) * (focusX / 100);
-  } else if (sourceAspect < outputAspect) {
-    cropHeight = sourceWidth / outputAspect;
-    sourceY = (sourceHeight - cropHeight) * (focusY / 100);
-  }
-
-  ctx.drawImage(
-    video,
-    sourceX,
-    sourceY,
-    cropWidth,
-    cropHeight,
-    0,
-    0,
-    width,
-    height
-  );
+function drawFrame(ctx, video, width, height) {
+  ctx.drawImage(video, 0, 0, width, height);
 }
 
-function drawSmartFit(ctx, video, width, height) {
-  ctx.save();
-  ctx.filter = "blur(28px) brightness(0.42) saturate(0.82)";
-  drawCover(ctx, video, width, height);
-  ctx.restore();
-
-  ctx.fillStyle = "rgba(0, 0, 0, 0.24)";
-  ctx.fillRect(0, 0, width, height);
-
-  const scale = Math.min(
-    width / video.videoWidth,
-    height / video.videoHeight
-  );
-  const drawWidth = video.videoWidth * scale;
-  const drawHeight = video.videoHeight * scale;
-  const drawX = (width - drawWidth) / 2;
-  const drawY = (height - drawHeight) / 2;
-
-  ctx.save();
-  ctx.shadowColor = "rgba(0, 0, 0, 0.8)";
-  ctx.shadowBlur = 34;
-  ctx.drawImage(video, drawX, drawY, drawWidth, drawHeight);
-  ctx.restore();
-}
-
-function drawAiAnalysisFrame(canvas, video, mode, focusX, focusY) {
+function drawAiAnalysisFrame(canvas, video) {
   const ctx = canvas.getContext("2d", { alpha: false });
   if (!ctx) throw new Error("Die KI-Bildanalyse konnte nicht gestartet werden.");
 
   ctx.fillStyle = "#050506";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  if (mode === "smart") {
-    drawSmartFit(ctx, video, canvas.width, canvas.height);
-  } else {
-    drawCover(ctx, video, canvas.width, canvas.height, focusX, focusY);
-  }
+  drawFrame(ctx, video, canvas.width, canvas.height);
 }
 
 function applyLightSharpen(ctx, width, height, amount = SHARPEN_AMOUNT) {
@@ -376,7 +319,7 @@ function applyLightSharpen(ctx, width, height, amount = SHARPEN_AMOUNT) {
   ctx.putImageData(imageData, 0, 0);
 }
 
-function frameToBlob(video, mode, focusX, focusY) {
+function frameToBlob(video) {
   if (!video.videoWidth || !video.videoHeight) {
     throw new Error("Das Video hat noch kein lesbares Bild geliefert.");
   }
@@ -391,18 +334,7 @@ function frameToBlob(video, mode, focusX, focusY) {
   ctx.fillStyle = "#050506";
   ctx.fillRect(0, 0, OUTPUT_WIDTH, OUTPUT_HEIGHT);
 
-  if (mode === "smart") {
-    drawSmartFit(ctx, video, OUTPUT_WIDTH, OUTPUT_HEIGHT);
-  } else {
-    drawCover(
-      ctx,
-      video,
-      OUTPUT_WIDTH,
-      OUTPUT_HEIGHT,
-      focusX,
-      focusY
-    );
-  }
+  drawFrame(ctx, video, OUTPUT_WIDTH, OUTPUT_HEIGHT);
 
   applyLightSharpen(ctx, OUTPUT_WIDTH, OUTPUT_HEIGHT);
 
@@ -511,9 +443,6 @@ export default function AdminThumbnailStudio({
   const [currentTime, setCurrentTime] = useState(0);
   const [videoReady, setVideoReady] = useState(false);
   const [videoError, setVideoError] = useState(null);
-  const [mode, setMode] = useState("crop");
-  const [focusX, setFocusX] = useState(50);
-  const [focusY, setFocusY] = useState(50);
   const [candidates, setCandidates] = useState([]);
   const [selectedCandidateId, setSelectedCandidateId] = useState(null);
   const [previewCandidateId, setPreviewCandidateId] = useState(null);
@@ -761,7 +690,7 @@ export default function AdminThumbnailStudio({
     }
 
     try {
-      const blob = await frameToBlob(video, mode, focusX, focusY);
+      const blob = await frameToBlob(video);
       const url = URL.createObjectURL(blob);
       generatedUrlsRef.current.add(url);
       const candidate = {
@@ -769,7 +698,6 @@ export default function AdminThumbnailStudio({
         blob,
         url,
         time: video.currentTime,
-        mode,
         ...metadata,
       };
 
@@ -841,12 +769,7 @@ export default function AdminThumbnailStudio({
         const analysisPoint = analysisPoints[index];
         await waitForSeek(video, duration * analysisPoint.point);
         await waitForFramePaint();
-        const result = analyzeVideoFrame(
-          video,
-          analysisCanvas,
-          focusX,
-          focusY
-        );
+        const result = analyzeVideoFrame(video, analysisCanvas);
         analyses.push({ ...analysisPoint, ...result });
         setGenerating({
           active: true,
@@ -981,13 +904,8 @@ export default function AdminThumbnailStudio({
         await waitForSeek(video, duration * analysisPoint.point);
         await waitForFramePaint();
 
-        const technical = analyzeVideoFrame(
-          video,
-          technicalCanvas,
-          focusX,
-          focusY
-        );
-        drawAiAnalysisFrame(aiCanvas, video, mode, focusX, focusY);
+        const technical = analyzeVideoFrame(video, technicalCanvas);
+        drawAiAnalysisFrame(aiCanvas, video);
         const faceResult = faceLandmarker.detect(aiCanvas);
         const poseResult = poseLandmarker.detect(aiCanvas);
         const aiResult = scoreAiFrame({
@@ -1463,44 +1381,6 @@ export default function AdminThumbnailStudio({
                 </div>
               </div>
 
-              <div className="thumbnailStudio__renderSettings">
-                <div>
-                  <span>03 / Bildstil</span>
-                  <h3>Ausgabe komponieren</h3>
-                </div>
-                <div className="thumbnailStudio__modeButtons">
-                  <button
-                    type="button"
-                    className={mode === "crop" ? "is-active" : ""}
-                    onClick={() => setMode("crop")}
-                  >
-                    <strong>Kino-Crop</strong>
-                    <small>Flächig · 16:9</small>
-                  </button>
-                  <button
-                    type="button"
-                    className={mode === "smart" ? "is-active" : ""}
-                    onClick={() => setMode("smart")}
-                  >
-                    <strong>Smart Fit</strong>
-                    <small>Ganzes Bild · Blur</small>
-                  </button>
-                </div>
-              </div>
-
-              {mode === "crop" ? (
-                <div className="thumbnailStudio__focusControls">
-                  <label>
-                    <span>Horizontaler Fokus</span>
-                    <input type="range" min="0" max="100" value={focusX} onChange={(event) => setFocusX(Number(event.target.value))} />
-                  </label>
-                  <label>
-                    <span>Vertikaler Fokus</span>
-                    <input type="range" min="0" max="100" value={focusY} onChange={(event) => setFocusY(Number(event.target.value))} />
-                  </label>
-                </div>
-              ) : null}
-
               <div className="thumbnailStudio__captureActions">
                 <button
                   type="button"
@@ -1544,7 +1424,7 @@ export default function AdminThumbnailStudio({
 
               <div className="thumbnailStudio__selectionHeader">
                 <div>
-                  <span>04 / Auswahl</span>
+                  <span>03 / Auswahl</span>
                   <h3>Favorit festlegen</h3>
                 </div>
                 {candidates.length ? (
@@ -1636,7 +1516,7 @@ export default function AdminThumbnailStudio({
                       <span>Bereit zum Speichern</span>
                       <strong>{selectedMovie.title}</strong>
                       <small>
-                        Frame bei {formatTime(selectedCandidate.time)} · {selectedCandidate.mode === "smart" ? "Smart Fit" : "Kino-Crop"} · {selectedCandidate.generator === "ai"
+                        Frame bei {formatTime(selectedCandidate.time)} · {selectedCandidate.generator === "ai"
                           ? "KI Beta"
                           : selectedCandidate.generator === "standard"
                             ? "Standard"
