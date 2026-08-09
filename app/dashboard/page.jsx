@@ -7,6 +7,7 @@ import dynamic from "next/dynamic";
 import AdminBetaOverview from "./beta/AdminBetaOverview.jsx";
 import AdminMediaHealth from "./beta/AdminMediaHealth.jsx";
 import AdminMovieFilePicker from "./AdminMovieFilePicker.jsx";
+import wizardStyles from "./AdminMovieWizard.module.css";
 import {
   PUBLIC_VIDEO_BASE,
   hasExactVideoFile,
@@ -65,6 +66,17 @@ const MovieThumbnailUploader = dynamic(
 // -------------------------------
 
 const CHANGELOG = [
+  {
+    version: "2.5.0",
+    date: "2026-08-09",
+    items: [
+      "Film hinzufügen als geführten Assistenten mit sieben klaren Schritten neu aufgebaut",
+      "Datei, Thumbnail, Filmdaten, Cast und Tags werden nacheinander bearbeitet",
+      "Thumbnail Studio direkt in den neuen Film-Assistenten integriert",
+      "Abschließende Filmvorschau vor dem ersten Datenbankeintrag ergänzt",
+      "Eingaben bleiben beim Vor- und Zurückgehen vollständig erhalten",
+    ],
+  },
   {
     version: "2.4.0",
     date: "2026-08-09",
@@ -305,6 +317,80 @@ const chipClass = (active) =>
     ? "bg-red-500 border-red-600 text-black"
     : "bg-neutral-900/90 border-neutral-700 text-neutral-100 hover:border-neutral-400 transition-colors");
 
+const MOVIE_WIZARD_STEPS = [
+  {
+    label: "Datei",
+    short: "MP4",
+    title: "Videodatei auswählen",
+    description:
+      "Öffne deinen NAS-Ordner und wähle die konkrete MP4 aus. Bereits vorhandene Filme bleiben grün markiert und gesperrt.",
+  },
+  {
+    label: "Thumbnail",
+    short: "Cover",
+    title: "Thumbnail erstellen",
+    description:
+      "Erzeuge direkt aus dem ausgewählten Video ein 16:9-Cover oder überspringe diesen optionalen Schritt.",
+  },
+  {
+    label: "Filmdaten",
+    short: "Info",
+    title: "Filmdaten eintragen",
+    description:
+      "Lege Titel, Erscheinungsjahr, Studio und Qualität fest. Titel und Qualität sind Pflichtfelder.",
+  },
+  {
+    label: "Hauptdarsteller",
+    short: "Cast",
+    title: "Hauptdarsteller auswählen",
+    description:
+      "Wähle alle Hauptdarsteller aus, die auf der Filmseite besonders hervorgehoben werden sollen.",
+  },
+  {
+    label: "Nebendarsteller",
+    short: "Cast 2",
+    title: "Nebendarsteller auswählen",
+    description:
+      "Ergänze weitere Darsteller. Dieser Schritt ist optional und kann ohne Auswahl fortgesetzt werden.",
+  },
+  {
+    label: "Tags",
+    short: "Meta",
+    title: "Tags festlegen",
+    description:
+      "Ordne dem Film passende Tags zu. Mehrere Einträge können gleichzeitig ausgewählt werden.",
+  },
+  {
+    label: "Vorschau",
+    short: "Speichern",
+    title: "Prüfen und speichern",
+    description:
+      "Kontrolliere alle Angaben in Ruhe. Erst mit dem letzten Klick wird der Film in der Datenbank gespeichert.",
+  },
+];
+
+function decodeMovieFileSegment(value) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+function movieFileName(fileUrl) {
+  try {
+    const pathname = new URL(fileUrl).pathname;
+    return decodeMovieFileSegment(
+      pathname.split("/").filter(Boolean).pop() || "MP4-Datei"
+    );
+  } catch {
+    const clean = String(fileUrl || "").split(/[?#]/)[0];
+    return decodeMovieFileSegment(
+      clean.split("/").filter(Boolean).pop() || "MP4-Datei"
+    );
+  }
+}
+
 const AdminNavIcon = ({ name }) => {
   const paths = {
     overview: (
@@ -484,6 +570,9 @@ export function DashboardExperience({ beta = false }) {
   const [selectedMainActorIds, setSelectedMainActorIds] = useState([]);
   const [selectedSupportActorIds, setSelectedSupportActorIds] = useState([]);
   const [selectedTagIds, setSelectedTagIds] = useState([]);
+  const [filmWizardStep, setFilmWizardStep] = useState(0);
+  const [filmWizardMaxStep, setFilmWizardMaxStep] = useState(0);
+  const [filmSaving, setFilmSaving] = useState(false);
 
   const [editingFilmId, setEditingFilmId] = useState(null);
 
@@ -719,6 +808,27 @@ export function DashboardExperience({ beta = false }) {
       ) || null
     );
   }, [editingFilmId, filmFileUrl, filme]);
+
+  const wizardThumbnailMovie = useMemo(
+    () => ({
+      id: editingFilmId || "new-movie-draft",
+      title: filmTitel.trim() || movieFileName(filmFileUrl),
+      year: filmJahr || null,
+      studio_id: filmStudioId || null,
+      resolution_id: filmResolutionId || null,
+      file_url: filmFileUrl,
+      thumbnail_url: filmThumbnailUrl || null,
+    }),
+    [
+      editingFilmId,
+      filmFileUrl,
+      filmJahr,
+      filmResolutionId,
+      filmStudioId,
+      filmThumbnailUrl,
+      filmTitel,
+    ]
+  );
 
   const filteredFilme = useMemo(() => {
     const q = dashboardSearch.trim().toLowerCase();
@@ -1472,6 +1582,8 @@ export function DashboardExperience({ beta = false }) {
     setSelectedSupportActorIds([]);
     setSelectedTagIds([]);
     setEditingFilmId(null);
+    setFilmWizardStep(0);
+    setFilmWizardMaxStep(0);
 
     // Resolution Default: FullHD, sonst erstes
     const fullHd = resolutions.find((r) => r.name === "FullHD");
@@ -1481,32 +1593,38 @@ export function DashboardExperience({ beta = false }) {
 
   const handleAddOrUpdateFilm = async (e) => {
     e.preventDefault();
+    if (filmSaving) return false;
     setError(null);
+
+    if (!hasExactVideoFile(filmFileUrl)) {
+      setError("Bitte zuerst eine konkrete MP4-Datei auswählen.");
+      return false;
+    }
 
     const title = filmTitel.trim();
     if (!title) {
       setError("Bitte Filmname eingeben.");
-      return;
+      return false;
     }
 
     if (!filmResolutionId) {
       setError("Bitte eine Resolution auswählen (Pflichtfeld).");
-      return;
+      return false;
     }
 
     if (filmFileDuplicate) {
       setError(
         `Diese Videodatei wurde bereits als „${filmFileDuplicate.title}“ hinzugefügt.`
       );
-      return;
+      return false;
     }
 
     let year = null;
     if (filmJahr.trim()) {
-      const parsed = parseInt(filmJahr.trim(), 10);
-      if (Number.isNaN(parsed)) {
+      const parsed = Number(filmJahr.trim());
+      if (!Number.isInteger(parsed) || parsed < 1900 || parsed > 2100) {
         setError("Erscheinungsjahr ist keine gültige Zahl.");
-        return;
+        return false;
       }
       year = parsed;
     }
@@ -1525,37 +1643,51 @@ export function DashboardExperience({ beta = false }) {
       tag_ids: selectedTagIds.length > 0 ? selectedTagIds : null,
     };
 
-    if (editingFilmId) {
-      const { data, error: updateError } = await supabase
-        .from("movies")
-        .update(payload)
-        .eq("id", editingFilmId)
-        .select("*")
-        .single();
+    setFilmSaving(true);
 
-      if (updateError) {
-        console.error(updateError);
-        setError(updateError.message);
-        return;
+    try {
+      if (editingFilmId) {
+        const { data, error: updateError } = await supabase
+          .from("movies")
+          .update(payload)
+          .eq("id", editingFilmId)
+          .select("*")
+          .single();
+
+        if (updateError) {
+          console.error(updateError);
+          setError(updateError.message);
+          return false;
+        }
+
+        setFilme((prev) =>
+          prev.map((f) => (f.id === editingFilmId ? data : f))
+        );
+        resetFilmForm();
+      } else {
+        const { data, error: insertError } = await supabase
+          .from("movies")
+          .insert(payload)
+          .select("*")
+          .single();
+
+        if (insertError) {
+          console.error(insertError);
+          setError(insertError.message);
+          return false;
+        }
+
+        setFilme((prev) => [data, ...prev]);
+        resetFilmForm();
       }
 
-      setFilme((prev) => prev.map((f) => (f.id === editingFilmId ? data : f)));
-      resetFilmForm();
-    } else {
-      const { data, error: insertError } = await supabase
-        .from("movies")
-        .insert(payload)
-        .select("*")
-        .single();
-
-      if (insertError) {
-        console.error(insertError);
-        setError(insertError.message);
-        return;
-      }
-
-      setFilme((prev) => [data, ...prev]);
-      resetFilmForm();
+      return true;
+    } catch (saveError) {
+      console.error(saveError);
+      setError(saveError?.message || "Film konnte nicht gespeichert werden.");
+      return false;
+    } finally {
+      setFilmSaving(false);
     }
   };
 
@@ -1576,6 +1708,8 @@ export function DashboardExperience({ beta = false }) {
         : []
     );
     setSelectedTagIds(Array.isArray(film.tag_ids) ? film.tag_ids : []);
+    setFilmWizardStep(0);
+    setFilmWizardMaxStep(0);
 
     setActiveFilmSection("new");
     setMetaMenuOpen(false);
@@ -1583,6 +1717,97 @@ export function DashboardExperience({ beta = false }) {
 
   const handleCancelEdit = () => {
     resetFilmForm();
+  };
+
+  const handleWizardFileChange = (url) => {
+    const previousKey = movieFileUrlKey(filmFileUrl);
+    const nextKey = movieFileUrlKey(url);
+
+    if (previousKey !== nextKey) {
+      setFilmThumbnailUrl("");
+    }
+
+    setFilmFileUrl(url);
+    setError(null);
+  };
+
+  const validateMovieWizardStep = (step) => {
+    setError(null);
+
+    if (step === 0) {
+      if (!hasExactVideoFile(filmFileUrl)) {
+        setError("Bitte zuerst eine konkrete MP4-Datei auswählen.");
+        return false;
+      }
+
+      if (filmFileDuplicate) {
+        setError(
+          `Diese Videodatei wurde bereits als „${filmFileDuplicate.title}“ hinzugefügt.`
+        );
+        return false;
+      }
+    }
+
+    if (step === 2) {
+      if (!filmTitel.trim()) {
+        setError("Bitte einen Filmtitel eingeben.");
+        return false;
+      }
+
+      if (filmJahr.trim()) {
+        const parsedYear = Number(filmJahr.trim());
+        if (
+          !Number.isInteger(parsedYear) ||
+          parsedYear < 1900 ||
+          parsedYear > 2100
+        ) {
+          setError("Bitte ein gültiges Erscheinungsjahr eingeben.");
+          return false;
+        }
+      }
+
+      if (!filmResolutionId) {
+        setError("Bitte eine Qualität auswählen.");
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  const handleWizardNext = () => {
+    if (!validateMovieWizardStep(filmWizardStep)) return;
+
+    const nextStep = Math.min(
+      filmWizardStep + 1,
+      MOVIE_WIZARD_STEPS.length - 1
+    );
+    setFilmWizardStep(nextStep);
+    setFilmWizardMaxStep((current) => Math.max(current, nextStep));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleWizardBack = () => {
+    setError(null);
+    setFilmWizardStep((current) => Math.max(0, current - 1));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleWizardStepSelect = (step) => {
+    if (step > filmWizardMaxStep) return;
+    setError(null);
+    setFilmWizardStep(step);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleMovieWizardSubmit = (event) => {
+    if (filmWizardStep < MOVIE_WIZARD_STEPS.length - 1) {
+      event.preventDefault();
+      handleWizardNext();
+      return;
+    }
+
+    handleAddOrUpdateFilm(event);
   };
 
   const handleDeleteFilm = async (filmId) => {
@@ -1937,8 +2162,8 @@ export function DashboardExperience({ beta = false }) {
           eyebrow: editingFilmId ? "Editor / Bearbeitung" : "Editor / Neuer Eintrag",
           title: editingFilmId ? filmTitel || "Film bearbeiten" : "Film hinzufügen",
           description: editingFilmId
-            ? "Alle Filmdaten und Zuordnungen zentral aktualisieren."
-            : "Metadaten, Medienpfad, Thumbnail, Cast und Tags vollständig anlegen.",
+            ? "Datei, Thumbnail, Metadaten und Zuordnungen Schritt für Schritt aktualisieren."
+            : "In sieben klaren Schritten von der NAS-Datei bis zur finalen Vorschau.",
         }
       : {
           eyebrow: "Stammdaten",
@@ -2747,8 +2972,7 @@ export function DashboardExperience({ beta = false }) {
                               : "Neuen Film hinzufügen"}
                           </h2>
                           <p className="text-sm text-neutral-500">
-                            Titel, Jahr, Studio, Resolution, Thumbnail, Cast und
-                            Tags festlegen.
+                            In sieben Schritten vom NAS-Video zum fertigen Film.
                           </p>
                         </div>
                         {editingFilmId && (
@@ -2763,56 +2987,133 @@ export function DashboardExperience({ beta = false }) {
                       </div>
 
                       <form
-                        onSubmit={handleAddOrUpdateFilm}
-                        className="space-y-5 text-base"
+                        onSubmit={handleMovieWizardSubmit}
+                        className={wizardStyles.wizard}
                       >
-                        <AdminMovieFilePicker
-                          movies={filme}
-                          mainActors={hauptdarsteller}
-                          supportActors={nebendarsteller}
-                          value={filmFileUrl}
-                          editingMovieId={editingFilmId}
-                          onChange={(url) => {
-                            setFilmFileUrl(url);
-                            setError(null);
-                          }}
-                        />
+                        <nav
+                          className={wizardStyles.progress}
+                          aria-label="Schritte zum Film hinzufügen"
+                        >
+                          {MOVIE_WIZARD_STEPS.map((step, index) => {
+                            const current = index === filmWizardStep;
+                            const done = index < filmWizardStep;
+                            const enabled = index <= filmWizardMaxStep;
 
-                        {/* Titel + Jahr */}
-                        <div className="grid grid-cols-[2fr,1fr] gap-4 max-sm:grid-cols-1">
-                          <div>
-                            <label className="text-sm text-neutral-300">
-                              Filmname
-                            </label>
-                            <input
-                              className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
-                              value={filmTitel}
-                              onChange={(e) => setFilmTitel(e.target.value)}
-                              placeholder="z. B. Interstellar"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-sm text-neutral-300">
-                              Erscheinungsjahr
-                            </label>
-                            <input
-                              className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
-                              value={filmJahr}
-                              onChange={(e) => setFilmJahr(e.target.value)}
-                              placeholder="2014"
-                              type="number"
-                            />
-                          </div>
-                        </div>
+                            return (
+                              <button
+                                key={step.label}
+                                type="button"
+                                className={[
+                                  wizardStyles.progressButton,
+                                  current
+                                    ? wizardStyles.progressButtonCurrent
+                                    : "",
+                                  done ? wizardStyles.progressButtonDone : "",
+                                ]
+                                  .filter(Boolean)
+                                  .join(" ")}
+                                onClick={() => handleWizardStepSelect(index)}
+                                disabled={!enabled}
+                                aria-current={current ? "step" : undefined}
+                              >
+                                <span className={wizardStyles.progressNumber}>
+                                  {done ? "✓" : String(index + 1).padStart(2, "0")}
+                                </span>
+                                <span className={wizardStyles.progressCopy}>
+                                  <strong>{step.label}</strong>
+                                  <small>{step.short}</small>
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </nav>
+
+                        <section className={wizardStyles.step}>
+                          <header className={wizardStyles.stepHeader}>
+                            <div>
+                              <span className={wizardStyles.eyebrow}>
+                                Schritt {String(filmWizardStep + 1).padStart(2, "0")}
+                              </span>
+                              <h2>{MOVIE_WIZARD_STEPS[filmWizardStep].title}</h2>
+                              <p>
+                                {MOVIE_WIZARD_STEPS[filmWizardStep].description}
+                              </p>
+                            </div>
+                            <span className={wizardStyles.stepCounter}>
+                              {String(filmWizardStep + 1).padStart(2, "0")} / 07
+                            </span>
+                          </header>
+
+                          <div className={wizardStyles.body}>
+                            {filmWizardStep === 0 ? (
+                              <AdminMovieFilePicker
+                                movies={filme}
+                                mainActors={hauptdarsteller}
+                                supportActors={nebendarsteller}
+                                value={filmFileUrl}
+                                editingMovieId={editingFilmId}
+                                onChange={handleWizardFileChange}
+                              />
+                            ) : null}
+
+                            {filmWizardStep === 0 && hasExactVideoFile(filmFileUrl) ? (
+                              <div className={wizardStyles.fileSelected}>
+                                <span>✓</span>
+                                <div>
+                                  <strong>{movieFileName(filmFileUrl)}</strong>
+                                  <small>{filmFileUrl}</small>
+                                </div>
+                                <b>Ausgewählt</b>
+                              </div>
+                            ) : null}
+
+                            {/* Titel + Jahr */}
+                            {filmWizardStep === 2 ? (
+                              <div className={wizardStyles.fields}>
+                                <div className={wizardStyles.field}>
+                                  <label htmlFor="movie-wizard-title">
+                                    Filmname <span className={wizardStyles.required}>*</span>
+                                  </label>
+                                  <input
+                                    id="movie-wizard-title"
+                                    value={filmTitel}
+                                    onChange={(e) => setFilmTitel(e.target.value)}
+                                    placeholder="z. B. Interstellar"
+                                    autoFocus
+                                  />
+                                </div>
+                                <div className={wizardStyles.field}>
+                                  <label htmlFor="movie-wizard-year">
+                                    Erscheinungsjahr
+                                  </label>
+                                  <input
+                                    id="movie-wizard-year"
+                                    value={filmJahr}
+                                    onChange={(e) => setFilmJahr(e.target.value)}
+                                    placeholder="2014"
+                                    type="number"
+                                    min="1900"
+                                    max="2100"
+                                  />
+                                </div>
+                              </div>
+                            ) : null}
 
                         {/* Studio + Resolution + Thumbnail + File URL */}
-                        <div className="grid grid-cols-1 gap-4">
-                          <div>
-                            <label className="text-sm text-neutral-300">
+                        <div
+                          className={
+                            filmWizardStep === 2
+                              ? wizardStyles.fieldsSecondary
+                              : "grid grid-cols-1 gap-4"
+                          }
+                        >
+                          {filmWizardStep === 2 ? (
+                          <div className={wizardStyles.field}>
+                            <label htmlFor="movie-wizard-studio">
                               Studio
                             </label>
                             <select
-                              className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 focus:border-red-500 focus:outline-none"
+                              id="movie-wizard-studio"
                               value={filmStudioId}
                               onChange={(e) => setFilmStudioId(e.target.value)}
                             >
@@ -2824,13 +3125,15 @@ export function DashboardExperience({ beta = false }) {
                               ))}
                             </select>
                           </div>
+                          ) : null}
 
-                          <div>
-                            <label className="text-sm text-neutral-300">
-                              Resolution <span className="text-red-400">*</span>
+                          {filmWizardStep === 2 ? (
+                          <div className={wizardStyles.field}>
+                            <label htmlFor="movie-wizard-resolution">
+                              Qualität <span className={wizardStyles.required}>*</span>
                             </label>
                             <select
-                              className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 focus:border-red-500 focus:outline-none"
+                              id="movie-wizard-resolution"
                               value={filmResolutionId}
                               onChange={(e) =>
                                 handleResolutionChange(e.target.value)
@@ -2847,209 +3150,336 @@ export function DashboardExperience({ beta = false }) {
                               ))}
                             </select>
                           </div>
+                          ) : null}
 
-                          {/* Thumbnail Upload: OHNE CROP */}
-                          <div>
-                            <label className="text-sm text-neutral-300">
-                              Thumbnail (optional)
-                            </label>
-
-                            {filmThumbnailUrl ? (
-                              <div className="mt-2 flex items-center gap-3">
-                                <img
-                                  src={filmThumbnailUrl}
-                                  alt="Thumbnail Preview"
-                                  className="h-16 w-16 rounded-xl border border-neutral-700 object-cover bg-neutral-900"
-                                  loading="lazy"
-                                />
-                                <div className="min-w-0 flex-1">
-                                  <div className="truncate text-xs text-neutral-400">
-                                    {filmThumbnailUrl}
-                                  </div>
-                                  <div className="mt-2 flex gap-2">
+                          {filmWizardStep === 1 ? (
+                            <div>
+                              {filmThumbnailUrl ? (
+                                <div className={wizardStyles.thumbnailCurrent}>
+                                  <img
+                                    src={filmThumbnailUrl}
+                                    alt="Ausgewähltes Thumbnail"
+                                  />
+                                  <div>
+                                    <span>Thumbnail übernommen</span>
+                                    <strong>Das Cover ist für den Film vorgemerkt.</strong>
+                                    <small>{filmThumbnailUrl}</small>
                                     <button
                                       type="button"
                                       onClick={() => setFilmThumbnailUrl("")}
-                                      className="rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-xs text-neutral-200 hover:bg-neutral-900"
                                     >
-                                      Entfernen
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        try {
-                                          navigator.clipboard.writeText(
-                                            filmThumbnailUrl
-                                          );
-                                        } catch {
-                                          // ignore
-                                        }
-                                      }}
-                                      className="rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-xs text-neutral-200 hover:bg-neutral-900"
-                                    >
-                                      Copy URL
+                                      Thumbnail entfernen
                                     </button>
                                   </div>
                                 </div>
-                              </div>
-                            ) : (
-                              <div className="mt-2">
-                                <MovieThumbnailUploader
-                                  onUploaded={(url) =>
-                                    setFilmThumbnailUrl(url)
-                                  }
-                                />
-                              </div>
-                            )}
-                          </div>
+                              ) : null}
 
-                          <div>
-                            <label className="text-sm text-neutral-300">
-                              File-URL / NAS-Pfad
-                            </label>
+                              {beta ? (
+                                <AdminThumbnailStudio
+                                  studioMap={studioMap}
+                                  resolutionMap={resolutionMap}
+                                  embeddedMovie={wizardThumbnailMovie}
+                                  onThumbnailReady={(thumbnailUrl) => {
+                                    setFilmThumbnailUrl(thumbnailUrl);
+                                    setError(null);
+                                  }}
+                                  onUnauthorized={handleSessionExpired}
+                                />
+                              ) : (
+                                <MovieThumbnailUploader
+                                  onUploaded={(thumbnailUrl) => {
+                                    setFilmThumbnailUrl(thumbnailUrl);
+                                    setError(null);
+                                  }}
+                                />
+                              )}
+                            </div>
+                          ) : null}
+
+                          {filmWizardStep === 0 ? (
+                          <div className={wizardStyles.manualPath}>
+                            <span>Alternativ: File-URL / NAS-Pfad manuell</span>
                             <input
-                              className={`mt-1 w-full rounded-xl border bg-neutral-900 px-3 py-2.5 text-base text-neutral-50 placeholder:text-neutral-500 focus:outline-none ${
-                                filmFileDuplicate
-                                  ? "border-green-500 focus:border-green-400"
-                                  : "border-neutral-700 focus:border-red-500"
-                              }`}
                               value={filmFileUrl}
-                              onChange={(e) => setFilmFileUrl(e.target.value)}
+                              onChange={(e) => handleWizardFileChange(e.target.value)}
                               placeholder="https://video.my1337.de/"
                             />
                             {filmFileDuplicate ? (
-                              <p className="mt-2 text-xs text-green-400">
+                              <p className={wizardStyles.duplicate}>
                                 Bereits als „{filmFileDuplicate.title}“ vorhanden –
                                 dieser Pfad kann nicht erneut gespeichert werden.
                               </p>
                             ) : null}
                           </div>
+                          ) : null}
                         </div>
 
-                        {/* Hauptdarsteller Chips */}
-                        <div>
-                          <label className="text-sm text-neutral-300">
-                            Hauptdarsteller (klick zum Auswählen / Entfernen)
-                          </label>
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            {hauptdarsteller.length === 0 ? (
-                              <span className="text-sm text-neutral-500">
-                                Noch keine Hauptdarsteller angelegt.
-                              </span>
-                            ) : (
-                              hauptdarsteller.map((a) => {
-                                const active = selectedMainActorIds.includes(
-                                  a.id
-                                );
-                                return (
-                                  <button
-                                    key={a.id}
-                                    type="button"
-                                    onClick={() => handleToggleMainActor(a)}
-                                    className={chipClass(active)}
-                                  >
-                                    {a.name}
-                                  </button>
-                                );
-                              })
-                            )}
+                            {/* Hauptdarsteller */}
+                            {filmWizardStep === 3 ? (
+                              <div>
+                                <div className={wizardStyles.selectionIntro}>
+                                  <span>Klick zum Auswählen oder Entfernen</span>
+                                  <strong>{selectedMainActorIds.length}</strong>
+                                </div>
+                                <div className={wizardStyles.choices}>
+                                  {hauptdarsteller.length === 0 ? (
+                                    <span className={wizardStyles.empty}>
+                                      Noch keine Hauptdarsteller angelegt.
+                                    </span>
+                                  ) : (
+                                    hauptdarsteller.map((actor) => {
+                                      const active = selectedMainActorIds.includes(
+                                        actor.id
+                                      );
+                                      return (
+                                        <button
+                                          key={actor.id}
+                                          type="button"
+                                          onClick={() => handleToggleMainActor(actor)}
+                                          className={`${wizardStyles.choice} ${
+                                            active ? wizardStyles.choiceActive : ""
+                                          }`}
+                                          aria-pressed={active}
+                                        >
+                                          {active ? "✓ " : ""}{actor.name}
+                                        </button>
+                                      );
+                                    })
+                                  )}
+                                </div>
+                              </div>
+                            ) : null}
+
+                            {/* Nebendarsteller */}
+                            {filmWizardStep === 4 ? (
+                              <div>
+                                <div className={wizardStyles.selectionIntro}>
+                                  <span>Klick zum Auswählen oder Entfernen</span>
+                                  <strong>{selectedSupportActorIds.length}</strong>
+                                </div>
+                                <div className={wizardStyles.choices}>
+                                  {nebendarsteller.length === 0 ? (
+                                    <span className={wizardStyles.empty}>
+                                      Noch keine Nebendarsteller angelegt.
+                                    </span>
+                                  ) : (
+                                    nebendarsteller.map((actor) => {
+                                      const active = selectedSupportActorIds.includes(
+                                        actor.id
+                                      );
+                                      return (
+                                        <button
+                                          key={actor.id}
+                                          type="button"
+                                          onClick={() =>
+                                            toggleId(
+                                              actor.id,
+                                              selectedSupportActorIds,
+                                              setSelectedSupportActorIds
+                                            )
+                                          }
+                                          className={`${wizardStyles.choice} ${
+                                            active ? wizardStyles.choiceActive : ""
+                                          }`}
+                                          aria-pressed={active}
+                                        >
+                                          {active ? "✓ " : ""}{actor.name}
+                                        </button>
+                                      );
+                                    })
+                                  )}
+                                </div>
+                              </div>
+                            ) : null}
+
+                            {/* Tags */}
+                            {filmWizardStep === 5 ? (
+                              <div>
+                                <div className={wizardStyles.selectionIntro}>
+                                  <span>Klick zum Auswählen oder Entfernen</span>
+                                  <strong>{selectedTagIds.length}</strong>
+                                </div>
+                                <div className={wizardStyles.choices}>
+                                  {tags.length === 0 ? (
+                                    <span className={wizardStyles.empty}>
+                                      Noch keine Tags angelegt.
+                                    </span>
+                                  ) : (
+                                    tags.map((tag) => {
+                                      const active = selectedTagIds.includes(tag.id);
+                                      return (
+                                        <button
+                                          key={tag.id}
+                                          type="button"
+                                          onClick={() =>
+                                            toggleId(
+                                              tag.id,
+                                              selectedTagIds,
+                                              setSelectedTagIds
+                                            )
+                                          }
+                                          className={`${wizardStyles.choice} ${
+                                            active ? wizardStyles.choiceActive : ""
+                                          }`}
+                                          aria-pressed={active}
+                                        >
+                                          {active ? "✓ " : ""}{tag.name}
+                                        </button>
+                                      );
+                                    })
+                                  )}
+                                </div>
+                              </div>
+                            ) : null}
+
+                            {/* Vorschau */}
+                            {filmWizardStep === 6 ? (
+                              <div className={wizardStyles.review}>
+                                <div className={wizardStyles.reviewMedia}>
+                                  {filmThumbnailUrl ? (
+                                    <img src={filmThumbnailUrl} alt={filmTitel} />
+                                  ) : (
+                                    <div className={wizardStyles.reviewMediaEmpty}>
+                                      <strong>Kein Thumbnail</strong>
+                                      <span>Der Film kann trotzdem gespeichert werden.</span>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className={wizardStyles.reviewContent}>
+                                  <div className={wizardStyles.reviewTitle}>
+                                    <span>Bereit für die Bibliothek</span>
+                                    <h3>{filmTitel || "Ohne Titel"}</h3>
+                                    <p>
+                                      {studioMap[filmStudioId]?.name || "Kein Studio"}
+                                      {filmJahr ? ` · ${filmJahr}` : " · Jahr offen"}
+                                    </p>
+                                  </div>
+
+                                  <div className={wizardStyles.reviewFacts}>
+                                    <div className={wizardStyles.reviewFact}>
+                                      <span>Qualität</span>
+                                      <strong>
+                                        {resolutionMap[filmResolutionId]?.name || "Nicht gewählt"}
+                                      </strong>
+                                    </div>
+                                    <div className={wizardStyles.reviewFact}>
+                                      <span>Datei</span>
+                                      <strong>{movieFileName(filmFileUrl)}</strong>
+                                    </div>
+                                  </div>
+
+                                  <div className={wizardStyles.reviewGroups}>
+                                    <div className={wizardStyles.reviewGroup}>
+                                      <span>Hauptdarsteller</span>
+                                      <div className={wizardStyles.reviewChips}>
+                                        {selectedMainActorIds.length ? (
+                                          selectedMainActorIds.map((id) => (
+                                            <span key={id}>{actorMap[id]?.name || "Unbekannt"}</span>
+                                          ))
+                                        ) : (
+                                          <span>Keine Auswahl</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className={wizardStyles.reviewGroup}>
+                                      <span>Nebendarsteller</span>
+                                      <div className={wizardStyles.reviewChips}>
+                                        {selectedSupportActorIds.length ? (
+                                          selectedSupportActorIds.map((id) => (
+                                            <span key={id}>{supportMap[id]?.name || "Unbekannt"}</span>
+                                          ))
+                                        ) : (
+                                          <span>Keine Auswahl</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className={wizardStyles.reviewGroup}>
+                                      <span>Tags</span>
+                                      <div className={wizardStyles.reviewChips}>
+                                        {selectedTagIds.length ? (
+                                          selectedTagIds.map((id) => (
+                                            <span key={id}>{tagMap[id]?.name || "Unbekannt"}</span>
+                                          ))
+                                        ) : (
+                                          <span>Keine Auswahl</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className={wizardStyles.reviewPath}>
+                                    {filmFileUrl}
+                                  </div>
+                                </div>
+                              </div>
+                            ) : null}
                           </div>
-                        </div>
 
-                        {/* Nebendarsteller Chips */}
-                        <div>
-                          <label className="text-sm text-neutral-300">
-                            Nebendarsteller (klick zum Auswählen / Entfernen)
-                          </label>
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            {nebendarsteller.length === 0 ? (
-                              <span className="text-sm text-neutral-500">
-                                Noch keine Nebendarsteller angelegt.
-                              </span>
-                            ) : (
-                              nebendarsteller.map((a) => {
-                                const active = selectedSupportActorIds.includes(
-                                  a.id
-                                );
-                                return (
-                                  <button
-                                    key={a.id}
-                                    type="button"
-                                    onClick={() =>
-                                      toggleId(
-                                        a.id,
-                                        selectedSupportActorIds,
-                                        setSelectedSupportActorIds
-                                      )
-                                    }
-                                    className={chipClass(active)}
-                                  >
-                                    {a.name}
-                                  </button>
-                                );
-                              })
-                            )}
+                          <div className={wizardStyles.actions}>
+                            <span className={wizardStyles.optionalNote}>
+                              {filmWizardStep === 1 ||
+                              filmWizardStep === 3 ||
+                              filmWizardStep === 4 ||
+                              filmWizardStep === 5
+                                ? "Dieser Schritt kann ohne Auswahl fortgesetzt werden."
+                                : "Deine Eingaben bleiben beim Zurückgehen erhalten."}
+                            </span>
+                            <div className={wizardStyles.actionsRight}>
+                              {filmWizardStep > 0 ? (
+                                <button
+                                  type="button"
+                                  className={wizardStyles.secondaryButton}
+                                  onClick={handleWizardBack}
+                                  disabled={filmSaving}
+                                >
+                                  Zurück
+                                </button>
+                              ) : editingFilmId ? (
+                                <button
+                                  type="button"
+                                  className={wizardStyles.secondaryButton}
+                                  onClick={handleCancelEdit}
+                                  disabled={filmSaving}
+                                >
+                                  Abbrechen
+                                </button>
+                              ) : null}
+
+                              {filmWizardStep < MOVIE_WIZARD_STEPS.length - 1 ? (
+                                <button
+                                  type="button"
+                                  className={wizardStyles.primaryButton}
+                                  onClick={handleWizardNext}
+                                  disabled={
+                                    filmWizardStep === 0 &&
+                                    (!hasExactVideoFile(filmFileUrl) ||
+                                      Boolean(filmFileDuplicate))
+                                  }
+                                >
+                                  Weiter →
+                                </button>
+                              ) : (
+                                <button
+                                  type="submit"
+                                  className={wizardStyles.saveButton}
+                                  disabled={
+                                    filmSaving ||
+                                    !hasExactVideoFile(filmFileUrl) ||
+                                    !filmTitel.trim() ||
+                                    !filmResolutionId ||
+                                    Boolean(filmFileDuplicate)
+                                  }
+                                >
+                                  {filmSaving
+                                    ? "Wird gespeichert…"
+                                    : editingFilmId
+                                    ? "Film aktualisieren"
+                                    : "Film speichern"}
+                                </button>
+                              )}
+                            </div>
                           </div>
-                        </div>
-
-                        {/* Tags Chips */}
-                        <div>
-                          <label className="text-sm text-neutral-300">
-                            Tags (klick zum Auswählen / Entfernen)
-                          </label>
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            {tags.length === 0 ? (
-                              <span className="text-sm text-neutral-500">
-                                Noch keine Tags angelegt.
-                              </span>
-                            ) : (
-                              tags.map((t) => {
-                                const active = selectedTagIds.includes(t.id);
-                                return (
-                                  <button
-                                    key={t.id}
-                                    type="button"
-                                    onClick={() =>
-                                      toggleId(
-                                        t.id,
-                                        selectedTagIds,
-                                        setSelectedTagIds
-                                      )
-                                    }
-                                    className={chipClass(active)}
-                                  >
-                                    {t.name}
-                                  </button>
-                                );
-                              })
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="flex gap-3 pt-1">
-                          <button
-                            type="submit"
-                            className="rounded-xl bg-red-500 px-5 py-2.5 text-sm font-semibold text-black shadow shadow-red-900/70 hover:bg-red-400 hover:shadow-lg hover:shadow-red-900/70 disabled:opacity-60"
-                            disabled={
-                              !filmTitel.trim() ||
-                              !filmResolutionId ||
-                              Boolean(filmFileDuplicate)
-                            }
-                          >
-                            {editingFilmId
-                              ? "Film aktualisieren"
-                              : "Film speichern"}
-                          </button>
-                          {editingFilmId && (
-                            <button
-                              type="button"
-                              onClick={handleCancelEdit}
-                              className="rounded-xl border border-neutral-600 px-4 py-2.5 text-sm text-neutral-200 hover:bg-neutral-800"
-                            >
-                              Abbrechen
-                            </button>
-                          )}
-                        </div>
+                        </section>
                       </form>
                     </div>
                   )}

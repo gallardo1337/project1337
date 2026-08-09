@@ -11,6 +11,7 @@ const ANALYSIS_WIDTH = 192;
 const ANALYSIS_HEIGHT = 108;
 const SAMPLES_PER_BAND = 5;
 const SUGGESTION_COUNT = 6;
+const EMPTY_MOVIES = [];
 const CHAPTER_POINTS = [0.12, 0.26, 0.4, 0.54, 0.68, 0.82];
 const SUGGESTION_BANDS = [
   [0.07, 0.18],
@@ -401,10 +402,12 @@ function frameToBlob(video, mode, focusX, focusY) {
 }
 
 export default function AdminThumbnailStudio({
-  movies,
+  movies = EMPTY_MOVIES,
   studioMap,
   resolutionMap,
   initialMovieId,
+  embeddedMovie = null,
+  onThumbnailReady,
   onThumbnailSaved,
   onEditMovie,
   onUnauthorized,
@@ -438,14 +441,19 @@ export default function AdminThumbnailStudio({
   const [notice, setNotice] = useState(null);
   const [error, setError] = useState(null);
 
+  const workingMovies = useMemo(
+    () => (embeddedMovie ? [embeddedMovie] : movies),
+    [embeddedMovie, movies]
+  );
+
   const sortedMovies = useMemo(
     () =>
-      [...movies].sort((left, right) =>
+      [...workingMovies].sort((left, right) =>
         String(left.title || "").localeCompare(String(right.title || ""), "de", {
           sensitivity: "base",
         })
       ),
-    [movies]
+    [workingMovies]
   );
 
   const visibleMovies = useMemo(() => {
@@ -465,8 +473,8 @@ export default function AdminThumbnailStudio({
   }, [sortedMovies, search, onlyMissing, studioMap, resolutionMap]);
 
   const selectedMovie = useMemo(
-    () => movies.find((movie) => movie.id === selectedMovieId) || null,
-    [movies, selectedMovieId]
+    () => workingMovies.find((movie) => movie.id === selectedMovieId) || null,
+    [selectedMovieId, workingMovies]
   );
 
   const selectedCandidate = useMemo(
@@ -504,16 +512,19 @@ export default function AdminThumbnailStudio({
   };
 
   useEffect(() => {
-    if (selectedMovieId && movies.some((movie) => movie.id === selectedMovieId)) {
+    if (
+      selectedMovieId &&
+      workingMovies.some((movie) => movie.id === selectedMovieId)
+    ) {
       return;
     }
 
     const preferred =
-      movies.find((movie) => movie.id === initialMovieId) ||
-      movies.find((movie) => !movie.thumbnail_url) ||
-      movies[0];
+      workingMovies.find((movie) => movie.id === initialMovieId) ||
+      workingMovies.find((movie) => !movie.thumbnail_url) ||
+      workingMovies[0];
     setSelectedMovieId(preferred?.id || null);
-  }, [initialMovieId, movies, selectedMovieId]);
+  }, [initialMovieId, selectedMovieId, workingMovies]);
 
   useEffect(() => {
     clearLocalSource();
@@ -871,6 +882,12 @@ export default function AdminThumbnailStudio({
         throw new Error("Der Bild-Upload hat keine URL zurückgegeben.");
       }
 
+      if (embeddedMovie) {
+        onThumbnailReady?.(uploadPayload.url);
+        setNotice("Thumbnail wurde für den neuen Film übernommen.");
+        return;
+      }
+
       const saveResponse = await fetch(
         `/api/movies/${selectedMovie.id}/thumbnail`,
         {
@@ -917,11 +934,12 @@ export default function AdminThumbnailStudio({
     <section className="thumbnailStudio">
       <div className="thumbnailStudio__intro">
         <div>
-          <span>Workflow 01—04</span>
+          <span>{embeddedMovie ? "Assistent / Thumbnail" : "Workflow 01—04"}</span>
           <h2>Aus Video wird Cover.</h2>
           <p>
-            Quelle wählen, Szene finden, Varianten vergleichen und den Favoriten
-            direkt dem Film zuordnen.
+            {embeddedMovie
+              ? "Szene finden, Varianten vergleichen und den Favoriten für den neuen Film übernehmen."
+              : "Quelle wählen, Szene finden, Varianten vergleichen und den Favoriten direkt dem Film zuordnen."}
           </p>
         </div>
         <div className="thumbnailStudio__specs" aria-label="Ausgabeformat">
@@ -931,8 +949,13 @@ export default function AdminThumbnailStudio({
         </div>
       </div>
 
-      <div className="thumbnailStudio__layout">
-        <aside className="thumbnailStudio__library">
+      <div
+        className={`thumbnailStudio__layout${
+          embeddedMovie ? " is-embedded" : ""
+        }`}
+      >
+        {!embeddedMovie ? (
+          <aside className="thumbnailStudio__library">
           <header>
             <div>
               <span>01</span>
@@ -996,7 +1019,8 @@ export default function AdminThumbnailStudio({
               </div>
             ) : null}
           </div>
-        </aside>
+          </aside>
+        ) : null}
 
         <div className="thumbnailStudio__workbench">
           {selectedMovie ? (
@@ -1293,6 +1317,10 @@ export default function AdminThumbnailStudio({
                     <button type="button" onClick={saveThumbnail} disabled={saving}>
                       {saving
                         ? "Thumbnail wird gespeichert…"
+                        : embeddedMovie
+                        ? selectedMovie.thumbnail_url
+                          ? "Thumbnail ersetzen"
+                          : "Thumbnail übernehmen"
                         : selectedMovie.thumbnail_url
                         ? "Thumbnail ersetzen"
                         : "Thumbnail speichern"}
@@ -1301,12 +1329,14 @@ export default function AdminThumbnailStudio({
                 </div>
               ) : null}
 
-              <div className="thumbnailStudio__editLink">
-                <span>Metadaten, Dateipfad oder bestehende URL ändern?</span>
-                <button type="button" onClick={() => onEditMovie?.(selectedMovie)}>
-                  Film im Editor öffnen →
-                </button>
-              </div>
+              {!embeddedMovie ? (
+                <div className="thumbnailStudio__editLink">
+                  <span>Metadaten, Dateipfad oder bestehende URL ändern?</span>
+                  <button type="button" onClick={() => onEditMovie?.(selectedMovie)}>
+                    Film im Editor öffnen →
+                  </button>
+                </div>
+              ) : null}
             </>
           ) : (
             <div className="thumbnailStudio__empty">

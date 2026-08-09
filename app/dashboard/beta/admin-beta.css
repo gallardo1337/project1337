@@ -3314,6 +3314,10 @@
   background: rgba(8, 8, 9, 0.9);
 }
 
+.adminBeta .thumbnailStudio__layout.is-embedded {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .adminBeta .thumbnailStudio__library {
   position: sticky;
   top: 112px;
