@@ -67,6 +67,13 @@ const MovieThumbnailUploader = dynamic(
 
 const CHANGELOG = [
   {
+    version: "2.5.7",
+    date: "2026-08-09",
+    items: [
+      "Benutzer-Initialen im Kontomenü-Schalter durch ein Zahnrad ersetzt",
+    ],
+  },
+  {
     version: "2.5.6",
     date: "2026-08-09",
     items: [

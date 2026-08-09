@@ -460,7 +460,8 @@
   background: rgba(255,43,69,.1);
 }
 
-.toolButton svg {
+.toolButton svg,
+.accountButton svg {
   width: 18px;
 }
 
@@ -502,12 +503,6 @@
 
 .account {
   position: relative;
-}
-
-.accountButton span {
-  font-size: 10px;
-  font-weight: 850;
-  letter-spacing: .08em;
 }
 
 .accountMenu {
