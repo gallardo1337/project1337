@@ -9,21 +9,21 @@ const JPEG_QUALITY = 0.94;
 const SHARPEN_AMOUNT = 0.12;
 const ANALYSIS_WIDTH = 192;
 const ANALYSIS_HEIGHT = 108;
+const ANALYSIS_RANGE_START = 0.2;
+const ANALYSIS_RANGE_END = 0.95;
+const ANALYSIS_BAND_COUNT = 6;
 const SAMPLES_PER_BAND = 5;
 const SUGGESTION_COUNT = 6;
 const EMPTY_MOVIES = [];
 const CHAPTER_POINTS = [0.12, 0.26, 0.4, 0.54, 0.68, 0.82];
-const SUGGESTION_BANDS = [
-  [0.07, 0.18],
-  [0.2, 0.32],
-  [0.34, 0.46],
-  [0.48, 0.6],
-  [0.62, 0.74],
-  [0.76, 0.9],
-];
 
 function createAnalysisPoints() {
-  return SUGGESTION_BANDS.flatMap(([start, end], bandIndex) => {
+  const bandSize =
+    (ANALYSIS_RANGE_END - ANALYSIS_RANGE_START) / ANALYSIS_BAND_COUNT;
+
+  return Array.from({ length: ANALYSIS_BAND_COUNT }, (_, bandIndex) => {
+    const start = ANALYSIS_RANGE_START + bandIndex * bandSize;
+    const end = start + bandSize;
     const sliceSize = (end - start) / SAMPLES_PER_BAND;
 
     return Array.from({ length: SAMPLES_PER_BAND }, (_, sampleIndex) => ({
@@ -32,7 +32,7 @@ function createAnalysisPoints() {
         start +
         sliceSize * (sampleIndex + 0.16 + Math.random() * 0.68),
     }));
-  });
+  }).flat();
 }
 
 function waitForFramePaint() {
