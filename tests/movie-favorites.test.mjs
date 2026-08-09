@@ -54,13 +54,24 @@ test("V1 ist aus der aktiven Website entfernt", async () => {
 });
 
 test("Admin-Changelog führt V1-Archivierung und Favoriten fort", async () => {
-  const dashboard = await readProjectFile("app/dashboard/page.jsx");
+  const [dashboard, experience, layout, redirectLayout] = await Promise.all([
+    readProjectFile("app/dashboard/page.jsx"),
+    readProjectFile("app/beta/BetaExperience.jsx"),
+    readProjectFile("app/dashboard/v2/layout.jsx"),
+    readProjectFile("app/dashboard/beta/layout.jsx"),
+  ]);
 
-  assert.match(dashboard, /const CHANGELOG = \[\s*\{\s*version:\s*"2\.5\.5"/);
+  assert.match(dashboard, /const CHANGELOG = \[\s*\{\s*version:\s*"2\.5\.6"/);
   assert.match(dashboard, /Git-Branch archive\/v1/);
   assert.match(dashboard, /version:\s*"2\.5\.3"/);
   assert.match(dashboard, /version:\s*"2\.5\.2"/);
   assert.match(dashboard, /horizontale und vertikale Fokusregler/);
   assert.match(dashboard, /Favoriten als geräteübergreifend gespeicherte Filmauswahl/);
   assert.match(dashboard, /Favoritenherzen von allen Filmkarten entfernt/);
+  assert.match(experience, />Admin<\/button>/);
+  assert.match(dashboard, /<small>Admin<\/small>/);
+  assert.doesNotMatch(dashboard, /Klassisches Dashboard/);
+  assert.doesNotMatch(dashboard, /Zum klassischen Dashboard/);
+  assert.match(layout, /title:\s*"Admin \| Project1337"/);
+  assert.match(redirectLayout, /title:\s*"Admin \| Project1337"/);
 });

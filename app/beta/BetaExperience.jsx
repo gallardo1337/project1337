@@ -1045,7 +1045,7 @@ function AppHeader({
           {accountOpen ? (
             <div className={styles.accountMenu}>
               <strong>{loginUser}</strong>
-              <button type="button" onClick={onDashboard}>Admin v2</button>
+              <button type="button" onClick={onDashboard}>Admin</button>
               <button type="button" onClick={onLogout}>Abmelden</button>
             </div>
           ) : null}

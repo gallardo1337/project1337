@@ -67,6 +67,14 @@ const MovieThumbnailUploader = dynamic(
 
 const CHANGELOG = [
   {
+    version: "2.5.6",
+    date: "2026-08-09",
+    items: [
+      "Bezeichnung der Verwaltungsoberfläche überall zu Admin vereinheitlicht",
+      "Wechsel zum klassischen Dashboard aus dem Admin-Menü entfernt",
+    ],
+  },
+  {
     version: "2.5.5",
     date: "2026-08-09",
     items: [
@@ -168,7 +176,7 @@ const CHANGELOG = [
     version: "2.2.0",
     date: "2026-08-08",
     items: [
-      "Startseiten-Regisseur als neuen Arbeitsbereich im Admin v2 hinzugefügt",
+      "Startseiten-Regisseur als neuen Arbeitsbereich im Adminbereich hinzugefügt",
       "Bereiche der v2-Startseite können sortiert, ausgeblendet, umbenannt und in ihrer Größe angepasst werden",
       "Neue dynamische Reihen für Top bewertet, Meistgesehen, Zufallsauswahl und Studio-Spotlights ergänzt",
       "Startseiten-Konfiguration geschützt und zentral in Supabase gespeichert",
@@ -2594,7 +2602,7 @@ export function DashboardExperience({ beta = false }) {
                   <img src="/logo.png" alt="Project1337" />
                   <span>
                     Control Room
-                    <small>Admin v2 / 02</small>
+                    <small>Admin</small>
                   </span>
                 </button>
               ) : null}
@@ -2713,21 +2721,6 @@ export function DashboardExperience({ beta = false }) {
                     >
                       Hauptseite
                     </button>
-
-                    {beta ? (
-                      <button
-                        type="button"
-                        className="dashUserMenu__item"
-                        role="menuitem"
-                        onClick={() => {
-                          setUserMenuOpen(false);
-                          router.push("/dashboard");
-                        }}
-                        title="Zum klassischen Dashboard"
-                      >
-                        Klassisches Dashboard
-                      </button>
-                    ) : null}
 
                     <div style={{ height: 8 }} />
 
