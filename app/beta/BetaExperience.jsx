@@ -68,6 +68,7 @@ function Icon({ name, className = "" }) {
         <circle cx="15.5" cy="15.5" r="1" fill="currentColor" stroke="none" />
       </>
     ),
+    heart: <path d="M20.8 4.7a5.5 5.5 0 0 0-7.8 0L12 5.8l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.5a5.5 5.5 0 0 0 0-7.8Z" />,
     spark: <path d="M12 3l1.4 5.6L19 10l-5.6 1.4L12 17l-1.4-5.6L5 10l5.6-1.4L12 3Zm6 13 .6 2.4L21 19l-2.4.6L18 22l-.6-2.4L15 19l2.4-.6L18 16Z" />,
     star: <path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6-5.4-2.8-5.4 2.8 1-6-4.4-4.3 6.1-.9L12 3Z" />,
     user: (
@@ -703,53 +704,104 @@ function addActorMetrics(actors, movies) {
   });
 }
 
-function MovieCard({ movie, onOpen, large = false, index, showMetrics = false }) {
+function FavoriteToggle({ movie, onToggleFavorite, className = "", showLabel = false }) {
+  const [saving, setSaving] = useState(false);
+  const favorite = movie?.favorite === true;
+
+  if (!onToggleFavorite) return null;
+
+  const toggleFavorite = async () => {
+    if (saving) return;
+    setSaving(true);
+
+    try {
+      await onToggleFavorite(movie.id, !favorite);
+    } catch {
+      // Die übergeordnete Seite stellt den vorherigen Zustand wieder her und zeigt den Fehler an.
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <button
       type="button"
-      className={`${styles.movieCard} ${large ? styles.movieCardLarge : ""}`}
-      onClick={() => onOpen(movie)}
-      aria-label={`${movie.title || "Film"} öffnen`}
+      className={`${className} ${favorite ? styles.favoriteActive : ""}`}
+      onClick={toggleFavorite}
+      aria-label={favorite ? `${movie.title || "Film"} aus Favoriten entfernen` : `${movie.title || "Film"} zu Favoriten hinzufügen`}
+      aria-pressed={favorite}
+      disabled={saving}
+      title={favorite ? "Aus Favoriten entfernen" : "Zu Favoriten hinzufügen"}
     >
-      <span className={styles.movieVisual}>
-        <MediaImage
-          src={movie.thumbnailUrl}
-          alt={movie.title || "Filmcover"}
-          sizes={large ? "(max-width: 760px) 90vw, 48vw" : "(max-width: 760px) 78vw, 24vw"}
-        />
-        <span className={styles.movieShade} />
-        {typeof index === "number" ? (
-          <span className={styles.movieIndex}>{String(index + 1).padStart(2, "0")}</span>
-        ) : null}
-        <span className={`${styles.quality} ${qualityTone(movie.resolution)}`}>
-          {movie.resolution || "HD"}
-        </span>
-        <span className={styles.moviePlay}>
-          <Icon name="play" />
-        </span>
-      </span>
-      <span className={styles.movieCopy}>
-        <span className={styles.movieTitle}>{movie.title || "Unbenannt"}</span>
-        <span className={styles.movieMeta}>
-          {movie.studio || "Independent"}
-          <i />
-          {movie.year || "–"}
-        </span>
-        {showMetrics ? (
-          <span className={styles.movieMetrics}>
-            <span>
-              <Icon name="star" />
-              {Number(movie.rating) > 0 ? `${formatRating(movie.rating)} / 10` : "– / 10"}
-            </span>
-            <i />
-            <span>
-              <Icon name="play" />
-              {formatNumber(movie.viewCount)} Aufrufe
-            </span>
-          </span>
-        ) : null}
-      </span>
+      <Icon name="heart" />
+      {showLabel ? <span>{saving ? "Speichert…" : favorite ? "Favorit" : "Zu Favoriten"}</span> : null}
     </button>
+  );
+}
+
+function MovieCard({
+  movie,
+  onOpen,
+  onToggleFavorite,
+  large = false,
+  index,
+  showMetrics = false,
+}) {
+  return (
+    <article
+      className={`${styles.movieCard} ${large ? styles.movieCardLarge : ""}`}
+    >
+      <button
+        type="button"
+        className={styles.movieCardOpen}
+        onClick={() => onOpen(movie)}
+        aria-label={`${movie.title || "Film"} öffnen`}
+      >
+        <span className={styles.movieVisual}>
+          <MediaImage
+            src={movie.thumbnailUrl}
+            alt={movie.title || "Filmcover"}
+            sizes={large ? "(max-width: 760px) 90vw, 48vw" : "(max-width: 760px) 78vw, 24vw"}
+          />
+          <span className={styles.movieShade} />
+          {typeof index === "number" ? (
+            <span className={styles.movieIndex}>{String(index + 1).padStart(2, "0")}</span>
+          ) : null}
+          <span className={`${styles.quality} ${qualityTone(movie.resolution)}`}>
+            {movie.resolution || "HD"}
+          </span>
+          <span className={styles.moviePlay}>
+            <Icon name="play" />
+          </span>
+        </span>
+        <span className={styles.movieCopy}>
+          <span className={styles.movieTitle}>{movie.title || "Unbenannt"}</span>
+          <span className={styles.movieMeta}>
+            {movie.studio || "Independent"}
+            <i />
+            {movie.year || "–"}
+          </span>
+          {showMetrics ? (
+            <span className={styles.movieMetrics}>
+              <span>
+                <Icon name="star" />
+                {Number(movie.rating) > 0 ? `${formatRating(movie.rating)} / 10` : "– / 10"}
+              </span>
+              <i />
+              <span>
+                <Icon name="play" />
+                {formatNumber(movie.viewCount)} Aufrufe
+              </span>
+            </span>
+          ) : null}
+        </span>
+      </button>
+      <FavoriteToggle
+        movie={movie}
+        onToggleFavorite={onToggleFavorite}
+        className={styles.movieCardFavorite}
+      />
+    </article>
   );
 }
 
@@ -932,13 +984,16 @@ function AppHeader({
   onOpenArchive,
   onLogout,
   onOpenRoulette,
+  onShowFavorites,
   onOpenFilters,
+  favoriteCount,
 }) {
   const [accountOpen, setAccountOpen] = useState(false);
 
   const discoverActive = viewMode === "actors" && !selectedActor && !selectedMovieId;
   const moviesActive = viewMode === "movies" && !selectedActor && !selectedMovieId;
   const actorsActive = viewMode === "actors_all" && !selectedActor && !selectedMovieId;
+  const favoritesActive = viewMode === "favorites" && !selectedMovieId;
 
   return (
     <header className={styles.header}>
@@ -971,6 +1026,17 @@ function AppHeader({
           title="Film-Roulette"
         >
           <Icon name="dice" />
+        </button>
+        <button
+          type="button"
+          className={`${styles.toolButton} ${styles.favoriteHeaderButton} ${favoritesActive ? styles.favoriteHeaderButtonActive : ""}`}
+          onClick={onShowFavorites}
+          aria-label={`Favoriten öffnen${favoriteCount ? ` (${favoriteCount})` : ""}`}
+          aria-current={favoritesActive ? "page" : undefined}
+          title="Favoriten"
+        >
+          <Icon name="heart" />
+          {favoriteCount ? <span>{favoriteCount > 99 ? "99+" : favoriteCount}</span> : null}
         </button>
         <button type="button" className={styles.toolButton} onClick={onOpenFilters} aria-label="Filter öffnen">
           <Icon name="filter" />
@@ -1454,6 +1520,7 @@ function Discovery({
   onShowMovies,
   onShowActors,
   onShowActor,
+  onToggleFavorite,
 }) {
   const visibleSections = useMemo(
     () =>
@@ -1661,6 +1728,7 @@ function Discovery({
                 movie={movie}
                 index={index}
                 onOpen={onOpenMovie}
+                onToggleFavorite={onToggleFavorite}
                 large={index === 0}
                 showMetrics={section.type === "top_rated" || section.type === "most_viewed"}
               />
@@ -1726,12 +1794,23 @@ function Discovery({
   );
 }
 
-function MovieArchive({ movies, title, subtitle, movieSort, setMovieSort, onOpenMovie, onOpenFilters, hasAnyFilter }) {
+function MovieArchive({
+  movies,
+  title,
+  subtitle,
+  movieSort,
+  setMovieSort,
+  onOpenMovie,
+  onToggleFavorite,
+  onOpenFilters,
+  hasAnyFilter,
+  favoritesMode = false,
+}) {
   return (
     <main className={styles.archivePage}>
       <section className={styles.archiveIntro}>
-        <span>Complete catalogue / {new Date().getFullYear()}</span>
-        <h1>Film<br /><em>Archive</em></h1>
+        <span>{favoritesMode ? "Personal selection" : "Complete catalogue"} / {new Date().getFullYear()}</span>
+        <h1>{favoritesMode ? <>My<br /><em>Favorites</em></> : <>Film<br /><em>Archive</em></>}</h1>
         <p>{subtitle || `${movies.length} Filme`} · persönlich kuratiert und sofort verfügbar.</p>
         <div className={styles.archiveNumber}>{String(movies.length).padStart(3, "0")}</div>
       </section>
@@ -1746,18 +1825,23 @@ function MovieArchive({ movies, title, subtitle, movieSort, setMovieSort, onOpen
             <option value="views_desc">Meiste Aufrufe</option>
             <option value="rating_desc">Beste Bewertung</option>
           </select>
-          <button type="button" className={hasAnyFilter ? styles.filterActive : ""} onClick={onOpenFilters}>
-            <Icon name="filter" /> Filter {hasAnyFilter ? "aktiv" : ""}
-          </button>
+          {!favoritesMode ? (
+            <button type="button" className={hasAnyFilter ? styles.filterActive : ""} onClick={onOpenFilters}>
+              <Icon name="filter" /> Filter {hasAnyFilter ? "aktiv" : ""}
+            </button>
+          ) : null}
         </div>
       </div>
 
       {movies.length ? (
         <div className={styles.archiveGrid}>
-          {movies.map((movie, index) => <MovieCard key={movie.id} movie={movie} onOpen={onOpenMovie} large={index % 9 === 0} index={index} />)}
+          {movies.map((movie, index) => <MovieCard key={movie.id} movie={movie} onOpen={onOpenMovie} onToggleFavorite={onToggleFavorite} large={index % 9 === 0} index={index} />)}
         </div>
       ) : (
-        <div className={styles.emptyState}><strong>Keine Filme gefunden.</strong><span>Ändere Suche oder Filter und versuche es erneut.</span></div>
+        <div className={styles.emptyState}>
+          <strong>{favoritesMode ? "Noch keine Favoriten." : "Keine Filme gefunden."}</strong>
+          <span>{favoritesMode ? "Markiere Filme über das Herz, damit sie hier erscheinen." : "Ändere Suche oder Filter und versuche es erneut."}</span>
+        </div>
       )}
     </main>
   );
@@ -1980,7 +2064,7 @@ function ActorStatsModal({ actor, movies, stats, onClose }) {
   );
 }
 
-function ActorProfile({ actor, movies, movieSort, setMovieSort, onBack, onOpenMovie }) {
+function ActorProfile({ actor, movies, movieSort, setMovieSort, onBack, onOpenMovie, onToggleFavorite }) {
   const age = getAge(actor.birthDate);
   const [statsOpen, setStatsOpen] = useState(false);
   const stats = useMemo(() => buildActorStats(movies), [movies]);
@@ -2070,7 +2154,7 @@ function ActorProfile({ actor, movies, movieSort, setMovieSort, onBack, onOpenMo
           </select>
         </div>
         <div className={styles.profileMovieGrid}>
-          {movies.map((movie, index) => <MovieCard key={movie.id} movie={movie} onOpen={onOpenMovie} index={index} />)}
+          {movies.map((movie, index) => <MovieCard key={movie.id} movie={movie} onOpen={onOpenMovie} onToggleFavorite={onToggleFavorite} index={index} />)}
         </div>
       </section>
 
@@ -2094,6 +2178,7 @@ function MovieDetail({
   onOpenMovie,
   onRateMovie,
   onRecordView,
+  onToggleFavorite,
 }) {
   const mainCast = Array.isArray(movie.mainCast) ? movie.mainCast : [];
   const supportCast = Array.isArray(movie.supportCast) ? movie.supportCast : [];
@@ -2177,6 +2262,12 @@ function MovieDetail({
             </span>
             <h1>{movie.title || "Unbenannt"}</h1>
           </div>
+          <FavoriteToggle
+            movie={movie}
+            onToggleFavorite={onToggleFavorite}
+            className={styles.detailFavoriteButton}
+            showLabel
+          />
           {movie.tags?.length ? <div className={styles.detailTags}>{movie.tags.map((tag) => <span key={tag}>{tag}</span>)}</div> : null}
           <aside className={styles.compactRating}>
             <div className={styles.ratingHeader}>
@@ -2291,11 +2382,13 @@ export default function BetaExperience({
   onDiscover,
   onShowActors,
   onShowMovies,
+  onShowFavorites,
   onShowActor,
   onOpenMovie,
   onCloseMovie,
   onRateMovie,
   onRecordMovieView,
+  onToggleFavorite,
   onSearch,
   onDashboard,
   onOpenArchive,
@@ -2332,6 +2425,10 @@ export default function BetaExperience({
   const actorsWithMetrics = useMemo(
     () => addActorMetrics(actors, movies),
     [actors, movies]
+  );
+  const favoriteCount = useMemo(
+    () => movies.filter((movie) => movie.favorite).length,
+    [movies]
   );
 
   useEffect(() => {
@@ -2404,7 +2501,9 @@ export default function BetaExperience({
         onOpenArchive={onOpenArchive}
         onLogout={onLogout}
         onOpenRoulette={() => setRouletteOpen(true)}
+        onShowFavorites={onShowFavorites}
         onOpenFilters={() => setFiltersOpen(true)}
+        favoriteCount={favoriteCount}
       />
 
       {error ? <div className={styles.globalError}>{error}</div> : null}
@@ -2421,14 +2520,15 @@ export default function BetaExperience({
             onOpenMovie={onOpenMovie}
             onRateMovie={onRateMovie}
             onRecordView={onRecordMovieView}
+            onToggleFavorite={onToggleFavorite}
           />
         ) : <div className={styles.emptyState}><strong>Film nicht gefunden.</strong><button type="button" onClick={onCloseMovie}>Zurück</button></div>
       ) : selectedActor ? (
-        <ActorProfile actor={selectedActor} movies={movieList} movieSort={movieSort} setMovieSort={setMovieSort} onBack={actorBackTarget === "archive" ? onShowActors : onDiscover} onOpenMovie={onOpenMovie} />
+        <ActorProfile actor={selectedActor} movies={movieList} movieSort={movieSort} setMovieSort={setMovieSort} onBack={actorBackTarget === "archive" ? onShowActors : onDiscover} onOpenMovie={onOpenMovie} onToggleFavorite={onToggleFavorite} />
       ) : viewMode === "actors_all" ? (
         <ActorArchive actors={actorsWithMetrics} onShowActor={openActorFromArchive} />
-      ) : viewMode === "movies" ? (
-        <MovieArchive movies={movieList} title={moviesTitle} subtitle={moviesSubtitle} movieSort={movieSort} setMovieSort={setMovieSort} onOpenMovie={onOpenMovie} onOpenFilters={() => setFiltersOpen(true)} hasAnyFilter={hasAnyFilter} />
+      ) : viewMode === "movies" || viewMode === "favorites" ? (
+        <MovieArchive movies={movieList} title={moviesTitle} subtitle={viewMode === "favorites" ? `${movieList.length} Lieblingsfilme` : moviesSubtitle} movieSort={movieSort} setMovieSort={setMovieSort} onOpenMovie={onOpenMovie} onToggleFavorite={onToggleFavorite} onOpenFilters={() => setFiltersOpen(true)} hasAnyFilter={hasAnyFilter} favoritesMode={viewMode === "favorites"} />
       ) : (
         <Discovery
           movies={movies}
@@ -2438,6 +2538,7 @@ export default function BetaExperience({
           onShowMovies={onShowMovies}
           onShowActors={onShowActors}
           onShowActor={openActorFromDiscover}
+          onToggleFavorite={onToggleFavorite}
         />
       )}
 

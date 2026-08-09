@@ -15,7 +15,7 @@ export async function GET() {
     const supabase = createServerSupabase();
     const { data, error } = await supabase
       .from("movie_metrics")
-      .select("movie_id,rating,view_count");
+      .select("movie_id,rating,view_count,is_favorite");
 
     if (error) throw error;
 
