@@ -1,7 +1,7 @@
 import "./admin-beta.css";
 
 export const metadata = {
-  title: "Control Room v2 | Project1337",
+  title: "Admin | Project1337",
   description: "Die neue Administrationsoberfläche für Project1337.",
 };
 

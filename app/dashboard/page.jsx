@@ -67,6 +67,56 @@ const MovieThumbnailUploader = dynamic(
 
 const CHANGELOG = [
   {
+    version: "2.5.7",
+    date: "2026-08-09",
+    items: [
+      "Benutzer-Initialen im Kontomenü-Schalter durch ein Zahnrad ersetzt",
+    ],
+  },
+  {
+    version: "2.5.6",
+    date: "2026-08-09",
+    items: [
+      "Bezeichnung der Verwaltungsoberfläche überall zu Admin vereinheitlicht",
+      "Wechsel zum klassischen Dashboard aus dem Admin-Menü entfernt",
+    ],
+  },
+  {
+    version: "2.5.5",
+    date: "2026-08-09",
+    items: [
+      "V1 vollständig aus der aktiven Website entfernt",
+      "V1 bleibt dauerhaft im separaten Git-Branch archive/v1 erhalten",
+      "Menüeintrag und direkte Route /v1 entfernt",
+    ],
+  },
+  {
+    version: "2.5.4",
+    date: "2026-08-09",
+    items: [
+      "Favoritenherzen von allen Filmkarten entfernt",
+      "Filme werden weiterhin über das kleine Herz neben der Bewertung als Favorit markiert",
+    ],
+  },
+  {
+    version: "2.5.3",
+    date: "2026-08-09",
+    items: [
+      "Favoriten als geräteübergreifend gespeicherte Filmauswahl hinzugefügt",
+      "Herz neben dem Film-Roulette öffnet die neue Favoritenansicht",
+      "Filme lassen sich auf Filmkarten und direkt neben der Bewertung auf der Filmseite als Favorit markieren",
+    ],
+  },
+  {
+    version: "2.5.2",
+    date: "2026-08-09",
+    items: [
+      "Beta KI-Generator für Gesichter, Augen, Körperpunkte und ungünstige Bildausschnitte ergänzt",
+      "Kino-Crop, Smart Fit sowie horizontale und vertikale Fokusregler aus dem Thumbnail Studio entfernt",
+      "Ausgewählte Frames werden direkt im 16:9-Format mit 1920 × 1080 Pixeln gespeichert",
+    ],
+  },
+  {
     version: "2.5.1",
     date: "2026-08-09",
     items: [
@@ -133,7 +183,7 @@ const CHANGELOG = [
     version: "2.2.0",
     date: "2026-08-08",
     items: [
-      "Startseiten-Regisseur als neuen Arbeitsbereich im Admin v2 hinzugefügt",
+      "Startseiten-Regisseur als neuen Arbeitsbereich im Adminbereich hinzugefügt",
       "Bereiche der v2-Startseite können sortiert, ausgeblendet, umbenannt und in ihrer Größe angepasst werden",
       "Neue dynamische Reihen für Top bewertet, Meistgesehen, Zufallsauswahl und Studio-Spotlights ergänzt",
       "Startseiten-Konfiguration geschützt und zentral in Supabase gespeichert",
@@ -2559,7 +2609,7 @@ export function DashboardExperience({ beta = false }) {
                   <img src="/logo.png" alt="Project1337" />
                   <span>
                     Control Room
-                    <small>Admin v2 / 02</small>
+                    <small>Admin</small>
                   </span>
                 </button>
               ) : null}
@@ -2678,21 +2728,6 @@ export function DashboardExperience({ beta = false }) {
                     >
                       Hauptseite
                     </button>
-
-                    {beta ? (
-                      <button
-                        type="button"
-                        className="dashUserMenu__item"
-                        role="menuitem"
-                        onClick={() => {
-                          setUserMenuOpen(false);
-                          router.push("/dashboard");
-                        }}
-                        title="Zum klassischen Dashboard"
-                      >
-                        Klassisches Dashboard
-                      </button>
-                    ) : null}
 
                     <div style={{ height: 8 }} />
 

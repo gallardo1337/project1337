@@ -1348,6 +1348,7 @@ export default function HomePage({ basePath = "/", version = "v2" }) {
                 ? Number(metric.rating)
                 : null,
             viewCount: Math.max(0, Number(metric?.view_count) || 0),
+            favorite: metric?.is_favorite === true,
             actors: allActors,
             tags: tagNames,
             mainActorIds: mainIds,
@@ -1405,10 +1406,12 @@ export default function HomePage({ basePath = "/", version = "v2" }) {
 
         let actorParam = null;
         let movieParam = null;
+        let viewParam = null;
         if (typeof window !== "undefined") {
           const sp = new URLSearchParams(window.location.search || "");
           actorParam = sp.get("actor");
           movieParam = sp.get("movie");
+          viewParam = sp.get("view");
         }
 
         if (movieParam && mappedMovies.some((movie) => String(movie.id) === String(movieParam))) {
@@ -1451,6 +1454,13 @@ export default function HomePage({ basePath = "/", version = "v2" }) {
             setMoviesTitle("Filme");
             setMoviesSubtitle("");
           }
+        } else if (viewParam === "favorites") {
+          setViewMode("favorites");
+          setSelectedActor(null);
+          setSelectedMovieId(null);
+          setVisibleMovies([]);
+          setMoviesTitle("Favoriten");
+          setMoviesSubtitle("Deine gespeicherten Lieblingsfilme");
         } else {
           setViewMode("actors");
           setSelectedActor(null);
@@ -1593,6 +1603,7 @@ export default function HomePage({ basePath = "/", version = "v2" }) {
       const params = new URLSearchParams(window.location.search || "");
       const movieParam = params.get("movie");
       const actorParam = params.get("actor");
+      const viewParam = params.get("view");
 
       if (
         movieParam &&
@@ -1627,6 +1638,18 @@ export default function HomePage({ basePath = "/", version = "v2" }) {
         }
       }
 
+      if (viewParam === "favorites") {
+        setSearch("");
+        setSelectedActor(null);
+        setSelectedMovieId(null);
+        setViewMode("favorites");
+        setVisibleMovies([]);
+        setMoviesTitle("Favoriten");
+        setMoviesSubtitle("Deine gespeicherten Lieblingsfilme");
+        requestAnimationFrame(() => window.scrollTo(0, 0));
+        return;
+      }
+
       setSearch("");
       setSelectedActor(null);
       setSelectedMovieId(null);
@@ -1643,7 +1666,7 @@ export default function HomePage({ basePath = "/", version = "v2" }) {
     };
   }, [actors, loggedIn, movies]);
 
-  const showMovies = viewMode === "movies";
+  const showMovies = viewMode === "movies" || viewMode === "favorites";
 
   const getAddedTime = (movie) => {
     if (!movie?.addedAt) return 0;
@@ -1667,7 +1690,10 @@ export default function HomePage({ basePath = "/", version = "v2" }) {
   const movieList = useMemo(() => {
     if (!showMovies) return [];
 
-    const list = [...visibleMovies];
+    const list =
+      viewMode === "favorites"
+        ? movies.filter((movie) => movie.favorite)
+        : [...visibleMovies];
 
     list.sort((a, b) => {
       if (movieSort === "year_desc") {
@@ -1703,7 +1729,7 @@ export default function HomePage({ basePath = "/", version = "v2" }) {
     });
 
     return list;
-  }, [showMovies, visibleMovies, movieSort]);
+  }, [showMovies, viewMode, movies, visibleMovies, movieSort]);
 
   const handleShowMoviesForActor = (actorId, actorName, actorSlug) => {
     const actor = actors.find((a) => String(a.id) === String(actorId)) || null;
@@ -1810,6 +1836,22 @@ export default function HomePage({ basePath = "/", version = "v2" }) {
     setMoviesTitle(hasAnyFilter ? "Gefilterte Filme" : "Filme");
     setMoviesSubtitle(`${filtered.length} Film(e)`);
     setVisibleMovies(filtered);
+  };
+
+  const handleShowFavorites = () => {
+    router.replace(`${rootUrl}?view=favorites`, { scroll: false });
+    setSearch("");
+    setSelectedActor(null);
+    setSelectedMovieId(null);
+    setViewMode("favorites");
+    setMoviesTitle("Favoriten");
+    setMoviesSubtitle("Deine gespeicherten Lieblingsfilme");
+    setVisibleMovies([]);
+    setFiltersOpen(false);
+
+    requestAnimationFrame(() => {
+      window.scrollTo(0, 0);
+    });
   };
 
   const handleLogin = async (e) => {
@@ -1961,6 +2003,11 @@ export default function HomePage({ basePath = "/", version = "v2" }) {
       return;
     }
 
+    if (viewMode === "favorites") {
+      document.title = "Favoriten | my1337.de";
+      return;
+    }
+
     if (selectedActor?.name && viewMode === "movies") {
       document.title = `${selectedActor.name} | my1337.de`;
       return;
@@ -2022,6 +2069,45 @@ export default function HomePage({ basePath = "/", version = "v2" }) {
     return nextViewCount;
   };
 
+  const handleToggleFavorite = async (movieId, favorite) => {
+    const previousMovie = movies.find(
+      (movie) => String(movie.id) === String(movieId)
+    );
+    const previousFavorite = previousMovie?.favorite === true;
+    const nextFavorite = favorite === true;
+
+    patchMovieMetric(movieId, { favorite: nextFavorite });
+    setErr(null);
+
+    try {
+      const response = await fetch(
+        `/api/movie-metrics/${encodeURIComponent(movieId)}/favorite`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ favorite: nextFavorite }),
+        }
+      );
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(
+          response.status === 401
+            ? "Bitte melde dich erneut an."
+            : payload?.error || "Favorit konnte nicht gespeichert werden."
+        );
+      }
+
+      const savedFavorite = payload?.metric?.is_favorite === true;
+      patchMovieMetric(movieId, { favorite: savedFavorite });
+      return savedFavorite;
+    } catch (error) {
+      patchMovieMetric(movieId, { favorite: previousFavorite });
+      setErr(error?.message || "Favorit konnte nicht gespeichert werden.");
+      throw error;
+    }
+  };
+
   const handleOpenMovie = (movie) => {
     if (!movie?.id) return;
 
@@ -2041,6 +2127,8 @@ export default function HomePage({ basePath = "/", version = "v2" }) {
     if (selectedActor) {
       const urlVal = selectedActor.slug ? selectedActor.slug : selectedActor.id;
       router.replace(`${rootUrl}?actor=${encodeURIComponent(urlVal)}`, { scroll: false });
+    } else if (viewMode === "favorites") {
+      router.replace(`${rootUrl}?view=favorites`, { scroll: false });
     } else {
       router.replace(rootUrl, { scroll: false });
     }
@@ -2111,14 +2199,15 @@ export default function HomePage({ basePath = "/", version = "v2" }) {
         onDiscover={handleBackToActors}
         onShowActors={handleShowAllActors}
         onShowMovies={handleSwitchToMovies}
+        onShowFavorites={handleShowFavorites}
         onShowActor={handleShowMoviesForActor}
         onOpenMovie={handleOpenMovie}
         onCloseMovie={handleCloseMovie}
         onRateMovie={handleRateMovie}
         onRecordMovieView={handleRecordMovieView}
+        onToggleFavorite={handleToggleFavorite}
         onSearch={handleSearchChange}
         onDashboard={() => safeOpen("/dashboard/v2")}
-        onOpenArchive={() => safeOpen("/v1")}
         filtersOpen={filtersOpen}
         setFiltersOpen={setFiltersOpen}
         hasAnyFilter={hasAnyFilter}
