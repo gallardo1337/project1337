@@ -67,6 +67,24 @@ const MovieThumbnailUploader = dynamic(
 
 const CHANGELOG = [
   {
+    version: "2.5.3",
+    date: "2026-08-09",
+    items: [
+      "Favoriten als geräteübergreifend gespeicherte Filmauswahl hinzugefügt",
+      "Herz neben dem Film-Roulette öffnet die neue Favoritenansicht",
+      "Filme lassen sich auf Filmkarten und direkt neben der Bewertung auf der Filmseite als Favorit markieren",
+    ],
+  },
+  {
+    version: "2.5.2",
+    date: "2026-08-09",
+    items: [
+      "Beta KI-Generator für Gesichter, Augen, Körperpunkte und ungünstige Bildausschnitte ergänzt",
+      "Kino-Crop, Smart Fit sowie horizontale und vertikale Fokusregler aus dem Thumbnail Studio entfernt",
+      "Ausgewählte Frames werden direkt im 16:9-Format mit 1920 × 1080 Pixeln gespeichert",
+    ],
+  },
+  {
     version: "2.5.1",
     date: "2026-08-09",
     items: [

@@ -704,7 +704,7 @@ function addActorMetrics(actors, movies) {
   });
 }
 
-function FavoriteToggle({ movie, onToggleFavorite, className = "", showLabel = false }) {
+function FavoriteToggle({ movie, onToggleFavorite, className = "" }) {
   const [saving, setSaving] = useState(false);
   const favorite = movie?.favorite === true;
 
@@ -734,7 +734,6 @@ function FavoriteToggle({ movie, onToggleFavorite, className = "", showLabel = f
       title={favorite ? "Aus Favoriten entfernen" : "Zu Favoriten hinzufügen"}
     >
       <Icon name="heart" />
-      {showLabel ? <span>{saving ? "Speichert…" : favorite ? "Favorit" : "Zu Favoriten"}</span> : null}
     </button>
   );
 }
@@ -2262,17 +2261,18 @@ function MovieDetail({
             </span>
             <h1>{movie.title || "Unbenannt"}</h1>
           </div>
-          <FavoriteToggle
-            movie={movie}
-            onToggleFavorite={onToggleFavorite}
-            className={styles.detailFavoriteButton}
-            showLabel
-          />
           {movie.tags?.length ? <div className={styles.detailTags}>{movie.tags.map((tag) => <span key={tag}>{tag}</span>)}</div> : null}
           <aside className={styles.compactRating}>
             <div className={styles.ratingHeader}>
               <span>Personal score</span>
-              <strong>{visibleRating ? `${visibleRating}/10` : "–/10"}</strong>
+              <div className={styles.ratingValueRow}>
+                <strong>{visibleRating ? `${visibleRating}/10` : "–/10"}</strong>
+                <FavoriteToggle
+                  movie={movie}
+                  onToggleFavorite={onToggleFavorite}
+                  className={styles.detailFavoriteButton}
+                />
+              </div>
               <small>{draftRating ? "Deine Bewertung" : "Noch nicht bewertet"}</small>
             </div>
             <div

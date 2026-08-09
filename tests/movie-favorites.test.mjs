@@ -40,8 +40,11 @@ test("V2 verbindet Header, Favoritenansicht und Film-Schalter", async () => {
   assert.match(experience, /className=\{styles\.detailFavoriteButton\}/);
 });
 
-test("Admin-Changelog bleibt bei Version 2.5.1", async () => {
+test("Admin-Changelog führt Thumbnail-Vereinfachung und Favoriten fort", async () => {
   const dashboard = await readProjectFile("app/dashboard/page.jsx");
 
-  assert.match(dashboard, /version:\s*"2\.5\.1"/);
+  assert.match(dashboard, /const CHANGELOG = \[\s*\{\s*version:\s*"2\.5\.3"/);
+  assert.match(dashboard, /version:\s*"2\.5\.2"/);
+  assert.match(dashboard, /horizontale und vertikale Fokusregler/);
+  assert.match(dashboard, /Favoriten als geräteübergreifend gespeicherte Filmauswahl/);
 });
