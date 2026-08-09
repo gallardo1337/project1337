@@ -3924,7 +3924,7 @@
 
 .adminBeta .thumbnailStudio__captureActions {
   display: grid;
-  grid-template-columns: minmax(220px, 1.35fr) minmax(170px, 0.65fr);
+  grid-template-columns: minmax(210px, 1fr) minmax(210px, 1fr) minmax(150px, 0.62fr);
   gap: 8px;
   margin-top: 22px;
 }
@@ -3935,34 +3935,80 @@
   cursor: pointer;
 }
 
-.adminBeta .thumbnailStudio__generate {
+.adminBeta .thumbnailStudio__generate,
+.adminBeta .thumbnailStudio__generateAi {
   display: flex;
   align-items: center;
   gap: 14px;
-  background: var(--admin-red);
   padding: 10px 15px;
-  color: #09090a;
   text-align: left;
 }
 
-.adminBeta .thumbnailStudio__generate > span {
+.adminBeta .thumbnailStudio__generate {
+  background: var(--admin-red);
+  color: #09090a;
+}
+
+.adminBeta .thumbnailStudio__generateAi {
+  border-color: rgba(240, 68, 68, 0.58);
+  background:
+    radial-gradient(circle at 12% 20%, rgba(240, 68, 68, 0.17), transparent 46%),
+    rgba(255, 255, 255, 0.025);
+  color: #f1eeee;
+}
+
+.adminBeta .thumbnailStudio__generateAi:hover:not(:disabled) {
+  border-color: var(--admin-red);
+  background:
+    radial-gradient(circle at 12% 20%, rgba(240, 68, 68, 0.27), transparent 48%),
+    rgba(255, 255, 255, 0.04);
+}
+
+.adminBeta .thumbnailStudio__generate > span,
+.adminBeta .thumbnailStudio__generateAi > span {
   min-width: 28px;
   font-family: Georgia, "Times New Roman", serif;
   font-size: 22px;
   text-align: center;
 }
 
-.adminBeta .thumbnailStudio__generate > div {
+.adminBeta .thumbnailStudio__generateAi > span {
+  color: var(--admin-red);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.adminBeta .thumbnailStudio__generate > div,
+.adminBeta .thumbnailStudio__generateAi > div {
   display: grid;
   gap: 2px;
 }
 
-.adminBeta .thumbnailStudio__generate strong {
+.adminBeta .thumbnailStudio__generate strong,
+.adminBeta .thumbnailStudio__generateAi strong {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   font-size: 10px;
+}
+
+.adminBeta .thumbnailStudio__generateAi strong b {
+  border: 1px solid rgba(240, 68, 68, 0.46);
+  padding: 2px 4px;
+  color: #f06b6b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 6px;
+  letter-spacing: 0.08em;
 }
 
 .adminBeta .thumbnailStudio__generate small {
   color: rgba(9, 9, 10, 0.58);
+  font-size: 8px;
+}
+
+.adminBeta .thumbnailStudio__generateAi small {
+  color: #74747c;
   font-size: 8px;
 }
 
@@ -4080,12 +4126,25 @@
 }
 
 .adminBeta .thumbnailStudio__candidateSelect > span,
+.adminBeta .thumbnailStudio__candidateSelect > em,
 .adminBeta .thumbnailStudio__candidateSelect > small,
 .adminBeta .thumbnailStudio__candidateSelect > i {
   position: absolute;
   z-index: 2;
   background: rgba(3, 3, 4, 0.84);
   backdrop-filter: blur(6px);
+}
+
+.adminBeta .thumbnailStudio__candidateSelect > em {
+  top: 7px;
+  left: 36px;
+  padding: 5px 6px;
+  color: #9b9ba2;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 6px;
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: 0.08em;
 }
 
 .adminBeta .thumbnailStudio__candidateSelect > span {
@@ -4492,6 +4551,14 @@
 
   .adminBeta .thumbnailStudio__focusControls {
     grid-template-columns: 1fr;
+  }
+
+  .adminBeta .thumbnailStudio__captureActions {
+    grid-template-columns: repeat(2, minmax(200px, 1fr));
+  }
+
+  .adminBeta .thumbnailStudio__capture {
+    grid-column: 1 / -1;
   }
 }
 

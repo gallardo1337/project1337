@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { scoreAiFrame } from "../../../lib/thumbnailAiScoring.mjs";
+
 const UPLOAD_URL = process.env.NEXT_PUBLIC_MOVIE_UPLOAD_URL;
 const OUTPUT_WIDTH = 1920;
 const OUTPUT_HEIGHT = 1080;
@@ -9,6 +11,8 @@ const JPEG_QUALITY = 0.94;
 const SHARPEN_AMOUNT = 0.12;
 const ANALYSIS_WIDTH = 192;
 const ANALYSIS_HEIGHT = 108;
+const AI_ANALYSIS_WIDTH = 640;
+const AI_ANALYSIS_HEIGHT = 360;
 const ANALYSIS_RANGE_START = 0.2;
 const ANALYSIS_RANGE_END = 0.95;
 const ANALYSIS_BAND_COUNT = 6;
@@ -16,6 +20,12 @@ const SAMPLES_PER_BAND = 5;
 const SUGGESTION_COUNT = 6;
 const EMPTY_MOVIES = [];
 const CHAPTER_POINTS = [0.12, 0.26, 0.4, 0.54, 0.68, 0.82];
+const MEDIAPIPE_WASM_ROOT =
+  "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm";
+const FACE_LANDMARKER_MODEL =
+  "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
+const POSE_LANDMARKER_MODEL =
+  "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task";
 
 function createAnalysisPoints() {
   const bandSize =
@@ -325,6 +335,20 @@ function drawSmartFit(ctx, video, width, height) {
   ctx.restore();
 }
 
+function drawAiAnalysisFrame(canvas, video, mode, focusX, focusY) {
+  const ctx = canvas.getContext("2d", { alpha: false });
+  if (!ctx) throw new Error("Die KI-Bildanalyse konnte nicht gestartet werden.");
+
+  ctx.fillStyle = "#050506";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  if (mode === "smart") {
+    drawSmartFit(ctx, video, canvas.width, canvas.height);
+  } else {
+    drawCover(ctx, video, canvas.width, canvas.height, focusX, focusY);
+  }
+}
+
 function applyLightSharpen(ctx, width, height, amount = SHARPEN_AMOUNT) {
   const imageData = ctx.getImageData(0, 0, width, height);
   const output = imageData.data;
@@ -401,6 +425,66 @@ function frameToBlob(video, mode, focusX, focusY) {
   });
 }
 
+async function createAiModels() {
+  const { FilesetResolver, FaceLandmarker, PoseLandmarker } = await import(
+    "@mediapipe/tasks-vision"
+  );
+  const vision = await FilesetResolver.forVisionTasks(MEDIAPIPE_WASM_ROOT);
+
+  const createWithDelegate = async (delegate) => {
+    const [faceResult, poseResult] = await Promise.allSettled([
+      FaceLandmarker.createFromOptions(vision, {
+        baseOptions: {
+          modelAssetPath: FACE_LANDMARKER_MODEL,
+          delegate,
+        },
+        runningMode: "IMAGE",
+        numFaces: 4,
+        minFaceDetectionConfidence: 0.42,
+        minFacePresenceConfidence: 0.42,
+        outputFaceBlendshapes: true,
+      }),
+      PoseLandmarker.createFromOptions(vision, {
+        baseOptions: {
+          modelAssetPath: POSE_LANDMARKER_MODEL,
+          delegate,
+        },
+        runningMode: "IMAGE",
+        numPoses: 4,
+        minPoseDetectionConfidence: 0.42,
+        minPosePresenceConfidence: 0.42,
+        outputSegmentationMasks: false,
+      }),
+    ]);
+
+    if (faceResult.status === "rejected" || poseResult.status === "rejected") {
+      if (faceResult.status === "fulfilled") faceResult.value.close();
+      if (poseResult.status === "fulfilled") poseResult.value.close();
+      throw faceResult.status === "rejected"
+        ? faceResult.reason
+        : poseResult.reason;
+    }
+
+    const faceLandmarker = faceResult.value;
+    const poseLandmarker = poseResult.value;
+
+    return {
+      faceLandmarker,
+      poseLandmarker,
+      close() {
+        faceLandmarker.close();
+        poseLandmarker.close();
+      },
+    };
+  };
+
+  try {
+    return await createWithDelegate("GPU");
+  } catch {
+    return createWithDelegate("CPU");
+  }
+}
+
 export default function AdminThumbnailStudio({
   movies = EMPTY_MOVIES,
   studioMap,
@@ -416,6 +500,7 @@ export default function AdminThumbnailStudio({
   const videoRef = useRef(null);
   const generatedUrlsRef = useRef(new Set());
   const localSourceRef = useRef(null);
+  const aiModelsRef = useRef(null);
 
   const [search, setSearch] = useState("");
   const [onlyMissing, setOnlyMissing] = useState(false);
@@ -434,6 +519,7 @@ export default function AdminThumbnailStudio({
   const [previewCandidateId, setPreviewCandidateId] = useState(null);
   const [generating, setGenerating] = useState({
     active: false,
+    kind: null,
     phase: "idle",
     done: 0,
     total: 0,
@@ -583,6 +669,12 @@ export default function AdminThumbnailStudio({
       if (localSourceRef.current) {
         URL.revokeObjectURL(localSourceRef.current.url);
       }
+      if (aiModelsRef.current) {
+        aiModelsRef.current
+          .then((models) => models.close())
+          .catch(() => {});
+        aiModelsRef.current = null;
+      }
     },
     []
   );
@@ -658,7 +750,7 @@ export default function AdminThumbnailStudio({
     setVideoError(null);
   };
 
-  const captureCurrentFrame = async ({ select = true } = {}) => {
+  const captureCurrentFrame = async ({ select = true, metadata = {} } = {}) => {
     const video = videoRef.current;
     if (!video || !canCapture) {
       throw new Error(
@@ -678,6 +770,7 @@ export default function AdminThumbnailStudio({
         url,
         time: video.currentTime,
         mode,
+        ...metadata,
       };
 
       setCandidates((current) => {
@@ -728,6 +821,7 @@ export default function AdminThumbnailStudio({
     const analysisPoints = createAnalysisPoints();
     setGenerating({
       active: true,
+      kind: "standard",
       phase: "analysis",
       done: 0,
       total: analysisPoints.length,
@@ -756,6 +850,7 @@ export default function AdminThumbnailStudio({
         analyses.push({ ...analysisPoint, ...result });
         setGenerating({
           active: true,
+          kind: "standard",
           phase: "analysis",
           done: index + 1,
           total: analysisPoints.length,
@@ -769,6 +864,7 @@ export default function AdminThumbnailStudio({
 
       setGenerating({
         active: true,
+        kind: "standard",
         phase: "capture",
         done: 0,
         total: bestFrames.length,
@@ -778,10 +874,14 @@ export default function AdminThumbnailStudio({
       for (let index = 0; index < bestFrames.length; index += 1) {
         await waitForSeek(video, duration * bestFrames[index].point);
         await waitForFramePaint();
-        const candidate = await captureCurrentFrame({ select: false });
+        const candidate = await captureCurrentFrame({
+          select: false,
+          metadata: { generator: "standard" },
+        });
         if (!firstCandidate) firstCandidate = candidate;
         setGenerating({
           active: true,
+          kind: "standard",
           phase: "capture",
           done: index + 1,
           total: bestFrames.length,
@@ -813,7 +913,178 @@ export default function AdminThumbnailStudio({
       } catch {
         // Die Vorschläge bleiben auch dann nutzbar, wenn das Zurückspringen scheitert.
       }
-      setGenerating({ active: false, phase: "idle", done: 0, total: 0 });
+      setGenerating({
+        active: false,
+        kind: null,
+        phase: "idle",
+        done: 0,
+        total: 0,
+      });
+    }
+  };
+
+  const generateAiSuggestions = async () => {
+    const video = videoRef.current;
+    if (!video || !duration || generating.active) return;
+
+    setError(null);
+    setNotice(null);
+    const analysisPoints = createAnalysisPoints();
+    setGenerating({
+      active: true,
+      kind: "ai",
+      phase: "models",
+      done: 0,
+      total: 0,
+    });
+
+    const originalTime = video.currentTime;
+    const wasPaused = video.paused;
+    video.pause();
+
+    try {
+      if (!aiModelsRef.current) {
+        aiModelsRef.current = createAiModels().catch((modelError) => {
+          aiModelsRef.current = null;
+          throw modelError;
+        });
+      }
+      let faceLandmarker;
+      let poseLandmarker;
+      try {
+        const models = await aiModelsRef.current;
+        faceLandmarker = models.faceLandmarker;
+        poseLandmarker = models.poseLandmarker;
+      } catch {
+        throw new Error(
+          "Die KI-Modelle konnten nicht geladen werden. Prüfe die Internetverbindung und versuche es erneut."
+        );
+      }
+      const technicalCanvas = document.createElement("canvas");
+      technicalCanvas.width = ANALYSIS_WIDTH;
+      technicalCanvas.height = ANALYSIS_HEIGHT;
+      const aiCanvas = document.createElement("canvas");
+      aiCanvas.width = AI_ANALYSIS_WIDTH;
+      aiCanvas.height = AI_ANALYSIS_HEIGHT;
+      const analyses = [];
+
+      setGenerating({
+        active: true,
+        kind: "ai",
+        phase: "analysis",
+        done: 0,
+        total: analysisPoints.length,
+      });
+
+      for (let index = 0; index < analysisPoints.length; index += 1) {
+        const analysisPoint = analysisPoints[index];
+        await waitForSeek(video, duration * analysisPoint.point);
+        await waitForFramePaint();
+
+        const technical = analyzeVideoFrame(
+          video,
+          technicalCanvas,
+          focusX,
+          focusY
+        );
+        drawAiAnalysisFrame(aiCanvas, video, mode, focusX, focusY);
+        const faceResult = faceLandmarker.detect(aiCanvas);
+        const poseResult = poseLandmarker.detect(aiCanvas);
+        const aiResult = scoreAiFrame({
+          technicalScore: technical.score,
+          faceLandmarks: faceResult.faceLandmarks,
+          faceBlendshapes: faceResult.faceBlendshapes,
+          poseLandmarks: poseResult.landmarks,
+        });
+
+        analyses.push({
+          ...analysisPoint,
+          ...technical,
+          ...aiResult,
+          ai: aiResult,
+        });
+        setGenerating({
+          active: true,
+          kind: "ai",
+          phase: "analysis",
+          done: index + 1,
+          total: analysisPoints.length,
+        });
+      }
+
+      const bestFrames = chooseBestFrames(analyses);
+      if (bestFrames.length < SUGGESTION_COUNT) {
+        throw new Error("Die KI konnte nicht genug unterschiedliche Frames finden.");
+      }
+
+      setGenerating({
+        active: true,
+        kind: "ai",
+        phase: "capture",
+        done: 0,
+        total: bestFrames.length,
+      });
+      let firstCandidate = null;
+
+      for (let index = 0; index < bestFrames.length; index += 1) {
+        await waitForSeek(video, duration * bestFrames[index].point);
+        await waitForFramePaint();
+        const candidate = await captureCurrentFrame({
+          select: false,
+          metadata: {
+            generator: "ai",
+            ai: bestFrames[index].ai,
+          },
+        });
+        if (!firstCandidate) firstCandidate = candidate;
+        setGenerating({
+          active: true,
+          kind: "ai",
+          phase: "capture",
+          done: index + 1,
+          total: bestFrames.length,
+        });
+      }
+
+      if (firstCandidate) setSelectedCandidateId(firstCandidate.id);
+      const framesWithFaces = analyses.filter(
+        (analysis) => analysis.faceCount > 0
+      ).length;
+      const framesWithPoses = analyses.filter(
+        (analysis) => analysis.poseCount > 0
+      ).length;
+      setNotice(
+        `KI-Beta: ${analysisPoints.length} Szenen geprüft, davon ${framesWithFaces} mit Gesicht und ${framesWithPoses} mit Körperpunkten. Die sechs stärksten Frames sind fertig.`
+      );
+    } catch (generationError) {
+      if (
+        generationError?.name === "SecurityError" ||
+        /tainted|cross-origin|insecure/i.test(generationError?.message || "")
+      ) {
+        setRemoteAccess("playback-only");
+        setError(
+          "Der Videohost erlaubt keine KI-Bildanalyse. Wähle dieselbe MP4-Datei unten lokal aus."
+        );
+      } else {
+        setError(
+          generationError?.message ||
+            "Der KI-Beta-Generator konnte nicht gestartet werden. Prüfe die Internetverbindung und versuche es erneut."
+        );
+      }
+    } finally {
+      try {
+        await waitForSeek(video, originalTime);
+        if (!wasPaused) await video.play().catch(() => {});
+      } catch {
+        // Die Vorschläge bleiben auch dann nutzbar, wenn das Zurückspringen scheitert.
+      }
+      setGenerating({
+        active: false,
+        kind: null,
+        phase: "idle",
+        done: 0,
+        total: 0,
+      });
     }
   };
 
@@ -925,18 +1196,37 @@ export default function AdminThumbnailStudio({
     }
   };
 
-  const generationCounter = generating.active
+  const standardGenerating =
+    generating.active && generating.kind === "standard";
+  const aiGenerating = generating.active && generating.kind === "ai";
+  const generationCounter = standardGenerating
     ? `${generating.done}/${generating.total}`
     : "✦";
-  const generationTitle = generating.active
+  const generationTitle = standardGenerating
     ? generating.phase === "analysis"
       ? "Filmszenen werden analysiert"
       : "Beste Frames werden erstellt"
     : candidates.length
       ? "6 weitere Vorschläge erzeugen"
       : "6 Vorschläge erzeugen";
+  const aiGenerationCounter = aiGenerating
+    ? generating.phase === "models"
+      ? "…"
+      : `${generating.done}/${generating.total}`
+    : "KI";
+  const aiGenerationTitle = aiGenerating
+    ? generating.phase === "models"
+      ? "KI-Modelle werden geladen"
+      : generating.phase === "analysis"
+        ? "Personen und Gesichter werden analysiert"
+        : "KI-Frames werden erstellt"
+    : candidates.length
+      ? "6 weitere KI-Vorschläge"
+      : "Beta KI-Generator";
   const generationActionLabel = generating.active
-    ? generating.phase === "analysis"
+    ? generating.phase === "models"
+      ? "KI-Modelle werden geladen…"
+      : generating.phase === "analysis"
       ? `${generating.done}/${generating.total} Szenen geprüft…`
       : `${generating.done}/${generating.total} Frames werden erstellt…`
     : "6 neue Vorschläge";
@@ -1226,6 +1516,21 @@ export default function AdminThumbnailStudio({
                 </button>
                 <button
                   type="button"
+                  className="thumbnailStudio__generateAi"
+                  onClick={generateAiSuggestions}
+                  disabled={!canCapture || generating.active || saving}
+                >
+                  <span>{aiGenerationCounter}</span>
+                  <div>
+                    <strong>
+                      {aiGenerationTitle}
+                      <b>BETA</b>
+                    </strong>
+                    <small>30 Szenen · Gesichter · Augen · Körper · Bildschnitt</small>
+                  </div>
+                </button>
+                <button
+                  type="button"
                   className="thumbnailStudio__capture"
                   onClick={handleSingleCapture}
                   disabled={!canCapture || generating.active || saving}
@@ -1279,6 +1584,13 @@ export default function AdminThumbnailStudio({
                       >
                         <img src={candidate.url} alt={`Thumbnail-Vorschlag ${index + 1}`} />
                         <span>{String(index + 1).padStart(2, "0")}</span>
+                        <em>
+                          {candidate.generator === "ai"
+                            ? "KI BETA"
+                            : candidate.generator === "standard"
+                              ? "STANDARD"
+                              : "MANUELL"}
+                        </em>
                         <small>{formatTime(candidate.time)}</small>
                         <i>{candidate.id === selectedCandidateId ? "Ausgewählt" : "Wählen"}</i>
                       </button>
@@ -1323,7 +1635,13 @@ export default function AdminThumbnailStudio({
                     <div>
                       <span>Bereit zum Speichern</span>
                       <strong>{selectedMovie.title}</strong>
-                      <small>Frame bei {formatTime(selectedCandidate.time)} · {selectedCandidate.mode === "smart" ? "Smart Fit" : "Kino-Crop"}</small>
+                      <small>
+                        Frame bei {formatTime(selectedCandidate.time)} · {selectedCandidate.mode === "smart" ? "Smart Fit" : "Kino-Crop"} · {selectedCandidate.generator === "ai"
+                          ? "KI Beta"
+                          : selectedCandidate.generator === "standard"
+                            ? "Standard"
+                            : "Manuell"}
+                      </small>
                     </div>
                     <button type="button" onClick={saveThumbnail} disabled={saving}>
                       {saving
