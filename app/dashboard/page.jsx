@@ -67,6 +67,14 @@ const MovieThumbnailUploader = dynamic(
 
 const CHANGELOG = [
   {
+    version: "2.5.4",
+    date: "2026-08-09",
+    items: [
+      "Favoritenherzen von allen Filmkarten entfernt",
+      "Filme werden weiterhin über das kleine Herz neben der Bewertung als Favorit markiert",
+    ],
+  },
+  {
     version: "2.5.3",
     date: "2026-08-09",
     items: [
