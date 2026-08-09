@@ -67,9 +67,11 @@ const MovieThumbnailUploader = dynamic(
 
 const CHANGELOG = [
   {
-    version: "2.5.0",
+    version: "2.5.1",
     date: "2026-08-09",
     items: [
+      "Vorschau wird nicht mehr übersprungen und speichert nur noch per ausdrücklichem Klick im letzten Schritt",
+      "Die in Schritt 1 gewählte MP4 wird automatisch an den Thumbnail-Generator übergeben",
       "Film hinzufügen als geführten Assistenten mit sieben klaren Schritten neu aufgebaut",
       "Datei, Thumbnail, Filmdaten, Cast und Tags werden nacheinander bearbeitet",
       "Thumbnail Studio direkt in den neuen Film-Assistenten integriert",
@@ -565,6 +567,7 @@ export function DashboardExperience({ beta = false }) {
   const [filmJahr, setFilmJahr] = useState("");
   const [filmStudioId, setFilmStudioId] = useState("");
   const [filmFileUrl, setFilmFileUrl] = useState(DEFAULT_FILE_BASE);
+  const [filmVideoFile, setFilmVideoFile] = useState(null);
   const [filmResolutionId, setFilmResolutionId] = useState("");
   const [filmThumbnailUrl, setFilmThumbnailUrl] = useState("");
   const [selectedMainActorIds, setSelectedMainActorIds] = useState([]);
@@ -1577,6 +1580,7 @@ export function DashboardExperience({ beta = false }) {
     setFilmJahr("");
     setFilmStudioId("");
     setFilmFileUrl(DEFAULT_FILE_BASE);
+    setFilmVideoFile(null);
     setFilmThumbnailUrl("");
     setSelectedMainActorIds([]);
     setSelectedSupportActorIds([]);
@@ -1591,8 +1595,7 @@ export function DashboardExperience({ beta = false }) {
     else setFilmResolutionId(resolutions[0]?.id || "");
   };
 
-  const handleAddOrUpdateFilm = async (e) => {
-    e.preventDefault();
+  const handleAddOrUpdateFilm = async () => {
     if (filmSaving) return false;
     setError(null);
 
@@ -1697,6 +1700,7 @@ export function DashboardExperience({ beta = false }) {
     setFilmJahr(film.year ? String(film.year) : "");
     setFilmStudioId(film.studio_id || "");
     setFilmFileUrl(film.file_url || "");
+    setFilmVideoFile(null);
     setFilmResolutionId(film.resolution_id || "");
     setFilmThumbnailUrl(film.thumbnail_url || "");
     setSelectedMainActorIds(
@@ -1719,12 +1723,15 @@ export function DashboardExperience({ beta = false }) {
     resetFilmForm();
   };
 
-  const handleWizardFileChange = (url) => {
+  const handleWizardFileChange = (url, localFile = null) => {
     const previousKey = movieFileUrlKey(filmFileUrl);
     const nextKey = movieFileUrlKey(url);
 
     if (previousKey !== nextKey) {
       setFilmThumbnailUrl("");
+      setFilmVideoFile(localFile);
+    } else if (localFile) {
+      setFilmVideoFile(localFile);
     }
 
     setFilmFileUrl(url);
@@ -1800,14 +1807,8 @@ export function DashboardExperience({ beta = false }) {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleMovieWizardSubmit = (event) => {
-    if (filmWizardStep < MOVIE_WIZARD_STEPS.length - 1) {
-      event.preventDefault();
-      handleWizardNext();
-      return;
-    }
-
-    handleAddOrUpdateFilm(event);
+  const preventMovieWizardSubmit = (event) => {
+    event.preventDefault();
   };
 
   const handleDeleteFilm = async (filmId) => {
@@ -2987,7 +2988,7 @@ export function DashboardExperience({ beta = false }) {
                       </div>
 
                       <form
-                        onSubmit={handleMovieWizardSubmit}
+                        onSubmit={preventMovieWizardSubmit}
                         className={wizardStyles.wizard}
                       >
                         <nav
@@ -3179,6 +3180,7 @@ export function DashboardExperience({ beta = false }) {
                                   studioMap={studioMap}
                                   resolutionMap={resolutionMap}
                                   embeddedMovie={wizardThumbnailMovie}
+                                  localVideoFile={filmVideoFile}
                                   onThumbnailReady={(thumbnailUrl) => {
                                     setFilmThumbnailUrl(thumbnailUrl);
                                     setError(null);
@@ -3460,8 +3462,9 @@ export function DashboardExperience({ beta = false }) {
                                 </button>
                               ) : (
                                 <button
-                                  type="submit"
+                                  type="button"
                                   className={wizardStyles.saveButton}
+                                  onClick={handleAddOrUpdateFilm}
                                   disabled={
                                     filmSaving ||
                                     !hasExactVideoFile(filmFileUrl) ||

@@ -27,7 +27,7 @@ async function collectDirectoryVideos(directoryHandle, prefix = "", output = [])
     if (handle.kind === "directory") {
       await collectDirectoryVideos(handle, path, output);
     } else if (/\.mp4$/i.test(name)) {
-      output.push({ name, path });
+      output.push({ name, path, fileHandle: handle });
     }
   }
 
@@ -52,6 +52,7 @@ export default function AdminMovieFilePicker({
   const [folderFiles, setFolderFiles] = useState([]);
   const [folderName, setFolderName] = useState("");
   const [folderLoading, setFolderLoading] = useState(false);
+  const [selectingPath, setSelectingPath] = useState("");
   const [query, setQuery] = useState("");
   const [error, setError] = useState("");
   const deferredQuery = useDeferredValue(query);
@@ -145,11 +146,28 @@ export default function AdminMovieFilePicker({
       const path = fullPath.startsWith(`${root}/`)
         ? fullPath.slice(root.length + 1)
         : fullPath;
-      return { name: file.name, path };
+      return { name: file.name, path, file };
     });
 
     applyFolder(root, entries);
     event.target.value = "";
+  };
+
+  const handleFileSelect = async (entry) => {
+    setSelectingPath(entry.path);
+    setError("");
+
+    try {
+      const file = entry.file || (await entry.fileHandle?.getFile()) || null;
+      onChange(entry.url, file);
+    } catch (fileError) {
+      console.error(fileError);
+      setError(
+        "Die ausgewählte MP4 konnte nicht für den Thumbnail-Generator geöffnet werden."
+      );
+    } finally {
+      setSelectingPath("");
+    }
   };
 
   return (
@@ -224,8 +242,8 @@ export default function AdminMovieFilePicker({
                   key={entry.path}
                   type="button"
                   className={classNames}
-                  onClick={() => onChange(entry.url)}
-                  disabled={isBlocked}
+                  onClick={() => handleFileSelect(entry)}
+                  disabled={isBlocked || selectingPath === entry.path}
                   aria-pressed={isActive}
                   title={
                     isBlocked
@@ -247,6 +265,8 @@ export default function AdminMovieFilePicker({
                       ? "Aktueller Film"
                       : entry.movie
                       ? "Bereits vorhanden"
+                      : selectingPath === entry.path
+                      ? "Wird geöffnet…"
                       : isActive
                       ? "Ausgewählt"
                       : "Auswählen"}

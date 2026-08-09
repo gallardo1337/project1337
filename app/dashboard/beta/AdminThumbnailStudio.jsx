@@ -407,6 +407,7 @@ export default function AdminThumbnailStudio({
   resolutionMap,
   initialMovieId,
   embeddedMovie = null,
+  localVideoFile = null,
   onThumbnailReady,
   onThumbnailSaved,
   onEditMovie,
@@ -533,9 +534,19 @@ export default function AdminThumbnailStudio({
     setCurrentTime(0);
     setVideoReady(false);
     setVideoError(null);
-    setNotice(null);
+    if (embeddedMovie && localVideoFile) {
+      const url = URL.createObjectURL(localVideoFile);
+      const source = { file: localVideoFile, url };
+      localSourceRef.current = source;
+      setLocalSource(source);
+      setNotice(
+        "Die in Schritt 1 gewählte MP4 ist bereit. Nur der erzeugte JPEG-Frame wird hochgeladen – nicht das Video."
+      );
+    } else {
+      setNotice(null);
+    }
     setError(null);
-  }, [selectedMovieId]);
+  }, [embeddedMovie?.id, localVideoFile, selectedMovieId]);
 
   useEffect(() => {
     if (!selectedMovie?.file_url || localSource) {
