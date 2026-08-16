@@ -1,0 +1,35 @@
+services:
+  nas-library-scanner:
+    build:
+      context: .
+    container_name: project1337-nas-library-scanner
+    restart: unless-stopped
+    init: true
+    env_file:
+      - .env
+    environment:
+      PORT: "43138"
+      NAS_LIBRARY_PATH: /media
+      NAS_SCANNER_DATA_PATH: /data/library-scan.json
+    ports:
+      - "${NAS_SCANNER_BIND:-127.0.0.1}:43138:43138"
+    volumes:
+      - "${NAS_HOST_LIBRARY_PATH:?NAS_HOST_LIBRARY_PATH fehlt}:/media:ro"
+      - nas_scanner_data:/data
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 64
+    networks:
+      - project1337_scanner
+
+volumes:
+  nas_scanner_data:
+
+networks:
+  project1337_scanner:
+    name: project1337-scanner

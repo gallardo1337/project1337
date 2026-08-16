@@ -1013,7 +1013,6 @@
 }
 
 .movieIndex,
-.quality,
 .moviePlay {
   position: absolute;
   z-index: 2;
@@ -1028,18 +1027,33 @@
   font-style: italic;
 }
 
-.quality {
-  right: 14px;
-  bottom: 14px;
+.qualityInlineText {
+  flex: 0 0 auto;
   padding: 7px 9px;
   border: 1px solid rgba(255,255,255,.22);
-  background: rgba(0,0,0,.55);
+  background: rgba(255,255,255,.045);
   color: white;
   font-size: 8px;
   font-weight: 850;
   letter-spacing: .08em;
   text-transform: uppercase;
-  backdrop-filter: blur(10px);
+}
+
+.qualityInlineLogo {
+  width: 34px;
+  flex: 0 0 auto;
+  pointer-events: none;
+  filter: drop-shadow(0 7px 14px rgba(0, 0, 0, .58));
+}
+
+.qualityInlineLogo img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.movieCardLarge .qualityInlineLogo {
+  width: 38px;
 }
 
 .qualityUltra {
@@ -1102,13 +1116,21 @@
   padding-right: 12px;
 }
 
+.movieTitleRow {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
 .movieTitle {
+  min-width: 0;
   overflow: hidden;
   color: rgba(255,255,255,.96);
   font-family: Georgia, "Times New Roman", serif;
   font-size: 20px;
   line-height: 1.15;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -2438,7 +2460,7 @@
   white-space: nowrap;
 }
 
-.playerTopbar > small {
+.playerQualityText {
   flex: 0 0 auto;
   padding: 7px 10px;
   border: 1px solid rgba(255,255,255,.14);
@@ -2450,6 +2472,18 @@
   letter-spacing: .15em;
   text-transform: uppercase;
   backdrop-filter: blur(14px);
+}
+
+.playerQualityLogo {
+  width: 50px;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 10px 22px rgba(0, 0, 0, .72));
+}
+
+.playerQualityLogo img {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 .playerCenterButton {
@@ -3131,20 +3165,26 @@
   padding-right: 10px;
 }
 
-.similarCopy strong {
-  min-height: 44px;
-  display: -webkit-box;
+.similarTitleRow {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.similarTitle {
+  min-width: 0;
   overflow: hidden;
   color: rgba(255,255,255,.94);
   font-family: Georgia, "Times New Roman", serif;
   font-size: 20px;
   font-weight: 400;
   line-height: 1.12;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  white-space: nowrap;
 }
 
-.similarCopy > span {
+.similarCopy > .similarMeta {
   min-width: 0;
   display: flex;
   align-items: center;
@@ -4762,9 +4802,13 @@
     font-size: 11px;
   }
 
-  .playerTopbar > small {
+  .playerQualityText {
     padding: 6px 8px;
     font-size: 6px;
+  }
+
+  .playerQualityLogo {
+    width: 42px;
   }
 
   .playerCenterButton {

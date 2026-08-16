@@ -53,15 +53,41 @@ test("V1 ist aus der aktiven Website entfernt", async () => {
   assert.doesNotMatch(experience, /v1 · Original ansehen/);
 });
 
-test("Admin-Changelog führt V1-Archivierung, Favoriten und Kontomenü fort", async () => {
-  const [dashboard, experience, layout, redirectLayout] = await Promise.all([
+test("Admin-Changelog führt NAS-Analyse, V1-Archivierung, Favoriten und Kontomenü fort", async () => {
+  const [dashboard, overviewStyles, experience, layout, redirectLayout] = await Promise.all([
     readProjectFile("app/dashboard/page.jsx"),
+    readProjectFile("app/dashboard/beta/admin-beta.css"),
     readProjectFile("app/beta/BetaExperience.jsx"),
     readProjectFile("app/dashboard/v2/layout.jsx"),
     readProjectFile("app/dashboard/beta/layout.jsx"),
   ]);
 
-  assert.match(dashboard, /const CHANGELOG = \[\s*\{\s*version:\s*"2\.5\.7"/);
+  assert.match(dashboard, /const CHANGELOG = \[\s*\{\s*version:\s*"2\.6\.1"/);
+  assert.match(dashboard, /NAS-Qualitätsauswertung auf 4K und Nicht 4K/);
+  assert.match(dashboard, /Abdeckung nach Hauptdarsteller über anklickbare Spaltenköpfe sortierbar/);
+  assert.match(dashboard, /Unten abgeschnittene Kennzahlen in der Admin-Übersicht korrigiert/);
+  assert.match(dashboard, /Thumbnails der aktuellen Filme in der Admin-Übersicht auf 16:9 umgestellt/);
+  assert.match(dashboard, /Thumbnails im Filmarchiv vollständig auf 16:9 umgestellt/);
+  assert.match(overviewStyles, /\.adminKpi > strong \{[^}]*overflow:\s*visible;/s);
+  assert.match(overviewStyles, /\.adminKpi > strong \{[^}]*line-height:\s*1;/s);
+  assert.match(
+    overviewStyles,
+    /\.adminBeta \.adminRecentMovie__cover \{[^}]*width:\s*100%;[^}]*aspect-ratio:\s*16 \/ 9;/s
+  );
+  assert.match(
+    overviewStyles,
+    /grid-template-columns:\s*27px 88px minmax\(150px, 1fr\)/
+  );
+  assert.match(
+    overviewStyles,
+    /\.adminBeta \.dashMovieIdentity__cover \{[^}]*width:\s*clamp\(72px, 8vw, 100px\);[^}]*aspect-ratio:\s*16 \/ 9;/s
+  );
+  assert.match(
+    dashboard,
+    /className="aspect-video w-28 shrink-0 rounded-xl border border-neutral-800 object-cover bg-neutral-900"/
+  );
+  assert.match(dashboard, /label:\s*"NAS-Analyse"/);
+  assert.match(dashboard, /AdminNasLibrary/);
   assert.match(dashboard, /Git-Branch archive\/v1/);
   assert.match(dashboard, /version:\s*"2\.5\.3"/);
   assert.match(dashboard, /version:\s*"2\.5\.2"/);
@@ -77,4 +103,22 @@ test("Admin-Changelog führt V1-Archivierung, Favoriten und Kontomenü fort", as
   assert.doesNotMatch(dashboard, /Zum klassischen Dashboard/);
   assert.match(layout, /title:\s*"Admin \| Project1337"/);
   assert.match(redirectLayout, /title:\s*"Admin \| Project1337"/);
+});
+
+test("Studio-Bilder sind entfernt und die Darsteller-Dateiauswahl ist sauber aufgebaut", async () => {
+  const [dashboard, actorImageUploader] = await Promise.all([
+    readProjectFile("app/dashboard/page.jsx"),
+    readProjectFile("app/dashboard/ActorImageUploader.jsx"),
+  ]);
+
+  assert.match(dashboard, /Bildverwaltung für Studios aus der Admin-Oberfläche entfernt/);
+  assert.match(dashboard, /Dateiauswahl beim Anlegen von Haupt- und Nebendarstellern sauber ausgerichtet/);
+  assert.doesNotMatch(dashboard, /newStudioImage/);
+  assert.doesNotMatch(dashboard, /studioEditForm\.image_url/);
+  assert.doesNotMatch(dashboard, /s\.image_url/);
+  assert.match(dashboard, /\.from\("studios"\)\s*\.insert\(\{ name \}\)/s);
+  assert.match(actorImageUploader, /actorImageUploader__picker/);
+  assert.match(actorImageUploader, /fileInputRef\.current\?\.click\(\)/);
+  assert.match(actorImageUploader, /selectedFileName \|\| "Keine Datei ausgewählt"/);
+  assert.match(actorImageUploader, /aria-label="Darsteller-Foto auswählen"/);
 });

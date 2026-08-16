@@ -1,3 +1,5 @@
+import ResolutionIndicator from "../../components/ResolutionIndicator";
+
 const formatNumber = (value) =>
   new Intl.NumberFormat("de-DE").format(Math.max(0, Number(value) || 0));
 
@@ -224,7 +226,12 @@ export default function AdminBetaOverview({
                         {studio} · {movie.year || "Jahr offen"}
                       </span>
                     </div>
-                    <span className="adminRecentMovie__quality">{resolution}</span>
+                    <ResolutionIndicator
+                      value={resolution}
+                      logoClassName="adminRecentMovie__qualityLogo"
+                      fallbackClassName="adminRecentMovie__quality"
+                      fallback="Ohne Qualität"
+                    />
                     <div className="adminRecentMovie__metric">
                       <strong>{formatNumber(metric.view_count)}</strong>
                       <span>Aufrufe</span>

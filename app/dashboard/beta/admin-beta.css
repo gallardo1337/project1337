@@ -1129,18 +1129,19 @@
 
 .adminBeta .adminKpi > strong {
   display: block;
-  overflow: hidden;
+  overflow: visible;
+  padding-bottom: 0.08em;
   color: #f1eee7;
   font-family: Georgia, "Times New Roman", serif;
   font-size: clamp(40px, 4vw, 62px);
   font-weight: 400;
-  line-height: 0.9;
+  line-height: 1;
   letter-spacing: -0.06em;
-  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .adminBeta .adminKpi > p {
-  margin: 11px 0 0;
+  margin: 7px 0 0;
   color: rgba(255, 255, 255, 0.3);
   font-size: 9px;
   font-weight: 700;
@@ -1219,7 +1220,7 @@
 .adminBeta .adminRecentMovie {
   display: grid;
   min-height: 78px;
-  grid-template-columns: 27px 42px minmax(150px, 1fr) 68px 58px 62px 86px 69px;
+  grid-template-columns: 27px 88px minmax(150px, 1fr) 68px 58px 62px 86px 69px;
   align-items: center;
   gap: clamp(8px, 1vw, 15px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.065);
@@ -1247,8 +1248,8 @@
 }
 
 .adminBeta .adminRecentMovie__cover {
-  width: 42px;
-  height: 50px;
+  width: 100%;
+  aspect-ratio: 16 / 9;
 }
 
 .adminBeta .adminRecentMovie__cover img,
@@ -1291,6 +1292,18 @@
   font-weight: 850;
   text-align: center;
   text-transform: uppercase;
+}
+
+.adminBeta .adminRecentMovie__qualityLogo {
+  width: 36px;
+  justify-self: center;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.58));
+}
+
+.adminBeta .adminRecentMovie__qualityLogo img {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 .adminBeta .adminRecentMovie__metric {
@@ -1593,8 +1606,8 @@
 
 .adminBeta .dashMovieIdentity__cover {
   flex: 0 0 auto;
-  width: 45px;
-  height: 56px;
+  width: clamp(72px, 8vw, 100px);
+  aspect-ratio: 16 / 9;
 }
 
 .adminBeta .dashMovieIdentity__text {
@@ -1632,6 +1645,24 @@
 }
 
 .adminBeta .adminMovieColumns strong {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.adminBeta .adminMovieColumns__qualityLogo {
+  width: 32px;
+  justify-self: end;
+  filter: drop-shadow(0 7px 14px rgba(0, 0, 0, 0.58));
+}
+
+.adminBeta .adminMovieColumns__qualityLogo img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.adminBeta .adminMovieColumns__qualityText {
   color: rgba(255, 255, 255, 0.68);
   font-size: 10px;
   font-weight: 750;
@@ -2160,7 +2191,7 @@
 
 @media (max-width: 1380px) {
   .adminBeta .adminRecentMovie {
-    grid-template-columns: 24px 42px minmax(140px, 1fr) 66px 56px 60px 66px;
+    grid-template-columns: 24px 80px minmax(140px, 1fr) 66px 56px 60px 66px;
   }
 
   .adminBeta .adminRecentMovie__date {
@@ -2182,11 +2213,12 @@
   }
 
   .adminBeta .adminRecentMovie {
-    grid-template-columns: 42px minmax(130px, 1fr) 62px 54px 58px;
+    grid-template-columns: 80px minmax(130px, 1fr) 62px 54px 58px;
   }
 
   .adminBeta .adminRecentMovie__index,
-  .adminBeta .adminRecentMovie__quality {
+  .adminBeta .adminRecentMovie__quality,
+  .adminBeta .adminRecentMovie__qualityLogo {
     display: none;
   }
 }
@@ -2288,7 +2320,7 @@
   }
 
   .adminBeta .adminRecentMovie {
-    grid-template-columns: 42px minmax(120px, 1fr) 52px 58px;
+    grid-template-columns: 80px minmax(120px, 1fr) 52px 58px;
   }
 
   .adminBeta .adminRecentMovie__metric:nth-of-type(3) {
@@ -2347,17 +2379,12 @@
   }
 
   .adminBeta .adminRecentMovie {
-    grid-template-columns: 40px minmax(100px, 1fr) 58px;
+    grid-template-columns: 72px minmax(100px, 1fr) 58px;
   }
 
   .adminBeta .adminRecentMovie__metric,
   .adminBeta .adminRecentMovie__edit {
     display: none;
-  }
-
-  .adminBeta .adminRecentMovie__cover {
-    width: 40px;
-    height: 48px;
   }
 
   .adminBeta .adminPanelHeading {

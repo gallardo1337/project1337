@@ -6,6 +6,7 @@ import {
   DEFAULT_HOMEPAGE_SECTIONS,
   normalizeHomepageSections,
 } from "../../lib/homepageSections";
+import ResolutionIndicator from "../components/ResolutionIndicator";
 import styles from "./experience.module.css";
 
 function Icon({ name, className = "" }) {
@@ -98,6 +99,59 @@ function Icon({ name, className = "" }) {
     >
       {paths[name]}
     </svg>
+  );
+}
+
+function AutoFitMovieTitle({ title, className, maxSize, minSize = 8 }) {
+  const titleRef = useRef(null);
+
+  useEffect(() => {
+    const element = titleRef.current;
+    const container = element?.parentElement;
+    if (!element || !container) return undefined;
+
+    let frame = 0;
+
+    const fit = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        element.style.fontSize = `${maxSize}px`;
+
+        const availableWidth = element.clientWidth;
+        const contentWidth = element.scrollWidth;
+        if (!availableWidth || contentWidth <= availableWidth + 1) return;
+
+        let nextSize = Math.max(
+          minSize,
+          (maxSize * availableWidth) / contentWidth
+        );
+        element.style.fontSize = `${nextSize}px`;
+
+        if (element.scrollWidth > element.clientWidth + 1) {
+          nextSize = Math.max(
+            6,
+            nextSize * (element.clientWidth / element.scrollWidth)
+          );
+          element.style.fontSize = `${nextSize}px`;
+        }
+      });
+    };
+
+    const resizeObserver = new ResizeObserver(fit);
+    resizeObserver.observe(container);
+    fit();
+    document.fonts?.ready.then(fit);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      resizeObserver.disconnect();
+    };
+  }, [maxSize, minSize, title]);
+
+  return (
+    <span ref={titleRef} className={className} title={title}>
+      {title}
+    </span>
   );
 }
 
@@ -352,7 +406,12 @@ function ModernVideoPlayer({ src, poster, title, quality, onPlay }) {
           <span>Now screening</span>
           <strong>{title || "Unbenannt"}</strong>
         </div>
-        <small>{quality || "1337"}</small>
+        <ResolutionIndicator
+          value={quality}
+          logoClassName={styles.playerQualityLogo}
+          fallbackClassName={styles.playerQualityText}
+          fallback="1337"
+        />
       </div>
 
       {!playing ? (
@@ -771,15 +830,23 @@ function MovieCard({
           {typeof index === "number" ? (
             <span className={styles.movieIndex}>{String(index + 1).padStart(2, "0")}</span>
           ) : null}
-          <span className={`${styles.quality} ${qualityTone(movie.resolution)}`}>
-            {movie.resolution || "HD"}
-          </span>
           <span className={styles.moviePlay}>
             <Icon name="play" />
           </span>
         </span>
         <span className={styles.movieCopy}>
-          <span className={styles.movieTitle}>{movie.title || "Unbenannt"}</span>
+          <span className={styles.movieTitleRow}>
+            <AutoFitMovieTitle
+              title={movie.title || "Unbenannt"}
+              className={styles.movieTitle}
+              maxSize={large ? 27 : 20}
+            />
+            <ResolutionIndicator
+              value={movie.resolution}
+              logoClassName={styles.qualityInlineLogo}
+              fallbackClassName={`${styles.qualityInlineText} ${qualityTone(movie.resolution)}`}
+            />
+          </span>
           <span className={styles.movieMeta}>
             {movie.studio || "Independent"}
             <i />
@@ -824,9 +891,6 @@ function SimilarMovieCard({ recommendation, onOpen, index }) {
         <span className={styles.similarIndex}>
           {String(index + 1).padStart(2, "0")}
         </span>
-        <span className={`${styles.quality} ${qualityTone(movie.resolution)}`}>
-          {movie.resolution || "HD"}
-        </span>
         <span className={styles.similarMatch}>
           <Icon name="spark" /> {reason}
         </span>
@@ -835,10 +899,19 @@ function SimilarMovieCard({ recommendation, onOpen, index }) {
         </span>
       </span>
       <span className={styles.similarCopy}>
-        <strong title={movie.title || "Unbenannt"}>
-          {movie.title || "Unbenannt"}
-        </strong>
-        <span>
+        <span className={styles.similarTitleRow}>
+          <AutoFitMovieTitle
+            title={movie.title || "Unbenannt"}
+            className={styles.similarTitle}
+            maxSize={20}
+          />
+          <ResolutionIndicator
+            value={movie.resolution}
+            logoClassName={styles.qualityInlineLogo}
+            fallbackClassName={`${styles.qualityInlineText} ${qualityTone(movie.resolution)}`}
+          />
+        </span>
+        <span className={styles.similarMeta}>
           {movie.studio || "Independent"}
           <i />
           {movie.year || "–"}

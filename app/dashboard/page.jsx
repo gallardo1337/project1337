@@ -7,6 +7,7 @@ import dynamic from "next/dynamic";
 import AdminBetaOverview from "./beta/AdminBetaOverview.jsx";
 import AdminMediaHealth from "./beta/AdminMediaHealth.jsx";
 import AdminMovieFilePicker from "./AdminMovieFilePicker.jsx";
+import ResolutionIndicator from "../components/ResolutionIndicator.jsx";
 import wizardStyles from "./AdminMovieWizard.module.css";
 import {
   PUBLIC_VIDEO_BASE,
@@ -40,6 +41,18 @@ const AdminThumbnailStudio = dynamic(
   }
 );
 
+const AdminNasLibrary = dynamic(
+  () => import("./beta/AdminNasLibrary.jsx"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="text-xs text-neutral-500">
+        Lade NAS-Analyse…
+      </div>
+    ),
+  }
+);
+
 // ActorImageUploader nur im Client laden (wegen react-easy-crop / Canvas)
 const ActorImageUploader = dynamic(() => import("./ActorImageUploader.jsx"), {
   ssr: false,
@@ -66,6 +79,33 @@ const MovieThumbnailUploader = dynamic(
 // -------------------------------
 
 const CHANGELOG = [
+  {
+    version: "2.6.1",
+    date: "2026-08-16",
+    items: [
+      "NAS-Qualitätsauswertung auf 4K und Nicht 4K anhand eines eigenen 4K-Ordners vereinfacht",
+      "Abdeckung nach Hauptdarsteller über anklickbare Spaltenköpfe sortierbar gemacht",
+      "Unten abgeschnittene Kennzahlen in der Admin-Übersicht korrigiert",
+      "Thumbnails der aktuellen Filme in der Admin-Übersicht auf 16:9 umgestellt",
+      "Thumbnails im Filmarchiv vollständig auf 16:9 umgestellt",
+      "Bildverwaltung für Studios aus der Admin-Oberfläche entfernt",
+      "Dateiauswahl beim Anlegen von Haupt- und Nebendarstellern sauber ausgerichtet",
+      "Doppelte Darstellernamen in der NAS-Analyse entfernt und Dateityp-Zähler besser lesbar gemacht",
+      "V1-Qualitätslogos auf Hauptseite und im Admin wiederhergestellt: 4K rot, FullHD gelb und Retro weiß-grau",
+      "Qualitätslogos in V2 unter die Thumbnails neben den Filmtitel verschoben",
+      "Lange V2-Filmtitel neben Qualitätslogos passen ihre Schriftgröße automatisch an, statt gekürzt zu werden",
+    ],
+  },
+  {
+    version: "2.6.0",
+    date: "2026-08-09",
+    items: [
+      "NAS-Bibliotheksanalyse mit vollständigem Inventar aller Videoformate ergänzt",
+      "Exakten Datenbankabgleich, mögliche Dateinamens-Treffer und offene NAS-Dateien getrennt ausgewiesen",
+      "Aussagekräftige Statistiken nach Hauptdarsteller, Qualität, Dateiformat und MP4-Konvertierungsstand ergänzt",
+      "Geschützten read-only Docker-Scanner für den Hauptordner 1337 vorbereitet",
+    ],
+  },
   {
     version: "2.5.7",
     date: "2026-08-09",
@@ -465,6 +505,14 @@ const AdminNavIcon = ({ name }) => {
         <path d="M7 12h2l1.4-3.5 2.2 7 1.5-3.5H17" />
       </>
     ),
+    nas: (
+      <>
+        <path d="M4 6.5h16v11H4z" />
+        <path d="M7 10h10M7 14h6" />
+        <circle cx="17" cy="14" r="1" />
+        <path d="M8 4h8M8 20h8" />
+      </>
+    ),
     thumbnail: (
       <>
         <rect x="3" y="4" width="18" height="16" rx="1" />
@@ -551,7 +599,7 @@ export function DashboardExperience({ beta = false }) {
   // Tabs: Filme / Neuer Film / Stammdaten
   const [activeFilmSection, setActiveFilmSection] = useState(
     beta ? "overview" : "stats"
-  ); // "overview" | "health" | "stats" | "new" | "meta"
+  ); // "overview" | "nas" | "health" | "stats" | "new" | "meta"
   const [metaMenuOpen, setMetaMenuOpen] = useState(false);
   const [activeMetaSection, setActiveMetaSection] = useState("mainActors"); // "mainActors" | "supportActors" | "studios" | "tags"
 
@@ -581,7 +629,6 @@ export function DashboardExperience({ beta = false }) {
   const [newSupportImage, setNewSupportImage] = useState("");
 
   const [newStudioName, setNewStudioName] = useState("");
-  const [newStudioImage, setNewStudioImage] = useState("");
 
   const [newTagName, setNewTagName] = useState("");
 
@@ -604,7 +651,6 @@ export function DashboardExperience({ beta = false }) {
   const [editingStudioMetaId, setEditingStudioMetaId] = useState(null);
   const [studioEditForm, setStudioEditForm] = useState({
     name: "",
-    image_url: "",
   });
 
   const [editingTagMetaId, setEditingTagMetaId] = useState(null);
@@ -1151,10 +1197,7 @@ export function DashboardExperience({ beta = false }) {
 
     const { data, error: insertError } = await supabase
       .from("studios")
-      .insert({
-        name,
-        image_url: newStudioImage.trim() || null,
-      })
+      .insert({ name })
       .select("*")
       .single();
 
@@ -1166,7 +1209,6 @@ export function DashboardExperience({ beta = false }) {
 
     setStudios((prev) => [...prev, data]);
     setNewStudioName("");
-    setNewStudioImage("");
   };
 
   const handleAddTag = async (e) => {
@@ -1188,42 +1230,6 @@ export function DashboardExperience({ beta = false }) {
 
     setTags((prev) => [...prev, data]);
     setNewTagName("");
-  };
-
-  const handleEditStudio = async (studio) => {
-    const newName = window.prompt("Neuer Studio-Name:", studio.name || "");
-    if (newName === null) return;
-
-    const trimmedName = newName.trim();
-    if (!trimmedName) return;
-
-    const newImg = window.prompt(
-      "Neue Bild-URL (leer lassen zum Löschen):",
-      studio.image_url || ""
-    );
-
-    let image_url = studio.image_url || null;
-    if (newImg !== null) {
-      const t = newImg.trim();
-      image_url = t === "" ? null : t;
-    }
-
-    const { data, error: updateError } = await supabase
-      .from("studios")
-      .update({ name: trimmedName, image_url })
-      .eq("id", studio.id)
-      .select("*")
-      .single();
-
-    if (updateError) {
-      console.error(updateError);
-      setError(updateError.message);
-      return;
-    }
-
-    setStudios((prev) =>
-      prev.map((s) => (s.id === studio.id ? data : s))
-    );
   };
 
   const handleDeleteStudio = async (studioId) => {
@@ -1553,7 +1559,6 @@ export function DashboardExperience({ beta = false }) {
     setEditingStudioMetaId(studio.id);
     setStudioEditForm({
       name: studio.name || "",
-      image_url: studio.image_url || "",
     });
   };
 
@@ -1561,7 +1566,6 @@ export function DashboardExperience({ beta = false }) {
     setEditingStudioMetaId(null);
     setStudioEditForm({
       name: "",
-      image_url: "",
     });
   };
 
@@ -1569,14 +1573,9 @@ export function DashboardExperience({ beta = false }) {
     const name = studioEditForm.name.trim();
     if (!name) return;
 
-    const payload = {
-      name,
-      image_url: studioEditForm.image_url.trim() || null,
-    };
-
     const { data, error: updateError } = await supabase
       .from("studios")
-      .update(payload)
+      .update({ name })
       .eq("id", studioId)
       .select("*")
       .single();
@@ -2114,6 +2113,7 @@ export function DashboardExperience({ beta = false }) {
     { key: "overview", label: "Übersicht", icon: "overview", section: "overview" },
     { key: "director", label: "Startseiten-Regisseur", icon: "director", section: "director" },
     { key: "stats", label: "Filmarchiv", icon: "movies", section: "stats", count: filme.length },
+    { key: "nas", label: "NAS-Analyse", icon: "nas", section: "nas" },
     { key: "health", label: "Medienprüfung", icon: "health", section: "health" },
     { key: "thumbnails", label: "Thumbnail Studio", icon: "thumbnail", section: "thumbnails" },
     { key: "new", label: editingFilmId ? "Film bearbeiten" : "Film hinzufügen", icon: "add", section: "new" },
@@ -2186,6 +2186,13 @@ export function DashboardExperience({ beta = false }) {
           description:
             "Reihenfolge, Sichtbarkeit und Inhalt der v2-Startseite zentral inszenieren und veröffentlichen.",
         }
+      : activeFilmSection === "nas"
+      ? {
+          eyebrow: "NAS Library Intelligence",
+          title: "NAS-Analyse",
+          description:
+            "Den vollständigen Videoordner 1337 inventarisieren, mit der Datenbank abgleichen und den Erfassungsstand präzise auswerten.",
+        }
       : activeFilmSection === "health"
       ? {
           eyebrow: "Media Health Center",
@@ -2232,7 +2239,7 @@ export function DashboardExperience({ beta = false }) {
               : activeMetaSection === "supportActors"
               ? `${nebendarsteller.length} Nebendarsteller anlegen, bearbeiten und löschen.`
               : activeMetaSection === "studios"
-              ? `${studios.length} Studios samt Bildmaterial pflegen.`
+              ? `${studios.length} Studios verwalten.`
               : `${tags.length} Tags für die Katalogisierung verwalten.`,
         };
 
@@ -2967,6 +2974,12 @@ export function DashboardExperience({ beta = false }) {
                     />
                   ) : null}
 
+                  {beta && activeFilmSection === "nas" ? (
+                    <AdminNasLibrary
+                      onUnauthorized={handleSessionExpired}
+                    />
+                  ) : null}
+
                   {beta && activeFilmSection === "director" ? (
                     <AdminHomepageDirector
                       movies={filme}
@@ -3586,7 +3599,12 @@ export function DashboardExperience({ beta = false }) {
                                   {beta ? (
                                     <>
                                       <span>
-                                        <strong>{resolutionMap[f.resolution_id]?.name || "–"}</strong>
+                                        <ResolutionIndicator
+                                          value={resolutionMap[f.resolution_id]?.name}
+                                          logoClassName="adminMovieColumns__qualityLogo"
+                                          fallbackClassName="adminMovieColumns__qualityText"
+                                          fallback="–"
+                                        />
                                         <small>Qualität</small>
                                       </span>
                                       <span>
@@ -3643,7 +3661,7 @@ export function DashboardExperience({ beta = false }) {
                                       <img
                                         src={f.thumbnail_url}
                                         alt={`${f.title} Thumbnail`}
-                                        className="h-14 w-14 rounded-xl border border-neutral-800 object-cover bg-neutral-900"
+                                        className="aspect-video w-28 shrink-0 rounded-xl border border-neutral-800 object-cover bg-neutral-900"
                                         loading="lazy"
                                       />
                                       <div className="min-w-0 flex-1">
@@ -4247,10 +4265,6 @@ export function DashboardExperience({ beta = false }) {
                               }
                             />
 
-                            <ActorImageUploader
-                              onUploaded={(url) => setNewStudioImage(url)}
-                            />
-
                             <button
                               type="submit"
                               className="rounded-xl bg-red-500 px-4 py-2 text-sm font-semibold text-black shadow shadow-red-900/70 hover:bg-red-400 disabled:opacity-60"
@@ -4290,17 +4304,6 @@ export function DashboardExperience({ beta = false }) {
                                             }))
                                           }
                                         />
-                                        <input
-                                          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
-                                          placeholder="Bild-URL"
-                                          value={studioEditForm.image_url}
-                                          onChange={(e) =>
-                                            setStudioEditForm((prev) => ({
-                                              ...prev,
-                                              image_url: e.target.value,
-                                            }))
-                                          }
-                                        />
                                       </div>
 
                                       <div className="flex flex-wrap gap-2">
@@ -4323,20 +4326,7 @@ export function DashboardExperience({ beta = false }) {
                                     </div>
                                   ) : (
                                     <div className="flex items-center justify-between gap-3">
-                                      <div className="flex min-w-0 items-center gap-3">
-                                        {s.image_url ? (
-                                          <img
-                                            src={s.image_url}
-                                            alt={s.name}
-                                            className="h-10 w-10 rounded-lg border border-neutral-800 object-cover"
-                                            loading="lazy"
-                                          />
-                                        ) : (
-                                          <div className="grid h-10 w-10 place-items-center rounded-lg border border-neutral-800 bg-neutral-900 text-[10px] font-bold text-neutral-500">
-                                            IMG
-                                          </div>
-                                        )}
-
+                                      <div className="min-w-0">
                                         <span className="truncate text-sm font-medium text-neutral-50">
                                           {s.name}
                                         </span>
