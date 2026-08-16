@@ -82,6 +82,7 @@ const CHANGELOG = [
       "Qualitätslogos in V2 unter die Thumbnails neben den Filmtitel verschoben",
       "Lange V2-Filmtitel neben Qualitätslogos passen ihre Schriftgröße automatisch an, statt gekürzt zu werden",
       "Aktuelle V2-Oberflächen unter / und /dashboard konsolidiert und ungenutzte V1- sowie Classic-Dateien entfernt",
+      "Nicht mehr benötigte Weiterleitungsrouten für /beta, /v2, /dashboard/beta und /dashboard/v2 entfernt",
     ],
   },
   {

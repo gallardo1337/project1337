@@ -54,13 +54,11 @@ test("V1 ist aus der aktiven Website entfernt", async () => {
 });
 
 test("Admin-Changelog führt NAS-Analyse, Bereinigung, Favoriten und Kontomenü fort", async () => {
-  const [dashboard, overviewStyles, experience, layout, v2Redirect, betaRedirect] = await Promise.all([
+  const [dashboard, overviewStyles, experience, layout] = await Promise.all([
     readProjectFile("app/dashboard/page.jsx"),
     readProjectFile("app/dashboard/beta/admin-beta.css"),
     readProjectFile("app/beta/BetaExperience.jsx"),
     readProjectFile("app/dashboard/layout.jsx"),
-    readProjectFile("app/dashboard/v2/page.jsx"),
-    readProjectFile("app/dashboard/beta/page.jsx"),
   ]);
 
   assert.match(dashboard, /const CHANGELOG = \[\s*\{\s*version:\s*"2\.6\.1"/);
@@ -70,6 +68,7 @@ test("Admin-Changelog führt NAS-Analyse, Bereinigung, Favoriten und Kontomenü 
   assert.match(dashboard, /Thumbnails der aktuellen Filme in der Admin-Übersicht auf 16:9 umgestellt/);
   assert.match(dashboard, /Thumbnails im Filmarchiv vollständig auf 16:9 umgestellt/);
   assert.match(dashboard, /V2-Oberflächen unter \/ und \/dashboard konsolidiert/);
+  assert.match(dashboard, /Nicht mehr benötigte Weiterleitungsrouten/);
   assert.match(overviewStyles, /\.adminKpi > strong \{[^}]*overflow:\s*visible;/s);
   assert.match(overviewStyles, /\.adminKpi > strong \{[^}]*line-height:\s*1;/s);
   assert.match(
@@ -105,8 +104,6 @@ test("Admin-Changelog führt NAS-Analyse, Bereinigung, Favoriten und Kontomenü 
   assert.doesNotMatch(dashboard, /Zum klassischen Dashboard/);
   assert.match(layout, /title:\s*"Admin \| Project1337"/);
   assert.match(layout, /import "\.\/beta\/admin-beta\.css"/);
-  assert.match(v2Redirect, /redirect\("\/dashboard"\)/);
-  assert.match(betaRedirect, /redirect\("\/dashboard"\)/);
 });
 
 test("V1- und Classic-Reste sind aus den aktiven Bundles entfernt", async () => {
@@ -126,6 +123,10 @@ test("V1- und Classic-Reste sind aus den aktiven Bundles entfernt", async () => 
     "app/dashboard/MovieThumbnailUploader.jsx",
     "app/dashboard/v2/layout.jsx",
     "app/dashboard/beta/layout.jsx",
+    "app/beta/page.jsx",
+    "app/v2/page.jsx",
+    "app/dashboard/beta/page.jsx",
+    "app/dashboard/v2/page.jsx",
     "public/db.png",
     "public/palm.png",
   ]) {
