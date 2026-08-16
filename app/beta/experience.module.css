@@ -1125,12 +1125,12 @@
 }
 
 .movieTitle {
+  min-width: 0;
   overflow: hidden;
   color: rgba(255,255,255,.96);
   font-family: Georgia, "Times New Roman", serif;
   font-size: 20px;
   line-height: 1.15;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -3173,17 +3173,15 @@
   gap: 12px;
 }
 
-.similarCopy strong {
-  min-height: 44px;
-  display: -webkit-box;
+.similarTitle {
+  min-width: 0;
   overflow: hidden;
   color: rgba(255,255,255,.94);
   font-family: Georgia, "Times New Roman", serif;
   font-size: 20px;
   font-weight: 400;
   line-height: 1.12;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  white-space: nowrap;
 }
 
 .similarCopy > .similarMeta {

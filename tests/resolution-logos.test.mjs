@@ -23,6 +23,10 @@ test("V1-Qualitätslogos erscheinen farbcodiert auf Hauptseite und im Admin", as
   assert.match(indicator, /src: "\/fullhd\.svg"/);
   assert.match(indicator, /src: "\/retro\.svg"/);
   assert.equal((experience.match(/<ResolutionIndicator/g) || []).length, 3);
+  assert.match(experience, /function AutoFitMovieTitle\(/);
+  assert.match(experience, /new ResizeObserver\(fit\)/);
+  assert.match(experience, /element\.scrollWidth/);
+  assert.equal((experience.match(/<AutoFitMovieTitle/g) || []).length, 2);
   assert.equal(
     (experience.match(/logoClassName=\{styles\.qualityInlineLogo\}/g) || []).length,
     2
@@ -32,6 +36,13 @@ test("V1-Qualitätslogos erscheinen farbcodiert auf Hauptseite und im Admin", as
   assert.match(experienceStyles, /\.qualityInlineLogo \{/);
   assert.match(experienceStyles, /\.movieTitleRow \{/);
   assert.match(experienceStyles, /\.similarTitleRow \{/);
+  assert.match(experienceStyles, /\.movieTitle \{[^}]*white-space:\s*nowrap;/s);
+  assert.match(experienceStyles, /\.similarTitle \{[^}]*white-space:\s*nowrap;/s);
+  assert.doesNotMatch(
+    experienceStyles,
+    /\.movieTitle \{[^}]*text-overflow:\s*ellipsis;/s
+  );
+  assert.doesNotMatch(experienceStyles, /\.similarTitle \{[^}]*line-clamp:/s);
   assert.doesNotMatch(experienceStyles, /\.qualityLogo \{/);
   assert.match(experienceStyles, /\.playerQualityLogo \{/);
   assert.match(overview, /logoClassName="adminRecentMovie__qualityLogo"/);
@@ -51,5 +62,9 @@ test("V1-Qualitätslogos erscheinen farbcodiert auf Hauptseite und im Admin", as
   assert.match(
     dashboard,
     /Qualitätslogos in V2 unter die Thumbnails neben den Filmtitel verschoben/
+  );
+  assert.match(
+    dashboard,
+    /Lange V2-Filmtitel neben Qualitätslogos passen ihre Schriftgröße automatisch an, statt gekürzt zu werden/
   );
 });

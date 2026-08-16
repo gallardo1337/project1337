@@ -102,6 +102,59 @@ function Icon({ name, className = "" }) {
   );
 }
 
+function AutoFitMovieTitle({ title, className, maxSize, minSize = 8 }) {
+  const titleRef = useRef(null);
+
+  useEffect(() => {
+    const element = titleRef.current;
+    const container = element?.parentElement;
+    if (!element || !container) return undefined;
+
+    let frame = 0;
+
+    const fit = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        element.style.fontSize = `${maxSize}px`;
+
+        const availableWidth = element.clientWidth;
+        const contentWidth = element.scrollWidth;
+        if (!availableWidth || contentWidth <= availableWidth + 1) return;
+
+        let nextSize = Math.max(
+          minSize,
+          (maxSize * availableWidth) / contentWidth
+        );
+        element.style.fontSize = `${nextSize}px`;
+
+        if (element.scrollWidth > element.clientWidth + 1) {
+          nextSize = Math.max(
+            6,
+            nextSize * (element.clientWidth / element.scrollWidth)
+          );
+          element.style.fontSize = `${nextSize}px`;
+        }
+      });
+    };
+
+    const resizeObserver = new ResizeObserver(fit);
+    resizeObserver.observe(container);
+    fit();
+    document.fonts?.ready.then(fit);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      resizeObserver.disconnect();
+    };
+  }, [maxSize, minSize, title]);
+
+  return (
+    <span ref={titleRef} className={className} title={title}>
+      {title}
+    </span>
+  );
+}
+
 function MediaImage({ src, alt, priority = false, sizes = "100vw" }) {
   if (!src) {
     return (
@@ -783,7 +836,11 @@ function MovieCard({
         </span>
         <span className={styles.movieCopy}>
           <span className={styles.movieTitleRow}>
-            <span className={styles.movieTitle}>{movie.title || "Unbenannt"}</span>
+            <AutoFitMovieTitle
+              title={movie.title || "Unbenannt"}
+              className={styles.movieTitle}
+              maxSize={large ? 27 : 20}
+            />
             <ResolutionIndicator
               value={movie.resolution}
               logoClassName={styles.qualityInlineLogo}
@@ -843,9 +900,11 @@ function SimilarMovieCard({ recommendation, onOpen, index }) {
       </span>
       <span className={styles.similarCopy}>
         <span className={styles.similarTitleRow}>
-          <strong title={movie.title || "Unbenannt"}>
-            {movie.title || "Unbenannt"}
-          </strong>
+          <AutoFitMovieTitle
+            title={movie.title || "Unbenannt"}
+            className={styles.similarTitle}
+            maxSize={20}
+          />
           <ResolutionIndicator
             value={movie.resolution}
             logoClassName={styles.qualityInlineLogo}
