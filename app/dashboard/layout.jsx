@@ -1,9 +1,10 @@
-// app/dashboard/layout.jsx
+import "./beta/admin-beta.css";
+
 export const metadata = {
-  title: "1337 Dashboard",
+  title: "Admin | Project1337",
+  description: "Die Administrationsoberfläche der 1337 Library.",
 };
 
 export default function DashboardLayout({ children }) {
-  // Einfach nur die Children rendern, Header etc. kommt aus page.jsx
-  return <>{children}</>;
+  return children;
 }
