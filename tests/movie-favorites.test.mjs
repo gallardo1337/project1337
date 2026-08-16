@@ -54,14 +54,20 @@ test("V1 ist aus der aktiven Website entfernt", async () => {
 });
 
 test("Admin-Changelog führt NAS-Analyse, V1-Archivierung, Favoriten und Kontomenü fort", async () => {
-  const [dashboard, experience, layout, redirectLayout] = await Promise.all([
+  const [dashboard, overviewStyles, experience, layout, redirectLayout] = await Promise.all([
     readProjectFile("app/dashboard/page.jsx"),
+    readProjectFile("app/dashboard/beta/admin-beta.css"),
     readProjectFile("app/beta/BetaExperience.jsx"),
     readProjectFile("app/dashboard/v2/layout.jsx"),
     readProjectFile("app/dashboard/beta/layout.jsx"),
   ]);
 
-  assert.match(dashboard, /const CHANGELOG = \[\s*\{\s*version:\s*"2\.6\.0"/);
+  assert.match(dashboard, /const CHANGELOG = \[\s*\{\s*version:\s*"2\.6\.1"/);
+  assert.match(dashboard, /NAS-Qualitätsauswertung auf 4K und Nicht 4K/);
+  assert.match(dashboard, /Abdeckung nach Hauptdarsteller über anklickbare Spaltenköpfe sortierbar/);
+  assert.match(dashboard, /Unten abgeschnittene Kennzahlen in der Admin-Übersicht korrigiert/);
+  assert.match(overviewStyles, /\.adminKpi > strong \{[^}]*overflow:\s*visible;/s);
+  assert.match(overviewStyles, /\.adminKpi > strong \{[^}]*line-height:\s*1;/s);
   assert.match(dashboard, /label:\s*"NAS-Analyse"/);
   assert.match(dashboard, /AdminNasLibrary/);
   assert.match(dashboard, /Git-Branch archive\/v1/);

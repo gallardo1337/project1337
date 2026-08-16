@@ -79,6 +79,15 @@ const MovieThumbnailUploader = dynamic(
 
 const CHANGELOG = [
   {
+    version: "2.6.1",
+    date: "2026-08-16",
+    items: [
+      "NAS-Qualitätsauswertung auf 4K und Nicht 4K anhand eines eigenen 4K-Ordners vereinfacht",
+      "Abdeckung nach Hauptdarsteller über anklickbare Spaltenköpfe sortierbar gemacht",
+      "Unten abgeschnittene Kennzahlen in der Admin-Übersicht korrigiert",
+    ],
+  },
+  {
     version: "2.6.0",
     date: "2026-08-09",
     items: [

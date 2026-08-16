@@ -1129,18 +1129,19 @@
 
 .adminBeta .adminKpi > strong {
   display: block;
-  overflow: hidden;
+  overflow: visible;
+  padding-bottom: 0.08em;
   color: #f1eee7;
   font-family: Georgia, "Times New Roman", serif;
   font-size: clamp(40px, 4vw, 62px);
   font-weight: 400;
-  line-height: 0.9;
+  line-height: 1;
   letter-spacing: -0.06em;
-  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .adminBeta .adminKpi > p {
-  margin: 11px 0 0;
+  margin: 7px 0 0;
   color: rgba(255, 255, 255, 0.3);
   font-size: 9px;
   font-weight: 700;
