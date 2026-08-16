@@ -87,6 +87,8 @@ const CHANGELOG = [
       "Unten abgeschnittene Kennzahlen in der Admin-Übersicht korrigiert",
       "Thumbnails der aktuellen Filme in der Admin-Übersicht auf 16:9 umgestellt",
       "Thumbnails im Filmarchiv vollständig auf 16:9 umgestellt",
+      "Bildverwaltung für Studios aus der Admin-Oberfläche entfernt",
+      "Dateiauswahl beim Anlegen von Haupt- und Nebendarstellern sauber ausgerichtet",
     ],
   },
   {
@@ -622,7 +624,6 @@ export function DashboardExperience({ beta = false }) {
   const [newSupportImage, setNewSupportImage] = useState("");
 
   const [newStudioName, setNewStudioName] = useState("");
-  const [newStudioImage, setNewStudioImage] = useState("");
 
   const [newTagName, setNewTagName] = useState("");
 
@@ -645,7 +646,6 @@ export function DashboardExperience({ beta = false }) {
   const [editingStudioMetaId, setEditingStudioMetaId] = useState(null);
   const [studioEditForm, setStudioEditForm] = useState({
     name: "",
-    image_url: "",
   });
 
   const [editingTagMetaId, setEditingTagMetaId] = useState(null);
@@ -1192,10 +1192,7 @@ export function DashboardExperience({ beta = false }) {
 
     const { data, error: insertError } = await supabase
       .from("studios")
-      .insert({
-        name,
-        image_url: newStudioImage.trim() || null,
-      })
+      .insert({ name })
       .select("*")
       .single();
 
@@ -1207,7 +1204,6 @@ export function DashboardExperience({ beta = false }) {
 
     setStudios((prev) => [...prev, data]);
     setNewStudioName("");
-    setNewStudioImage("");
   };
 
   const handleAddTag = async (e) => {
@@ -1229,42 +1225,6 @@ export function DashboardExperience({ beta = false }) {
 
     setTags((prev) => [...prev, data]);
     setNewTagName("");
-  };
-
-  const handleEditStudio = async (studio) => {
-    const newName = window.prompt("Neuer Studio-Name:", studio.name || "");
-    if (newName === null) return;
-
-    const trimmedName = newName.trim();
-    if (!trimmedName) return;
-
-    const newImg = window.prompt(
-      "Neue Bild-URL (leer lassen zum Löschen):",
-      studio.image_url || ""
-    );
-
-    let image_url = studio.image_url || null;
-    if (newImg !== null) {
-      const t = newImg.trim();
-      image_url = t === "" ? null : t;
-    }
-
-    const { data, error: updateError } = await supabase
-      .from("studios")
-      .update({ name: trimmedName, image_url })
-      .eq("id", studio.id)
-      .select("*")
-      .single();
-
-    if (updateError) {
-      console.error(updateError);
-      setError(updateError.message);
-      return;
-    }
-
-    setStudios((prev) =>
-      prev.map((s) => (s.id === studio.id ? data : s))
-    );
   };
 
   const handleDeleteStudio = async (studioId) => {
@@ -1594,7 +1554,6 @@ export function DashboardExperience({ beta = false }) {
     setEditingStudioMetaId(studio.id);
     setStudioEditForm({
       name: studio.name || "",
-      image_url: studio.image_url || "",
     });
   };
 
@@ -1602,7 +1561,6 @@ export function DashboardExperience({ beta = false }) {
     setEditingStudioMetaId(null);
     setStudioEditForm({
       name: "",
-      image_url: "",
     });
   };
 
@@ -1610,14 +1568,9 @@ export function DashboardExperience({ beta = false }) {
     const name = studioEditForm.name.trim();
     if (!name) return;
 
-    const payload = {
-      name,
-      image_url: studioEditForm.image_url.trim() || null,
-    };
-
     const { data, error: updateError } = await supabase
       .from("studios")
-      .update(payload)
+      .update({ name })
       .eq("id", studioId)
       .select("*")
       .single();
@@ -2281,7 +2234,7 @@ export function DashboardExperience({ beta = false }) {
               : activeMetaSection === "supportActors"
               ? `${nebendarsteller.length} Nebendarsteller anlegen, bearbeiten und löschen.`
               : activeMetaSection === "studios"
-              ? `${studios.length} Studios samt Bildmaterial pflegen.`
+              ? `${studios.length} Studios verwalten.`
               : `${tags.length} Tags für die Katalogisierung verwalten.`,
         };
 
@@ -4302,10 +4255,6 @@ export function DashboardExperience({ beta = false }) {
                               }
                             />
 
-                            <ActorImageUploader
-                              onUploaded={(url) => setNewStudioImage(url)}
-                            />
-
                             <button
                               type="submit"
                               className="rounded-xl bg-red-500 px-4 py-2 text-sm font-semibold text-black shadow shadow-red-900/70 hover:bg-red-400 disabled:opacity-60"
@@ -4345,17 +4294,6 @@ export function DashboardExperience({ beta = false }) {
                                             }))
                                           }
                                         />
-                                        <input
-                                          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
-                                          placeholder="Bild-URL"
-                                          value={studioEditForm.image_url}
-                                          onChange={(e) =>
-                                            setStudioEditForm((prev) => ({
-                                              ...prev,
-                                              image_url: e.target.value,
-                                            }))
-                                          }
-                                        />
                                       </div>
 
                                       <div className="flex flex-wrap gap-2">
@@ -4378,20 +4316,7 @@ export function DashboardExperience({ beta = false }) {
                                     </div>
                                   ) : (
                                     <div className="flex items-center justify-between gap-3">
-                                      <div className="flex min-w-0 items-center gap-3">
-                                        {s.image_url ? (
-                                          <img
-                                            src={s.image_url}
-                                            alt={s.name}
-                                            className="h-10 w-10 rounded-lg border border-neutral-800 object-cover"
-                                            loading="lazy"
-                                          />
-                                        ) : (
-                                          <div className="grid h-10 w-10 place-items-center rounded-lg border border-neutral-800 bg-neutral-900 text-[10px] font-bold text-neutral-500">
-                                            IMG
-                                          </div>
-                                        )}
-
+                                      <div className="min-w-0">
                                         <span className="truncate text-sm font-medium text-neutral-50">
                                           {s.name}
                                         </span>

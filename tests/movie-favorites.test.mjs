@@ -104,3 +104,21 @@ test("Admin-Changelog führt NAS-Analyse, V1-Archivierung, Favoriten und Kontome
   assert.match(layout, /title:\s*"Admin \| Project1337"/);
   assert.match(redirectLayout, /title:\s*"Admin \| Project1337"/);
 });
+
+test("Studio-Bilder sind entfernt und die Darsteller-Dateiauswahl ist sauber aufgebaut", async () => {
+  const [dashboard, actorImageUploader] = await Promise.all([
+    readProjectFile("app/dashboard/page.jsx"),
+    readProjectFile("app/dashboard/ActorImageUploader.jsx"),
+  ]);
+
+  assert.match(dashboard, /Bildverwaltung für Studios aus der Admin-Oberfläche entfernt/);
+  assert.match(dashboard, /Dateiauswahl beim Anlegen von Haupt- und Nebendarstellern sauber ausgerichtet/);
+  assert.doesNotMatch(dashboard, /newStudioImage/);
+  assert.doesNotMatch(dashboard, /studioEditForm\.image_url/);
+  assert.doesNotMatch(dashboard, /s\.image_url/);
+  assert.match(dashboard, /\.from\("studios"\)\s*\.insert\(\{ name \}\)/s);
+  assert.match(actorImageUploader, /actorImageUploader__picker/);
+  assert.match(actorImageUploader, /fileInputRef\.current\?\.click\(\)/);
+  assert.match(actorImageUploader, /selectedFileName \|\| "Keine Datei ausgewählt"/);
+  assert.match(actorImageUploader, /aria-label="Darsteller-Foto auswählen"/);
+});

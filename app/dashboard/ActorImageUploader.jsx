@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import Cropper from "react-easy-crop";
 
 const UPLOAD_URL = process.env.NEXT_PUBLIC_ACTOR_UPLOAD_URL;
@@ -54,12 +54,14 @@ async function getCroppedImage(imageSrc, pixelCrop) {
  *  onUploaded(url: string) – wird aufgerufen, wenn Upload fertig ist
  */
 export default function ActorImageUploader({ onUploaded }) {
+  const fileInputRef = useRef(null);
   const [imageSrc, setImageSrc] = useState(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [selectedFileName, setSelectedFileName] = useState("");
 
   const onCropComplete = useCallback((_, croppedPixels) => {
     setCroppedAreaPixels(croppedPixels);
@@ -67,7 +69,12 @@ export default function ActorImageUploader({ onUploaded }) {
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      setSelectedFileName("");
+      return;
+    }
+
+    setSelectedFileName(file.name);
 
     const reader = new FileReader();
     reader.onload = () => {
@@ -124,16 +131,34 @@ export default function ActorImageUploader({ onUploaded }) {
 
   return (
     <div className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium mb-1">
+      <div className="space-y-2">
+        <div className="text-sm font-medium">
           Darsteller-Foto hochladen
-        </label>
-        <input
-          type="file"
-          accept="image/*"
-          onChange={handleFileChange}
-          className="block w-full text-sm"
-        />
+        </div>
+        <div className="actorImageUploader__picker flex min-h-12 w-full items-center gap-3 overflow-hidden rounded-lg border border-neutral-700 bg-neutral-950 p-1.5">
+          <button
+            type="button"
+            className="shrink-0 rounded-md border border-neutral-600 bg-neutral-800 px-3 py-2 text-xs font-medium text-neutral-100 transition-colors hover:border-red-500 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+          >
+            Datei auswählen
+          </button>
+          <span
+            className="min-w-0 flex-1 truncate text-xs text-neutral-400"
+            title={selectedFileName || "Keine Datei ausgewählt"}
+          >
+            {selectedFileName || "Keine Datei ausgewählt"}
+          </span>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            aria-label="Darsteller-Foto auswählen"
+            hidden
+          />
+        </div>
       </div>
 
       {imageSrc && (
