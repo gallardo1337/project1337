@@ -18,9 +18,17 @@ test("NAS-Darstellerliste vermeidet doppelte Namen und zeigt lesbare Dateityp-Z�
     /normalizePerformerLabel\(folder\)\s*!==\s*normalizePerformerLabel\(performer\.name\)/s
   );
   assert.match(component, /className=\{styles\.performerFormats\}/);
-  assert.match(component, /<b>\{item\.name\}<\/b>\s*<em>\{formatNumber\(item\.count\)\}<\/em>/s);
-  assert.match(styles, /\.performerFormats span \{[^}]*font-size:\s*10px;/s);
-  assert.match(styles, /\.performerFormats em \{[^}]*font-size:\s*11px;/s);
+  assert.match(
+    component,
+    /\.map\(\(item\) => `\$\{item\.name\} \$\{formatNumber\(item\.count\)\}`\)\s*\.join\(" · "\)/s
+  );
+  assert.doesNotMatch(component, /<b>\{item\.name\}<\/b>/);
+  assert.doesNotMatch(component, /<em>\{formatNumber\(item\.count\)\}<\/em>/);
+  assert.match(
+    styles,
+    /\.performerFormats \{[^}]*font-size:\s*11px;[^}]*font-weight:\s*400;/s
+  );
+  assert.doesNotMatch(styles, /\.performerFormats span \{/);
   assert.match(
     dashboard,
     /Doppelte Darstellernamen in der NAS-Analyse entfernt und Dateityp-Zähler besser lesbar gemacht/

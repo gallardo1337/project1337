@@ -559,18 +559,10 @@ export default function AdminNasLibrary({ onUnauthorized }) {
                       className={styles.performerFormats}
                       aria-label={`Dateitypen von ${performer.name}`}
                     >
-                      {performer.formats.length ? (
-                        performer.formats.slice(0, 4).map((item) => (
-                          <span key={item.name}>
-                            <b>{item.name}</b>
-                            <em>{formatNumber(item.count)}</em>
-                          </span>
-                        ))
-                      ) : (
-                        <span className={styles.performerFormatsEmpty}>
-                          Keine NAS-Dateien
-                        </span>
-                      )}
+                      {performer.formats
+                        .slice(0, 4)
+                        .map((item) => `${item.name} ${formatNumber(item.count)}`)
+                        .join(" · ") || "Keine NAS-Dateien"}
                     </div>
                   </div>
                   <span>{formatNumber(performer.nas_files)}</span>
