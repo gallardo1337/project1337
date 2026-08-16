@@ -354,7 +354,36 @@
 }
 
 .performerTableHead { min-height: 36px; background: rgba(255, 255, 255, 0.025); }
-.performerTableHead span { color: rgba(255, 255, 255, 0.29); font-size: 7px; font-weight: 850; letter-spacing: 0.08em; text-transform: uppercase; }
+.performerTableHead span { min-width: 0; }
+.performerTableHead button {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 0;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.29);
+  font-size: 7px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-align: left;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.performerTableHead button:hover,
+.performerTableHead .sortActive { color: rgba(255, 255, 255, 0.82); }
+.performerTableHead button i {
+  color: rgba(255, 255, 255, 0.2);
+  font-size: 9px;
+  font-style: normal;
+  line-height: 1;
+}
+.performerTableHead .sortActive i { color: #f04444; }
+.performerTableHead button:focus-visible {
+  outline: 1px solid #f04444;
+  outline-offset: 3px;
+}
 .performerTable > article { min-height: 70px; border-top: 1px solid rgba(255, 255, 255, 0.055); }
 .performerTable > article > span { color: rgba(255, 255, 255, 0.6); font-size: 10px; }
 .performerIdentity { display: grid; min-width: 0; gap: 3px; }

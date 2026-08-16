@@ -8,9 +8,20 @@ import {
   useRef,
   useState,
 } from "react";
+import { sortNasPerformers } from "../../../lib/nasLibraryAnalysis.mjs";
 import styles from "./AdminNasLibrary.module.css";
 
 const FILE_PAGE_SIZE = 75;
+
+const PERFORMER_COLUMNS = [
+  { key: "name", label: "Darsteller / NAS-Ordner" },
+  { key: "nas_files", label: "NAS" },
+  { key: "database_movies", label: "DB-Filme" },
+  { key: "exact", label: "Sicher" },
+  { key: "probable", label: "Möglich" },
+  { key: "missing", label: "Offen" },
+  { key: "coverage", label: "Quote" },
+];
 
 const numberFormatter = new Intl.NumberFormat("de-DE");
 const decimalFormatter = new Intl.NumberFormat("de-DE", {
@@ -99,6 +110,10 @@ export default function AdminNasLibrary({ onUnauthorized }) {
   const [error, setError] = useState(null);
   const [activeView, setActiveView] = useState("overview");
   const [performerQuery, setPerformerQuery] = useState("");
+  const [performerSort, setPerformerSort] = useState({
+    key: "nas_files",
+    direction: "desc",
+  });
   const [fileQuery, setFileQuery] = useState("");
   const [databaseQuery, setDatabaseQuery] = useState("");
   const [fileStatus, setFileStatus] = useState("all");
@@ -157,11 +172,28 @@ export default function AdminNasLibrary({ onUnauthorized }) {
 
   const performers = useMemo(() => {
     const query = normalizeSearch(performerQuery);
-    if (!query) return report?.performers || [];
-    return (report?.performers || []).filter((performer) =>
-      normalizeSearch(`${performer.name} ${performer.folders.join(" ")}`).includes(query)
+    const filtered = !query
+      ? report?.performers || []
+      : (report?.performers || []).filter((performer) =>
+          normalizeSearch(`${performer.name} ${performer.folders.join(" ")}`).includes(query)
+        );
+
+    return sortNasPerformers(filtered, performerSort);
+  }, [performerQuery, performerSort, report]);
+
+  const changePerformerSort = useCallback((key) => {
+    setPerformerSort((current) =>
+      current.key === key
+        ? {
+            key,
+            direction: current.direction === "desc" ? "asc" : "desc",
+          }
+        : {
+            key,
+            direction: key === "name" ? "asc" : "desc",
+          }
     );
-  }, [performerQuery, report]);
+  }, []);
 
   const visibleFiles = useMemo(() => {
     const query = normalizeSearch(deferredFileQuery);
@@ -386,27 +418,25 @@ export default function AdminNasLibrary({ onUnauthorized }) {
             <section className={styles.panel}>
               <header>
                 <div>
-                  <span>Datenbankqualität</span>
-                  <h2>Qualitätsverteilung</h2>
+                  <span>NAS-Ordnerstruktur</span>
+                  <h2>4K-Verteilung</h2>
                 </div>
-                <small>aus Filmmetadaten</small>
+                <small>nur Ordner „4K“ wird als 4K erkannt</small>
               </header>
               <div className={styles.qualityList}>
-                {report.qualities.database.map((quality) => {
-                  const coverage = quality.database_movies
-                    ? (quality.exact / quality.database_movies) * 100
+                {report.qualities.nas.map((quality) => {
+                  const share = summary.nas_files
+                    ? (quality.files / summary.nas_files) * 100
                     : 0;
                   return (
                     <article key={quality.name}>
                       <div>
                         <strong>{quality.name}</strong>
-                        <span>{formatNumber(quality.database_movies)} Filme</span>
+                        <span>{formatNumber(quality.files)} Dateien</span>
                       </div>
-                      <ProgressBar value={coverage} tone="green" />
+                      <ProgressBar value={share} tone={quality.name === "4K" ? "green" : "red"} />
                       <small>
-                        {formatNumber(quality.exact)} sicher auf NAS · {formatNumber(
-                          quality.missing
-                        )} ohne exakten Treffer
+                        {formatPercent(share)} des NAS-Bestands · {formatBytes(quality.bytes)}
                       </small>
                     </article>
                   );
@@ -450,10 +480,9 @@ export default function AdminNasLibrary({ onUnauthorized }) {
           <section className={styles.inferenceNote}>
             <strong>Qualität auf dem NAS</strong>
             <p>
-              {report.qualities.inferred_nas
-                .map((quality) => `${quality.name}: ${formatNumber(quality.files)}`)
-                .join(" · ")}. Nur eindeutige Unterordner wie 4K, FullHD oder Retro lassen sich ohne
-              Öffnen der Videodateien erkennen; alle übrigen Qualitäten stammen zuverlässig aus der Datenbank.
+              Als 4K zählen ausschließlich Dateien, deren Ordnerpfad einen eigenen Ordner namens „4K“ enthält.
+              Alle übrigen Dateien werden als „Nicht 4K“ gezählt. Dateiname, Videoformat und Datenbankqualität
+              beeinflussen diese Auswertung nicht.
             </p>
           </section>
         </div>
@@ -476,13 +505,33 @@ export default function AdminNasLibrary({ onUnauthorized }) {
           </header>
           <div className={styles.performerTable}>
             <div className={styles.performerTableHead}>
-              <span>Darsteller / NAS-Ordner</span>
-              <span>NAS</span>
-              <span>DB-Filme</span>
-              <span>Sicher</span>
-              <span>Möglich</span>
-              <span>Offen</span>
-              <span>Quote</span>
+              {PERFORMER_COLUMNS.map((column) => {
+                const active = performerSort.key === column.key;
+                const direction = active ? performerSort.direction : null;
+                return (
+                  <span
+                    key={column.key}
+                    role="columnheader"
+                    aria-sort={
+                      active
+                        ? direction === "desc"
+                          ? "descending"
+                          : "ascending"
+                        : "none"
+                    }
+                  >
+                    <button
+                      type="button"
+                      className={active ? styles.sortActive : ""}
+                      onClick={() => changePerformerSort(column.key)}
+                      title={`${column.label} sortieren`}
+                    >
+                      {column.label}
+                      <i aria-hidden="true">{active ? (direction === "desc" ? "↓" : "↑") : "↕"}</i>
+                    </button>
+                  </span>
+                );
+              })}
             </div>
             {performers.map((performer) => (
               <article key={performer.key}>

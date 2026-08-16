@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   analyzeNasLibrary,
   normalizeLibraryPath,
+  sortNasPerformers,
 } from "../lib/nasLibraryAnalysis.mjs";
 
 test("normalisiert öffentliche Video-URLs und optionale 1337-Wurzel", () => {
@@ -101,11 +102,62 @@ test("erstellt exakte, wahrscheinliche und fehlende NAS-Abgleiche", () => {
   assert.equal(report.summary.unmatched_folders, 1);
 
   assert.deepEqual(
-    report.qualities.database.map((quality) => [quality.name, quality.database_movies]),
+    report.qualities.nas.map((quality) => [quality.name, quality.files]),
     [
-      ["FullHD", 2],
       ["4K", 1],
+      ["Nicht 4K", 2],
     ]
   );
-  assert.equal(report.qualities.inferred_nas[0].name, "Nicht aus Ordner ableitbar");
+  assert.deepEqual(anna.qualities, [
+    { name: "4K", count: 1 },
+    { name: "Nicht 4K", count: 1 },
+  ]);
+});
+
+test("erkennt ausschließlich einen eigenen 4K-Ordner als 4K", () => {
+  const report = analyzeNasLibrary({
+    inventory: {
+      root_name: "1337",
+      files: [
+        { path: "A/4K/Film.mp4", size: 1 },
+        { path: "A/UHD/Film.mkv", size: 1 },
+        { path: "A/2160p/Film.avi", size: 1 },
+        { path: "A/FullHD/Film.mov", size: 1 },
+        { path: "A/Retro/Film.wmv", size: 1 },
+        { path: "A/Mein_4K_Film.mp4", size: 1 },
+      ],
+    },
+    actors: [],
+    resolutions: [],
+    movies: [],
+  });
+
+  assert.deepEqual(
+    report.qualities.nas.map((quality) => [quality.name, quality.files]),
+    [
+      ["4K", 1],
+      ["Nicht 4K", 5],
+    ]
+  );
+});
+
+test("sortiert Darsteller nach Quote beim ersten Klick absteigend", () => {
+  const performers = [
+    { name: "B", nas_files: 5, coverage: 40 },
+    { name: "A", nas_files: 10, coverage: 80 },
+    { name: "C", nas_files: 2, coverage: 80 },
+  ];
+
+  assert.deepEqual(
+    sortNasPerformers(performers, { key: "coverage", direction: "desc" }).map(
+      (performer) => performer.name
+    ),
+    ["A", "C", "B"]
+  );
+  assert.deepEqual(
+    sortNasPerformers(performers, { key: "coverage", direction: "asc" }).map(
+      (performer) => performer.name
+    ),
+    ["B", "A", "C"]
+  );
 });
