@@ -53,13 +53,14 @@ test("V1 ist aus der aktiven Website entfernt", async () => {
   assert.doesNotMatch(experience, /v1 · Original ansehen/);
 });
 
-test("Admin-Changelog führt NAS-Analyse, V1-Archivierung, Favoriten und Kontomenü fort", async () => {
-  const [dashboard, overviewStyles, experience, layout, redirectLayout] = await Promise.all([
+test("Admin-Changelog führt NAS-Analyse, Bereinigung, Favoriten und Kontomenü fort", async () => {
+  const [dashboard, overviewStyles, experience, layout, v2Redirect, betaRedirect] = await Promise.all([
     readProjectFile("app/dashboard/page.jsx"),
     readProjectFile("app/dashboard/beta/admin-beta.css"),
     readProjectFile("app/beta/BetaExperience.jsx"),
-    readProjectFile("app/dashboard/v2/layout.jsx"),
-    readProjectFile("app/dashboard/beta/layout.jsx"),
+    readProjectFile("app/dashboard/layout.jsx"),
+    readProjectFile("app/dashboard/v2/page.jsx"),
+    readProjectFile("app/dashboard/beta/page.jsx"),
   ]);
 
   assert.match(dashboard, /const CHANGELOG = \[\s*\{\s*version:\s*"2\.6\.1"/);
@@ -68,6 +69,7 @@ test("Admin-Changelog führt NAS-Analyse, V1-Archivierung, Favoriten und Kontome
   assert.match(dashboard, /Unten abgeschnittene Kennzahlen in der Admin-Übersicht korrigiert/);
   assert.match(dashboard, /Thumbnails der aktuellen Filme in der Admin-Übersicht auf 16:9 umgestellt/);
   assert.match(dashboard, /Thumbnails im Filmarchiv vollständig auf 16:9 umgestellt/);
+  assert.match(dashboard, /V2-Oberflächen unter \/ und \/dashboard konsolidiert/);
   assert.match(overviewStyles, /\.adminKpi > strong \{[^}]*overflow:\s*visible;/s);
   assert.match(overviewStyles, /\.adminKpi > strong \{[^}]*line-height:\s*1;/s);
   assert.match(
@@ -102,7 +104,33 @@ test("Admin-Changelog führt NAS-Analyse, V1-Archivierung, Favoriten und Kontome
   assert.doesNotMatch(dashboard, /Klassisches Dashboard/);
   assert.doesNotMatch(dashboard, /Zum klassischen Dashboard/);
   assert.match(layout, /title:\s*"Admin \| Project1337"/);
-  assert.match(redirectLayout, /title:\s*"Admin \| Project1337"/);
+  assert.match(layout, /import "\.\/beta\/admin-beta\.css"/);
+  assert.match(v2Redirect, /redirect\("\/dashboard"\)/);
+  assert.match(betaRedirect, /redirect\("\/dashboard"\)/);
+});
+
+test("V1- und Classic-Reste sind aus den aktiven Bundles entfernt", async () => {
+  const [page, dashboard] = await Promise.all([
+    readProjectFile("app/page.jsx"),
+    readProjectFile("app/dashboard/page.jsx"),
+  ]);
+
+  assert.match(page, /onDashboard=\{\(\) => safeOpen\("\/dashboard"\)\}/);
+  assert.doesNotMatch(page, /MovieDetailView|ActorHero|nfx--redesign|dashboard\/v2/);
+  assert.match(dashboard, /export function DashboardExperience\(\)/);
+  assert.doesNotMatch(dashboard, /ClassicSidebarContent|MovieThumbnailUploader|\{ beta/);
+
+  for (const removedPath of [
+    "styles.css",
+    "app/beta/beta.module.css",
+    "app/dashboard/MovieThumbnailUploader.jsx",
+    "app/dashboard/v2/layout.jsx",
+    "app/dashboard/beta/layout.jsx",
+    "public/db.png",
+    "public/palm.png",
+  ]) {
+    await assert.rejects(access(new URL(`../${removedPath}`, import.meta.url)));
+  }
 });
 
 test("Studio-Bilder sind entfernt und die Darsteller-Dateiauswahl ist sauber aufgebaut", async () => {
