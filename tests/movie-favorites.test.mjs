@@ -66,8 +66,17 @@ test("Admin-Changelog führt NAS-Analyse, V1-Archivierung, Favoriten und Kontome
   assert.match(dashboard, /NAS-Qualitätsauswertung auf 4K und Nicht 4K/);
   assert.match(dashboard, /Abdeckung nach Hauptdarsteller über anklickbare Spaltenköpfe sortierbar/);
   assert.match(dashboard, /Unten abgeschnittene Kennzahlen in der Admin-Übersicht korrigiert/);
+  assert.match(dashboard, /Thumbnails der aktuellen Filme in der Admin-Übersicht auf 16:9 umgestellt/);
   assert.match(overviewStyles, /\.adminKpi > strong \{[^}]*overflow:\s*visible;/s);
   assert.match(overviewStyles, /\.adminKpi > strong \{[^}]*line-height:\s*1;/s);
+  assert.match(
+    overviewStyles,
+    /\.adminBeta \.adminRecentMovie__cover \{[^}]*width:\s*100%;[^}]*aspect-ratio:\s*16 \/ 9;/s
+  );
+  assert.match(
+    overviewStyles,
+    /grid-template-columns:\s*27px 88px minmax\(150px, 1fr\)/
+  );
   assert.match(dashboard, /label:\s*"NAS-Analyse"/);
   assert.match(dashboard, /AdminNasLibrary/);
   assert.match(dashboard, /Git-Branch archive\/v1/);

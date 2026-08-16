@@ -1220,7 +1220,7 @@
 .adminBeta .adminRecentMovie {
   display: grid;
   min-height: 78px;
-  grid-template-columns: 27px 42px minmax(150px, 1fr) 68px 58px 62px 86px 69px;
+  grid-template-columns: 27px 88px minmax(150px, 1fr) 68px 58px 62px 86px 69px;
   align-items: center;
   gap: clamp(8px, 1vw, 15px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.065);
@@ -1248,8 +1248,8 @@
 }
 
 .adminBeta .adminRecentMovie__cover {
-  width: 42px;
-  height: 50px;
+  width: 100%;
+  aspect-ratio: 16 / 9;
 }
 
 .adminBeta .adminRecentMovie__cover img,
@@ -2161,7 +2161,7 @@
 
 @media (max-width: 1380px) {
   .adminBeta .adminRecentMovie {
-    grid-template-columns: 24px 42px minmax(140px, 1fr) 66px 56px 60px 66px;
+    grid-template-columns: 24px 80px minmax(140px, 1fr) 66px 56px 60px 66px;
   }
 
   .adminBeta .adminRecentMovie__date {
@@ -2183,7 +2183,7 @@
   }
 
   .adminBeta .adminRecentMovie {
-    grid-template-columns: 42px minmax(130px, 1fr) 62px 54px 58px;
+    grid-template-columns: 80px minmax(130px, 1fr) 62px 54px 58px;
   }
 
   .adminBeta .adminRecentMovie__index,
@@ -2289,7 +2289,7 @@
   }
 
   .adminBeta .adminRecentMovie {
-    grid-template-columns: 42px minmax(120px, 1fr) 52px 58px;
+    grid-template-columns: 80px minmax(120px, 1fr) 52px 58px;
   }
 
   .adminBeta .adminRecentMovie__metric:nth-of-type(3) {
@@ -2348,17 +2348,12 @@
   }
 
   .adminBeta .adminRecentMovie {
-    grid-template-columns: 40px minmax(100px, 1fr) 58px;
+    grid-template-columns: 72px minmax(100px, 1fr) 58px;
   }
 
   .adminBeta .adminRecentMovie__metric,
   .adminBeta .adminRecentMovie__edit {
     display: none;
-  }
-
-  .adminBeta .adminRecentMovie__cover {
-    width: 40px;
-    height: 48px;
   }
 
   .adminBeta .adminPanelHeading {

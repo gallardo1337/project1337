@@ -85,6 +85,7 @@ const CHANGELOG = [
       "NAS-Qualitätsauswertung auf 4K und Nicht 4K anhand eines eigenen 4K-Ordners vereinfacht",
       "Abdeckung nach Hauptdarsteller über anklickbare Spaltenköpfe sortierbar gemacht",
       "Unten abgeschnittene Kennzahlen in der Admin-Übersicht korrigiert",
+      "Thumbnails der aktuellen Filme in der Admin-Übersicht auf 16:9 umgestellt",
     ],
   },
   {
