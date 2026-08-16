@@ -1594,8 +1594,8 @@
 
 .adminBeta .dashMovieIdentity__cover {
   flex: 0 0 auto;
-  width: 45px;
-  height: 56px;
+  width: clamp(72px, 8vw, 100px);
+  aspect-ratio: 16 / 9;
 }
 
 .adminBeta .dashMovieIdentity__text {

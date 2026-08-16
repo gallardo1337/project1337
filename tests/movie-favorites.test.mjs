@@ -67,6 +67,7 @@ test("Admin-Changelog führt NAS-Analyse, V1-Archivierung, Favoriten und Kontome
   assert.match(dashboard, /Abdeckung nach Hauptdarsteller über anklickbare Spaltenköpfe sortierbar/);
   assert.match(dashboard, /Unten abgeschnittene Kennzahlen in der Admin-Übersicht korrigiert/);
   assert.match(dashboard, /Thumbnails der aktuellen Filme in der Admin-Übersicht auf 16:9 umgestellt/);
+  assert.match(dashboard, /Thumbnails im Filmarchiv vollständig auf 16:9 umgestellt/);
   assert.match(overviewStyles, /\.adminKpi > strong \{[^}]*overflow:\s*visible;/s);
   assert.match(overviewStyles, /\.adminKpi > strong \{[^}]*line-height:\s*1;/s);
   assert.match(
@@ -76,6 +77,14 @@ test("Admin-Changelog führt NAS-Analyse, V1-Archivierung, Favoriten und Kontome
   assert.match(
     overviewStyles,
     /grid-template-columns:\s*27px 88px minmax\(150px, 1fr\)/
+  );
+  assert.match(
+    overviewStyles,
+    /\.adminBeta \.dashMovieIdentity__cover \{[^}]*width:\s*clamp\(72px, 8vw, 100px\);[^}]*aspect-ratio:\s*16 \/ 9;/s
+  );
+  assert.match(
+    dashboard,
+    /className="aspect-video w-28 shrink-0 rounded-xl border border-neutral-800 object-cover bg-neutral-900"/
   );
   assert.match(dashboard, /label:\s*"NAS-Analyse"/);
   assert.match(dashboard, /AdminNasLibrary/);

@@ -86,6 +86,7 @@ const CHANGELOG = [
       "Abdeckung nach Hauptdarsteller über anklickbare Spaltenköpfe sortierbar gemacht",
       "Unten abgeschnittene Kennzahlen in der Admin-Übersicht korrigiert",
       "Thumbnails der aktuellen Filme in der Admin-Übersicht auf 16:9 umgestellt",
+      "Thumbnails im Filmarchiv vollständig auf 16:9 umgestellt",
     ],
   },
   {
@@ -3697,7 +3698,7 @@ export function DashboardExperience({ beta = false }) {
                                       <img
                                         src={f.thumbnail_url}
                                         alt={`${f.title} Thumbnail`}
-                                        className="h-14 w-14 rounded-xl border border-neutral-800 object-cover bg-neutral-900"
+                                        className="aspect-video w-28 shrink-0 rounded-xl border border-neutral-800 object-cover bg-neutral-900"
                                         loading="lazy"
                                       />
                                       <div className="min-w-0 flex-1">
