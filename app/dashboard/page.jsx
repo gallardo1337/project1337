@@ -91,7 +91,7 @@ const CHANGELOG = [
       "Bildverwaltung für Studios aus der Admin-Oberfläche entfernt",
       "Dateiauswahl beim Anlegen von Haupt- und Nebendarstellern sauber ausgerichtet",
       "Doppelte Darstellernamen in der NAS-Analyse entfernt und Dateityp-Zähler besser lesbar gemacht",
-      "V1-Qualitätslogos für 4K, FullHD und Retro auf Hauptseite und im Admin wiederhergestellt",
+      "V1-Qualitätslogos auf Hauptseite und im Admin wiederhergestellt: 4K rot, FullHD gelb und Retro weiß-grau",
     ],
   },
   {

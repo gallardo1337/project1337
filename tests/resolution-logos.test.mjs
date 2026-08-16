@@ -5,8 +5,8 @@ import test from "node:test";
 const projectFile = (path) =>
   readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("V1-Qualitätslogos erscheinen auf Hauptseite und im Admin", async () => {
-  const [indicator, experience, experienceStyles, overview, dashboard, adminStyles] =
+test("V1-Qualitätslogos erscheinen farbcodiert auf Hauptseite und im Admin", async () => {
+  const [indicator, experience, experienceStyles, overview, dashboard, adminStyles, logo4k, logoFullHd, logoRetro] =
     await Promise.all([
       projectFile("app/components/ResolutionIndicator.jsx"),
       projectFile("app/beta/BetaExperience.jsx"),
@@ -14,6 +14,9 @@ test("V1-Qualitätslogos erscheinen auf Hauptseite und im Admin", async () => {
       projectFile("app/dashboard/beta/AdminBetaOverview.jsx"),
       projectFile("app/dashboard/page.jsx"),
       projectFile("app/dashboard/beta/admin-beta.css"),
+      projectFile("public/4k.svg"),
+      projectFile("public/fullhd.svg"),
+      projectFile("public/retro.svg"),
     ]);
 
   assert.match(indicator, /src: "\/4k\.svg"/);
@@ -26,8 +29,14 @@ test("V1-Qualitätslogos erscheinen auf Hauptseite und im Admin", async () => {
   assert.match(dashboard, /logoClassName="adminMovieColumns__qualityLogo"/);
   assert.match(adminStyles, /\.adminRecentMovie__qualityLogo \{/);
   assert.match(adminStyles, /\.adminMovieColumns__qualityLogo \{/);
+  assert.match(logo4k, /fill="#E50914"/);
+  assert.match(logo4k, /fill="#FF5A64"/);
+  assert.match(logoFullHd, /fill:#ffcb00/);
+  assert.match(logoFullHd, /fill:#fd5/);
+  assert.match(logoRetro, /fill:#b8bcc4/);
+  assert.match(logoRetro, /fill:#f1f1f3/);
   assert.match(
     dashboard,
-    /V1-Qualitätslogos für 4K, FullHD und Retro auf Hauptseite und im Admin wiederhergestellt/
+    /V1-Qualitätslogos auf Hauptseite und im Admin wiederhergestellt: 4K rot, FullHD gelb und Retro weiß-grau/
   );
 });
