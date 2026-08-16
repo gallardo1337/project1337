@@ -1013,7 +1013,6 @@
 }
 
 .movieIndex,
-.quality,
 .moviePlay {
   position: absolute;
   z-index: 2;
@@ -1028,38 +1027,33 @@
   font-style: italic;
 }
 
-.quality {
-  right: 14px;
-  bottom: 14px;
+.qualityInlineText {
+  flex: 0 0 auto;
   padding: 7px 9px;
   border: 1px solid rgba(255,255,255,.22);
-  background: rgba(0,0,0,.55);
+  background: rgba(255,255,255,.045);
   color: white;
   font-size: 8px;
   font-weight: 850;
   letter-spacing: .08em;
   text-transform: uppercase;
-  backdrop-filter: blur(10px);
 }
 
-.qualityLogo {
-  position: absolute;
-  right: 14px;
-  bottom: 14px;
-  z-index: 2;
-  width: 44px;
+.qualityInlineLogo {
+  width: 34px;
+  flex: 0 0 auto;
   pointer-events: none;
-  filter: drop-shadow(0 10px 22px rgba(0, 0, 0, .62));
+  filter: drop-shadow(0 7px 14px rgba(0, 0, 0, .58));
 }
 
-.qualityLogo img {
+.qualityInlineLogo img {
   display: block;
   width: 100%;
   height: auto;
 }
 
-.movieCardLarge .qualityLogo {
-  width: 48px;
+.movieCardLarge .qualityInlineLogo {
+  width: 38px;
 }
 
 .qualityUltra {
@@ -1120,6 +1114,14 @@
   display: grid;
   gap: 7px;
   padding-right: 12px;
+}
+
+.movieTitleRow {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
 }
 
 .movieTitle {
@@ -3163,6 +3165,14 @@
   padding-right: 10px;
 }
 
+.similarTitleRow {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
 .similarCopy strong {
   min-height: 44px;
   display: -webkit-box;
@@ -3176,7 +3186,7 @@
   -webkit-line-clamp: 2;
 }
 
-.similarCopy > span {
+.similarCopy > .similarMeta {
   min-width: 0;
   display: flex;
   align-items: center;

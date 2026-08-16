@@ -92,6 +92,7 @@ const CHANGELOG = [
       "Dateiauswahl beim Anlegen von Haupt- und Nebendarstellern sauber ausgerichtet",
       "Doppelte Darstellernamen in der NAS-Analyse entfernt und Dateityp-Zähler besser lesbar gemacht",
       "V1-Qualitätslogos auf Hauptseite und im Admin wiederhergestellt: 4K rot, FullHD gelb und Retro weiß-grau",
+      "Qualitätslogos in V2 unter die Thumbnails neben den Filmtitel verschoben",
     ],
   },
   {

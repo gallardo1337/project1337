@@ -777,17 +777,19 @@ function MovieCard({
           {typeof index === "number" ? (
             <span className={styles.movieIndex}>{String(index + 1).padStart(2, "0")}</span>
           ) : null}
-          <ResolutionIndicator
-            value={movie.resolution}
-            logoClassName={styles.qualityLogo}
-            fallbackClassName={`${styles.quality} ${qualityTone(movie.resolution)}`}
-          />
           <span className={styles.moviePlay}>
             <Icon name="play" />
           </span>
         </span>
         <span className={styles.movieCopy}>
-          <span className={styles.movieTitle}>{movie.title || "Unbenannt"}</span>
+          <span className={styles.movieTitleRow}>
+            <span className={styles.movieTitle}>{movie.title || "Unbenannt"}</span>
+            <ResolutionIndicator
+              value={movie.resolution}
+              logoClassName={styles.qualityInlineLogo}
+              fallbackClassName={`${styles.qualityInlineText} ${qualityTone(movie.resolution)}`}
+            />
+          </span>
           <span className={styles.movieMeta}>
             {movie.studio || "Independent"}
             <i />
@@ -832,11 +834,6 @@ function SimilarMovieCard({ recommendation, onOpen, index }) {
         <span className={styles.similarIndex}>
           {String(index + 1).padStart(2, "0")}
         </span>
-        <ResolutionIndicator
-          value={movie.resolution}
-          logoClassName={styles.qualityLogo}
-          fallbackClassName={`${styles.quality} ${qualityTone(movie.resolution)}`}
-        />
         <span className={styles.similarMatch}>
           <Icon name="spark" /> {reason}
         </span>
@@ -845,10 +842,17 @@ function SimilarMovieCard({ recommendation, onOpen, index }) {
         </span>
       </span>
       <span className={styles.similarCopy}>
-        <strong title={movie.title || "Unbenannt"}>
-          {movie.title || "Unbenannt"}
-        </strong>
-        <span>
+        <span className={styles.similarTitleRow}>
+          <strong title={movie.title || "Unbenannt"}>
+            {movie.title || "Unbenannt"}
+          </strong>
+          <ResolutionIndicator
+            value={movie.resolution}
+            logoClassName={styles.qualityInlineLogo}
+            fallbackClassName={`${styles.qualityInlineText} ${qualityTone(movie.resolution)}`}
+          />
+        </span>
+        <span className={styles.similarMeta}>
           {movie.studio || "Independent"}
           <i />
           {movie.year || "–"}

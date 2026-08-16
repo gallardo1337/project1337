@@ -23,7 +23,16 @@ test("V1-Qualitätslogos erscheinen farbcodiert auf Hauptseite und im Admin", as
   assert.match(indicator, /src: "\/fullhd\.svg"/);
   assert.match(indicator, /src: "\/retro\.svg"/);
   assert.equal((experience.match(/<ResolutionIndicator/g) || []).length, 3);
-  assert.match(experienceStyles, /\.qualityLogo \{/);
+  assert.equal(
+    (experience.match(/logoClassName=\{styles\.qualityInlineLogo\}/g) || []).length,
+    2
+  );
+  assert.match(experience, /className=\{styles\.movieTitleRow\}[\s\S]*logoClassName=\{styles\.qualityInlineLogo\}/);
+  assert.match(experience, /className=\{styles\.similarTitleRow\}[\s\S]*logoClassName=\{styles\.qualityInlineLogo\}/);
+  assert.match(experienceStyles, /\.qualityInlineLogo \{/);
+  assert.match(experienceStyles, /\.movieTitleRow \{/);
+  assert.match(experienceStyles, /\.similarTitleRow \{/);
+  assert.doesNotMatch(experienceStyles, /\.qualityLogo \{/);
   assert.match(experienceStyles, /\.playerQualityLogo \{/);
   assert.match(overview, /logoClassName="adminRecentMovie__qualityLogo"/);
   assert.match(dashboard, /logoClassName="adminMovieColumns__qualityLogo"/);
@@ -38,5 +47,9 @@ test("V1-Qualitätslogos erscheinen farbcodiert auf Hauptseite und im Admin", as
   assert.match(
     dashboard,
     /V1-Qualitätslogos auf Hauptseite und im Admin wiederhergestellt: 4K rot, FullHD gelb und Retro weiß-grau/
+  );
+  assert.match(
+    dashboard,
+    /Qualitätslogos in V2 unter die Thumbnails neben den Filmtitel verschoben/
   );
 });
