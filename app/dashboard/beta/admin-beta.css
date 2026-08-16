@@ -1294,6 +1294,18 @@
   text-transform: uppercase;
 }
 
+.adminBeta .adminRecentMovie__qualityLogo {
+  width: 36px;
+  justify-self: center;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.58));
+}
+
+.adminBeta .adminRecentMovie__qualityLogo img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 .adminBeta .adminRecentMovie__metric {
   display: grid;
   gap: 3px;
@@ -1633,6 +1645,24 @@
 }
 
 .adminBeta .adminMovieColumns strong {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.adminBeta .adminMovieColumns__qualityLogo {
+  width: 32px;
+  justify-self: end;
+  filter: drop-shadow(0 7px 14px rgba(0, 0, 0, 0.58));
+}
+
+.adminBeta .adminMovieColumns__qualityLogo img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.adminBeta .adminMovieColumns__qualityText {
   color: rgba(255, 255, 255, 0.68);
   font-size: 10px;
   font-weight: 750;
@@ -2187,7 +2217,8 @@
   }
 
   .adminBeta .adminRecentMovie__index,
-  .adminBeta .adminRecentMovie__quality {
+  .adminBeta .adminRecentMovie__quality,
+  .adminBeta .adminRecentMovie__qualityLogo {
     display: none;
   }
 }

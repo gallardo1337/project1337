@@ -7,6 +7,7 @@ import dynamic from "next/dynamic";
 import AdminBetaOverview from "./beta/AdminBetaOverview.jsx";
 import AdminMediaHealth from "./beta/AdminMediaHealth.jsx";
 import AdminMovieFilePicker from "./AdminMovieFilePicker.jsx";
+import ResolutionIndicator from "../components/ResolutionIndicator.jsx";
 import wizardStyles from "./AdminMovieWizard.module.css";
 import {
   PUBLIC_VIDEO_BASE,
@@ -90,6 +91,7 @@ const CHANGELOG = [
       "Bildverwaltung für Studios aus der Admin-Oberfläche entfernt",
       "Dateiauswahl beim Anlegen von Haupt- und Nebendarstellern sauber ausgerichtet",
       "Doppelte Darstellernamen in der NAS-Analyse entfernt und Dateityp-Zähler besser lesbar gemacht",
+      "V1-Qualitätslogos für 4K, FullHD und Retro auf Hauptseite und im Admin wiederhergestellt",
     ],
   },
   {
@@ -3595,7 +3597,12 @@ export function DashboardExperience({ beta = false }) {
                                   {beta ? (
                                     <>
                                       <span>
-                                        <strong>{resolutionMap[f.resolution_id]?.name || "–"}</strong>
+                                        <ResolutionIndicator
+                                          value={resolutionMap[f.resolution_id]?.name}
+                                          logoClassName="adminMovieColumns__qualityLogo"
+                                          fallbackClassName="adminMovieColumns__qualityText"
+                                          fallback="–"
+                                        />
                                         <small>Qualität</small>
                                       </span>
                                       <span>

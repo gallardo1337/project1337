@@ -6,6 +6,7 @@ import {
   DEFAULT_HOMEPAGE_SECTIONS,
   normalizeHomepageSections,
 } from "../../lib/homepageSections";
+import ResolutionIndicator from "../components/ResolutionIndicator";
 import styles from "./experience.module.css";
 
 function Icon({ name, className = "" }) {
@@ -352,7 +353,12 @@ function ModernVideoPlayer({ src, poster, title, quality, onPlay }) {
           <span>Now screening</span>
           <strong>{title || "Unbenannt"}</strong>
         </div>
-        <small>{quality || "1337"}</small>
+        <ResolutionIndicator
+          value={quality}
+          logoClassName={styles.playerQualityLogo}
+          fallbackClassName={styles.playerQualityText}
+          fallback="1337"
+        />
       </div>
 
       {!playing ? (
@@ -771,9 +777,11 @@ function MovieCard({
           {typeof index === "number" ? (
             <span className={styles.movieIndex}>{String(index + 1).padStart(2, "0")}</span>
           ) : null}
-          <span className={`${styles.quality} ${qualityTone(movie.resolution)}`}>
-            {movie.resolution || "HD"}
-          </span>
+          <ResolutionIndicator
+            value={movie.resolution}
+            logoClassName={styles.qualityLogo}
+            fallbackClassName={`${styles.quality} ${qualityTone(movie.resolution)}`}
+          />
           <span className={styles.moviePlay}>
             <Icon name="play" />
           </span>
@@ -824,9 +832,11 @@ function SimilarMovieCard({ recommendation, onOpen, index }) {
         <span className={styles.similarIndex}>
           {String(index + 1).padStart(2, "0")}
         </span>
-        <span className={`${styles.quality} ${qualityTone(movie.resolution)}`}>
-          {movie.resolution || "HD"}
-        </span>
+        <ResolutionIndicator
+          value={movie.resolution}
+          logoClassName={styles.qualityLogo}
+          fallbackClassName={`${styles.quality} ${qualityTone(movie.resolution)}`}
+        />
         <span className={styles.similarMatch}>
           <Icon name="spark" /> {reason}
         </span>
