@@ -89,6 +89,7 @@ const CHANGELOG = [
       "Thumbnails im Filmarchiv vollständig auf 16:9 umgestellt",
       "Bildverwaltung für Studios aus der Admin-Oberfläche entfernt",
       "Dateiauswahl beim Anlegen von Haupt- und Nebendarstellern sauber ausgerichtet",
+      "Doppelte Darstellernamen in der NAS-Analyse entfernt und Dateityp-Zähler besser lesbar gemacht",
     ],
   },
   {

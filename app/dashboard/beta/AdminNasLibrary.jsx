@@ -80,6 +80,12 @@ function normalizeSearch(value) {
     .trim();
 }
 
+function normalizePerformerLabel(value) {
+  return normalizeSearch(value)
+    .replace(/[_\-.]+/g, " ")
+    .replace(/\s+/g, " ");
+}
+
 function StatusBadge({ status }) {
   const data = {
     exact: { label: "In Datenbank", className: styles.statusExact },
@@ -533,30 +539,52 @@ export default function AdminNasLibrary({ onUnauthorized }) {
                 );
               })}
             </div>
-            {performers.map((performer) => (
-              <article key={performer.key}>
-                <div className={styles.performerIdentity}>
-                  <strong>{performer.name}</strong>
-                  <span>
-                    {performer.folders.length
-                      ? performer.folders.join(" · ")
-                      : "Kein passender NAS-Ordner gefunden"}
-                  </span>
-                  <small>
-                    {performer.formats.slice(0, 4).map((item) => `${item.name} ${item.count}`).join(" · ") || "Keine NAS-Dateien"}
-                  </small>
-                </div>
-                <span>{formatNumber(performer.nas_files)}</span>
-                <span>{formatNumber(performer.database_movies)}</span>
-                <span className={styles.valueExact}>{formatNumber(performer.exact)}</span>
-                <span className={styles.valueProbable}>{formatNumber(performer.probable)}</span>
-                <span className={styles.valueMissing}>{formatNumber(performer.missing)}</span>
-                <div className={styles.tableCoverage}>
-                  <strong>{performer.nas_files ? formatPercent(performer.coverage) : "–"}</strong>
-                  <ProgressBar value={performer.coverage} tone="green" />
-                </div>
-              </article>
-            ))}
+            {performers.map((performer) => {
+              const distinctFolders = performer.folders.filter(
+                (folder) =>
+                  normalizePerformerLabel(folder) !==
+                  normalizePerformerLabel(performer.name)
+              );
+
+              return (
+                <article key={performer.key}>
+                  <div className={styles.performerIdentity}>
+                    <strong>{performer.name}</strong>
+                    {distinctFolders.length ? (
+                      <span title={distinctFolders.join(" · ")}>
+                        NAS-Ordner: {distinctFolders.join(" · ")}
+                      </span>
+                    ) : null}
+                    <div
+                      className={styles.performerFormats}
+                      aria-label={`Dateitypen von ${performer.name}`}
+                    >
+                      {performer.formats.length ? (
+                        performer.formats.slice(0, 4).map((item) => (
+                          <span key={item.name}>
+                            <b>{item.name}</b>
+                            <em>{formatNumber(item.count)}</em>
+                          </span>
+                        ))
+                      ) : (
+                        <span className={styles.performerFormatsEmpty}>
+                          Keine NAS-Dateien
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <span>{formatNumber(performer.nas_files)}</span>
+                  <span>{formatNumber(performer.database_movies)}</span>
+                  <span className={styles.valueExact}>{formatNumber(performer.exact)}</span>
+                  <span className={styles.valueProbable}>{formatNumber(performer.probable)}</span>
+                  <span className={styles.valueMissing}>{formatNumber(performer.missing)}</span>
+                  <div className={styles.tableCoverage}>
+                    <strong>{performer.nas_files ? formatPercent(performer.coverage) : "–"}</strong>
+                    <ProgressBar value={performer.coverage} tone="green" />
+                  </div>
+                </article>
+              );
+            })}
           </div>
           {!performers.length ? <EmptyState>Kein passender Darsteller gefunden.</EmptyState> : null}
         </section>
