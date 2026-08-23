@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { hasLibrarySession } from "../../../lib/serverSupabase";
+import {
+  hasLibrarySession,
+  setLibrarySessionCookie,
+} from "../../../lib/serverSupabase";
 
 export const dynamic = "force-dynamic";
 
@@ -35,18 +38,9 @@ export async function POST(req) {
       );
     }
 
-    const res = NextResponse.json({ ok: true, user: expectedUser });
-
-    // Cookie setzen (optional, falls du später doch Middleware willst)
-    res.cookies.set("auth_1337", "ok", {
-      httpOnly: true,
-      sameSite: "strict",
-      secure: true,
-      path: "/",
-      maxAge: 60 * 60 * 24 * 7, // 7 Tage
-    });
-
-    return res;
+    return setLibrarySessionCookie(
+      NextResponse.json({ ok: true, user: expectedUser })
+    );
   } catch (error) {
     console.error(error);
     return NextResponse.json(
