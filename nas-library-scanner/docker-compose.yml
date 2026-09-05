@@ -24,6 +24,7 @@ services:
       - ALL
     cap_add:
       - DAC_READ_SEARCH
+      - DAC_OVERRIDE
     security_opt:
       - no-new-privileges:true
     pids_limit: 64
