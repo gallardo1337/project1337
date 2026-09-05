@@ -5,6 +5,18 @@ import { join } from "node:path";
 import test from "node:test";
 import { NasLibraryScanner } from "../src/scanner.mjs";
 
+function scannerConfig({ libraryPath, dataPath }) {
+  return {
+    libraryPath,
+    libraryName: "1337",
+    dataPath,
+    videoExtensions: new Set(["mp4", "mkv"]),
+    ignoredDirectories: new Set(["@eadir"]),
+    maxFiles: 100,
+    maxDepth: 8,
+  };
+}
+
 test("scannt rekursiv alle freigegebenen Videoformate und ignoriert Systemordner", async () => {
   const base = await mkdtemp(join(tmpdir(), "project1337-scanner-"));
   const libraryPath = join(base, "1337");
@@ -16,19 +28,12 @@ test("scannt rekursiv alle freigegebenen Videoformate und ignoriert Systemordner
   await writeFile(join(libraryPath, "Anna_Asti", "Notiz.txt"), "ignore");
   await writeFile(join(libraryPath, "Anna_Asti", "@eaDir", "Doppelt.mp4"), "ignore");
 
-  const scanner = new NasLibraryScanner({
-    libraryPath,
-    libraryName: "1337",
-    dataPath,
-    videoExtensions: new Set(["mp4", "mkv"]),
-    ignoredDirectories: new Set(["@eadir"]),
-    maxFiles: 100,
-    maxDepth: 8,
-  });
+  const scanner = new NasLibraryScanner(scannerConfig({ libraryPath, dataPath }));
 
   const fresh = await scanner.inventory({ refresh: true });
   assert.equal(fresh.cached, false);
   assert.equal(fresh.total_files, 2);
+  assert.equal(fresh.skipped_entries, 0);
   assert.deepEqual(
     fresh.files.map((file) => file.path),
     ["Anna_Asti/4K/Film.mkv", "Anna_Asti/Film.mp4"]
@@ -39,4 +44,22 @@ test("scannt rekursiv alle freigegebenen Videoformate und ignoriert Systemordner
   const cached = await scanner.inventory();
   assert.equal(cached.cached, true);
   assert.equal(cached.total_files, 2);
+});
+
+test("liefert einen erfolgreichen Scan auch bei nicht beschreibbarem Snapshot-Pfad", async () => {
+  const base = await mkdtemp(join(tmpdir(), "project1337-scanner-cache-"));
+  const libraryPath = join(base, "1337");
+  const dataPath = join(base, "fehlt", "scan.json");
+  await mkdir(libraryPath, { recursive: true });
+  await writeFile(join(libraryPath, "Film.mp4"), "mp4");
+
+  const scanner = new NasLibraryScanner(scannerConfig({ libraryPath, dataPath }));
+
+  const fresh = await scanner.inventory({ refresh: true });
+  assert.equal(fresh.cached, false);
+  assert.equal(fresh.total_files, 1);
+
+  const cached = await scanner.inventory();
+  assert.equal(cached.cached, true);
+  assert.equal(cached.total_files, 1);
 });
