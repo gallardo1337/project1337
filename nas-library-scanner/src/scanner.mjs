@@ -41,6 +41,11 @@ function publicSnapshot(snapshot, cached) {
   };
 }
 
+function snapshotTime(snapshot) {
+  const value = Date.parse(snapshot?.scanned_at || "");
+  return Number.isFinite(value) ? value : 0;
+}
+
 export class NasLibraryScanner {
   constructor(config) {
     this.config = config;
@@ -55,10 +60,16 @@ export class NasLibraryScanner {
       if (!snapshot || !Array.isArray(snapshot.files) || !snapshot.scanned_at) {
         return null;
       }
-      this.lastSnapshot = snapshot;
-      return publicSnapshot(snapshot, true);
+
+      if (!this.lastSnapshot || snapshotTime(snapshot) >= snapshotTime(this.lastSnapshot)) {
+        this.lastSnapshot = snapshot;
+      }
+
+      return publicSnapshot(this.lastSnapshot, true);
     } catch (error) {
-      if (error?.code === "ENOENT") return null;
+      if (error?.code === "ENOENT") {
+        return this.lastSnapshot ? publicSnapshot(this.lastSnapshot, true) : null;
+      }
       console.warn(
         JSON.stringify({
           level: "warn",
@@ -66,7 +77,7 @@ export class NasLibraryScanner {
           code: filesystemErrorCode(error),
         })
       );
-      return null;
+      return this.lastSnapshot ? publicSnapshot(this.lastSnapshot, true) : null;
     }
   }
 
