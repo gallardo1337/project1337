@@ -1,6 +1,15 @@
-import { readdir, readFile, rename, stat, writeFile } from "node:fs/promises";
+import {
+  readdir,
+  readFile,
+  rename,
+  stat,
+  unlink,
+  writeFile,
+} from "node:fs/promises";
 import { extname, join, relative, sep } from "node:path";
 import { ScannerError } from "./security.mjs";
+
+const SKIPPABLE_ENTRY_ERRORS = new Set(["EACCES", "EPERM", "ENOENT", "ESTALE"]);
 
 function relativeMediaPath(rootPath, filePath) {
   return relative(rootPath, filePath).split(sep).join("/");
@@ -8,6 +17,20 @@ function relativeMediaPath(rootPath, filePath) {
 
 function lowercase(value) {
   return String(value || "").toLocaleLowerCase("de");
+}
+
+function filesystemErrorCode(error) {
+  return String(error?.code || error?.cause?.code || "UNKNOWN");
+}
+
+function logFilesystemWarning(event, error) {
+  console.warn(
+    JSON.stringify({
+      level: "warn",
+      event,
+      code: filesystemErrorCode(error),
+    })
+  );
 }
 
 function publicSnapshot(snapshot, cached) {
@@ -22,6 +45,7 @@ export class NasLibraryScanner {
   constructor(config) {
     this.config = config;
     this.scanPromise = null;
+    this.lastSnapshot = null;
   }
 
   async readSavedSnapshot() {
@@ -31,6 +55,7 @@ export class NasLibraryScanner {
       if (!snapshot || !Array.isArray(snapshot.files) || !snapshot.scanned_at) {
         return null;
       }
+      this.lastSnapshot = snapshot;
       return publicSnapshot(snapshot, true);
     } catch (error) {
       if (error?.code === "ENOENT") return null;
@@ -38,7 +63,7 @@ export class NasLibraryScanner {
         JSON.stringify({
           level: "warn",
           event: "snapshot_read_failed",
-          code: error?.code || "UNKNOWN",
+          code: filesystemErrorCode(error),
         })
       );
       return null;
@@ -47,6 +72,7 @@ export class NasLibraryScanner {
 
   async inventory({ refresh = false } = {}) {
     if (!refresh) {
+      if (this.lastSnapshot) return publicSnapshot(this.lastSnapshot, true);
       const saved = await this.readSavedSnapshot();
       if (saved) return saved;
     }
@@ -63,7 +89,7 @@ export class NasLibraryScanner {
     const startedAt = Date.now();
     const rootStat = await stat(this.config.libraryPath).catch((error) => {
       throw new ScannerError(
-        `Der NAS-Hauptordner ist nicht lesbar (${error?.code || "unbekannter Fehler"}).`,
+        `Der NAS-Hauptordner ist nicht lesbar (${filesystemErrorCode(error)}).`,
         "LIBRARY_UNREADABLE",
         503
       );
@@ -80,6 +106,7 @@ export class NasLibraryScanner {
     const files = [];
     const ignoredDirectories = this.config.ignoredDirectories;
     const extensions = this.config.videoExtensions;
+    let skippedEntries = 0;
 
     const walk = async (directoryPath, depth) => {
       if (depth > this.config.maxDepth) {
@@ -90,7 +117,23 @@ export class NasLibraryScanner {
         );
       }
 
-      const entries = await readdir(directoryPath, { withFileTypes: true });
+      let entries;
+      try {
+        entries = await readdir(directoryPath, { withFileTypes: true });
+      } catch (error) {
+        const code = filesystemErrorCode(error);
+        if (depth > 0 && SKIPPABLE_ENTRY_ERRORS.has(code)) {
+          skippedEntries += 1;
+          logFilesystemWarning("directory_skipped", error);
+          return;
+        }
+        throw new ScannerError(
+          `Ein NAS-Ordner konnte nicht gelesen werden (${code}).`,
+          "DIRECTORY_READ_FAILED",
+          503
+        );
+      }
+
       entries.sort((left, right) => left.name.localeCompare(right.name, "de"));
 
       for (const entry of entries) {
@@ -115,7 +158,23 @@ export class NasLibraryScanner {
           );
         }
 
-        const fileStat = await stat(fullPath);
+        let fileStat;
+        try {
+          fileStat = await stat(fullPath);
+        } catch (error) {
+          const code = filesystemErrorCode(error);
+          if (SKIPPABLE_ENTRY_ERRORS.has(code)) {
+            skippedEntries += 1;
+            logFilesystemWarning("file_skipped", error);
+            continue;
+          }
+          throw new ScannerError(
+            `Eine Videodatei konnte nicht geprüft werden (${code}).`,
+            "FILE_STAT_FAILED",
+            503
+          );
+        }
+
         files.push({
           path: relativeMediaPath(this.config.libraryPath, fullPath),
           name: entry.name,
@@ -134,16 +193,24 @@ export class NasLibraryScanner {
       duration_ms: Date.now() - startedAt,
       total_files: files.length,
       total_bytes: files.reduce((sum, file) => sum + file.size, 0),
+      skipped_entries: skippedEntries,
       video_extensions: [...extensions].sort(),
       files,
     };
 
+    this.lastSnapshot = snapshot;
+
     const temporaryPath = `${this.config.dataPath}.${process.pid}.tmp`;
-    await writeFile(temporaryPath, JSON.stringify(snapshot), {
-      encoding: "utf8",
-      mode: 0o600,
-    });
-    await rename(temporaryPath, this.config.dataPath);
+    try {
+      await writeFile(temporaryPath, JSON.stringify(snapshot), {
+        encoding: "utf8",
+        mode: 0o600,
+      });
+      await rename(temporaryPath, this.config.dataPath);
+    } catch (error) {
+      logFilesystemWarning("snapshot_write_failed", error);
+      await unlink(temporaryPath).catch(() => {});
+    }
 
     console.log(
       JSON.stringify({
@@ -151,6 +218,7 @@ export class NasLibraryScanner {
         event: "library_scan_completed",
         files: snapshot.total_files,
         bytes: snapshot.total_bytes,
+        skipped_entries: snapshot.skipped_entries,
         duration_ms: snapshot.duration_ms,
       })
     );
