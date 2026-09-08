@@ -176,6 +176,15 @@ function MediaImage({ src, alt, priority = false, sizes = "100vw" }) {
   );
 }
 
+function ActorPortrait({ actor, ...props }) {
+  const [failedImage, setFailedImage] = useState(null);
+  const transparent = actor.transparentImage && failedImage !== actor.transparentImage;
+  if (!transparent) return <MediaImage src={actor.profileImage} alt={actor.name} {...props} />;
+  return <Image src={actor.transparentImage} alt={actor.name} fill unoptimized
+    style={{ objectFit: "contain", objectPosition: "center bottom" }}
+    onError={() => setFailedImage(actor.transparentImage)} {...props} />;
+}
+
 function formatDate(value) {
   if (!value) return "–";
   const date = new Date(value);
@@ -930,9 +939,8 @@ function ActorCard({ actor, onOpen, feature = false }) {
       aria-label={`${actor.name} öffnen`}
     >
       <span className={styles.actorVisual}>
-        <MediaImage
-          src={actor.profileImage}
-          alt={actor.name}
+        <ActorPortrait
+          actor={actor}
           sizes={feature ? "(max-width: 760px) 90vw, 38vw" : "(max-width: 760px) 45vw, 18vw"}
         />
         <span className={styles.actorShade} />
@@ -2160,7 +2168,7 @@ function ActorProfile({ actor, movies, movieSort, setMovieSort, onBack, onOpenMo
     <main className={styles.profilePage}>
       <section className={styles.profileHero}>
         <div className={styles.profileImage}>
-          <MediaImage src={actor.profileImage} alt={actor.name} priority sizes="(max-width: 760px) 100vw, 54vw" />
+          <ActorPortrait actor={actor} priority sizes="(max-width: 760px) 100vw, 54vw" />
           <div className={styles.profileImageShade} />
         </div>
         <button type="button" className={styles.backButton} onClick={onBack}><Icon name="back" /> Collection</button>
@@ -2385,13 +2393,13 @@ function MovieDetail({
             <div className={styles.castRail}>
               {mainCast.map((person) => (
                 <button type="button" key={`main-${person.id}`} onClick={() => onShowActor(person.id, person.name, person.slug)}>
-                  <span><MediaImage src={person.profileImage} alt={person.name} sizes="200px" /></span>
+                  <span><ActorPortrait actor={person} sizes="200px" /></span>
                   <strong>{person.name}</strong><small>Main</small>
                 </button>
               ))}
               {supportCast.map((person) => (
                 <div key={`support-${person.id}`}>
-                  <span><MediaImage src={person.profileImage} alt={person.name} sizes="200px" /></span>
+                  <span><ActorPortrait actor={person} sizes="200px" /></span>
                   <strong>{person.name}</strong><small>Supporting</small>
                 </div>
               ))}

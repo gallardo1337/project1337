@@ -54,6 +54,7 @@ const AdminNasLibrary = dynamic(
 );
 
 // ActorImageUploader nur im Client laden (wegen react-easy-crop / Canvas)
+const TransparentActorUploader = dynamic(() => import("./TransparentActorUploader.jsx"), { ssr: false });
 const ActorImageUploader = dynamic(() => import("./ActorImageUploader.jsx"), {
   ssr: false,
   loading: () => (
@@ -607,6 +608,7 @@ export function DashboardExperience() {
   // Stammdaten Inputs
   const [newActorName, setNewActorName] = useState("");
   const [newActorImage, setNewActorImage] = useState("");
+  const [newActorTransparentImage, setNewActorTransparentImage] = useState("");
   const [newActorOrigin, setNewActorOrigin] = useState("");
   const [newActorBirthDate, setNewActorBirthDate] = useState("");
   const [newActorIafdUrl, setNewActorIafdUrl] = useState("");
@@ -614,6 +616,7 @@ export function DashboardExperience() {
 
   const [newSupportName, setNewSupportName] = useState("");
   const [newSupportImage, setNewSupportImage] = useState("");
+  const [newSupportTransparentImage, setNewSupportTransparentImage] = useState("");
 
   const [newStudioName, setNewStudioName] = useState("");
 
@@ -623,6 +626,7 @@ export function DashboardExperience() {
   const [actorEditForm, setActorEditForm] = useState({
     name: "",
     profile_image: "",
+    transparent_image: "",
     origin: "",
     birth_date: "",
     iafd_url: "",
@@ -633,6 +637,7 @@ export function DashboardExperience() {
   const [supportEditForm, setSupportEditForm] = useState({
     name: "",
     profile_image: "",
+    transparent_image: "",
   });
 
   const [editingStudioMetaId, setEditingStudioMetaId] = useState(null);
@@ -1127,6 +1132,7 @@ export function DashboardExperience() {
       .insert({
         name,
         profile_image: newActorImage.trim() || null,
+        transparent_image: newActorTransparentImage.trim() || null,
         origin: newActorOrigin.trim() || null,
         birth_date: newActorBirthDate || null,
         iafd_url: newActorIafdUrl.trim() || null,
@@ -1144,6 +1150,7 @@ export function DashboardExperience() {
     setHauptdarsteller((prev) => [...prev, data]);
     setNewActorName("");
     setNewActorImage("");
+    setNewActorTransparentImage("");
     setNewActorOrigin("");
     setNewActorBirthDate("");
     setNewActorIafdUrl("");
@@ -1160,6 +1167,7 @@ export function DashboardExperience() {
       .insert({
         name,
         profile_image: newSupportImage.trim() || null,
+        transparent_image: newSupportTransparentImage.trim() || null,
       })
       .select("*")
       .single();
@@ -1173,6 +1181,7 @@ export function DashboardExperience() {
     setNebendarsteller((prev) => [...prev, data]);
     setNewSupportName("");
     setNewSupportImage("");
+    setNewSupportTransparentImage("");
   };
 
   const handleAddStudio = async (e) => {
@@ -1445,6 +1454,7 @@ export function DashboardExperience() {
     setActorEditForm({
       name: actor.name || "",
       profile_image: actor.profile_image || "",
+      transparent_image: actor.transparent_image || "",
       origin: actor.origin || "",
       birth_date: actor.birth_date || "",
       iafd_url: actor.iafd_url || "",
@@ -1457,6 +1467,7 @@ export function DashboardExperience() {
     setActorEditForm({
       name: "",
       profile_image: "",
+      transparent_image: "",
       origin: "",
       birth_date: "",
       iafd_url: "",
@@ -1471,6 +1482,7 @@ export function DashboardExperience() {
     const payload = {
       name,
       profile_image: actorEditForm.profile_image.trim() || null,
+      transparent_image: actorEditForm.transparent_image.trim() || null,
       origin: actorEditForm.origin.trim() || null,
       birth_date: actorEditForm.birth_date || null,
       iafd_url: actorEditForm.iafd_url.trim() || null,
@@ -1501,6 +1513,7 @@ export function DashboardExperience() {
     setSupportEditForm({
       name: actor.name || "",
       profile_image: actor.profile_image || "",
+      transparent_image: actor.transparent_image || "",
     });
   };
 
@@ -1509,6 +1522,7 @@ export function DashboardExperience() {
     setSupportEditForm({
       name: "",
       profile_image: "",
+      transparent_image: "",
     });
   };
 
@@ -1519,6 +1533,7 @@ export function DashboardExperience() {
     const payload = {
       name,
       profile_image: supportEditForm.profile_image.trim() || null,
+      transparent_image: supportEditForm.transparent_image.trim() || null,
     };
 
     const { data, error: updateError } = await supabase
@@ -3666,6 +3681,7 @@ export function DashboardExperience() {
                             <ActorImageUploader
                               onUploaded={(url) => setNewActorImage(url)}
                             />
+                            <TransparentActorUploader value={newActorTransparentImage} onChange={setNewActorTransparentImage} />
 
                             <button
                               type="submit"
@@ -3772,6 +3788,7 @@ export function DashboardExperience() {
                                               }))
                                             }
                                           />
+                                          <TransparentActorUploader value={actorEditForm.transparent_image} onChange={(url) => setActorEditForm((prev) => ({ ...prev, transparent_image: url }))} />
                                         </div>
                                         <input
                                           className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
@@ -3906,6 +3923,7 @@ export function DashboardExperience() {
                             <ActorImageUploader
                               onUploaded={(url) => setNewSupportImage(url)}
                             />
+                            <TransparentActorUploader value={newSupportTransparentImage} onChange={setNewSupportTransparentImage} />
 
                             <button
                               type="submit"
@@ -3990,6 +4008,7 @@ export function DashboardExperience() {
                                               }))
                                             }
                                           />
+                                          <TransparentActorUploader value={supportEditForm.transparent_image} onChange={(url) => setSupportEditForm((prev) => ({ ...prev, transparent_image: url }))} />
                                         </div>
                                       </div>
 
