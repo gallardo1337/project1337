@@ -943,7 +943,7 @@ function ActorCard({ actor, onOpen, feature = false }) {
           actor={actor}
           sizes={feature ? "(max-width: 760px) 90vw, 38vw" : "(max-width: 760px) 45vw, 18vw"}
         />
-        <span className={styles.actorShade} />
+        {!actor.transparentImage ? <span className={styles.actorShade} /> : null}
       </span>
       <span className={styles.actorNumber}>{String(actor.movieCount).padStart(2, "0")}</span>
       <span className={styles.actorCopy}>
