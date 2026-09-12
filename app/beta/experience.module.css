@@ -1238,6 +1238,10 @@
   transition: transform 650ms cubic-bezier(.2,.7,.2,1), filter 350ms ease;
 }
 
+.actorTransparentImage {
+  background-color: #0d0d0f;
+}
+
 .actorShade {
   z-index: 1;
   background: linear-gradient(0deg, rgba(0,0,0,.86), transparent 58%);

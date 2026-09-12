@@ -181,6 +181,7 @@ function ActorPortrait({ actor, ...props }) {
   const transparent = actor.transparentImage && failedImage !== actor.transparentImage;
   if (!transparent) return <MediaImage src={actor.profileImage} alt={actor.name} {...props} />;
   return <Image src={actor.transparentImage} alt={actor.name} fill unoptimized
+    className={styles.actorTransparentImage}
     style={{ objectFit: "contain", objectPosition: "center bottom" }}
     onError={() => setFailedImage(actor.transparentImage)} {...props} />;
 }
