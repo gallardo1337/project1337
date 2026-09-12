@@ -608,6 +608,7 @@ export function DashboardExperience() {
   // Stammdaten Inputs
   const [newActorName, setNewActorName] = useState("");
   const [newActorImage, setNewActorImage] = useState("");
+  const [newActorCastImage, setNewActorCastImage] = useState("");
   const [newActorTransparentImage, setNewActorTransparentImage] = useState("");
   const [newActorOrigin, setNewActorOrigin] = useState("");
   const [newActorBirthDate, setNewActorBirthDate] = useState("");
@@ -616,6 +617,7 @@ export function DashboardExperience() {
 
   const [newSupportName, setNewSupportName] = useState("");
   const [newSupportImage, setNewSupportImage] = useState("");
+  const [newSupportCastImage, setNewSupportCastImage] = useState("");
   const [newSupportTransparentImage, setNewSupportTransparentImage] = useState("");
 
   const [newStudioName, setNewStudioName] = useState("");
@@ -626,6 +628,7 @@ export function DashboardExperience() {
   const [actorEditForm, setActorEditForm] = useState({
     name: "",
     profile_image: "",
+    cast_image: "",
     transparent_image: "",
     origin: "",
     birth_date: "",
@@ -637,6 +640,7 @@ export function DashboardExperience() {
   const [supportEditForm, setSupportEditForm] = useState({
     name: "",
     profile_image: "",
+    cast_image: "",
     transparent_image: "",
   });
 
@@ -1132,6 +1136,7 @@ export function DashboardExperience() {
       .insert({
         name,
         profile_image: newActorImage.trim() || null,
+        cast_image: newActorCastImage.trim() || null,
         transparent_image: newActorTransparentImage.trim() || null,
         origin: newActorOrigin.trim() || null,
         birth_date: newActorBirthDate || null,
@@ -1150,6 +1155,7 @@ export function DashboardExperience() {
     setHauptdarsteller((prev) => [...prev, data]);
     setNewActorName("");
     setNewActorImage("");
+    setNewActorCastImage("");
     setNewActorTransparentImage("");
     setNewActorOrigin("");
     setNewActorBirthDate("");
@@ -1167,6 +1173,7 @@ export function DashboardExperience() {
       .insert({
         name,
         profile_image: newSupportImage.trim() || null,
+        cast_image: newSupportCastImage.trim() || null,
         transparent_image: newSupportTransparentImage.trim() || null,
       })
       .select("*")
@@ -1181,6 +1188,7 @@ export function DashboardExperience() {
     setNebendarsteller((prev) => [...prev, data]);
     setNewSupportName("");
     setNewSupportImage("");
+    setNewSupportCastImage("");
     setNewSupportTransparentImage("");
   };
 
@@ -1454,6 +1462,7 @@ export function DashboardExperience() {
     setActorEditForm({
       name: actor.name || "",
       profile_image: actor.profile_image || "",
+      cast_image: actor.cast_image || "",
       transparent_image: actor.transparent_image || "",
       origin: actor.origin || "",
       birth_date: actor.birth_date || "",
@@ -1467,6 +1476,7 @@ export function DashboardExperience() {
     setActorEditForm({
       name: "",
       profile_image: "",
+      cast_image: "",
       transparent_image: "",
       origin: "",
       birth_date: "",
@@ -1482,6 +1492,7 @@ export function DashboardExperience() {
     const payload = {
       name,
       profile_image: actorEditForm.profile_image.trim() || null,
+      cast_image: actorEditForm.cast_image.trim() || null,
       transparent_image: actorEditForm.transparent_image.trim() || null,
       origin: actorEditForm.origin.trim() || null,
       birth_date: actorEditForm.birth_date || null,
@@ -1513,6 +1524,7 @@ export function DashboardExperience() {
     setSupportEditForm({
       name: actor.name || "",
       profile_image: actor.profile_image || "",
+      cast_image: actor.cast_image || "",
       transparent_image: actor.transparent_image || "",
     });
   };
@@ -1522,6 +1534,7 @@ export function DashboardExperience() {
     setSupportEditForm({
       name: "",
       profile_image: "",
+      cast_image: "",
       transparent_image: "",
     });
   };
@@ -1533,6 +1546,7 @@ export function DashboardExperience() {
     const payload = {
       name,
       profile_image: supportEditForm.profile_image.trim() || null,
+      cast_image: supportEditForm.cast_image.trim() || null,
       transparent_image: supportEditForm.transparent_image.trim() || null,
     };
 
@@ -3681,7 +3695,18 @@ export function DashboardExperience() {
                             <ActorImageUploader
                               onUploaded={(url) => setNewActorImage(url)}
                             />
-                            <TransparentActorUploader value={newActorTransparentImage} onChange={setNewActorTransparentImage} />
+                            <TransparentActorUploader
+                              value={newActorCastImage}
+                              onChange={setNewActorCastImage}
+                              title="Cast-Bild (PNG)"
+                              description="Freigestelltes Bild für die 4:5-Darstellerkarten unter den Filmen. Ohne Cast-Bild erscheint dort das normale Foto."
+                              recommendedSize="Empfohlen: 800 × 1000 px im Verhältnis 4:5."
+                              filenamePrefix="actor_cast"
+                            />
+                            <TransparentActorUploader
+                              value={newActorTransparentImage}
+                              onChange={setNewActorTransparentImage}
+                            />
 
                             <button
                               type="submit"
@@ -3788,7 +3813,18 @@ export function DashboardExperience() {
                                               }))
                                             }
                                           />
-                                          <TransparentActorUploader value={actorEditForm.transparent_image} onChange={(url) => setActorEditForm((prev) => ({ ...prev, transparent_image: url }))} />
+                                          <TransparentActorUploader
+                                            value={actorEditForm.cast_image}
+                                            onChange={(url) => setActorEditForm((prev) => ({ ...prev, cast_image: url }))}
+                                            title="Cast-Bild (PNG)"
+                                            description="Freigestelltes Bild für die 4:5-Darstellerkarten unter den Filmen. Ohne Cast-Bild erscheint dort das normale Foto."
+                                            recommendedSize="Empfohlen: 800 × 1000 px im Verhältnis 4:5."
+                                            filenamePrefix="actor_cast"
+                                          />
+                                          <TransparentActorUploader
+                                            value={actorEditForm.transparent_image}
+                                            onChange={(url) => setActorEditForm((prev) => ({ ...prev, transparent_image: url }))}
+                                          />
                                         </div>
                                         <input
                                           className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
@@ -3923,7 +3959,18 @@ export function DashboardExperience() {
                             <ActorImageUploader
                               onUploaded={(url) => setNewSupportImage(url)}
                             />
-                            <TransparentActorUploader value={newSupportTransparentImage} onChange={setNewSupportTransparentImage} />
+                            <TransparentActorUploader
+                              value={newSupportCastImage}
+                              onChange={setNewSupportCastImage}
+                              title="Cast-Bild (PNG)"
+                              description="Freigestelltes Bild für die 4:5-Darstellerkarten unter den Filmen. Ohne Cast-Bild erscheint dort das normale Foto."
+                              recommendedSize="Empfohlen: 800 × 1000 px im Verhältnis 4:5."
+                              filenamePrefix="actor_cast"
+                            />
+                            <TransparentActorUploader
+                              value={newSupportTransparentImage}
+                              onChange={setNewSupportTransparentImage}
+                            />
 
                             <button
                               type="submit"
@@ -4008,7 +4055,18 @@ export function DashboardExperience() {
                                               }))
                                             }
                                           />
-                                          <TransparentActorUploader value={supportEditForm.transparent_image} onChange={(url) => setSupportEditForm((prev) => ({ ...prev, transparent_image: url }))} />
+                                          <TransparentActorUploader
+                                            value={supportEditForm.cast_image}
+                                            onChange={(url) => setSupportEditForm((prev) => ({ ...prev, cast_image: url }))}
+                                            title="Cast-Bild (PNG)"
+                                            description="Freigestelltes Bild für die 4:5-Darstellerkarten unter den Filmen. Ohne Cast-Bild erscheint dort das normale Foto."
+                                            recommendedSize="Empfohlen: 800 × 1000 px im Verhältnis 4:5."
+                                            filenamePrefix="actor_cast"
+                                          />
+                                          <TransparentActorUploader
+                                            value={supportEditForm.transparent_image}
+                                            onChange={(url) => setSupportEditForm((prev) => ({ ...prev, transparent_image: url }))}
+                                          />
                                         </div>
                                       </div>
 

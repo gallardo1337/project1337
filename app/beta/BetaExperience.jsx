@@ -176,13 +176,14 @@ function MediaImage({ src, alt, priority = false, sizes = "100vw" }) {
   );
 }
 
-function ActorPortrait({ actor, ...props }) {
+function ActorPortrait({ actor, variant = "profile", ...props }) {
   const [failedImage, setFailedImage] = useState(null);
-  const transparent = actor.transparentImage && failedImage !== actor.transparentImage;
-  if (!transparent) return <MediaImage src={actor.profileImage} alt={actor.name} {...props} />;
-  return <Image src={actor.transparentImage} alt={actor.name} fill unoptimized
+  const preferredImage = variant === "cast" ? actor.castImage : actor.transparentImage;
+  const usePreferredImage = preferredImage && failedImage !== preferredImage;
+  if (!usePreferredImage) return <MediaImage src={actor.profileImage} alt={actor.name} {...props} />;
+  return <Image src={preferredImage} alt={actor.name} fill unoptimized
     style={{ objectFit: "contain", objectPosition: "center bottom" }}
-    onError={() => setFailedImage(actor.transparentImage)} {...props} />;
+    onError={() => setFailedImage(preferredImage)} {...props} />;
 }
 
 function formatDate(value) {
@@ -2393,13 +2394,13 @@ function MovieDetail({
             <div className={styles.castRail}>
               {mainCast.map((person) => (
                 <button type="button" key={`main-${person.id}`} onClick={() => onShowActor(person.id, person.name, person.slug)}>
-                  <span><ActorPortrait actor={person} sizes="200px" /></span>
+                  <span><ActorPortrait actor={person} variant="cast" sizes="200px" /></span>
                   <strong>{person.name}</strong><small>Main</small>
                 </button>
               ))}
               {supportCast.map((person) => (
                 <div key={`support-${person.id}`}>
-                  <span><ActorPortrait actor={person} sizes="200px" /></span>
+                  <span><ActorPortrait actor={person} variant="cast" sizes="200px" /></span>
                   <strong>{person.name}</strong><small>Supporting</small>
                 </div>
               ))}
