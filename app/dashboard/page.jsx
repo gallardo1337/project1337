@@ -609,7 +609,6 @@ export function DashboardExperience() {
 
   const [newSupportName, setNewSupportName] = useState("");
   const [newSupportCastImage, setNewSupportCastImage] = useState("");
-  const [newSupportTransparentImage, setNewSupportTransparentImage] = useState("");
 
   const [newStudioName, setNewStudioName] = useState("");
 
@@ -632,7 +631,6 @@ export function DashboardExperience() {
     name: "",
     profile_image: "",
     cast_image: "",
-    transparent_image: "",
   });
 
   const [editingStudioMetaId, setEditingStudioMetaId] = useState(null);
@@ -1162,7 +1160,6 @@ export function DashboardExperience() {
       .insert({
         name,
         cast_image: newSupportCastImage.trim() || null,
-        transparent_image: newSupportTransparentImage.trim() || null,
       })
       .select("*")
       .single();
@@ -1176,7 +1173,6 @@ export function DashboardExperience() {
     setNebendarsteller((prev) => [...prev, data]);
     setNewSupportName("");
     setNewSupportCastImage("");
-    setNewSupportTransparentImage("");
   };
 
   const handleAddStudio = async (e) => {
@@ -1512,7 +1508,6 @@ export function DashboardExperience() {
       name: actor.name || "",
       profile_image: actor.profile_image || "",
       cast_image: actor.cast_image || "",
-      transparent_image: actor.transparent_image || "",
     });
   };
 
@@ -1522,7 +1517,6 @@ export function DashboardExperience() {
       name: "",
       profile_image: "",
       cast_image: "",
-      transparent_image: "",
     });
   };
 
@@ -1534,7 +1528,6 @@ export function DashboardExperience() {
       name,
       profile_image: supportEditForm.profile_image.trim() || null,
       cast_image: supportEditForm.cast_image.trim() || null,
-      transparent_image: supportEditForm.transparent_image.trim() || null,
     };
 
     const { data, error: updateError } = await supabase
@@ -3920,10 +3913,6 @@ export function DashboardExperience() {
                               recommendedSize="Empfohlen: 800 × 1000 px im Verhältnis 4:5."
                               filenamePrefix="actor_cast"
                             />
-                            <TransparentActorUploader
-                              value={newSupportTransparentImage}
-                              onChange={setNewSupportTransparentImage}
-                            />
 
                             <button
                               type="submit"
@@ -3987,10 +3976,6 @@ export function DashboardExperience() {
                                             description="Freigestelltes Bild für die 4:5-Darstellerkarten unter den Filmen. Ohne Cast-Bild erscheint dort das normale Foto."
                                             recommendedSize="Empfohlen: 800 × 1000 px im Verhältnis 4:5."
                                             filenamePrefix="actor_cast"
-                                          />
-                                          <TransparentActorUploader
-                                            value={supportEditForm.transparent_image}
-                                            onChange={(url) => setSupportEditForm((prev) => ({ ...prev, transparent_image: url }))}
                                           />
                                         </div>
                                       </div>
