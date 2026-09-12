@@ -1214,7 +1214,7 @@
   overflow: hidden;
   padding: 0;
   border: 0;
-  background: #18181a;
+  background: transparent;
   color: white;
   text-align: left;
   cursor: pointer;
@@ -1236,10 +1236,6 @@
   object-position: center 18%;
   filter: saturate(.78);
   transition: transform 650ms cubic-bezier(.2,.7,.2,1), filter 350ms ease;
-}
-
-.actorTransparentImage {
-  background-color: #0d0d0f;
 }
 
 .actorShade {
@@ -2980,7 +2976,7 @@
   display: block;
   overflow: hidden;
   margin-bottom: 6px;
-  background: #171719;
+  background: transparent;
 }
 
 .castRail img {
