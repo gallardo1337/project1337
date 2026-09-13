@@ -138,7 +138,7 @@ export default function ActorImageUploader({ onUploaded }) {
         <div className="actorImageUploader__picker flex min-h-12 w-full items-center gap-3 overflow-hidden rounded-lg border border-neutral-700 bg-neutral-950 p-1.5">
           <button
             type="button"
-            className="shrink-0 rounded-md border border-neutral-600 bg-neutral-800 px-3 py-2 text-xs font-medium text-neutral-100 transition-colors hover:border-red-500 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-50"
+            className="shrink-0 rounded-md border border-neutral-600 bg-neutral-800 px-3 py-2 text-xs font-medium text-neutral-100 transition-colors hover:border-orange-500 hover:text-orange-300 disabled:cursor-not-allowed disabled:opacity-50"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
           >

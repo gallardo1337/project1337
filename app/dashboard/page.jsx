@@ -385,11 +385,11 @@ function VersionHint() {
   );
 }
 
-// Helper für Chips – Rot als Akzent
+// Helper für Chips – Orange als Beta-Akzent
 const chipClass = (active) =>
   "px-3 py-1 rounded-full border text-sm " +
   (active
-    ? "bg-red-500 border-red-600 text-black"
+    ? "bg-orange-500 border-orange-600 text-black"
     : "bg-neutral-900/90 border-neutral-700 text-neutral-100 hover:border-neutral-400 transition-colors");
 
 const MOVIE_WIZARD_STEPS = [
@@ -2099,7 +2099,7 @@ export function DashboardExperience() {
       <style jsx global>{`
         :root {
           --dash-text: rgba(255, 255, 255, 0.92);
-          --dash-accent: #e50914;
+          --dash-accent: #f97316;
         }
 .changelogPanel {
   scrollbar-width: none;
@@ -2175,7 +2175,7 @@ export function DashboardExperience() {
         }
 
         .dashInput:focus-within {
-          border-color: rgba(229, 9, 20, 0.55);
+          border-color: rgba(249, 115, 22, 0.55);
           background: rgba(255, 255, 255, 0.08);
         }
 
@@ -2231,20 +2231,20 @@ export function DashboardExperience() {
         .dashBtn--primary {
           background: linear-gradient(
             180deg,
-            rgba(229, 9, 20, 0.95),
-            rgba(229, 9, 20, 0.78)
+            rgba(249, 115, 22, 0.95),
+            rgba(249, 115, 22, 0.78)
           );
-          border-color: rgba(229, 9, 20, 0.6);
-          box-shadow: 0 18px 36px rgba(229, 9, 20, 0.22);
+          border-color: rgba(249, 115, 22, 0.6);
+          box-shadow: 0 18px 36px rgba(249, 115, 22, 0.22);
         }
 
         .dashBtn--primary:hover {
           background: linear-gradient(
             180deg,
-            rgba(255, 21, 33, 0.95),
-            rgba(229, 9, 20, 0.8)
+            rgba(251, 146, 60, 0.95),
+            rgba(249, 115, 22, 0.8)
           );
-          border-color: rgba(255, 21, 33, 0.65);
+          border-color: rgba(251, 146, 60, 0.65);
         }
 
         .dashBtn--ghost {
@@ -3405,7 +3405,7 @@ export function DashboardExperience() {
                           {filteredFilme.map((f) => (
                             <details
                               key={f.id}
-                              className="dashMovieRow group rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4 shadow-sm shadow-black/60 transition-all hover:border-red-500/70"
+                              className="dashMovieRow group rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4 shadow-sm shadow-black/60 transition-all hover:border-orange-500/70"
                             >
                               <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
                                 <div className="dashMovieIdentity flex items-center gap-2">
@@ -3629,14 +3629,14 @@ export function DashboardExperience() {
                             </div>
 
                             <input
-                              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-orange-500 focus:outline-none"
                               placeholder="Name"
                               value={newActorName}
                               onChange={(e) => setNewActorName(e.target.value)}
                             />
 
                             <input
-                              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-orange-500 focus:outline-none"
                               placeholder="Herkunft"
                               value={newActorOrigin}
                               onChange={(e) =>
@@ -3645,7 +3645,7 @@ export function DashboardExperience() {
                             />
 
                             <input
-                              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-orange-500 focus:outline-none"
                               placeholder="Geburtsdatum"
                               type="date"
                               value={newActorBirthDate}
@@ -3655,7 +3655,7 @@ export function DashboardExperience() {
                             />
 
                             <input
-                              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-orange-500 focus:outline-none"
                               placeholder="IAFD URL"
                               value={newActorIafdUrl}
                               onChange={(e) =>
@@ -3664,7 +3664,7 @@ export function DashboardExperience() {
                             />
 
                             <input
-                              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-orange-500 focus:outline-none"
                               placeholder="PlanetSuzy URL"
                               value={newActorPlanetsuzyUrl}
                               onChange={(e) =>
@@ -3687,7 +3687,7 @@ export function DashboardExperience() {
 
                             <button
                               type="submit"
-                              className="rounded-xl bg-red-500 px-4 py-2 text-sm font-semibold text-black shadow shadow-red-900/70 hover:bg-red-400 disabled:opacity-60"
+                              className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-semibold text-black shadow shadow-orange-900/70 hover:bg-orange-400 disabled:opacity-60"
                               disabled={!newActorName.trim()}
                             >
                               Speichern
@@ -3714,7 +3714,7 @@ export function DashboardExperience() {
                                     <div className="space-y-3">
                                       <div className="grid gap-3">
                                         <input
-                                          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                                          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-orange-500 focus:outline-none"
                                           placeholder="Name"
                                           value={actorEditForm.name}
                                           onChange={(e) =>
@@ -3725,7 +3725,7 @@ export function DashboardExperience() {
                                           }
                                         />
                                         <input
-                                          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                                          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-orange-500 focus:outline-none"
                                           placeholder="Herkunft"
                                           value={actorEditForm.origin}
                                           onChange={(e) =>
@@ -3736,7 +3736,7 @@ export function DashboardExperience() {
                                           }
                                         />
                                         <input
-                                          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                                          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-orange-500 focus:outline-none"
                                           type="date"
                                           value={actorEditForm.birth_date}
                                           onChange={(e) =>
@@ -3776,7 +3776,7 @@ export function DashboardExperience() {
                                           />
                                         </div>
                                         <input
-                                          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                                          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-orange-500 focus:outline-none"
                                           placeholder="IAFD URL"
                                           value={actorEditForm.iafd_url}
                                           onChange={(e) =>
@@ -3787,7 +3787,7 @@ export function DashboardExperience() {
                                           }
                                         />
                                         <input
-                                          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                                          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-orange-500 focus:outline-none"
                                           placeholder="PlanetSuzy URL"
                                           value={actorEditForm.planetsuzy_url}
                                           onChange={(e) =>
@@ -3803,7 +3803,7 @@ export function DashboardExperience() {
                                         <button
                                           type="button"
                                           onClick={() => saveEditActorInline(a.id)}
-                                          className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-black hover:bg-red-400 disabled:opacity-60"
+                                          className="rounded-lg bg-orange-500 px-3 py-1.5 text-xs font-semibold text-black hover:bg-orange-400 disabled:opacity-60"
                                           disabled={!actorEditForm.name.trim()}
                                         >
                                           Speichern
@@ -3897,7 +3897,7 @@ export function DashboardExperience() {
                             </div>
 
                             <input
-                              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-orange-500 focus:outline-none"
                               placeholder="Name"
                               value={newSupportName}
                               onChange={(e) =>
@@ -3916,7 +3916,7 @@ export function DashboardExperience() {
 
                             <button
                               type="submit"
-                              className="rounded-xl bg-red-500 px-4 py-2 text-sm font-semibold text-black shadow shadow-red-900/70 hover:bg-red-400 disabled:opacity-60"
+                              className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-semibold text-black shadow shadow-orange-900/70 hover:bg-orange-400 disabled:opacity-60"
                               disabled={!newSupportName.trim()}
                             >
                               Speichern
@@ -3943,7 +3943,7 @@ export function DashboardExperience() {
                                     <div className="space-y-3">
                                       <div className="grid gap-3">
                                         <input
-                                          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                                          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-orange-500 focus:outline-none"
                                           placeholder="Name"
                                           value={supportEditForm.name}
                                           onChange={(e) =>
@@ -3984,7 +3984,7 @@ export function DashboardExperience() {
                                         <button
                                           type="button"
                                           onClick={() => saveEditSupportInline(a.id)}
-                                          className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-black hover:bg-red-400 disabled:opacity-60"
+                                          className="rounded-lg bg-orange-500 px-3 py-1.5 text-xs font-semibold text-black hover:bg-orange-400 disabled:opacity-60"
                                           disabled={!supportEditForm.name.trim()}
                                         >
                                           Speichern
@@ -4057,7 +4057,7 @@ export function DashboardExperience() {
                             </div>
 
                             <input
-                              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-orange-500 focus:outline-none"
                               placeholder="Studio"
                               value={newStudioName}
                               onChange={(e) =>
@@ -4067,7 +4067,7 @@ export function DashboardExperience() {
 
                             <button
                               type="submit"
-                              className="rounded-xl bg-red-500 px-4 py-2 text-sm font-semibold text-black shadow shadow-red-900/70 hover:bg-red-400 disabled:opacity-60"
+                              className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-semibold text-black shadow shadow-orange-900/70 hover:bg-orange-400 disabled:opacity-60"
                               disabled={!newStudioName.trim()}
                             >
                               Speichern
@@ -4094,7 +4094,7 @@ export function DashboardExperience() {
                                     <div className="space-y-3">
                                       <div className="grid gap-3">
                                         <input
-                                          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                                          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-orange-500 focus:outline-none"
                                           placeholder="Studio"
                                           value={studioEditForm.name}
                                           onChange={(e) =>
@@ -4110,7 +4110,7 @@ export function DashboardExperience() {
                                         <button
                                           type="button"
                                           onClick={() => saveEditStudioInline(s.id)}
-                                          className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-black hover:bg-red-400 disabled:opacity-60"
+                                          className="rounded-lg bg-orange-500 px-3 py-1.5 text-xs font-semibold text-black hover:bg-orange-400 disabled:opacity-60"
                                           disabled={!studioEditForm.name.trim()}
                                         >
                                           Speichern
@@ -4168,7 +4168,7 @@ export function DashboardExperience() {
                             </div>
 
                             <input
-                              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-orange-500 focus:outline-none"
                               placeholder="Tag-Name"
                               value={newTagName}
                               onChange={(e) => setNewTagName(e.target.value)}
@@ -4176,7 +4176,7 @@ export function DashboardExperience() {
 
                             <button
                               type="submit"
-                              className="rounded-xl bg-red-500 px-4 py-2 text-sm font-semibold text-black shadow shadow-red-900/70 hover:bg-red-400 disabled:opacity-60"
+                              className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-semibold text-black shadow shadow-orange-900/70 hover:bg-orange-400 disabled:opacity-60"
                               disabled={!newTagName.trim()}
                             >
                               Speichern
@@ -4202,7 +4202,7 @@ export function DashboardExperience() {
                                   {editingTagMetaId === t.id ? (
                                     <div className="flex flex-col gap-3 md:flex-row md:items-center">
                                       <input
-                                        className="min-w-0 flex-1 rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
+                                        className="min-w-0 flex-1 rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-orange-500 focus:outline-none"
                                         placeholder="Tag-Name"
                                         value={tagEditName}
                                         onChange={(e) =>
@@ -4214,7 +4214,7 @@ export function DashboardExperience() {
                                         <button
                                           type="button"
                                           onClick={() => saveEditTagInline(t.id)}
-                                          className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-black hover:bg-red-400 disabled:opacity-60"
+                                          className="rounded-lg bg-orange-500 px-3 py-1.5 text-xs font-semibold text-black hover:bg-orange-400 disabled:opacity-60"
                                           disabled={!tagEditName.trim()}
                                         >
                                           Speichern

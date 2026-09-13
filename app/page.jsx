@@ -797,21 +797,21 @@ export default function HomePage() {
     if (typeof document === "undefined") return;
 
     if (selectedMovie?.title) {
-      document.title = `${selectedMovie.title} | my1337.de`;
+      document.title = `[BETA] ${selectedMovie.title} | my1337.de`;
       return;
     }
 
     if (viewMode === "favorites") {
-      document.title = "Favoriten | my1337.de";
+      document.title = "[BETA] Favoriten | my1337.de";
       return;
     }
 
     if (selectedActor?.name && viewMode === "movies") {
-      document.title = `${selectedActor.name} | my1337.de`;
+      document.title = `[BETA] ${selectedActor.name} | my1337.de`;
       return;
     }
 
-    document.title = "Home | my1337.de";
+    document.title = "[BETA] Home | my1337.de";
   }, [selectedMovie?.title, selectedActor?.name, viewMode]);
 
   const patchMovieMetric = (movieId, patch) => {

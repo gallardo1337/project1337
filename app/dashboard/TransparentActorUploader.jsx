@@ -60,7 +60,7 @@ export default function TransparentActorUploader({
         </div>
       )}
       <input ref={inputRef} type="file" accept="image/png,.png" onChange={upload} hidden aria-label={`${title} auswählen`} />
-      <button type="button" disabled={uploading} onClick={() => inputRef.current?.click()} className="rounded-lg border border-neutral-600 bg-neutral-800 px-3 py-2 text-sm hover:border-red-500 disabled:opacity-50">
+      <button type="button" disabled={uploading} onClick={() => inputRef.current?.click()} className="rounded-lg border border-neutral-600 bg-neutral-800 px-3 py-2 text-sm hover:border-orange-500 disabled:opacity-50">
         {uploading ? "Lädt hoch…" : value ? "PNG ersetzen" : "PNG hochladen"}
       </button>
       <p className="text-sm text-neutral-500">{recommendedSize} Bis 10 MB. Anschließend den Darsteller speichern.</p>

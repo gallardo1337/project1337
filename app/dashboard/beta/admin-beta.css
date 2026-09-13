@@ -1,6 +1,6 @@
 .adminBeta {
-  --admin-red: #f04444;
-  --admin-red-deep: #a6161d;
+  --admin-orange: #f97316;
+  --admin-orange-deep: #9a3412;
   --admin-ink: #070708;
   --admin-panel: #0d0d0f;
   --admin-panel-soft: #121215;
@@ -10,7 +10,7 @@
   min-height: 100vh;
   overflow-x: clip;
   background:
-    radial-gradient(circle at 88% 4%, rgba(240, 68, 68, 0.13), transparent 23rem),
+    radial-gradient(circle at 88% 4%, rgba(249, 115, 22, 0.13), transparent 23rem),
     linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px),
     #070708 !important;
@@ -23,7 +23,7 @@
   z-index: 60;
   width: 3px;
   content: "";
-  background: linear-gradient(180deg, var(--admin-red), transparent 72%);
+  background: linear-gradient(180deg, var(--admin-orange), transparent 72%);
   pointer-events: none;
 }
 
@@ -62,7 +62,7 @@
   left: clamp(18px, 3vw, 48px);
   height: 1px;
   content: "";
-  background: linear-gradient(90deg, var(--admin-red) 0 76px, transparent 76px);
+  background: linear-gradient(90deg, var(--admin-orange) 0 76px, transparent 76px);
 }
 
 .adminBeta .adminBrand {
@@ -82,7 +82,7 @@
   width: 34px;
   height: 34px;
   object-fit: contain;
-  filter: drop-shadow(0 8px 18px rgba(240, 68, 68, 0.26));
+  filter: drop-shadow(0 8px 18px rgba(249, 115, 22, 0.26));
 }
 
 .adminBeta .adminBrand > span {
@@ -95,7 +95,7 @@
 }
 
 .adminBeta .adminBrand small {
-  color: var(--admin-red);
+  color: var(--admin-orange);
   font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.18em;
@@ -124,9 +124,9 @@
 }
 
 .adminBeta .dashInput:focus-within {
-  border-color: rgba(240, 68, 68, 0.72) !important;
+  border-color: rgba(249, 115, 22, 0.72) !important;
   background: rgba(255, 255, 255, 0.055) !important;
-  box-shadow: 0 0 0 1px rgba(240, 68, 68, 0.16);
+  box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.16);
 }
 
 .adminBeta .dashInput input {
@@ -150,8 +150,8 @@
 
 .adminBeta .dashUserMenu__btn:hover,
 .adminBeta .dashIconBtn:hover {
-  border-color: var(--admin-red) !important;
-  background: rgba(240, 68, 68, 0.08) !important;
+  border-color: var(--admin-orange) !important;
+  background: rgba(249, 115, 22, 0.08) !important;
   transform: none !important;
 }
 
@@ -171,7 +171,7 @@
 
 .adminBeta .dashUserMenu__item:hover {
   padding-left: 16px;
-  color: var(--admin-red) !important;
+  color: var(--admin-orange) !important;
   transform: none !important;
 }
 
@@ -206,7 +206,7 @@
   width: 76px;
   height: 2px;
   content: "";
-  background: var(--admin-red);
+  background: var(--admin-orange);
   box-shadow: 82px 0 0 rgba(255, 255, 255, 0.2);
 }
 
@@ -217,7 +217,7 @@
 .adminBeta .adminEyebrow {
   display: block;
   margin-bottom: 22px;
-  color: var(--admin-red);
+  color: var(--admin-orange);
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.22em;
@@ -274,12 +274,12 @@
 }
 
 .adminBeta .adminPrimaryAction {
-  background: var(--admin-red);
+  background: var(--admin-orange);
   color: #080808;
 }
 
 .adminBeta .adminPrimaryAction:hover {
-  background: #ff5d5d;
+  background: #fb923c;
 }
 
 .adminBeta .adminPrimaryAction > span {
@@ -400,9 +400,9 @@
   color: #fff !important;
 }
 
-.adminBeta .dashSidebarNav button[class*="bg-red-"] {
-  border-left-color: var(--admin-red) !important;
-  background: rgba(240, 68, 68, 0.08) !important;
+.adminBeta .dashSidebarNav button[class*="bg-orange-"] {
+  border-left-color: var(--admin-orange) !important;
+  background: rgba(249, 115, 22, 0.08) !important;
   color: #fff !important;
 }
 
@@ -417,7 +417,7 @@
 
 .adminBeta .dashSidebarOverview > div:first-child {
   margin-bottom: 16px !important;
-  color: var(--admin-red) !important;
+  color: var(--admin-orange) !important;
   font-size: 9px !important;
   letter-spacing: 0.22em !important;
 }
@@ -460,7 +460,7 @@
   width: 58px;
   height: 2px;
   content: "";
-  background: var(--admin-red);
+  background: var(--admin-orange);
 }
 
 .adminBeta .dashPanel h2 {
@@ -498,8 +498,8 @@
 }
 
 .adminBeta .dashPanel :where(input, select, textarea):focus {
-  border-color: rgba(240, 68, 68, 0.76) !important;
-  box-shadow: 0 0 0 1px rgba(240, 68, 68, 0.18);
+  border-color: rgba(249, 115, 22, 0.76) !important;
+  box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.18);
 }
 
 .adminBeta .dashPanel :where(input, textarea)::placeholder {
@@ -514,14 +514,14 @@
   border-radius: 2px !important;
 }
 
-.adminBeta .dashPanel button[class*="bg-red-"] {
-  background: var(--admin-red) !important;
+.adminBeta .dashPanel button[class*="bg-orange-"] {
+  background: var(--admin-orange) !important;
   color: #080808 !important;
   box-shadow: none !important;
 }
 
-.adminBeta .dashPanel button[class*="bg-red-"]:hover {
-  background: #ff5d5d !important;
+.adminBeta .dashPanel button[class*="bg-orange-"]:hover {
+  background: #fb923c !important;
 }
 
 .adminBeta .dashPanel button[class*="border-neutral-"] {
@@ -561,8 +561,8 @@
 
 .adminBeta .dashMovieRow:hover,
 .adminBeta .dashMovieRow[open] {
-  border-color: rgba(240, 68, 68, 0.42) !important;
-  background: rgba(240, 68, 68, 0.035) !important;
+  border-color: rgba(249, 115, 22, 0.42) !important;
+  background: rgba(249, 115, 22, 0.035) !important;
 }
 
 .adminBeta .dashMovieRow summary {
@@ -580,8 +580,8 @@
 }
 
 .adminBeta .dashMovieRow[open] summary > div:first-child::before {
-  background: var(--admin-red);
-  box-shadow: 0 0 12px rgba(240, 68, 68, 0.65);
+  background: var(--admin-orange);
+  box-shadow: 0 0 12px rgba(249, 115, 22, 0.65);
 }
 
 .adminBeta .dashMovieRow summary span[class*="text-base"] {
@@ -785,8 +785,8 @@
   align-items: center;
   gap: 10px;
   padding: 0 15px;
-  border: 1px solid var(--admin-red);
-  background: var(--admin-red);
+  border: 1px solid var(--admin-orange);
+  background: var(--admin-orange);
   color: #080808;
   font-size: 11px;
   font-weight: 850;
@@ -796,7 +796,7 @@
 }
 
 .adminBeta .adminTopCreate:hover {
-  background: #ff5d5d;
+  background: #fb923c;
 }
 
 .adminBeta .adminTopCreate span {
@@ -890,19 +890,19 @@
 }
 
 .adminBeta .adminBetaRail__group button.is-active {
-  border-left-color: var(--admin-red);
-  background: linear-gradient(90deg, rgba(240, 68, 68, 0.12), transparent 88%);
+  border-left-color: var(--admin-orange);
+  background: linear-gradient(90deg, rgba(249, 115, 22, 0.12), transparent 88%);
   color: #fff;
 }
 
 .adminBeta .adminBetaRail__group button.is-active svg {
-  color: var(--admin-red);
+  color: var(--admin-orange);
   opacity: 1;
 }
 
 .adminBeta .adminBetaRail__group button.is-active small {
-  border-color: rgba(240, 68, 68, 0.26);
-  color: var(--admin-red);
+  border-color: rgba(249, 115, 22, 0.26);
+  color: var(--admin-orange);
 }
 
 .adminBeta .adminBetaRail__system {
@@ -967,7 +967,7 @@
 .adminBeta .adminWorkspaceHeader > div:first-child > span {
   display: block;
   margin-bottom: 14px;
-  color: var(--admin-red);
+  color: var(--admin-orange);
   font-size: 9px;
   font-weight: 850;
   letter-spacing: 0.22em;
@@ -1028,14 +1028,14 @@
 
 .adminBeta .adminOverview__primaryButton,
 .adminBeta .adminWorkspaceHeader__primary {
-  border-color: var(--admin-red);
-  background: var(--admin-red);
+  border-color: var(--admin-orange);
+  background: var(--admin-orange);
   color: #080808;
 }
 
 .adminBeta .adminOverview__primaryButton:hover,
 .adminBeta .adminWorkspaceHeader__primary:hover {
-  background: #ff5d5d;
+  background: #fb923c;
 }
 
 .adminBeta .adminOverview__secondaryButton:hover,
@@ -1077,7 +1077,7 @@
   left: 0;
   height: 2px;
   content: "";
-  background: var(--admin-red);
+  background: var(--admin-orange);
 }
 
 .adminBeta .adminKpi__topline {
@@ -1110,7 +1110,7 @@
   padding: 0;
   border: 0;
   background: transparent;
-  color: rgba(240, 68, 68, 0.72);
+  color: rgba(249, 115, 22, 0.72);
   font-size: 8px;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -1178,7 +1178,7 @@
 .adminBeta .adminPanelHeading > div > span {
   display: block;
   margin-bottom: 6px;
-  color: var(--admin-red);
+  color: var(--admin-orange);
   font-size: 8px;
   font-weight: 850;
   letter-spacing: 0.18em;
@@ -1336,8 +1336,8 @@
 }
 
 .adminBeta .adminRecentMovie__edit:hover {
-  border-color: var(--admin-red);
-  color: var(--admin-red);
+  border-color: var(--admin-orange);
+  color: var(--admin-orange);
 }
 
 .adminBeta .adminOverviewPanel--health {
@@ -1353,7 +1353,7 @@
   margin: 30px auto 24px;
   border-radius: 50% !important;
   background: conic-gradient(
-    var(--admin-red) 0 var(--admin-health),
+    var(--admin-orange) 0 var(--admin-health),
     rgba(255, 255, 255, 0.07) var(--admin-health) 360deg
   );
 }
@@ -1417,7 +1417,7 @@
 }
 
 .adminBeta .adminIssueList strong {
-  color: var(--admin-red);
+  color: var(--admin-orange);
   font-size: 11px;
 }
 
@@ -1457,7 +1457,7 @@
 .adminBeta .adminBarTrack i {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, var(--admin-red), #ff7777);
+  background: linear-gradient(90deg, var(--admin-orange), #fdba74);
 }
 
 .adminBeta .adminStudioRanking {
@@ -1520,8 +1520,8 @@
 }
 
 .adminBeta .adminQuickLinks button:hover {
-  border-color: rgba(240, 68, 68, 0.4);
-  background: rgba(240, 68, 68, 0.035);
+  border-color: rgba(249, 115, 22, 0.4);
+  background: rgba(249, 115, 22, 0.035);
   color: #fff;
 }
 
@@ -1548,9 +1548,9 @@
 
 .adminBeta .adminEmptyState button {
   padding: 10px 14px;
-  border: 1px solid var(--admin-red);
+  border: 1px solid var(--admin-orange);
   background: transparent;
-  color: var(--admin-red);
+  color: var(--admin-orange);
   cursor: pointer;
 }
 
@@ -1677,7 +1677,7 @@
 }
 
 .adminBeta .adminMovieColumns svg {
-  color: var(--admin-red);
+  color: var(--admin-orange);
 }
 
 /* Homepage director */
@@ -1728,7 +1728,7 @@
 }
 
 .adminBeta .homepageDirectorSummary strong.is-dirty {
-  color: var(--admin-red);
+  color: var(--admin-orange);
 }
 
 .adminBeta .homepageDirectorSummary p {
@@ -1757,8 +1757,8 @@
 }
 
 .adminBeta .homepageDirectorSummary__actions button.is-primary {
-  border-color: var(--admin-red);
-  background: var(--admin-red);
+  border-color: var(--admin-orange);
+  background: var(--admin-orange);
 }
 
 .adminBeta .homepageDirectorSummary__actions button:disabled {
@@ -1774,7 +1774,7 @@
 
 .adminBeta .homepageDirectorMessage.is-error {
   border-color: rgba(255, 62, 83, 0.38);
-  background: rgba(255, 43, 69, 0.09);
+  background: rgba(255, 122, 26, 0.09);
   color: #ffb3bd;
 }
 
@@ -1924,7 +1924,7 @@
 }
 
 .adminBeta .homepageDirectorCard__heading > div > span {
-  color: var(--admin-red);
+  color: var(--admin-orange);
   font-size: 8px;
   font-weight: 850;
   letter-spacing: 0.15em;
@@ -1987,7 +1987,7 @@
 }
 
 .adminBeta .homepageDirectorSwitch input:checked + span::after {
-  background: var(--admin-red);
+  background: var(--admin-orange);
   transform: translateX(17px);
 }
 
@@ -2036,14 +2036,14 @@
 
 .adminBeta .homepageDirectorFields select,
 .adminBeta .homepageDirectorAdd select {
-  color: var(--admin-red);
+  color: var(--admin-orange);
   color-scheme: dark;
 }
 
 .adminBeta .homepageDirectorFields select option,
 .adminBeta .homepageDirectorAdd select option {
   background: #151517;
-  color: var(--admin-red);
+  color: var(--admin-orange);
 }
 
 .adminBeta .homepageDirectorStudio {
@@ -2067,7 +2067,7 @@
 .adminBeta .homepageDirectorRetro input {
   width: auto;
   height: auto;
-  accent-color: var(--admin-red);
+  accent-color: var(--admin-orange);
 }
 
 .adminBeta .homepageDirectorRetro span {
@@ -2091,8 +2091,8 @@
 }
 
 .adminBeta .homepageDirectorCard__remove:hover {
-  border-color: rgba(255, 43, 69, 0.5);
-  color: var(--admin-red);
+  border-color: rgba(255, 122, 26, 0.5);
+  color: var(--admin-orange);
 }
 
 .adminBeta .homepageDirectorAdd {
@@ -2130,7 +2130,7 @@
 .adminBeta .homepageDirectorAdd button {
   min-height: 45px;
   padding: 0 18px;
-  border: 1px solid var(--admin-red);
+  border: 1px solid var(--admin-orange);
   background: transparent;
   color: #fff;
   font-size: 9px;
@@ -2140,7 +2140,7 @@
 
 .adminBeta .homepageDirectorAdd button span {
   margin-right: 7px;
-  color: var(--admin-red);
+  color: var(--admin-orange);
   font-size: 16px;
 }
 
@@ -2172,7 +2172,7 @@
   width: 34px;
   height: 34px;
   border: 2px solid rgba(255, 255, 255, 0.13);
-  border-top-color: var(--admin-red);
+  border-top-color: var(--admin-orange);
   border-radius: 50%;
   animation: adminDirectorSpin 700ms linear infinite;
 }
@@ -2269,8 +2269,8 @@
   }
 
   .adminBeta .adminBetaRail__group button.is-active {
-    border-color: rgba(240, 68, 68, 0.5);
-    background: rgba(240, 68, 68, 0.1);
+    border-color: rgba(249, 115, 22, 0.5);
+    background: rgba(249, 115, 22, 0.1);
   }
 
   .adminBeta .adminBetaRail__group button svg {
@@ -2495,9 +2495,9 @@
 }
 
 .adminBeta .mediaHealth__scanActions button:last-child {
-  border-color: #f43f4c;
+  border-color: #fb923c;
   color: #fff;
-  background: #e50914;
+  background: #f97316;
 }
 
 .adminBeta .mediaHealth__scanActions button.is-running {
@@ -2529,8 +2529,8 @@
 .adminBeta .mediaHealth__progress i {
   display: block;
   height: 100%;
-  background: #e50914;
-  box-shadow: 0 0 18px rgba(229, 9, 20, 0.65);
+  background: #f97316;
+  box-shadow: 0 0 18px rgba(249, 115, 22, 0.65);
   transition: width 220ms ease;
 }
 
@@ -2661,7 +2661,7 @@
 }
 
 .adminBeta .mediaHealth__sectionHeading span {
-  color: #e50914;
+  color: #f97316;
   font-size: 9px;
   font-weight: 780;
   letter-spacing: 0.16em;
@@ -2845,7 +2845,7 @@
 }
 
 .adminBeta .mediaHealth__sectionHeading--catalog input:focus {
-  border-color: rgba(229, 9, 20, 0.72);
+  border-color: rgba(249, 115, 22, 0.72);
 }
 
 .adminBeta .mediaHealth__filters {
@@ -2879,9 +2879,9 @@
 }
 
 .adminBeta .mediaHealth__filters button.is-active {
-  border-color: rgba(229, 9, 20, 0.55);
+  border-color: rgba(249, 115, 22, 0.55);
   color: #fff;
-  background: rgba(229, 9, 20, 0.11);
+  background: rgba(249, 115, 22, 0.11);
 }
 
 .adminBeta .mediaHealth__list {
@@ -3270,7 +3270,7 @@
   padding: 26px 30px;
   border: 1px solid var(--admin-line);
   background:
-    linear-gradient(110deg, rgba(240, 68, 68, 0.08), transparent 42%),
+    linear-gradient(110deg, rgba(249, 115, 22, 0.08), transparent 42%),
     rgba(10, 10, 11, 0.86);
 }
 
@@ -3279,7 +3279,7 @@
 .adminBeta .thumbnailStudio__selectionHeader > div:first-child > span {
   display: block;
   margin-bottom: 7px;
-  color: var(--admin-red);
+  color: var(--admin-orange);
   font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.19em;
@@ -3313,7 +3313,7 @@
 }
 
 .adminBeta .thumbnailStudio__specs > span {
-  color: var(--admin-red);
+  color: var(--admin-orange);
   font-size: 9px;
   font-weight: 900;
   letter-spacing: 0.18em;
@@ -3375,7 +3375,7 @@
 }
 
 .adminBeta .thumbnailStudio__library > header span {
-  color: var(--admin-red);
+  color: var(--admin-orange);
   font-family: Georgia, "Times New Roman", serif;
   font-size: 16px;
 }
@@ -3412,7 +3412,7 @@
 }
 
 .adminBeta .thumbnailStudio__search:focus-within {
-  border-color: rgba(240, 68, 68, 0.62);
+  border-color: rgba(249, 115, 22, 0.62);
 }
 
 .adminBeta .thumbnailStudio__search > span {
@@ -3470,11 +3470,11 @@
 }
 
 .adminBeta .thumbnailStudio__toggle input:checked + span {
-  border-color: rgba(240, 68, 68, 0.54);
+  border-color: rgba(249, 115, 22, 0.54);
 }
 
 .adminBeta .thumbnailStudio__toggle input:checked + span::after {
-  background: var(--admin-red);
+  background: var(--admin-orange);
   transform: translateX(12px);
 }
 
@@ -3508,8 +3508,8 @@
 }
 
 .adminBeta .thumbnailStudio__movieList > button.is-active {
-  border-left-color: var(--admin-red);
-  background: rgba(240, 68, 68, 0.065);
+  border-left-color: var(--admin-orange);
+  background: rgba(249, 115, 22, 0.065);
 }
 
 .adminBeta .thumbnailStudio__movieCover {
@@ -3557,7 +3557,7 @@
 }
 
 .adminBeta .thumbnailStudio__movieList i {
-  color: var(--admin-red);
+  color: var(--admin-orange);
   font-size: 12px;
   font-style: normal;
 }
@@ -3601,7 +3601,7 @@
 .adminBeta .thumbnailStudio__sourceHeader p i {
   width: 3px;
   height: 3px;
-  background: var(--admin-red);
+  background: var(--admin-orange);
 }
 
 .adminBeta .thumbnailStudio__sourceState span {
@@ -3662,7 +3662,7 @@
   z-index: 2;
   width: 38px;
   height: 38px;
-  border-color: var(--admin-red);
+  border-color: var(--admin-orange);
   pointer-events: none;
   content: "";
 }
@@ -3753,7 +3753,7 @@
 
 .adminBeta .thumbnailStudio__transport button:hover,
 .adminBeta .thumbnailStudio__chapters button:hover {
-  border-color: var(--admin-red);
+  border-color: var(--admin-orange);
   color: #fff;
 }
 
@@ -3763,7 +3763,7 @@
   border-radius: 0;
   appearance: none;
   background: #303035;
-  accent-color: var(--admin-red);
+  accent-color: var(--admin-orange);
 }
 
 .adminBeta .thumbnailStudio input[type="range"]::-webkit-slider-thumb {
@@ -3772,7 +3772,7 @@
   border: 0;
   border-radius: 0;
   appearance: none;
-  background: var(--admin-red);
+  background: var(--admin-orange);
 }
 
 .adminBeta .thumbnailStudio__chapters {
@@ -3874,7 +3874,7 @@
 }
 
 .adminBeta .thumbnailStudio__localSource label {
-  border-color: rgba(240, 68, 68, 0.48);
+  border-color: rgba(249, 115, 22, 0.48);
   color: #ef8d8d;
 }
 
@@ -3915,22 +3915,22 @@
 }
 
 .adminBeta .thumbnailStudio__generate {
-  background: var(--admin-red);
+  background: var(--admin-orange);
   color: #09090a;
 }
 
 .adminBeta .thumbnailStudio__generateAi {
-  border-color: rgba(240, 68, 68, 0.58);
+  border-color: rgba(249, 115, 22, 0.58);
   background:
-    radial-gradient(circle at 12% 20%, rgba(240, 68, 68, 0.17), transparent 46%),
+    radial-gradient(circle at 12% 20%, rgba(249, 115, 22, 0.17), transparent 46%),
     rgba(255, 255, 255, 0.025);
   color: #f1eeee;
 }
 
 .adminBeta .thumbnailStudio__generateAi:hover:not(:disabled) {
-  border-color: var(--admin-red);
+  border-color: var(--admin-orange);
   background:
-    radial-gradient(circle at 12% 20%, rgba(240, 68, 68, 0.27), transparent 48%),
+    radial-gradient(circle at 12% 20%, rgba(249, 115, 22, 0.27), transparent 48%),
     rgba(255, 255, 255, 0.04);
 }
 
@@ -3943,7 +3943,7 @@
 }
 
 .adminBeta .thumbnailStudio__generateAi > span {
-  color: var(--admin-red);
+  color: var(--admin-orange);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 14px;
   font-weight: 900;
@@ -3964,7 +3964,7 @@
 }
 
 .adminBeta .thumbnailStudio__generateAi strong b {
-  border: 1px solid rgba(240, 68, 68, 0.46);
+  border: 1px solid rgba(249, 115, 22, 0.46);
   padding: 2px 4px;
   color: #f06b6b;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -3991,7 +3991,7 @@
 }
 
 .adminBeta .thumbnailStudio__capture:hover {
-  border-color: var(--admin-red);
+  border-color: var(--admin-orange);
   color: #fff;
 }
 
@@ -4081,7 +4081,7 @@
 }
 
 .adminBeta .thumbnailStudio__candidateSelect.is-active::after {
-  border-color: var(--admin-red);
+  border-color: var(--admin-orange);
 }
 
 .adminBeta .thumbnailStudio__candidates img {
@@ -4151,7 +4151,7 @@
 }
 
 .adminBeta .thumbnailStudio__candidateSelect.is-active > i {
-  background: var(--admin-red);
+  background: var(--admin-orange);
   color: #09090a;
 }
 
@@ -4175,8 +4175,8 @@
 }
 
 .adminBeta .thumbnailStudio__candidateZoom:hover {
-  border-color: var(--admin-red);
-  background: var(--admin-red);
+  border-color: var(--admin-orange);
+  background: var(--admin-orange);
   color: #09090a;
   opacity: 1;
 }
@@ -4221,7 +4221,7 @@
 }
 
 .adminBeta .thumbnailStudio__lightboxPanel > header span {
-  color: var(--admin-red);
+  color: var(--admin-orange);
   font-size: 8px;
   font-weight: 800;
   letter-spacing: 0.11em;
@@ -4252,7 +4252,7 @@
 }
 
 .adminBeta .thumbnailStudio__lightboxPanel > header > button:hover {
-  border-color: var(--admin-red);
+  border-color: var(--admin-orange);
   color: #fff;
 }
 
@@ -4291,8 +4291,8 @@
 }
 
 .adminBeta .thumbnailStudio__lightboxStage button:hover {
-  border-color: var(--admin-red);
-  background: var(--admin-red);
+  border-color: var(--admin-orange);
+  background: var(--admin-orange);
   color: #09090a;
 }
 
@@ -4321,8 +4321,8 @@
 
 .adminBeta .thumbnailStudio__lightboxPanel > footer button {
   min-height: 39px;
-  border: 1px solid var(--admin-red);
-  background: var(--admin-red);
+  border: 1px solid var(--admin-orange);
+  background: var(--admin-orange);
   padding: 0 15px;
   color: #09090a;
   cursor: pointer;
@@ -4343,7 +4343,7 @@
 
 .adminBeta .thumbnailStudio__candidateEmpty > span {
   margin-bottom: 3px;
-  color: var(--admin-red);
+  color: var(--admin-orange);
   font-family: Georgia, "Times New Roman", serif;
   font-size: 23px;
 }
@@ -4384,7 +4384,7 @@
 }
 
 .adminBeta .thumbnailStudio__comparison figure.is-new {
-  border-color: rgba(240, 68, 68, 0.58);
+  border-color: rgba(249, 115, 22, 0.58);
 }
 
 .adminBeta .thumbnailStudio__comparison img {
@@ -4408,7 +4408,7 @@
 }
 
 .adminBeta .thumbnailStudio__comparison > b {
-  color: var(--admin-red);
+  color: var(--admin-orange);
   font-family: Georgia, "Times New Roman", serif;
   font-size: 22px;
   font-weight: 400;
@@ -4433,7 +4433,7 @@
 }
 
 .adminBeta .thumbnailStudio__saveBar span {
-  color: var(--admin-red);
+  color: var(--admin-orange);
   font-size: 7px;
   font-weight: 900;
   letter-spacing: 0.15em;
@@ -4457,7 +4457,7 @@
   min-width: 176px;
   min-height: 43px;
   border: 0;
-  background: var(--admin-red);
+  background: var(--admin-orange);
   padding: 0 15px;
   color: #09090a;
   cursor: pointer;
@@ -4484,7 +4484,7 @@
 }
 
 .adminBeta .thumbnailStudio__editLink button:hover {
-  color: var(--admin-red);
+  color: var(--admin-orange);
 }
 
 .adminBeta .thumbnailStudio__empty {

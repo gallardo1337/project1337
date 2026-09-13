@@ -44,7 +44,7 @@
 }
 
 .progressButtonCurrent {
-  background: rgba(239, 68, 68, 0.075);
+  background: rgba(249, 115, 22, 0.075);
   color: #fff;
 }
 
@@ -54,7 +54,7 @@
   bottom: -1px;
   left: 0;
   height: 2px;
-  background: #ef4444;
+  background: #f97316;
   content: "";
 }
 
@@ -75,8 +75,8 @@
 
 .progressButtonCurrent .progressNumber,
 .progressButtonDone .progressNumber {
-  border-color: rgba(239, 68, 68, 0.65);
-  color: #ef6a6a;
+  border-color: rgba(249, 115, 22, 0.65);
+  color: #fb923c;
 }
 
 .progressCopy {
@@ -124,7 +124,7 @@
 .eyebrow {
   display: block;
   margin-bottom: 7px;
-  color: #ef4444;
+  color: #f97316;
   font-size: 8px;
   font-weight: 850;
   letter-spacing: 0.18em;
@@ -237,7 +237,7 @@
 }
 
 .manualPath input:focus {
-  border-color: rgba(239, 68, 68, 0.68);
+  border-color: rgba(249, 115, 22, 0.68);
 }
 
 .duplicate {
@@ -344,11 +344,11 @@
 
 .field input:focus,
 .field select:focus {
-  border-color: rgba(239, 68, 68, 0.72);
+  border-color: rgba(249, 115, 22, 0.72);
 }
 
 .required {
-  color: #ef4444;
+  color: #f97316;
 }
 
 .selectionIntro {
@@ -362,7 +362,7 @@
 }
 
 .selectionIntro strong {
-  color: #ef6a6a;
+  color: #fb923c;
   font-family: Georgia, "Times New Roman", serif;
   font-size: 23px;
   font-weight: 400;
@@ -394,8 +394,8 @@
 }
 
 .choiceActive {
-  border-color: #ef4444;
-  background: #ef4444;
+  border-color: #f97316;
+  background: #f97316;
   color: #09090a;
   font-weight: 800;
 }
@@ -416,7 +416,7 @@
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background:
-    radial-gradient(circle at 92% 100%, rgba(239, 68, 68, 0.07), transparent 32%),
+    radial-gradient(circle at 92% 100%, rgba(249, 115, 22, 0.07), transparent 32%),
     #0a0a0c;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.22);
 }
@@ -429,7 +429,7 @@
   overflow: hidden;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   background:
-    linear-gradient(130deg, rgba(239, 68, 68, 0.12), transparent 48%),
+    linear-gradient(130deg, rgba(249, 115, 22, 0.12), transparent 48%),
     #050506;
 }
 
@@ -487,7 +487,7 @@
 }
 
 .reviewTitle span {
-  color: #ef4444;
+  color: #f97316;
   font-size: 8px;
   font-weight: 850;
   letter-spacing: 0.16em;
@@ -630,8 +630,8 @@
 
 .primaryButton,
 .saveButton {
-  border-color: #ef4444;
-  background: #ef4444;
+  border-color: #f97316;
+  background: #f97316;
   color: #080809;
 }
 

@@ -20,7 +20,7 @@
   width: 30px;
   height: 30px;
   border: 2px solid rgba(255, 255, 255, 0.13);
-  border-top-color: #f04444;
+  border-top-color: #f97316;
   border-radius: 50%;
   animation: spin 800ms linear infinite;
 }
@@ -52,7 +52,7 @@
 }
 
 .setupEyebrow {
-  color: #f04444;
+  color: #f97316;
   font-size: 9px;
   font-weight: 850;
   letter-spacing: 0.2em;
@@ -78,7 +78,7 @@
 }
 
 .setupSteps article:last-child { border-right: 0; }
-.setupSteps b { color: #f04444; font-family: Georgia, serif; font-size: 22px; font-weight: 400; }
+.setupSteps b { color: #f97316; font-family: Georgia, serif; font-size: 22px; font-weight: 400; }
 .setupSteps div { display: grid; min-width: 0; gap: 5px; }
 .setupSteps strong { color: rgba(255, 255, 255, 0.86); font-size: 11px; }
 .setupSteps span { color: rgba(255, 255, 255, 0.39); font-size: 9px; line-height: 1.5; }
@@ -87,8 +87,8 @@
 .scanActions button {
   min-height: 42px;
   padding: 0 17px;
-  border: 1px solid #f04444;
-  background: #f04444;
+  border: 1px solid #f97316;
+  background: #f97316;
   color: #080808;
   font-size: 9px;
   font-weight: 850;
@@ -183,7 +183,7 @@
 .kpis article > span:first-child { color: rgba(255, 255, 255, 0.43); font-size: 8px; font-weight: 850; letter-spacing: 0.13em; text-transform: uppercase; }
 .kpis strong { color: #f4f1eb; font-family: Georgia, "Times New Roman", serif; font-size: clamp(28px, 3vw, 45px); font-weight: 400; line-height: 1; letter-spacing: -0.04em; }
 .kpis small { color: rgba(255, 255, 255, 0.34); font-size: 8px; line-height: 1.35; }
-.kpis .kpiAccent { background: linear-gradient(145deg, rgba(240, 68, 68, 0.14), transparent); }
+.kpis .kpiAccent { background: linear-gradient(145deg, rgba(249, 115, 22, 0.14), transparent); }
 .kpis .kpiWarning strong { color: #fbbf24; }
 .kpis .kpiDanger strong { color: #fb7185; }
 
@@ -195,7 +195,7 @@
   background: rgba(255, 255, 255, 0.08);
 }
 
-.progress i { display: block; height: 100%; background: #f04444; }
+.progress i { display: block; height: 100%; background: #f97316; }
 .progress_green i { background: #22c55e; }
 
 .views {
@@ -220,7 +220,7 @@
 }
 
 .views button:hover { color: #fff; }
-.views .viewActive { border-bottom-color: #f04444; color: #fff; }
+.views .viewActive { border-bottom-color: #f97316; color: #fff; }
 
 .overview {
   display: grid;
@@ -274,11 +274,11 @@
 }
 
 .panel > header > div:first-child { display: grid; min-width: 0; gap: 3px; }
-.panel > header span { color: #f04444; font-size: 8px; font-weight: 850; letter-spacing: 0.14em; text-transform: uppercase; }
+.panel > header span { color: #f97316; font-size: 8px; font-weight: 850; letter-spacing: 0.14em; text-transform: uppercase; }
 .panel > header h2 { margin: 0; color: #f4f1eb; font-family: Georgia, "Times New Roman", serif; font-size: 24px; font-weight: 400; letter-spacing: -0.03em; }
 .panel > header small { color: rgba(255, 255, 255, 0.33); font-size: 8px; }
 .panel > header > button { border: 0; background: transparent; color: rgba(255, 255, 255, 0.48); font-size: 9px; cursor: pointer; }
-.panel > header > button:hover { color: #f04444; }
+.panel > header > button:hover { color: #f97316; }
 
 .breakdownTable > div {
   display: grid;
@@ -342,7 +342,7 @@
 .listHeader > input { width: min(360px, 45%); padding: 0 12px; }
 .listHeader input:focus,
 .fileFilters input:focus,
-.fileFilters select:focus { border-color: rgba(240, 68, 68, 0.72); }
+.fileFilters select:focus { border-color: rgba(249, 115, 22, 0.72); }
 
 .performerTableHead,
 .performerTable > article {
@@ -379,9 +379,9 @@
   font-style: normal;
   line-height: 1;
 }
-.performerTableHead .sortActive i { color: #f04444; }
+.performerTableHead .sortActive i { color: #f97316; }
 .performerTableHead button:focus-visible {
-  outline: 1px solid #f04444;
+  outline: 1px solid #f97316;
   outline-offset: 3px;
 }
 .performerTable > article { min-height: 70px; border-top: 1px solid rgba(255, 255, 255, 0.055); }
@@ -457,7 +457,7 @@
 .pagination > span { color: rgba(255, 255, 255, 0.32); font-size: 8px; }
 .pagination > div { display: flex; gap: 7px; }
 .pagination button { min-height: 34px; padding: 0 11px; border: 1px solid rgba(255, 255, 255, 0.14); background: transparent; color: rgba(255, 255, 255, 0.62); font-size: 8px; cursor: pointer; }
-.pagination button:hover:not(:disabled) { border-color: #f04444; color: #fff; }
+.pagination button:hover:not(:disabled) { border-color: #f97316; color: #fff; }
 .pagination button:disabled { cursor: not-allowed; opacity: 0.28; }
 
 .databaseList article {
