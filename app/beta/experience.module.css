@@ -1214,7 +1214,7 @@
   overflow: hidden;
   padding: 0;
   border: 0;
-  background: #18181a;
+  background: transparent;
   color: white;
   text-align: left;
   cursor: pointer;
@@ -2976,7 +2976,7 @@
   display: block;
   overflow: hidden;
   margin-bottom: 6px;
-  background: #171719;
+  background: transparent;
 }
 
 .castRail img {

@@ -189,6 +189,8 @@ export default function HomePage() {
                 id: a.id,
                 name: a.name,
                 profileImage: a.profile_image || null,
+                transparentImage: a.transparent_image || null,
+                castImage: a.cast_image || null,
                 slug: a.slug || null,
               })),
             supportCast: supportIds
@@ -198,6 +200,8 @@ export default function HomePage() {
                 id: a.id,
                 name: a.name,
                 profileImage: a.profile_image || null,
+                transparentImage: a.transparent_image || null,
+                castImage: a.cast_image || null,
               })),
           };
         });
@@ -218,6 +222,7 @@ export default function HomePage() {
             slug: a.slug || null,
             name: a.name,
             profileImage: a.profile_image || null,
+            transparentImage: a.transparent_image || null,
             origin: a.origin || null,
             birthDate: a.birth_date || null,
             iafdUrl: a.iafd_url || null,

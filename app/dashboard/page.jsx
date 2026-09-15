@@ -53,13 +53,7 @@ const AdminNasLibrary = dynamic(
   }
 );
 
-// ActorImageUploader nur im Client laden (wegen react-easy-crop / Canvas)
-const ActorImageUploader = dynamic(() => import("./ActorImageUploader.jsx"), {
-  ssr: false,
-  loading: () => (
-    <div className="text-xs text-neutral-500">Lade Bild-Uploader…</div>
-  ),
-});
+const TransparentActorUploader = dynamic(() => import("./TransparentActorUploader.jsx"), { ssr: false });
 
 // -------------------------------
 // Version / Changelog
@@ -606,14 +600,15 @@ export function DashboardExperience() {
 
   // Stammdaten Inputs
   const [newActorName, setNewActorName] = useState("");
-  const [newActorImage, setNewActorImage] = useState("");
+  const [newActorCastImage, setNewActorCastImage] = useState("");
+  const [newActorTransparentImage, setNewActorTransparentImage] = useState("");
   const [newActorOrigin, setNewActorOrigin] = useState("");
   const [newActorBirthDate, setNewActorBirthDate] = useState("");
   const [newActorIafdUrl, setNewActorIafdUrl] = useState("");
   const [newActorPlanetsuzyUrl, setNewActorPlanetsuzyUrl] = useState("");
 
   const [newSupportName, setNewSupportName] = useState("");
-  const [newSupportImage, setNewSupportImage] = useState("");
+  const [newSupportCastImage, setNewSupportCastImage] = useState("");
 
   const [newStudioName, setNewStudioName] = useState("");
 
@@ -623,6 +618,8 @@ export function DashboardExperience() {
   const [actorEditForm, setActorEditForm] = useState({
     name: "",
     profile_image: "",
+    cast_image: "",
+    transparent_image: "",
     origin: "",
     birth_date: "",
     iafd_url: "",
@@ -633,6 +630,7 @@ export function DashboardExperience() {
   const [supportEditForm, setSupportEditForm] = useState({
     name: "",
     profile_image: "",
+    cast_image: "",
   });
 
   const [editingStudioMetaId, setEditingStudioMetaId] = useState(null);
@@ -1126,7 +1124,8 @@ export function DashboardExperience() {
       .from("actors")
       .insert({
         name,
-        profile_image: newActorImage.trim() || null,
+        cast_image: newActorCastImage.trim() || null,
+        transparent_image: newActorTransparentImage.trim() || null,
         origin: newActorOrigin.trim() || null,
         birth_date: newActorBirthDate || null,
         iafd_url: newActorIafdUrl.trim() || null,
@@ -1143,7 +1142,8 @@ export function DashboardExperience() {
 
     setHauptdarsteller((prev) => [...prev, data]);
     setNewActorName("");
-    setNewActorImage("");
+    setNewActorCastImage("");
+    setNewActorTransparentImage("");
     setNewActorOrigin("");
     setNewActorBirthDate("");
     setNewActorIafdUrl("");
@@ -1159,7 +1159,7 @@ export function DashboardExperience() {
       .from("actors2")
       .insert({
         name,
-        profile_image: newSupportImage.trim() || null,
+        cast_image: newSupportCastImage.trim() || null,
       })
       .select("*")
       .single();
@@ -1172,7 +1172,7 @@ export function DashboardExperience() {
 
     setNebendarsteller((prev) => [...prev, data]);
     setNewSupportName("");
-    setNewSupportImage("");
+    setNewSupportCastImage("");
   };
 
   const handleAddStudio = async (e) => {
@@ -1445,6 +1445,8 @@ export function DashboardExperience() {
     setActorEditForm({
       name: actor.name || "",
       profile_image: actor.profile_image || "",
+      cast_image: actor.cast_image || "",
+      transparent_image: actor.transparent_image || "",
       origin: actor.origin || "",
       birth_date: actor.birth_date || "",
       iafd_url: actor.iafd_url || "",
@@ -1457,6 +1459,8 @@ export function DashboardExperience() {
     setActorEditForm({
       name: "",
       profile_image: "",
+      cast_image: "",
+      transparent_image: "",
       origin: "",
       birth_date: "",
       iafd_url: "",
@@ -1471,6 +1475,8 @@ export function DashboardExperience() {
     const payload = {
       name,
       profile_image: actorEditForm.profile_image.trim() || null,
+      cast_image: actorEditForm.cast_image.trim() || null,
+      transparent_image: actorEditForm.transparent_image.trim() || null,
       origin: actorEditForm.origin.trim() || null,
       birth_date: actorEditForm.birth_date || null,
       iafd_url: actorEditForm.iafd_url.trim() || null,
@@ -1501,6 +1507,7 @@ export function DashboardExperience() {
     setSupportEditForm({
       name: actor.name || "",
       profile_image: actor.profile_image || "",
+      cast_image: actor.cast_image || "",
     });
   };
 
@@ -1509,6 +1516,7 @@ export function DashboardExperience() {
     setSupportEditForm({
       name: "",
       profile_image: "",
+      cast_image: "",
     });
   };
 
@@ -1519,6 +1527,7 @@ export function DashboardExperience() {
     const payload = {
       name,
       profile_image: supportEditForm.profile_image.trim() || null,
+      cast_image: supportEditForm.cast_image.trim() || null,
     };
 
     const { data, error: updateError } = await supabase
@@ -3663,8 +3672,17 @@ export function DashboardExperience() {
                               }
                             />
 
-                            <ActorImageUploader
-                              onUploaded={(url) => setNewActorImage(url)}
+                            <TransparentActorUploader
+                              value={newActorCastImage}
+                              onChange={setNewActorCastImage}
+                              title="Cast-Bild (PNG)"
+                              description="Freigestelltes Bild für die 4:5-Darstellerkarten unter den Filmen. Ohne Cast-Bild erscheint dort das normale Foto."
+                              recommendedSize="Empfohlen: 800 × 1000 px im Verhältnis 4:5."
+                              filenamePrefix="actor_cast"
+                            />
+                            <TransparentActorUploader
+                              value={newActorTransparentImage}
+                              onChange={setNewActorTransparentImage}
                             />
 
                             <button
@@ -3729,48 +3747,32 @@ export function DashboardExperience() {
                                           }
                                         />
                                         <div className="space-y-2">
-                                          <input
-                                            className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
-                                            placeholder="Bild-URL"
-                                            value={actorEditForm.profile_image}
-                                            onChange={(e) =>
-                                              setActorEditForm((prev) => ({
-                                                ...prev,
-                                                profile_image: e.target.value,
-                                              }))
-                                            }
-                                          />
-
                                           {actorEditForm.profile_image ? (
                                             <div className="flex items-center gap-3 rounded-lg border border-neutral-800 bg-neutral-950/80 p-2">
                                               <img
                                                 src={actorEditForm.profile_image}
-                                                alt="Bildvorschau"
+                                                alt="Bisheriges Darstellerbild"
                                                 className="h-14 w-14 rounded-lg border border-neutral-800 object-cover bg-neutral-900"
                                                 loading="lazy"
                                               />
-                                              <button
-                                                type="button"
-                                                onClick={() =>
-                                                  setActorEditForm((prev) => ({
-                                                    ...prev,
-                                                    profile_image: "",
-                                                  }))
-                                                }
-                                                className="rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-xs text-neutral-200 hover:bg-neutral-900"
-                                              >
-                                                Bild entfernen
-                                              </button>
+                                              <div>
+                                                <div className="text-xs font-medium text-neutral-200">Bisheriges Darstellerbild</div>
+                                                <p className="mt-1 text-xs text-neutral-500">Bleibt als Rückfall erhalten, solange kein Cast-Bild hinterlegt ist.</p>
+                                              </div>
                                             </div>
                                           ) : null}
 
-                                          <ActorImageUploader
-                                            onUploaded={(url) =>
-                                              setActorEditForm((prev) => ({
-                                                ...prev,
-                                                profile_image: url,
-                                              }))
-                                            }
+                                          <TransparentActorUploader
+                                            value={actorEditForm.cast_image}
+                                            onChange={(url) => setActorEditForm((prev) => ({ ...prev, cast_image: url }))}
+                                            title="Cast-Bild (PNG)"
+                                            description="Freigestelltes Bild für die 4:5-Darstellerkarten unter den Filmen. Ohne Cast-Bild erscheint dort das normale Foto."
+                                            recommendedSize="Empfohlen: 800 × 1000 px im Verhältnis 4:5."
+                                            filenamePrefix="actor_cast"
+                                          />
+                                          <TransparentActorUploader
+                                            value={actorEditForm.transparent_image}
+                                            onChange={(url) => setActorEditForm((prev) => ({ ...prev, transparent_image: url }))}
                                           />
                                         </div>
                                         <input
@@ -3903,8 +3905,13 @@ export function DashboardExperience() {
                               }
                             />
 
-                            <ActorImageUploader
-                              onUploaded={(url) => setNewSupportImage(url)}
+                            <TransparentActorUploader
+                              value={newSupportCastImage}
+                              onChange={setNewSupportCastImage}
+                              title="Cast-Bild (PNG)"
+                              description="Freigestelltes Bild für die 4:5-Darstellerkarten unter den Filmen. Ohne Cast-Bild erscheint dort das normale Foto."
+                              recommendedSize="Empfohlen: 800 × 1000 px im Verhältnis 4:5."
+                              filenamePrefix="actor_cast"
                             />
 
                             <button
@@ -3947,48 +3954,28 @@ export function DashboardExperience() {
                                           }
                                         />
                                         <div className="space-y-2">
-                                          <input
-                                            className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus:border-red-500 focus:outline-none"
-                                            placeholder="Bild-URL"
-                                            value={supportEditForm.profile_image}
-                                            onChange={(e) =>
-                                              setSupportEditForm((prev) => ({
-                                                ...prev,
-                                                profile_image: e.target.value,
-                                              }))
-                                            }
-                                          />
-
                                           {supportEditForm.profile_image ? (
                                             <div className="flex items-center gap-3 rounded-lg border border-neutral-800 bg-neutral-950/80 p-2">
                                               <img
                                                 src={supportEditForm.profile_image}
-                                                alt="Bildvorschau"
+                                                alt="Bisheriges Darstellerbild"
                                                 className="h-14 w-14 rounded-lg border border-neutral-800 object-cover bg-neutral-900"
                                                 loading="lazy"
                                               />
-                                              <button
-                                                type="button"
-                                                onClick={() =>
-                                                  setSupportEditForm((prev) => ({
-                                                    ...prev,
-                                                    profile_image: "",
-                                                  }))
-                                                }
-                                                className="rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-xs text-neutral-200 hover:bg-neutral-900"
-                                              >
-                                                Bild entfernen
-                                              </button>
+                                              <div>
+                                                <div className="text-xs font-medium text-neutral-200">Bisheriges Darstellerbild</div>
+                                                <p className="mt-1 text-xs text-neutral-500">Bleibt als Rückfall erhalten, solange kein Cast-Bild hinterlegt ist.</p>
+                                              </div>
                                             </div>
                                           ) : null}
 
-                                          <ActorImageUploader
-                                            onUploaded={(url) =>
-                                              setSupportEditForm((prev) => ({
-                                                ...prev,
-                                                profile_image: url,
-                                              }))
-                                            }
+                                          <TransparentActorUploader
+                                            value={supportEditForm.cast_image}
+                                            onChange={(url) => setSupportEditForm((prev) => ({ ...prev, cast_image: url }))}
+                                            title="Cast-Bild (PNG)"
+                                            description="Freigestelltes Bild für die 4:5-Darstellerkarten unter den Filmen. Ohne Cast-Bild erscheint dort das normale Foto."
+                                            recommendedSize="Empfohlen: 800 × 1000 px im Verhältnis 4:5."
+                                            filenamePrefix="actor_cast"
                                           />
                                         </div>
                                       </div>

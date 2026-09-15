@@ -176,6 +176,16 @@ function MediaImage({ src, alt, priority = false, sizes = "100vw" }) {
   );
 }
 
+function ActorPortrait({ actor, variant = "profile", ...props }) {
+  const [failedImage, setFailedImage] = useState(null);
+  const preferredImage = variant === "cast" ? actor.castImage : actor.transparentImage;
+  const usePreferredImage = preferredImage && failedImage !== preferredImage;
+  if (!usePreferredImage) return <MediaImage src={actor.profileImage} alt={actor.name} {...props} />;
+  return <Image src={preferredImage} alt={actor.name} fill unoptimized
+    style={{ objectFit: "contain", objectPosition: "center bottom" }}
+    onError={() => setFailedImage(preferredImage)} {...props} />;
+}
+
 function formatDate(value) {
   if (!value) return "–";
   const date = new Date(value);
@@ -930,12 +940,11 @@ function ActorCard({ actor, onOpen, feature = false }) {
       aria-label={`${actor.name} öffnen`}
     >
       <span className={styles.actorVisual}>
-        <MediaImage
-          src={actor.profileImage}
-          alt={actor.name}
+        <ActorPortrait
+          actor={actor}
           sizes={feature ? "(max-width: 760px) 90vw, 38vw" : "(max-width: 760px) 45vw, 18vw"}
         />
-        <span className={styles.actorShade} />
+        {!actor.transparentImage ? <span className={styles.actorShade} /> : null}
       </span>
       <span className={styles.actorNumber}>{String(actor.movieCount).padStart(2, "0")}</span>
       <span className={styles.actorCopy}>
@@ -2160,7 +2169,7 @@ function ActorProfile({ actor, movies, movieSort, setMovieSort, onBack, onOpenMo
     <main className={styles.profilePage}>
       <section className={styles.profileHero}>
         <div className={styles.profileImage}>
-          <MediaImage src={actor.profileImage} alt={actor.name} priority sizes="(max-width: 760px) 100vw, 54vw" />
+          <ActorPortrait actor={actor} priority sizes="(max-width: 760px) 100vw, 54vw" />
           <div className={styles.profileImageShade} />
         </div>
         <button type="button" className={styles.backButton} onClick={onBack}><Icon name="back" /> Collection</button>
@@ -2385,13 +2394,13 @@ function MovieDetail({
             <div className={styles.castRail}>
               {mainCast.map((person) => (
                 <button type="button" key={`main-${person.id}`} onClick={() => onShowActor(person.id, person.name, person.slug)}>
-                  <span><MediaImage src={person.profileImage} alt={person.name} sizes="200px" /></span>
+                  <span><ActorPortrait actor={person} variant="cast" sizes="200px" /></span>
                   <strong>{person.name}</strong><small>Main</small>
                 </button>
               ))}
               {supportCast.map((person) => (
                 <div key={`support-${person.id}`}>
-                  <span><MediaImage src={person.profileImage} alt={person.name} sizes="200px" /></span>
+                  <span><ActorPortrait actor={person} variant="cast" sizes="200px" /></span>
                   <strong>{person.name}</strong><small>Supporting</small>
                 </div>
               ))}
