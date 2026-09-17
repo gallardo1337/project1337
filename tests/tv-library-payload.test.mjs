@@ -23,14 +23,18 @@ test("builds the authenticated tvOS v2 payload with metrics and cast", () => {
       {
         id: "actor-1",
         name: "Main Actor",
-        profile_image: "/actor.webp",
+        profile_image: "/actor.jpg",
+        transparent_image: "/actor-transparent.png",
+        cast_image: "/actor-cast.png",
       },
     ],
     supportingActors: [
       {
         id: "support-1",
         name: "Support Actor",
-        profile_image: "/support.webp",
+        profile_image: "/support.jpg",
+        transparent_image: "/support-transparent.png",
+        cast_image: "/support-cast.png",
       },
     ],
     studios: [{ id: "studio-1", name: "Studio" }],
@@ -56,6 +60,26 @@ test("builds the authenticated tvOS v2 payload with metrics and cast", () => {
   assert.deepEqual(payload.movies[0].tags, ["Tag"]);
   assert.equal(payload.movies[0].main_cast[0].name, "Main Actor");
   assert.equal(payload.movies[0].support_cast[0].name, "Support Actor");
+  assert.equal(
+    payload.movies[0].main_cast[0].image_url,
+    "https://my1337.de/actor-cast.png"
+  );
+  assert.equal(
+    payload.movies[0].support_cast[0].transparent_image_url,
+    "https://my1337.de/support-transparent.png"
+  );
+  assert.equal(
+    payload.actors[0].image_url,
+    "https://my1337.de/actor-cast.png"
+  );
+  assert.equal(
+    payload.actors[0].profile_image_url,
+    "https://my1337.de/actor.jpg"
+  );
+  assert.equal(
+    payload.actors[0].transparent_image_url,
+    "https://my1337.de/actor-transparent.png"
+  );
   assert.equal(payload.actors[0].movie_count, 1);
   assert.equal(payload.actors[0].total_views, 12);
   assert.equal(payload.actors[0].average_rating, 9);
