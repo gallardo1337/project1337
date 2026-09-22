@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabaseClient"; // app/page.jsx -> ../lib/supabaseClient
 import BetaExperience from "./beta/BetaExperience";
 
+const SUPPORT_ACTOR_FALLBACK_IMAGE = "/support-actor-fallback.webp";
+
 function safeOpen(url) {
   if (!url) return;
   window.open(url, "_blank", "noopener,noreferrer");
@@ -199,7 +201,7 @@ export default function HomePage() {
               .map((a) => ({
                 id: a.id,
                 name: a.name,
-                profileImage: a.profile_image || null,
+                profileImage: a.profile_image || SUPPORT_ACTOR_FALLBACK_IMAGE,
                 transparentImage: a.transparent_image || null,
                 castImage: a.cast_image || null,
               })),

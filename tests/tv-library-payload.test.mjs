@@ -86,3 +86,27 @@ test("builds the authenticated tvOS v2 payload with metrics and cast", () => {
   assert.equal(payload.movies[0].file_url, "https://video.my1337.de/Folder/Testfilm.mp4");
   assert.equal(payload.movies[0].thumbnail_url, "https://my1337.de/thumb.webp");
 });
+
+test("uses the supporting actor fallback only when no image is stored", () => {
+  const payload = buildTvLibraryPayload({
+    movies: [
+      {
+        id: "movie-1",
+        title: "Testfilm",
+        supporting_actor_ids: ["support-without-image"],
+      },
+    ],
+    supportingActors: [
+      { id: "support-without-image", name: "Support Actor" },
+    ],
+  });
+
+  assert.equal(
+    payload.movies[0].support_cast[0].image_url,
+    "https://my1337.de/support-actor-fallback.webp"
+  );
+  assert.equal(
+    payload.movies[0].support_cast[0].profile_image_url,
+    "https://my1337.de/support-actor-fallback.webp"
+  );
+});
