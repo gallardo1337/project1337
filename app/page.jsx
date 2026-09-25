@@ -37,6 +37,7 @@ export default function HomePage() {
   const [err, setErr] = useState(null);
 
   const [loggedIn, setLoggedIn] = useState(false);
+  const [sessionChecked, setSessionChecked] = useState(false);
   const [loginUser, setLoginUser] = useState("gallardo1337");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginErr, setLoginErr] = useState(null);
@@ -54,19 +55,60 @@ export default function HomePage() {
   const [selectedSupportingActors, setSelectedSupportingActors] = useState([]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const flag = window.localStorage.getItem("auth_1337_flag");
-    const user = window.localStorage.getItem("auth_1337_user");
-    if (flag === "1" && user) {
-      setLoggedIn(true);
-      setLoginUser(user);
-    } else {
-      setLoggedIn(false);
-    }
+    let active = true;
+
+    const restoreSession = async () => {
+      if (typeof window === "undefined") return;
+
+      const flag = window.localStorage.getItem("auth_1337_flag");
+      const storedUser = window.localStorage.getItem("auth_1337_user");
+      if (storedUser) setLoginUser(storedUser);
+
+      try {
+        const response = await fetch("/api/login", {
+          method: "GET",
+          cache: "no-store",
+          credentials: "same-origin",
+        });
+        const payload = await response.json().catch(() => null);
+        if (!active) return;
+
+        if (response.ok && payload?.ok) {
+          setLoggedIn(true);
+          setLoginErr(null);
+          window.localStorage.setItem("auth_1337_flag", "1");
+          window.localStorage.setItem(
+            "auth_1337_user",
+            storedUser || "gallardo1337"
+          );
+        } else {
+          setLoggedIn(false);
+          window.localStorage.removeItem("auth_1337_flag");
+          window.localStorage.removeItem("auth_1337_user");
+          if (flag === "1") {
+            setLoginErr(
+              "Deine Sitzung ist abgelaufen. Bitte einmal neu einloggen."
+            );
+          }
+        }
+      } catch (sessionError) {
+        console.error("Library-Sitzung konnte nicht geprüft werden.", sessionError);
+        if (!active) return;
+        setLoggedIn(false);
+        setLoginErr("Sitzung konnte nicht geprüft werden. Bitte neu einloggen.");
+      } finally {
+        if (active) setSessionChecked(true);
+      }
+    };
+
+    restoreSession();
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
-    if (!loggedIn) {
+    if (!sessionChecked || !loggedIn) {
       setMovies([]);
       setActors([]);
       setSelectedActor(null);
@@ -312,7 +354,7 @@ export default function HomePage() {
     };
 
     void load();
-  }, [loggedIn, rootUrl, router]);
+  }, [loggedIn, rootUrl, router, sessionChecked]);
 
   const allTags = useMemo(() => {
     const set = new Set();
