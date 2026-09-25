@@ -749,45 +749,41 @@
   display: inline-flex;
   align-items: center;
   max-width: 100%;
-  padding: 6px 19px 6px 10px;
-  border: 1px solid rgba(255, 163, 105, .38);
-  border-radius: 2px;
-  clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 50%, calc(100% - 9px) 100%, 0 100%);
+  min-height: 25px;
+  padding: 6px 18px 6px 10px;
+  border: 1px solid rgba(255, 179, 130, .62);
+  clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 50%, calc(100% - 13px) 100%, 0 100%);
   background:
-    linear-gradient(115deg, rgba(255, 137, 70, .18), rgba(255, 137, 70, .055) 58%, rgba(255,255,255,.035)),
-    rgba(17, 15, 14, .78);
-  filter: drop-shadow(0 3px 4px rgba(0,0,0,.2));
-  color: #ffe0c8;
+    linear-gradient(115deg, rgba(255, 163, 94, .3), rgba(255, 111, 54, .17) 70%),
+    #241711;
+  filter: drop-shadow(0 3px 5px rgba(0,0,0,.28));
+  color: #ffe8d7;
   font-size: 9px;
-  font-weight: 780;
-  letter-spacing: .065em;
-  line-height: 1.15;
+  font-weight: 760;
+  letter-spacing: .045em;
+  line-height: 1.2;
   overflow-wrap: anywhere;
   text-transform: uppercase;
-  transition: border-color .18s ease, background .18s ease, transform .18s ease, box-shadow .18s ease;
+  transition: filter .18s ease, transform .18s ease;
 }
 
 .mainTagBadge::before {
   content: "";
   position: absolute;
   top: 50%;
-  right: 10px;
-  width: 5px;
-  height: 5px;
-  border: 1px solid rgba(255, 187, 142, .88);
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border: 2px solid #ffc296;
   border-radius: 50%;
-  background: rgba(63, 33, 20, .9);
-  box-shadow: 0 0 5px rgba(255, 129, 64, .32);
+  background: #291a13;
+  box-shadow: 0 0 0 1px rgba(53, 25, 13, .85), 0 0 7px rgba(255, 129, 64, .32);
   transform: translateY(-50%);
 }
 
 .mainTagBadge:hover {
   transform: translateY(-1px);
-  border-color: rgba(255, 184, 137, .66);
-  background:
-    linear-gradient(115deg, rgba(255, 137, 70, .24), rgba(255, 137, 70, .085) 58%, rgba(255,255,255,.045)),
-    rgba(17, 15, 14, .86);
-  filter: drop-shadow(0 4px 5px rgba(0,0,0,.25));
+  filter: drop-shadow(0 5px 7px rgba(0,0,0,.34)) brightness(1.12);
 }
 
 .spotlightMainTags {
@@ -2849,15 +2845,15 @@
   display: inline-flex;
   align-items: center;
   max-width: 100%;
-  padding: 8px 18px 8px 10px;
+  min-height: 31px;
+  padding: 8px 18px 8px 11px;
   border: 1px solid rgba(255,255,255,.1);
-  border-radius: 2px;
-  clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 50%, calc(100% - 9px) 100%, 0 100%);
-  background: linear-gradient(145deg, rgba(255,255,255,.055), rgba(255,255,255,.018));
-  color: rgba(255,255,255,.68);
+  clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 50%, calc(100% - 13px) 100%, 0 100%);
+  background: linear-gradient(145deg, rgba(255,255,255,.09), rgba(255,255,255,.035));
+  color: rgba(255,255,255,.74);
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: .015em;
+  letter-spacing: .01em;
   line-height: 1.25;
   overflow-wrap: anywhere;
   transition: border-color .18s ease, background .18s ease, color .18s ease, transform .18s ease;
@@ -2867,12 +2863,13 @@
   content: "";
   position: absolute;
   top: 50%;
-  right: 10px;
-  width: 5px;
-  height: 5px;
-  border: 1px solid rgba(255,255,255,.42);
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border: 2px solid rgba(255,255,255,.64);
   border-radius: 50%;
-  background: #191919;
+  background: #252525;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.55);
   transform: translateY(-50%);
 }
 
@@ -2884,19 +2881,19 @@
 }
 
 .detailTags > .detailTagMain {
-  border-color: rgba(255, 163, 105, .42);
+  border-color: rgba(255, 179, 130, .62);
   background:
-    linear-gradient(115deg, rgba(255, 137, 70, .2), rgba(255, 137, 70, .06) 62%, rgba(255,255,255,.035)),
-    rgba(17, 15, 14, .7);
-  box-shadow: inset 0 1px rgba(255,255,255,.08), 0 4px 13px rgba(0,0,0,.17);
-  color: #ffe0c8;
+    linear-gradient(115deg, rgba(255, 163, 94, .3), rgba(255, 111, 54, .17) 70%),
+    #241711;
+  filter: drop-shadow(0 3px 5px rgba(0,0,0,.24));
+  color: #ffe8d7;
   font-weight: 720;
 }
 
 .detailTags > .detailTagMain::before {
-  border-color: rgba(255, 187, 142, .88);
-  background: rgba(63, 33, 20, .9);
-  box-shadow: 0 0 5px rgba(255, 129, 64, .32);
+  border-color: #ffc296;
+  background: #291a13;
+  box-shadow: 0 0 0 1px rgba(53, 25, 13, .85), 0 0 7px rgba(255, 129, 64, .32);
 }
 
 .compactRating {
