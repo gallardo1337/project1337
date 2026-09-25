@@ -740,7 +740,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   min-width: 0;
 }
 
@@ -749,41 +749,38 @@
   display: inline-flex;
   align-items: center;
   max-width: 100%;
-  min-height: 25px;
-  padding: 6px 18px 6px 10px;
-  border: 1px solid rgba(255, 179, 130, .62);
-  clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 50%, calc(100% - 13px) 100%, 0 100%);
-  background:
-    linear-gradient(115deg, rgba(255, 163, 94, .3), rgba(255, 111, 54, .17) 70%),
-    #241711;
-  filter: drop-shadow(0 3px 5px rgba(0,0,0,.28));
-  color: #ffe8d7;
+  min-height: 23px;
+  padding: 5px 9px 5px 19px;
+  border: 1px solid rgba(255, 150, 91, .3);
+  border-radius: 6px;
+  background: linear-gradient(110deg, rgba(255, 130, 63, .15), rgba(255, 130, 63, .07));
+  color: #ffc49c;
   font-size: 9px;
-  font-weight: 760;
-  letter-spacing: .045em;
+  font-weight: 720;
+  letter-spacing: .035em;
   line-height: 1.2;
   overflow-wrap: anywhere;
   text-transform: uppercase;
-  transition: filter .18s ease, transform .18s ease;
+  transition: border-color .18s ease, background .18s ease, color .18s ease;
 }
 
 .mainTagBadge::before {
   content: "";
   position: absolute;
   top: 50%;
-  right: 4px;
-  width: 6px;
-  height: 6px;
-  border: 2px solid #ffc296;
+  left: 8px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
-  background: #291a13;
-  box-shadow: 0 0 0 1px rgba(53, 25, 13, .85), 0 0 7px rgba(255, 129, 64, .32);
+  background: #ff9a5d;
+  box-shadow: 0 0 0 2px rgba(255, 154, 93, .12);
   transform: translateY(-50%);
 }
 
 .mainTagBadge:hover {
-  transform: translateY(-1px);
-  filter: drop-shadow(0 5px 7px rgba(0,0,0,.34)) brightness(1.12);
+  border-color: rgba(255, 164, 112, .52);
+  background: linear-gradient(110deg, rgba(255, 130, 63, .21), rgba(255, 130, 63, .1));
+  color: #ffdbc2;
 }
 
 .spotlightMainTags {
@@ -2836,7 +2833,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   margin-top: 24px;
 }
 
@@ -2845,55 +2842,50 @@
   display: inline-flex;
   align-items: center;
   max-width: 100%;
-  min-height: 31px;
-  padding: 8px 18px 8px 11px;
-  border: 1px solid rgba(255,255,255,.1);
-  clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 50%, calc(100% - 13px) 100%, 0 100%);
-  background: linear-gradient(145deg, rgba(255,255,255,.09), rgba(255,255,255,.035));
-  color: rgba(255,255,255,.74);
+  min-height: 29px;
+  padding: 7px 11px 7px 20px;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 6px;
+  background: rgba(255,255,255,.035);
+  color: rgba(255,255,255,.62);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 550;
   letter-spacing: .01em;
   line-height: 1.25;
   overflow-wrap: anywhere;
-  transition: border-color .18s ease, background .18s ease, color .18s ease, transform .18s ease;
+  transition: border-color .18s ease, background .18s ease, color .18s ease;
 }
 
 .detailTags > span::before {
   content: "";
   position: absolute;
   top: 50%;
-  right: 4px;
-  width: 6px;
-  height: 6px;
-  border: 2px solid rgba(255,255,255,.64);
+  left: 9px;
+  width: 4px;
+  height: 4px;
   border-radius: 50%;
-  background: #252525;
-  box-shadow: 0 0 0 1px rgba(0,0,0,.55);
+  background: rgba(255,255,255,.32);
   transform: translateY(-50%);
 }
 
 .detailTags > span:hover {
-  transform: translateY(-1px);
   border-color: rgba(255,255,255,.2);
   background: rgba(255,255,255,.07);
   color: rgba(255,255,255,.88);
 }
 
 .detailTags > .detailTagMain {
-  border-color: rgba(255, 179, 130, .62);
-  background:
-    linear-gradient(115deg, rgba(255, 163, 94, .3), rgba(255, 111, 54, .17) 70%),
-    #241711;
-  filter: drop-shadow(0 3px 5px rgba(0,0,0,.24));
-  color: #ffe8d7;
-  font-weight: 720;
+  border-color: rgba(255, 150, 91, .32);
+  background: linear-gradient(110deg, rgba(255, 130, 63, .16), rgba(255, 130, 63, .07));
+  color: #ffc49c;
+  font-weight: 650;
 }
 
 .detailTags > .detailTagMain::before {
-  border-color: #ffc296;
-  background: #291a13;
-  box-shadow: 0 0 0 1px rgba(53, 25, 13, .85), 0 0 7px rgba(255, 129, 64, .32);
+  width: 5px;
+  height: 5px;
+  background: #ff9a5d;
+  box-shadow: 0 0 0 2px rgba(255, 154, 93, .12);
 }
 
 .compactRating {

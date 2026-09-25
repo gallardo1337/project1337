@@ -63,6 +63,6 @@ test("beta gives Main Tags a distinct pill style on cards and movie details", as
   assert.match(experience, /styles\.detailTagMain/);
   assert.match(styles, /\.mainTagBadge::before/);
   assert.match(styles, /\.detailTags > \.detailTagMain/);
-  assert.match(styles, /clip-path:\s*polygon\(0 0, calc\(100% - 13px\) 0, 100% 50%/);
+  assert.match(styles, /\.mainTagBadge\s*\{[\s\S]*?border-radius:\s*6px/);
   assert.match(styles, /\.detailTags > span::before/);
 });
