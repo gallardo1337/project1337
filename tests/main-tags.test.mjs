@@ -39,3 +39,16 @@ test("tvOS library, search, actor details, and filter options prioritize Main Ta
   assert.match(actorMovies, /prioritizeTagIds\(movie\.tag_ids, tagsResult\.data \|\| \[\]\)/);
   assert.match(filters, /Number\(b\.is_main\) - Number\(a\.is_main\)/);
 });
+
+test("beta shows each movie's Main Tags in the five-film spotlight and film cards", async () => {
+  const [homePage, experience] = await Promise.all([
+    readProjectFile("app/page.jsx"),
+    readProjectFile("app/beta/BetaExperience.jsx"),
+  ]);
+
+  assert.match(homePage, /mainTags:\s*mainTagNames/);
+  assert.match(experience, /<MainTagList tags=\{featured\?\.mainTags\}/);
+  assert.match(experience, /<MainTagList tags=\{movie\.mainTags\}/);
+  assert.match(experience, /function MovieCard\(/);
+  assert.match(experience, /function SimilarMovieCard\(/);
+});

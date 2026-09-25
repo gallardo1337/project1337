@@ -813,6 +813,23 @@ function FavoriteToggle({ movie, onToggleFavorite, className = "" }) {
   );
 }
 
+function MainTagList({ tags, className = "" }) {
+  if (!Array.isArray(tags) || tags.length === 0) return null;
+
+  return (
+    <span
+      className={`${styles.mainTagList} ${className}`.trim()}
+      aria-label="Main Tags"
+    >
+      {tags.map((tag) => (
+        <span className={styles.mainTagBadge} key={tag}>
+          {tag}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 function MovieCard({
   movie,
   onOpen,
@@ -875,6 +892,7 @@ function MovieCard({
               </span>
             </span>
           ) : null}
+          <MainTagList tags={movie.mainTags} />
         </span>
       </button>
     </article>
@@ -926,6 +944,7 @@ function SimilarMovieCard({ recommendation, onOpen, index }) {
           <i />
           {movie.year || "–"}
         </span>
+        <MainTagList tags={movie.mainTags} />
       </span>
     </button>
   );
@@ -1760,6 +1779,7 @@ function Discovery({
               ? featured.actors.slice(0, 3).join(" · ")
               : "Eine persönlich kuratierte Screening Collection."}
           </p>
+          <MainTagList tags={featured?.mainTags} className={styles.spotlightMainTags} />
           <div className={styles.spotlightActions}>
             {featured ? <button type="button" className={styles.primaryAction} onClick={() => onOpenMovie(featured)}><Icon name="play" /> Film öffnen</button> : null}
             <button type="button" className={styles.secondaryAction} onClick={onShowMovies}>Gesamtes Archiv <Icon name="arrow" /></button>

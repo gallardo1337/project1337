@@ -736,6 +736,31 @@
   background: var(--orange);
 }
 
+.mainTagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.mainTagBadge {
+  max-width: 100%;
+  padding: 5px 8px;
+  border: 1px solid rgba(255, 139, 64, .48);
+  background: rgba(191, 77, 14, .18);
+  color: #ffc193;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .07em;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  text-transform: uppercase;
+}
+
+.spotlightMainTags {
+  margin-top: 16px;
+}
+
 .spotlightCopy > p {
   max-width: 680px;
   margin: 18px 0 0;

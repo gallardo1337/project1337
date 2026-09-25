@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabaseClient"; // app/page.jsx -> ../lib/supabaseClient
+import { prioritizeTagIds } from "../lib/tvLibraryPayload.mjs";
 import BetaExperience from "./beta/BetaExperience";
 
 const SUPPORT_ACTOR_FALLBACK_IMAGE = "/support-actor-fallback.webp";
@@ -173,6 +174,9 @@ export default function HomePage() {
           studios.map((s) => [s.id, s.name])
         );
         const tagMap = Object.fromEntries(tags.map((t) => [t.id, t.name]));
+        const tagRowsById = Object.fromEntries(
+          tags.map((tag) => [String(tag.id), tag])
+        );
         const resolutionMap = Object.fromEntries(
           resolutions.map((r) => [r.id, r.name])
         );
@@ -192,14 +196,14 @@ export default function HomePage() {
             .filter(Boolean);
 
           const allActors = [...mainNames, ...supportNames];
-          const tagNames = Array.isArray(m.tag_ids)
-            ? m.tag_ids
-                .map((id) => tagMap[id])
-                .filter(Boolean)
-                .sort((a, b) =>
-                  a.localeCompare(b, "de", { sensitivity: "base" })
-                )
-            : [];
+          const orderedTagIds = prioritizeTagIds(m.tag_ids, tags);
+          const tagNames = orderedTagIds
+            .map((id) => tagMap[id])
+            .filter(Boolean);
+          const mainTagNames = orderedTagIds
+            .filter((id) => tagRowsById[String(id)]?.is_main === true)
+            .map((id) => tagRowsById[String(id)]?.name)
+            .filter(Boolean);
 
           const resolutionName = m.resolution_id
             ? resolutionMap[m.resolution_id] || null
@@ -222,6 +226,7 @@ export default function HomePage() {
             favorite: metric?.is_favorite === true,
             actors: allActors,
             tags: tagNames,
+            mainTags: mainTagNames,
             mainActorIds: mainIds,
             supportingActorIds: supportIds,
             mainActorNames: mainNames,
