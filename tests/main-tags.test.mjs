@@ -67,14 +67,15 @@ test("beta gives Main Tags a distinct pill style on cards and movie details", as
   assert.match(styles, /\.detailTags > span::before/);
 });
 
-test("beta movie tiles show compact Main Tags, rating, and cast names", async () => {
+test("beta movie tiles show compact Main Tags, rating, and cast in main-first order", async () => {
   const [experience, styles] = await Promise.all([
     readProjectFile("app/beta/BetaExperience.jsx"),
     readProjectFile("app/beta/experience.module.css"),
   ]);
 
   assert.match(experience, /<Icon name="star" \/>[\s\S]*?formatRating\(movie\.rating\)/);
-  assert.match(experience, /label="Hauptdarsteller" names=\{movie\.mainActorNames\}/);
-  assert.match(experience, /label="Nebendarsteller" names=\{movie\.supportingActorNames\}/);
+  assert.match(experience, /mainActors=\{movie\.mainActorNames\}[\s\S]*?supportingActors=\{movie\.supportingActorNames\}/);
+  assert.match(experience, /movieCastMain[\s\S]*?movieCastSupporting/);
   assert.match(styles, /\.movieCard \.mainTagBadge\s*\{[\s\S]*?font-size:\s*8px/);
+  assert.match(styles, /\.movieCastRow\s*\{[\s\S]*?white-space:\s*nowrap/);
 });

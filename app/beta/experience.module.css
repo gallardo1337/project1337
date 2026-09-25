@@ -1247,36 +1247,59 @@
   background: rgba(255,255,255,.2);
 }
 
-.movieCardCast {
-  display: grid;
+.movieCastRow {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.movieCastMain,
+.movieCastSupporting {
+  display: inline-flex;
+  align-items: baseline;
   gap: 4px;
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 9px;
 }
 
-.movieCastLine {
-  display: grid;
-  grid-template-columns: 82px minmax(0, 1fr);
-  align-items: baseline;
-  gap: 8px;
-  min-width: 0;
-  line-height: 1.25;
+.movieCastMain {
+  color: rgba(255,255,255,.77);
 }
 
-.movieCastLine > span {
-  color: rgba(255,255,255,.34);
+.movieCastSupporting {
+  color: rgba(255,255,255,.44);
+}
+
+.movieCastMain small,
+.movieCastSupporting small {
   font-size: 7px;
   font-weight: 800;
-  letter-spacing: .07em;
+  letter-spacing: .04em;
   text-transform: uppercase;
 }
 
-.movieCastLine > strong {
-  overflow: hidden;
-  color: rgba(255,255,255,.7);
-  font-size: 9px;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.movieCastMain small {
+  color: #ffad7b;
+}
+
+.movieCastSupporting small {
+  color: rgba(255,255,255,.38);
+}
+
+.movieCastRow > i {
+  width: 3px;
+  height: 3px;
+  flex: 0 0 3px;
+  align-self: center;
+  border-radius: 50%;
+  background: rgba(255,255,255,.24);
 }
 
 .movieCard .mainTagList {

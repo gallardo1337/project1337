@@ -830,17 +830,28 @@ function MainTagList({ tags, className = "" }) {
   );
 }
 
-function MovieCardCastLine({ label, names }) {
-  if (!Array.isArray(names) || names.length === 0) return null;
-  const visibleNames = names.slice(0, 2);
-  const remaining = names.length - visibleNames.length;
+function MovieCardCast({ mainActors, supportingActors }) {
+  const formatNames = (names) => {
+    if (!Array.isArray(names) || names.length === 0) return "";
+    const visibleNames = names.slice(0, 2);
+    const remaining = names.length - visibleNames.length;
+    return `${visibleNames.join(", ")}${remaining > 0 ? ` +${remaining}` : ""}`;
+  };
+  const mainText = formatNames(mainActors);
+  const supportingText = formatNames(supportingActors);
+  if (!mainText && !supportingText) return null;
 
   return (
-    <span className={styles.movieCastLine} title={names.join(", ")}>
-      <span>{label}</span>
-      <strong>
-        {visibleNames.join(", ")}{remaining > 0 ? ` +${remaining}` : ""}
-      </strong>
+    <span
+      className={styles.movieCastRow}
+      title={[
+        mainActors?.length ? `Hauptdarsteller: ${mainActors.join(", ")}` : "",
+        supportingActors?.length ? `Nebendarsteller: ${supportingActors.join(", ")}` : "",
+      ].filter(Boolean).join(" · ")}
+    >
+      {mainText ? <span className={styles.movieCastMain}><small>H</small>{mainText}</span> : null}
+      {mainText && supportingText ? <i aria-hidden="true" /> : null}
+      {supportingText ? <span className={styles.movieCastSupporting}><small>N</small>{supportingText}</span> : null}
     </span>
   );
 }
@@ -909,10 +920,10 @@ function MovieCard({
               </>
             ) : null}
           </span>
-          <span className={styles.movieCardCast}>
-            <MovieCardCastLine label="Hauptdarsteller" names={movie.mainActorNames} />
-            <MovieCardCastLine label="Nebendarsteller" names={movie.supportingActorNames} />
-          </span>
+          <MovieCardCast
+            mainActors={movie.mainActorNames}
+            supportingActors={movie.supportingActorNames}
+          />
           <MainTagList tags={movie.mainTags} />
         </span>
       </button>
