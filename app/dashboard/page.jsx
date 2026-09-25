@@ -61,6 +61,14 @@ const TransparentActorUploader = dynamic(() => import("./TransparentActorUploade
 
 const CHANGELOG = [
   {
+    version: "2.7.0",
+    date: "2026-09-25",
+    items: [
+      "Main Tags in der Tag-Verwaltung markierbar und in tvOS vor normalen Tags priorisiert",
+      "Main Tags im Film-Assistenten und in der Admin-Liste zuerst angezeigt",
+    ],
+  },
+  {
     version: "2.6.1",
     date: "2026-08-16",
     items: [
@@ -1215,6 +1223,23 @@ export function DashboardExperience() {
 
     setTags((prev) => [...prev, data]);
     setNewTagName("");
+  };
+
+  const handleToggleMainTag = async (tag) => {
+    const { data, error: updateError } = await supabase
+      .from("tags")
+      .update({ is_main: tag.is_main !== true })
+      .eq("id", tag.id)
+      .select("*")
+      .single();
+
+    if (updateError) {
+      console.error(updateError);
+      setError(updateError.message);
+      return;
+    }
+
+    setTags((prev) => prev.map((item) => (item.id === tag.id ? data : item)));
   };
 
   const handleDeleteStudio = async (studioId) => {
@@ -3193,28 +3218,35 @@ export function DashboardExperience() {
                                       Noch keine Tags angelegt.
                                     </span>
                                   ) : (
-                                    tags.map((tag) => {
-                                      const active = selectedTagIds.includes(tag.id);
-                                      return (
-                                        <button
-                                          key={tag.id}
-                                          type="button"
-                                          onClick={() =>
-                                            toggleId(
-                                              tag.id,
-                                              selectedTagIds,
-                                              setSelectedTagIds
-                                            )
-                                          }
-                                          className={`${wizardStyles.choice} ${
-                                            active ? wizardStyles.choiceActive : ""
-                                          }`}
-                                          aria-pressed={active}
-                                        >
-                                          {active ? "✓ " : ""}{tag.name}
-                                        </button>
-                                      );
-                                    })
+                                    [...tags]
+                                      .sort(
+                                        (a, b) =>
+                                          Number(b.is_main === true) -
+                                            Number(a.is_main === true) ||
+                                          (a.name || "").localeCompare(b.name || "", "de", { sensitivity: "base" })
+                                      )
+                                      .map((tag) => {
+                                        const active = selectedTagIds.includes(tag.id);
+                                        return (
+                                          <button
+                                            key={tag.id}
+                                            type="button"
+                                            onClick={() =>
+                                              toggleId(
+                                                tag.id,
+                                                selectedTagIds,
+                                                setSelectedTagIds
+                                              )
+                                            }
+                                            className={`${wizardStyles.choice} ${
+                                              active ? wizardStyles.choiceActive : ""
+                                            }`}
+                                            aria-pressed={active}
+                                          >
+                                            {active ? "✓ " : ""}{tag.name}
+                                          </button>
+                                        );
+                                      })
                                   )}
                                 </div>
                               </div>
@@ -4194,7 +4226,14 @@ export function DashboardExperience() {
                             </div>
 
                             <div className="max-h-[560px] space-y-2 overflow-y-auto pr-1">
-                              {tags.map((t) => (
+                              {[...tags]
+                                .sort(
+                                  (a, b) =>
+                                    Number(b.is_main === true) -
+                                      Number(a.is_main === true) ||
+                                    (a.name || "").localeCompare(b.name || "", "de", { sensitivity: "base" })
+                                )
+                                .map((t) => (
                                 <div
                                   key={t.id}
                                   className="rounded-xl border border-neutral-800 bg-neutral-950 px-3 py-2.5"
@@ -4230,11 +4269,35 @@ export function DashboardExperience() {
                                     </div>
                                   ) : (
                                     <div className="flex items-center justify-between gap-3">
-                                      <span className="truncate text-sm font-medium text-neutral-50">
-                                        {t.name}
-                                      </span>
+                                      <div className="flex min-w-0 items-center gap-2">
+                                        <span className="truncate text-sm font-medium text-neutral-50">
+                                          {t.name}
+                                        </span>
+                                        {t.is_main === true ? (
+                                          <span className="shrink-0 rounded-full border border-orange-400/50 bg-orange-500/15 px-2 py-0.5 text-[11px] font-semibold text-orange-200">
+                                            Main Tag
+                                          </span>
+                                        ) : null}
+                                      </div>
 
                                       <div className="flex shrink-0 gap-1.5">
+                                        <button
+                                          type="button"
+                                          onClick={() => handleToggleMainTag(t)}
+                                          className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
+                                            t.is_main === true
+                                              ? "border-orange-500/60 bg-orange-500/15 text-orange-200 hover:bg-orange-500/25"
+                                              : "border-neutral-600 text-neutral-100 hover:bg-neutral-800"
+                                          }`}
+                                          aria-pressed={t.is_main === true}
+                                          aria-label={
+                                            t.is_main === true
+                                              ? `${t.name} nicht mehr als Main Tag markieren`
+                                              : `${t.name} als Main Tag markieren`
+                                          }
+                                        >
+                                          {t.is_main === true ? "★ Main" : "Als Main markieren"}
+                                        </button>
                                         <button
                                           type="button"
                                           onClick={() => startEditTagInline(t)}
@@ -4253,7 +4316,7 @@ export function DashboardExperience() {
                                     </div>
                                   )}
                                 </div>
-                              ))}
+                                ))}
                             </div>
                           </div>
                         </div>

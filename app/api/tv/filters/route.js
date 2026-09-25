@@ -93,8 +93,8 @@ export async function GET() {
     }
 
     const tags = (tagsResult.data || [])
-      .map(normalizeOption)
-      .sort(sortByName);
+      .map((tag) => ({ ...normalizeOption(tag), is_main: tag.is_main === true }))
+      .sort((a, b) => Number(b.is_main) - Number(a.is_main) || sortByName(a, b));
 
     const studios = (studiosResult.data || [])
       .map(normalizeOption)

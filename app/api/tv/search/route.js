@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { prioritizeTagIds } from "../../../../lib/tvLibraryPayload.mjs";
 
 export const dynamic = "force-dynamic";
 
@@ -228,7 +229,10 @@ export async function GET(request) {
         movie.supporting_actor_ids,
         supportingActorMap
       ),
-      tags: getNamesFromIds(movie.tag_ids, tagMap),
+      tags: getNamesFromIds(
+        prioritizeTagIds(movie.tag_ids, tagsResult.data || []),
+        tagMap
+      ),
     }));
 
     return NextResponse.json({

@@ -110,3 +110,22 @@ test("uses the supporting actor fallback only when no image is stored", () => {
     "https://my1337.de/support-actor-fallback.webp"
   );
 });
+
+test("places Main Tags first in each tvOS movie while preserving tag order within groups", () => {
+  const payload = buildTvLibraryPayload({
+    movies: [{ id: "movie-1", tag_ids: ["regular-1", "main-1", "regular-2", "main-2"] }],
+    tags: [
+      { id: "regular-1", name: "Drama" },
+      { id: "main-1", name: "Action", is_main: true },
+      { id: "regular-2", name: "Comedy" },
+      { id: "main-2", name: "Iconic", is_main: true },
+    ],
+  });
+
+  assert.deepEqual(payload.movies[0].tag_ids, ["main-1", "main-2", "regular-1", "regular-2"]);
+  assert.deepEqual(payload.movies[0].tags, ["Action", "Iconic", "Drama", "Comedy"]);
+  assert.deepEqual(
+    payload.filters.tags.map(({ name, is_main }) => [name, is_main]),
+    [["Action", true], ["Iconic", true], ["Comedy", false], ["Drama", false]]
+  );
+});
