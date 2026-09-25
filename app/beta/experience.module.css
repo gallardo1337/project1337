@@ -1247,6 +1247,59 @@
   background: rgba(255,255,255,.2);
 }
 
+.movieCardCast {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.movieCastLine {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.movieCastLine > span {
+  color: rgba(255,255,255,.34);
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.movieCastLine > strong {
+  overflow: hidden;
+  color: rgba(255,255,255,.7);
+  font-size: 9px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.movieCard .mainTagList {
+  gap: 4px;
+  margin-top: 1px;
+}
+
+.movieCard .mainTagBadge {
+  min-height: 18px;
+  padding: 3px 7px 3px 15px;
+  border-radius: 5px;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .025em;
+}
+
+.movieCard .mainTagBadge::before {
+  left: 6px;
+  width: 4px;
+  height: 4px;
+  box-shadow: 0 0 0 1px rgba(255, 154, 93, .12);
+}
+
 .talentSection {
   border-top: 1px solid rgba(255,255,255,.08);
   background: #0d0d0f;

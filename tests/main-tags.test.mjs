@@ -66,3 +66,15 @@ test("beta gives Main Tags a distinct pill style on cards and movie details", as
   assert.match(styles, /\.mainTagBadge\s*\{[\s\S]*?border-radius:\s*6px/);
   assert.match(styles, /\.detailTags > span::before/);
 });
+
+test("beta movie tiles show compact Main Tags, rating, and cast names", async () => {
+  const [experience, styles] = await Promise.all([
+    readProjectFile("app/beta/BetaExperience.jsx"),
+    readProjectFile("app/beta/experience.module.css"),
+  ]);
+
+  assert.match(experience, /<Icon name="star" \/>[\s\S]*?formatRating\(movie\.rating\)/);
+  assert.match(experience, /label="Hauptdarsteller" names=\{movie\.mainActorNames\}/);
+  assert.match(experience, /label="Nebendarsteller" names=\{movie\.supportingActorNames\}/);
+  assert.match(styles, /\.movieCard \.mainTagBadge\s*\{[\s\S]*?font-size:\s*8px/);
+});

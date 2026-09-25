@@ -830,6 +830,21 @@ function MainTagList({ tags, className = "" }) {
   );
 }
 
+function MovieCardCastLine({ label, names }) {
+  if (!Array.isArray(names) || names.length === 0) return null;
+  const visibleNames = names.slice(0, 2);
+  const remaining = names.length - visibleNames.length;
+
+  return (
+    <span className={styles.movieCastLine} title={names.join(", ")}>
+      <span>{label}</span>
+      <strong>
+        {visibleNames.join(", ")}{remaining > 0 ? ` +${remaining}` : ""}
+      </strong>
+    </span>
+  );
+}
+
 function MovieCard({
   movie,
   onOpen,
@@ -879,19 +894,25 @@ function MovieCard({
             <i />
             {movie.year || "–"}
           </span>
-          {showMetrics ? (
-            <span className={styles.movieMetrics}>
-              <span>
-                <Icon name="star" />
-                {Number(movie.rating) > 0 ? `${formatRating(movie.rating)} / 10` : "– / 10"}
-              </span>
-              <i />
-              <span>
-                <Icon name="play" />
-                {formatNumber(movie.viewCount)} Aufrufe
-              </span>
+          <span className={styles.movieMetrics}>
+            <span>
+              <Icon name="star" />
+              {Number(movie.rating) > 0 ? `${formatRating(movie.rating)} / 10` : "– / 10"}
             </span>
-          ) : null}
+            {showMetrics ? (
+              <>
+                <i />
+                <span>
+                  <Icon name="play" />
+                  {formatNumber(movie.viewCount)} Aufrufe
+                </span>
+              </>
+            ) : null}
+          </span>
+          <span className={styles.movieCardCast}>
+            <MovieCardCastLine label="Hauptdarsteller" names={movie.mainActorNames} />
+            <MovieCardCastLine label="Nebendarsteller" names={movie.supportingActorNames} />
+          </span>
           <MainTagList tags={movie.mainTags} />
         </span>
       </button>
