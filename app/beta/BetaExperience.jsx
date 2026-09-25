@@ -2370,7 +2370,6 @@ function MovieDetail({
                     className={isMainTag ? styles.detailTagMain : styles.detailTag}
                     key={tag}
                   >
-                    {isMainTag ? <span className={styles.detailTagStar} aria-hidden="true">✦</span> : null}
                     {tag}
                   </span>
                 );
