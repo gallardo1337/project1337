@@ -849,9 +849,9 @@ function MovieCardCast({ mainActors, supportingActors }) {
         supportingActors?.length ? `Nebendarsteller: ${supportingActors.join(", ")}` : "",
       ].filter(Boolean).join(" · ")}
     >
-      {mainText ? <span className={styles.movieCastMain}><small>H</small>{mainText}</span> : null}
+      {mainText ? <span className={styles.movieCastMain}><small className={styles.movieCastFemale} aria-hidden="true">♀</small>{mainText}</span> : null}
       {mainText && supportingText ? <i aria-hidden="true" /> : null}
-      {supportingText ? <span className={styles.movieCastSupporting}><small>N</small>{supportingText}</span> : null}
+      {supportingText ? <span className={styles.movieCastSupporting}><small className={styles.movieCastMale} aria-hidden="true">♂</small>{supportingText}</span> : null}
     </span>
   );
 }

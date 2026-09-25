@@ -1285,12 +1285,16 @@
   text-transform: uppercase;
 }
 
-.movieCastMain small {
-  color: #ffad7b;
+.movieCastFemale {
+  color: #ff91b8;
+  font-size: 11px !important;
+  line-height: .8;
 }
 
-.movieCastSupporting small {
-  color: rgba(255,255,255,.38);
+.movieCastMale {
+  color: #8dcaff;
+  font-size: 11px !important;
+  line-height: .8;
 }
 
 .movieCastRow > i {

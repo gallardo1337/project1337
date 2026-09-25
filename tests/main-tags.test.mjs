@@ -76,6 +76,10 @@ test("beta movie tiles show compact Main Tags, rating, and cast in main-first or
   assert.match(experience, /<Icon name="star" \/>[\s\S]*?formatRating\(movie\.rating\)/);
   assert.match(experience, /mainActors=\{movie\.mainActorNames\}[\s\S]*?supportingActors=\{movie\.supportingActorNames\}/);
   assert.match(experience, /movieCastMain[\s\S]*?movieCastSupporting/);
+  assert.match(experience, /movieCastFemale[^>]*>♀/);
+  assert.match(experience, /movieCastMale[^>]*>♂/);
   assert.match(styles, /\.movieCard \.mainTagBadge\s*\{[\s\S]*?font-size:\s*8px/);
   assert.match(styles, /\.movieCastRow\s*\{[\s\S]*?white-space:\s*nowrap/);
+  assert.match(styles, /\.movieCastFemale\s*\{[\s\S]*?color:\s*#ff91b8/);
+  assert.match(styles, /\.movieCastMale\s*\{[\s\S]*?color:\s*#8dcaff/);
 });
