@@ -739,31 +739,52 @@
 .mainTagList {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  align-items: center;
+  gap: 7px;
   min-width: 0;
 }
 
 .mainTagBadge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
   max-width: 100%;
-  padding: 4px 8px;
-  border: 1px solid rgba(255, 166, 102, .42);
-  border-radius: 999px;
-  background: linear-gradient(135deg, rgba(255, 128, 50, .2), rgba(151, 57, 18, .16));
-  box-shadow: inset 0 1px rgba(255,255,255,.08), 0 2px 8px rgba(0,0,0,.12);
-  color: #ffd1ac;
-  font-size: 8px;
-  font-weight: 800;
-  letter-spacing: .055em;
-  line-height: 1.2;
+  padding: 6px 10px 6px 8px;
+  border: 1px solid rgba(255, 163, 105, .38);
+  border-radius: 7px;
+  background:
+    linear-gradient(115deg, rgba(255, 137, 70, .18), rgba(255, 137, 70, .055) 58%, rgba(255,255,255,.035)),
+    rgba(17, 15, 14, .78);
+  box-shadow: inset 0 1px rgba(255,255,255,.08), 0 3px 10px rgba(0,0,0,.2);
+  color: #ffe0c8;
+  font-size: 9px;
+  font-weight: 780;
+  letter-spacing: .065em;
+  line-height: 1.15;
   overflow-wrap: anywhere;
   text-transform: uppercase;
+  transition: border-color .18s ease, background .18s ease, transform .18s ease, box-shadow .18s ease;
 }
 
 .mainTagBadge::before {
-  content: "✦";
-  margin-right: 4px;
-  color: #ffad70;
-  font-size: 8px;
+  content: "";
+  flex: 0 0 6px;
+  width: 6px;
+  height: 6px;
+  margin-right: 7px;
+  border-radius: 2px;
+  background: #ff9b5c;
+  box-shadow: 0 0 0 2px rgba(255, 155, 92, .15), 0 0 9px rgba(255, 129, 64, .55);
+  transform: rotate(45deg);
+}
+
+.mainTagBadge:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 184, 137, .66);
+  background:
+    linear-gradient(115deg, rgba(255, 137, 70, .24), rgba(255, 137, 70, .085) 58%, rgba(255,255,255,.045)),
+    rgba(17, 15, 14, .86);
+  box-shadow: inset 0 1px rgba(255,255,255,.1), 0 5px 14px rgba(0,0,0,.24);
 }
 
 .spotlightMainTags {
@@ -2815,39 +2836,56 @@
 .detailTags {
   display: flex;
   flex-wrap: wrap;
-  gap: 9px;
+  align-items: center;
+  gap: 10px;
   margin-top: 24px;
 }
 
 .detailTags > span {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
   max-width: 100%;
   padding: 8px 12px;
   border: 1px solid rgba(255,255,255,.1);
-  border-radius: 999px;
-  background: rgba(255,255,255,.035);
-  color: rgba(255,255,255,.62);
-  font-size: 10px;
-  font-weight: 650;
-  letter-spacing: .025em;
-  line-height: 1.2;
+  border-radius: 7px;
+  background: linear-gradient(145deg, rgba(255,255,255,.055), rgba(255,255,255,.018));
+  color: rgba(255,255,255,.68);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .015em;
+  line-height: 1.25;
   overflow-wrap: anywhere;
-  transition: border-color .18s ease, background .18s ease, color .18s ease;
+  transition: border-color .18s ease, background .18s ease, color .18s ease, transform .18s ease;
+}
+
+.detailTags > span:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255,255,255,.2);
+  background: rgba(255,255,255,.07);
+  color: rgba(255,255,255,.88);
 }
 
 .detailTags > .detailTagMain {
-  border-color: rgba(255, 153, 91, .42);
-  background: linear-gradient(135deg, rgba(255, 128, 50, .18), rgba(151, 57, 18, .12));
-  box-shadow: inset 0 1px rgba(255,255,255,.07), 0 3px 12px rgba(0,0,0,.12);
-  color: #ffd1ac;
-  font-weight: 750;
+  gap: 8px;
+  border-color: rgba(255, 163, 105, .42);
+  background:
+    linear-gradient(115deg, rgba(255, 137, 70, .2), rgba(255, 137, 70, .06) 62%, rgba(255,255,255,.035)),
+    rgba(17, 15, 14, .7);
+  box-shadow: inset 0 1px rgba(255,255,255,.08), 0 4px 13px rgba(0,0,0,.17);
+  color: #ffe0c8;
+  font-weight: 720;
 }
 
 .detailTagStar {
-  color: #ffad70;
-  font-size: 11px;
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-radius: 2px;
+  background: #ff9b5c;
+  box-shadow: 0 0 0 2px rgba(255, 155, 92, .15), 0 0 9px rgba(255, 129, 64, .5);
+  transform: rotate(45deg);
 }
 
 .compactRating {
