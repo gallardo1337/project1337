@@ -52,3 +52,15 @@ test("beta shows each movie's Main Tags in the five-film spotlight and film card
   assert.match(experience, /function MovieCard\(/);
   assert.match(experience, /function SimilarMovieCard\(/);
 });
+
+test("beta gives Main Tags a distinct pill style on cards and movie details", async () => {
+  const [experience, styles] = await Promise.all([
+    readProjectFile("app/beta/BetaExperience.jsx"),
+    readProjectFile("app/beta/experience.module.css"),
+  ]);
+
+  assert.match(experience, /movie\.mainTags\?\.includes\(tag\)/);
+  assert.match(experience, /styles\.detailTagMain/);
+  assert.match(styles, /\.mainTagBadge::before/);
+  assert.match(styles, /\.detailTags > \.detailTagMain/);
+});

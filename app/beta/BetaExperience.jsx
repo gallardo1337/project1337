@@ -2361,7 +2361,22 @@ function MovieDetail({
             </span>
             <h1>{movie.title || "Unbenannt"}</h1>
           </div>
-          {movie.tags?.length ? <div className={styles.detailTags}>{movie.tags.map((tag) => <span key={tag}>{tag}</span>)}</div> : null}
+          {movie.tags?.length ? (
+            <div className={styles.detailTags} aria-label="Film-Tags">
+              {movie.tags.map((tag) => {
+                const isMainTag = movie.mainTags?.includes(tag);
+                return (
+                  <span
+                    className={isMainTag ? styles.detailTagMain : styles.detailTag}
+                    key={tag}
+                  >
+                    {isMainTag ? <span className={styles.detailTagStar} aria-hidden="true">✦</span> : null}
+                    {tag}
+                  </span>
+                );
+              })}
+            </div>
+          ) : null}
           <aside className={styles.compactRating}>
             <div className={styles.ratingHeader}>
               <span>Personal score</span>
