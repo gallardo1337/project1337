@@ -56,11 +56,38 @@ const AdminNasLibrary = dynamic(
 
 const TransparentActorUploader = dynamic(() => import("./TransparentActorUploader.jsx"), { ssr: false });
 
+const MOVIE_PAGE_SIZE = 1000;
+
+async function loadAllMovies() {
+  const allMovies = [];
+
+  for (let offset = 0; ; offset += MOVIE_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from("movies")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: true })
+      .range(offset, offset + MOVIE_PAGE_SIZE - 1);
+
+    if (error) throw error;
+
+    allMovies.push(...(data || []));
+    if (!data || data.length < MOVIE_PAGE_SIZE) return allMovies;
+  }
+}
+
 // -------------------------------
 // Version / Changelog
 // -------------------------------
 
 const CHANGELOG = [
+  {
+    version: "2.7.1",
+    date: "2026-09-26",
+    items: [
+      "Dateiabgleich im Film-Wizard um vollständige Filmpaginierung und einheitliche Behandlung kodierter Sonderzeichen erweitert",
+    ],
+  },
   {
     version: "2.7.0",
     date: "2026-09-25",
@@ -814,7 +841,7 @@ export function DashboardExperience() {
           actors2Res,
           studiosRes,
           tagsRes,
-          moviesRes,
+          allMovies,
           resolutionsRes,
           metricsData,
         ] = await Promise.all([
@@ -822,10 +849,7 @@ export function DashboardExperience() {
           supabase.from("actors2").select("*").order("name"),
           supabase.from("studios").select("*").order("name"),
           supabase.from("tags").select("*").order("name"),
-          supabase
-            .from("movies")
-            .select("*")
-            .order("created_at", { ascending: false }),
+          loadAllMovies(),
           supabase.from("resolutions").select("*").order("name"),
           metricsPromise,
         ]);
@@ -834,14 +858,13 @@ export function DashboardExperience() {
         if (actors2Res.error) throw actors2Res.error;
         if (studiosRes.error) throw studiosRes.error;
         if (tagsRes.error) throw tagsRes.error;
-        if (moviesRes.error) throw moviesRes.error;
         if (resolutionsRes.error) throw resolutionsRes.error;
 
         setHauptdarsteller(actorsRes.data || []);
         setNebendarsteller(actors2Res.data || []);
         setStudios(studiosRes.data || []);
         setTags(tagsRes.data || []);
-        setFilme(moviesRes.data || []);
+        setFilme(allMovies);
         setResolutions(resolutionsRes.data || []);
         setMovieMetrics(metricsData);
 
