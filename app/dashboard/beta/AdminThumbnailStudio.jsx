@@ -484,6 +484,7 @@ export default function AdminThumbnailStudio({
   const [candidates, setCandidates] = useState([]);
   const [selectedCandidateId, setSelectedCandidateId] = useState(null);
   const [previewCandidateId, setPreviewCandidateId] = useState(null);
+  const [previewImage, setPreviewImage] = useState(null);
   const [generating, setGenerating] = useState({
     active: false,
     kind: null,
@@ -661,7 +662,7 @@ export default function AdminThumbnailStudio({
   );
 
   useEffect(() => {
-    if (!previewCandidateId) return undefined;
+    if (!previewCandidateId && !previewImage) return undefined;
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -669,10 +670,12 @@ export default function AdminThumbnailStudio({
     const handleKeyDown = (event) => {
       if (event.key === "Escape") {
         setPreviewCandidateId(null);
+        setPreviewImage(null);
         return;
       }
 
       if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+      if (!previewCandidateId) return;
 
       const currentIndex = candidates.findIndex(
         (candidate) => candidate.id === previewCandidateId
@@ -690,7 +693,7 @@ export default function AdminThumbnailStudio({
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [candidates, previewCandidateId]);
+  }, [candidates, previewCandidateId, previewImage]);
 
   const videoSource = localSource?.url || selectedMovie?.file_url || "";
   const canCapture = Boolean(
@@ -1786,7 +1789,18 @@ export default function AdminThumbnailStudio({
                     <figure>
                       <figcaption>Aktuell</figcaption>
                       {selectedMovie.thumbnail_url ? (
-                        <img src={selectedMovie.thumbnail_url} alt="Aktuelles Thumbnail" />
+                        <>
+                          <img src={selectedMovie.thumbnail_url} alt="Aktuelles Thumbnail" />
+                          <button
+                            type="button"
+                            className="thumbnailStudio__compareZoom"
+                            onClick={() => setPreviewImage({ url: selectedMovie.thumbnail_url, label: "Aktuelles Thumbnail" })}
+                            aria-label="Aktuelles Thumbnail groß ansehen"
+                            title="Groß ansehen"
+                          >
+                            ⛶
+                          </button>
+                        </>
                       ) : (
                         <span>Kein Thumbnail</span>
                       )}
@@ -1795,6 +1809,15 @@ export default function AdminThumbnailStudio({
                     <figure className="is-new">
                       <figcaption>Neu</figcaption>
                       <img src={selectedCandidate.url} alt="Neues Thumbnail" />
+                      <button
+                        type="button"
+                        className="thumbnailStudio__compareZoom"
+                        onClick={() => setPreviewCandidateId(selectedCandidate.id)}
+                        aria-label="Neues Thumbnail groß ansehen"
+                        title="Groß ansehen"
+                      >
+                        ⛶
+                      </button>
                     </figure>
                   </div>
                   <div className="thumbnailStudio__saveBar">
@@ -1844,7 +1867,7 @@ export default function AdminThumbnailStudio({
         </div>
       </div>
 
-      {previewCandidate ? (
+      {previewCandidate || previewImage ? (
         <div
           className="thumbnailStudio__lightbox"
           role="dialog"
@@ -1853,20 +1876,28 @@ export default function AdminThumbnailStudio({
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
               setPreviewCandidateId(null);
+              setPreviewImage(null);
             }
           }}
         >
           <div className="thumbnailStudio__lightboxPanel">
             <header>
               <div>
-                <span>Detailansicht · {String(previewCandidateNumber).padStart(2, "0")}/{String(candidates.length).padStart(2, "0")}</span>
+                <span>
+                  {previewCandidate
+                    ? `Detailansicht · ${String(previewCandidateNumber).padStart(2, "0")}/${String(candidates.length).padStart(2, "0")}`
+                    : previewImage.label}
+                </span>
                 <h3 id="thumbnail-preview-title">
                   {selectedMovie?.title || "Thumbnail-Vorschlag"}
                 </h3>
               </div>
               <button
                 type="button"
-                onClick={() => setPreviewCandidateId(null)}
+                onClick={() => {
+                  setPreviewCandidateId(null);
+                  setPreviewImage(null);
+                }}
                 aria-label="Detailansicht schließen"
               >
                 ×
@@ -1874,7 +1905,7 @@ export default function AdminThumbnailStudio({
             </header>
 
             <div className="thumbnailStudio__lightboxStage">
-              {candidates.length > 1 ? (
+              {previewCandidate && candidates.length > 1 ? (
                 <button
                   type="button"
                   className="is-previous"
@@ -1885,10 +1916,12 @@ export default function AdminThumbnailStudio({
                 </button>
               ) : null}
               <img
-                src={previewCandidate.url}
-                alt={`Vergrößerter Thumbnail-Vorschlag ${previewCandidateNumber}`}
+                src={previewCandidate?.url || previewImage.url}
+                alt={previewCandidate
+                  ? `Vergrößerter Thumbnail-Vorschlag ${previewCandidateNumber}`
+                  : `Großansicht: ${previewImage.label}`}
               />
-              {candidates.length > 1 ? (
+              {previewCandidate && candidates.length > 1 ? (
                 <button
                   type="button"
                   className="is-next"
@@ -1902,20 +1935,26 @@ export default function AdminThumbnailStudio({
 
             <footer>
               <div>
-                <span>Frame bei {formatTime(previewCandidate.time)}</span>
-                <small>Pfeiltasten wechseln · Esc schließt</small>
+                <span>
+                  {previewCandidate
+                    ? `Frame bei ${formatTime(previewCandidate.time)}`
+                    : previewImage.label}
+                </span>
+                <small>{previewCandidate && candidates.length > 1 ? "Pfeiltasten wechseln · Esc schließt" : "Esc schließt"}</small>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedCandidateId(previewCandidate.id);
-                  setPreviewCandidateId(null);
-                }}
-              >
-                {previewCandidate.id === selectedCandidateId
-                  ? "Bereits ausgewählt"
-                  : "Diesen Frame auswählen"}
-              </button>
+              {previewCandidate ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedCandidateId(previewCandidate.id);
+                    setPreviewCandidateId(null);
+                  }}
+                >
+                  {previewCandidate.id === selectedCandidateId
+                    ? "Bereits ausgewählt"
+                    : "Diesen Frame auswählen"}
+                </button>
+              ) : null}
             </footer>
           </div>
         </div>
