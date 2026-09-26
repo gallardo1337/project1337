@@ -3886,6 +3886,121 @@
   opacity: 0;
 }
 
+.adminBeta .thumbnailStudio__aiEnhancer {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid rgba(249, 115, 22, 0.25);
+  background: linear-gradient(120deg, rgba(249, 115, 22, 0.07), rgba(255, 255, 255, 0.015));
+}
+
+.adminBeta .thumbnailStudio__aiEnhancerTitle,
+.adminBeta .thumbnailStudio__aiControls,
+.adminBeta .thumbnailStudio__aiActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.adminBeta .thumbnailStudio__aiEnhancerTitle {
+  justify-content: space-between;
+}
+
+.adminBeta .thumbnailStudio__aiEnhancerTitle > div {
+  display: grid;
+  gap: 3px;
+}
+
+.adminBeta .thumbnailStudio__aiEnhancerTitle > div > span {
+  color: var(--admin-orange);
+  font: 800 8px ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .12em;
+}
+
+.adminBeta .thumbnailStudio__aiEnhancerTitle strong {
+  color: #e7e7eb;
+  font-size: 11px;
+}
+
+.adminBeta .thumbnailStudio__aiEnhancerTitle small,
+.adminBeta .thumbnailStudio__aiHint {
+  color: #777780;
+  font-size: 8px;
+  line-height: 1.55;
+}
+
+.adminBeta .thumbnailStudio__aiStatus {
+  flex: 0 0 auto;
+  color: #8d8d94;
+  font-size: 8px;
+}
+
+.adminBeta .thumbnailStudio__aiStatus.is-connected {
+  color: #86efac;
+}
+
+.adminBeta .thumbnailStudio__aiStatus.is-checking {
+  color: #fbbf24;
+}
+
+.adminBeta .thumbnailStudio__aiControls input,
+.adminBeta .thumbnailStudio__aiControls select,
+.adminBeta .thumbnailStudio__aiControls button,
+.adminBeta .thumbnailStudio__aiActions button,
+.adminBeta .thumbnailStudio__aiActions label {
+  min-width: 0;
+  min-height: 33px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 3px;
+  background: rgba(5, 5, 6, 0.56);
+  padding: 0 10px;
+  color: #c9c9ce;
+  font-size: 8px;
+}
+
+.adminBeta .thumbnailStudio__aiControls input {
+  flex: 1 1 190px;
+}
+
+.adminBeta .thumbnailStudio__aiControls select {
+  flex: 1 1 220px;
+}
+
+.adminBeta .thumbnailStudio__aiControls button,
+.adminBeta .thumbnailStudio__aiActions button,
+.adminBeta .thumbnailStudio__aiActions label {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-color: rgba(249, 115, 22, 0.35);
+  color: #f0a36f;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.adminBeta .thumbnailStudio__aiActions input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+}
+
+.adminBeta .thumbnailStudio__aiControls button:disabled,
+.adminBeta .thumbnailStudio__aiActions button:disabled,
+.adminBeta .thumbnailStudio__aiActions label.is-disabled {
+  cursor: not-allowed;
+  opacity: .45;
+}
+
+.adminBeta .thumbnailStudio__aiHint code {
+  color: #c8c8cf;
+  overflow-wrap: anywhere;
+}
+
 .adminBeta .thumbnailStudio__selectionHeader {
   margin-top: 32px;
   padding-top: 25px;
@@ -4600,8 +4715,22 @@
   }
 
   .adminBeta .thumbnailStudio__localSource > div:last-child,
-  .adminBeta .thumbnailStudio__captureActions {
+  .adminBeta .thumbnailStudio__captureActions,
+  .adminBeta .thumbnailStudio__aiControls,
+  .adminBeta .thumbnailStudio__aiActions {
     grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .adminBeta .thumbnailStudio__aiControls {
+    display: grid;
+  }
+
+  .adminBeta .thumbnailStudio__aiControls input,
+  .adminBeta .thumbnailStudio__aiControls select,
+  .adminBeta .thumbnailStudio__aiControls button,
+  .adminBeta .thumbnailStudio__aiActions button,
+  .adminBeta .thumbnailStudio__aiActions label {
     width: 100%;
   }
 

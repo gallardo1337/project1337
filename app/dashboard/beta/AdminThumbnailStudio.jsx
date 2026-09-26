@@ -19,6 +19,8 @@ const ANALYSIS_BAND_COUNT = 6;
 const SAMPLES_PER_BAND = 5;
 const SUGGESTION_COUNT = 6;
 const EMPTY_MOVIES = [];
+const COMFY_ENDPOINT_STORAGE_KEY = "project1337-comfyui-endpoint";
+const DEFAULT_COMFY_ENDPOINT = "http://127.0.0.1:8188";
 const CHAPTER_POINTS = [0.12, 0.26, 0.4, 0.54, 0.68, 0.82];
 const MEDIAPIPE_WASM_ROOT =
   "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm";
@@ -357,6 +359,42 @@ function frameToBlob(video) {
   });
 }
 
+async function fitImageToThumbnail(blob) {
+  const image = await createImageBitmap(blob);
+  const canvas = document.createElement("canvas");
+  canvas.width = OUTPUT_WIDTH;
+  canvas.height = OUTPUT_HEIGHT;
+  const ctx = canvas.getContext("2d", { alpha: false });
+  if (!ctx) {
+    image.close?.();
+    throw new Error("Der Browser konnte das KI-Ergebnis nicht verarbeiten.");
+  }
+  const scale = Math.max(OUTPUT_WIDTH / image.width, OUTPUT_HEIGHT / image.height);
+  const cropWidth = OUTPUT_WIDTH / scale;
+  const cropHeight = OUTPUT_HEIGHT / scale;
+  ctx.drawImage(
+    image,
+    (image.width - cropWidth) / 2,
+    (image.height - cropHeight) / 2,
+    cropWidth,
+    cropHeight,
+    0,
+    0,
+    OUTPUT_WIDTH,
+    OUTPUT_HEIGHT
+  );
+  image.close?.();
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (result) => (result ? resolve(result) : reject(new Error("JPEG-Ergebnis ist leer."))),
+      "image/jpeg",
+      JPEG_QUALITY
+    );
+  });
+}
+
+const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
 async function createAiModels() {
   const { FilesetResolver, FaceLandmarker, PoseLandmarker } = await import(
     "@mediapipe/tasks-vision"
@@ -454,8 +492,22 @@ export default function AdminThumbnailStudio({
     total: 0,
   });
   const [saving, setSaving] = useState(false);
+  const [comfyEndpoint, setComfyEndpoint] = useState(DEFAULT_COMFY_ENDPOINT);
+  const [comfyModels, setComfyModels] = useState([]);
+  const [comfyModel, setComfyModel] = useState("");
+  const [comfyStatus, setComfyStatus] = useState("idle");
+  const [enhancing, setEnhancing] = useState(false);
   const [notice, setNotice] = useState(null);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    try {
+      const savedEndpoint = window.localStorage.getItem(COMFY_ENDPOINT_STORAGE_KEY);
+      if (savedEndpoint) setComfyEndpoint(savedEndpoint);
+    } catch {
+      // Local storage can be disabled; the default endpoint remains usable.
+    }
+  }, []);
 
   const workingMovies = useMemo(
     () => (embeddedMovie ? [embeddedMovie] : movies),
@@ -727,6 +779,189 @@ export default function AdminThumbnailStudio({
       }
       throw captureError;
     }
+  };
+
+  const connectComfy = async () => {
+    const baseUrl = comfyEndpoint.trim().replace(/\/+$/, "");
+    try {
+      const parsedUrl = new URL(baseUrl);
+      if (!["http:", "https:"].includes(parsedUrl.protocol)) throw new Error();
+      window.localStorage.setItem(COMFY_ENDPOINT_STORAGE_KEY, baseUrl);
+    } catch {
+      setComfyStatus("error");
+      setError("Bitte eine gültige ComfyUI-Adresse eingeben, z. B. http://127.0.0.1:8188.");
+      return;
+    }
+
+    setComfyStatus("checking");
+    setError(null);
+    try {
+      const response = await fetch(`${baseUrl}/models/upscale_models`, {
+        cache: "no-store",
+      });
+      if (!response.ok) throw new Error(`ComfyUI antwortet mit HTTP ${response.status}.`);
+      const models = await response.json();
+      if (!Array.isArray(models)) throw new Error("ComfyUI hat eine ungültige Modellliste geliefert.");
+      setComfyModels(models);
+      setComfyModel((current) => (models.includes(current) ? current : models[0] || ""));
+      setComfyStatus("connected");
+      setNotice(
+        models.length
+          ? `ComfyUI verbunden · ${models.length} Upscale-Modell${models.length === 1 ? "" : "e"} gefunden.`
+          : "ComfyUI ist erreichbar. Es wurde noch kein Modell im Ordner models/upscale_models gefunden."
+      );
+    } catch (connectError) {
+      setComfyStatus("error");
+      setComfyModels([]);
+      setComfyModel("");
+      setError(
+        `ComfyUI nicht erreichbar. Starte ComfyUI mit --enable-cors-header ${window.location.origin} und prüfe die Adresse. ${connectError?.message || ""}`
+      );
+    }
+  };
+
+  const enhanceImage = async (sourceBlob, sourceLabel) => {
+    if (!sourceBlob || enhancing) return;
+    const baseUrl = comfyEndpoint.trim().replace(/\/+$/, "");
+    if (!comfyModel) {
+      setError("Verbinde zuerst ComfyUI und wähle ein Upscale-Modell aus.");
+      return;
+    }
+    setEnhancing(true);
+    setError(null);
+    setNotice("Bild wird lokal an ComfyUI übergeben …");
+    try {
+      const normalizedSource = await fitImageToThumbnail(sourceBlob);
+      const formData = new FormData();
+      formData.append("image", normalizedSource, "thumbnail-source.jpg");
+      formData.append("type", "input");
+      formData.append("overwrite", "true");
+      const uploadResponse = await fetch(`${baseUrl}/upload/image`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!uploadResponse.ok) throw new Error(`ComfyUI-Upload fehlgeschlagen (HTTP ${uploadResponse.status}).`);
+      const uploaded = await uploadResponse.json();
+      if (!uploaded?.name) throw new Error("ComfyUI hat keinen Eingabedateinamen zurückgegeben.");
+
+      const prompt = {
+        "1": { class_type: "LoadImage", inputs: { image: uploaded.name } },
+        "2": { class_type: "UpscaleModelLoader", inputs: { model_name: comfyModel } },
+        "3": {
+          class_type: "ImageScale",
+          inputs: {
+            image: ["1", 0],
+            upscale_method: "lanczos",
+            width: OUTPUT_WIDTH / 2,
+            height: OUTPUT_HEIGHT / 2,
+            crop: "disabled",
+          },
+        },
+        "4": {
+          class_type: "ImageUpscaleWithModel",
+          inputs: { upscale_model: ["2", 0], image: ["3", 0] },
+        },
+        "5": {
+          class_type: "ImageScale",
+          inputs: {
+            image: ["4", 0],
+            upscale_method: "lanczos",
+            width: OUTPUT_WIDTH,
+            height: OUTPUT_HEIGHT,
+            crop: "disabled",
+          },
+        },
+        "6": { class_type: "SaveImage", inputs: { filename_prefix: "my1337-enhanced", images: ["5", 0] } },
+      };
+      const promptResponse = await fetch(`${baseUrl}/prompt`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      });
+      const promptPayload = await promptResponse.json().catch(() => null);
+      if (!promptResponse.ok || !promptPayload?.prompt_id) {
+        const details = promptPayload?.error?.message || "ComfyUI hat den Workflow abgelehnt.";
+        throw new Error(details);
+      }
+
+      setNotice(`KI wertet „${sourceLabel}“ lokal auf …`);
+      let images = null;
+      for (let attempt = 0; attempt < 240; attempt += 1) {
+        await wait(1500);
+        const historyResponse = await fetch(`${baseUrl}/history/${encodeURIComponent(promptPayload.prompt_id)}`, {
+          cache: "no-store",
+        });
+        if (!historyResponse.ok) throw new Error(`ComfyUI-Status konnte nicht gelesen werden (HTTP ${historyResponse.status}).`);
+        const history = await historyResponse.json();
+        const job = history?.[promptPayload.prompt_id];
+        if (job?.outputs?.["6"]?.images?.length) {
+          images = job.outputs["6"].images;
+          break;
+        }
+        if (job?.status?.status_str === "error") {
+          throw new Error(job.status.messages?.find((item) => item?.[0] === "execution_error")?.[1]?.exception_message || "ComfyUI konnte das Bild nicht verarbeiten.");
+        }
+      }
+      if (!images?.length) throw new Error("Zeitüberschreitung: ComfyUI hat nach 6 Minuten kein Ergebnis geliefert.");
+
+      const imageInfo = images[0];
+      const imageQuery = new URLSearchParams({
+        filename: imageInfo.filename,
+        subfolder: imageInfo.subfolder || "",
+        type: imageInfo.type || "output",
+      });
+      const resultResponse = await fetch(`${baseUrl}/view?${imageQuery.toString()}`);
+      if (!resultResponse.ok) throw new Error("Das fertige KI-Bild konnte nicht geladen werden.");
+      const resultBlob = await fitImageToThumbnail(await resultResponse.blob());
+      const url = URL.createObjectURL(resultBlob);
+      generatedUrlsRef.current.add(url);
+      const candidate = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        blob: resultBlob,
+        url,
+        time: videoRef.current?.currentTime || 0,
+        generator: "ai-enhance",
+        sourceLabel,
+      };
+      setCandidates((current) => {
+        const next = [...current, candidate];
+        if (next.length <= 12) return next;
+        const removed = next.shift();
+        if (removed) {
+          URL.revokeObjectURL(removed.url);
+          generatedUrlsRef.current.delete(removed.url);
+        }
+        return next;
+      });
+      setSelectedCandidateId(candidate.id);
+      setNotice("KI-Ergebnis bereit · du kannst es prüfen und anschließend wie gewohnt speichern.");
+    } catch (enhanceError) {
+      setError(
+        `${enhanceError?.message || "KI-Aufwertung fehlgeschlagen."} Prüfe, ob ComfyUI mit CORS für ${window.location.origin} gestartet wurde.`
+      );
+      setNotice(null);
+    } finally {
+      setEnhancing(false);
+    }
+  };
+
+  const enhanceSelectedCandidate = () => {
+    if (selectedCandidate) enhanceImage(selectedCandidate.blob, "ausgewählter Frame");
+  };
+
+  const handleEnhancementFile = (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("Bitte eine Bilddatei auswählen.");
+      return;
+    }
+    if (file.size > 30 * 1024 * 1024) {
+      setError("Das Bild ist größer als 30 MB.");
+      return;
+    }
+    enhanceImage(file, file.name);
   };
 
   const handleSingleCapture = async () => {
@@ -1381,6 +1616,55 @@ export default function AdminThumbnailStudio({
                 </div>
               </div>
 
+              <section className="thumbnailStudio__aiEnhancer" aria-label="Lokale KI-Aufwertung">
+                <div className="thumbnailStudio__aiEnhancerTitle">
+                  <div>
+                    <span>LOKALE KI</span>
+                    <strong>Verwackelte oder weiche Bilder aufwerten</strong>
+                    <small>ComfyUI verarbeitet das Bild auf deinem Rechner.</small>
+                  </div>
+                  <span className={`thumbnailStudio__aiStatus is-${comfyStatus}`}>
+                    {comfyStatus === "connected" ? "Verbunden" : comfyStatus === "checking" ? "Prüfe …" : "Nicht verbunden"}
+                  </span>
+                </div>
+                <div className="thumbnailStudio__aiControls">
+                  <input
+                    type="url"
+                    aria-label="ComfyUI-Adresse"
+                    value={comfyEndpoint}
+                    onChange={(event) => setComfyEndpoint(event.target.value)}
+                    placeholder={DEFAULT_COMFY_ENDPOINT}
+                  />
+                  <button type="button" onClick={connectComfy} disabled={comfyStatus === "checking" || enhancing}>
+                    {comfyStatus === "checking" ? "Verbinde …" : "ComfyUI verbinden"}
+                  </button>
+                  <select
+                    aria-label="Upscale-Modell"
+                    value={comfyModel}
+                    onChange={(event) => setComfyModel(event.target.value)}
+                    disabled={!comfyModels.length || enhancing}
+                  >
+                    {comfyModels.length ? (
+                      comfyModels.map((model) => <option key={model} value={model}>{model}</option>)
+                    ) : (
+                      <option value="">Upscale-Modell auswählen</option>
+                    )}
+                  </select>
+                </div>
+                <div className="thumbnailStudio__aiActions">
+                  <button type="button" onClick={enhanceSelectedCandidate} disabled={!selectedCandidate || !comfyModel || enhancing || saving}>
+                    {enhancing ? "KI arbeitet …" : "Ausgewählten Frame aufwerten"}
+                  </button>
+                  <label className={!comfyModel || enhancing || saving ? "is-disabled" : ""}>
+                    Thumbnail-Bilddatei wählen
+                    <input type="file" accept="image/*" onChange={handleEnhancementFile} disabled={!comfyModel || enhancing || saving} />
+                  </label>
+                </div>
+                <small className="thumbnailStudio__aiHint">
+                  Falls die Verbindung blockiert wird: ComfyUI mit <code>--enable-cors-header {typeof window !== "undefined" ? window.location.origin : "https://beta.my1337.de"}</code> starten. Ein Modell wie 4x-UltraSharp muss in <code>models/upscale_models</code> liegen.
+                </small>
+              </section>
+
               <div className="thumbnailStudio__captureActions">
                 <button
                   type="button"
@@ -1465,13 +1749,15 @@ export default function AdminThumbnailStudio({
                         <img src={candidate.url} alt={`Thumbnail-Vorschlag ${index + 1}`} />
                         <span>{String(index + 1).padStart(2, "0")}</span>
                         <em>
-                          {candidate.generator === "ai"
+                          {candidate.generator === "ai-enhance"
+                            ? "KI AUFGEWERTET"
+                            : candidate.generator === "ai"
                             ? "KI BETA"
                             : candidate.generator === "standard"
                               ? "STANDARD"
                               : "MANUELL"}
                         </em>
-                        <small>{formatTime(candidate.time)}</small>
+                        <small>{candidate.sourceLabel || formatTime(candidate.time)}</small>
                         <i>{candidate.id === selectedCandidateId ? "Ausgewählt" : "Wählen"}</i>
                       </button>
                       <button
@@ -1516,11 +1802,13 @@ export default function AdminThumbnailStudio({
                       <span>Bereit zum Speichern</span>
                       <strong>{selectedMovie.title}</strong>
                       <small>
-                        Frame bei {formatTime(selectedCandidate.time)} · {selectedCandidate.generator === "ai"
+                        {selectedCandidate.generator === "ai-enhance"
+                          ? `KI-Aufwertung · ${selectedCandidate.sourceLabel || "Bild"}`
+                          : `Frame bei ${formatTime(selectedCandidate.time)} · ${selectedCandidate.generator === "ai"
                           ? "KI Beta"
                           : selectedCandidate.generator === "standard"
                             ? "Standard"
-                            : "Manuell"}
+                            : "Manuell"}`}
                       </small>
                     </div>
                     <button type="button" onClick={saveThumbnail} disabled={saving}>
