@@ -61,7 +61,7 @@ test("Admin-Changelog führt NAS-Analyse, Bereinigung, Favoriten und Kontomenü 
     readProjectFile("app/dashboard/layout.jsx"),
   ]);
 
-  assert.match(dashboard, /const CHANGELOG = \[\s*\{\s*version:\s*"2\.7\.2"/);
+  assert.match(dashboard, /const CHANGELOG = \[\s*\{\s*version:\s*"2\.7\.3"/);
   assert.match(dashboard, /NAS-Qualitätsauswertung auf 4K und Nicht 4K/);
   assert.match(dashboard, /Abdeckung nach Hauptdarsteller über anklickbare Spaltenköpfe sortierbar/);
   assert.match(dashboard, /Unten abgeschnittene Kennzahlen in der Admin-Übersicht korrigiert/);

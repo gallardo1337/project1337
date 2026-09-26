@@ -83,6 +83,13 @@ async function loadAllMovies() {
 
 const CHANGELOG = [
   {
+    version: "2.7.3",
+    date: "2026-09-26",
+    items: [
+      "Suchfelder für die Darsteller- und Tag-Auswahl kompakter ausgerichtet",
+    ],
+  },
+  {
     version: "2.7.2",
     date: "2026-09-26",
     items: [

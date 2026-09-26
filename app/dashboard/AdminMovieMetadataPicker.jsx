@@ -56,7 +56,7 @@ export default function AdminMovieMetadataPicker({
             <span> · {items.length} insgesamt</span>
           </strong>
         </div>
-        <label className={styles.search}>
+        <div className={styles.search}>
           <svg viewBox="0 0 20 20" aria-hidden="true">
             <circle cx="8.5" cy="8.5" r="5.25" />
             <path d="m12.5 12.5 4 4" />
@@ -77,7 +77,7 @@ export default function AdminMovieMetadataPicker({
               ×
             </button>
           ) : null}
-        </label>
+        </div>
       </header>
 
       {selectedItems.length ? (
