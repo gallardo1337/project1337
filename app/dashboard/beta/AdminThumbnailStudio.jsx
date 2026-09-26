@@ -500,11 +500,17 @@ export default function AdminThumbnailStudio({
   const [comfyEndpoint, setComfyEndpoint] = useState(DEFAULT_COMFY_ENDPOINT);
   const [comfyModels, setComfyModels] = useState([]);
   const [comfyModel, setComfyModel] = useState("");
+  const [comfyDeblurModels, setComfyDeblurModels] = useState([]);
+  const [comfyDeblurModel, setComfyDeblurModel] = useState("");
+  const [enhancementMode, setEnhancementMode] = useState("upscale");
   const [comfyStatus, setComfyStatus] = useState("idle");
   const [enhancing, setEnhancing] = useState(false);
   const [loadingExistingThumbnail, setLoadingExistingThumbnail] = useState(false);
   const [notice, setNotice] = useState(null);
   const [error, setError] = useState(null);
+  const canEnhance = enhancementMode === "deblur"
+    ? Boolean(comfyDeblurModel && comfyDeblurModels.includes(comfyDeblurModel))
+    : Boolean(comfyModel);
 
   useEffect(() => {
     setComparisonSplit(50);
@@ -826,18 +832,45 @@ export default function AdminThumbnailStudio({
       if (!response.ok) throw new Error(`ComfyUI antwortet mit HTTP ${response.status}.`);
       const models = await response.json();
       if (!Array.isArray(models)) throw new Error("ComfyUI hat eine ungültige Modellliste geliefert.");
+      let deblurModels = [];
+      try {
+        const nodeResponse = await fetch(`${baseUrl}/object_info/NAFNetLoader`, { cache: "no-store" });
+        if (nodeResponse.ok) {
+          const nodeInfo = await nodeResponse.json();
+          const modelChoices = nodeInfo?.NAFNetLoader?.input?.required?.model_name?.[0];
+          if (Array.isArray(modelChoices)) {
+            deblurModels = modelChoices.filter((model) => /^NAFNet-(REDS|GoPro)-width(32|64)\.pth$/.test(model));
+          }
+        }
+      } catch {
+        // Keep normal upscaling available when the optional NAFNet nodes are not installed.
+      }
       setComfyModels(models);
       setComfyModel((current) => (models.includes(current) ? current : models[0] || ""));
+      setComfyDeblurModels(deblurModels);
+      setComfyDeblurModel((current) =>
+        deblurModels.includes(current)
+          ? current
+          : deblurModels.includes("NAFNet-REDS-width64.pth")
+            ? "NAFNet-REDS-width64.pth"
+            : deblurModels.includes("NAFNet-REDS-width32.pth")
+              ? "NAFNet-REDS-width32.pth"
+              : deblurModels[0] || ""
+      );
       setComfyStatus("connected");
       setNotice(
-        models.length
-          ? `ComfyUI verbunden · ${models.length} Upscale-Modell${models.length === 1 ? "" : "e"} gefunden.`
-          : "ComfyUI ist erreichbar. Es wurde noch kein Modell im Ordner models/upscale_models gefunden."
+        deblurModels.length
+          ? `ComfyUI verbunden · NAFNet-Entwackler verfügbar (${deblurModels.length} Modell${deblurModels.length === 1 ? "" : "e"}).`
+          : models.length
+            ? `ComfyUI verbunden · ${models.length} Upscale-Modell${models.length === 1 ? "" : "e"} gefunden. Für Entwackeln NAFNet installieren.`
+            : "ComfyUI ist erreichbar. Es wurde noch kein Modell im Ordner models/upscale_models gefunden."
       );
     } catch (connectError) {
       setComfyStatus("error");
       setComfyModels([]);
       setComfyModel("");
+      setComfyDeblurModels([]);
+      setComfyDeblurModel("");
       setError(
         `ComfyUI nicht erreichbar. Starte ComfyUI mit --enable-cors-header ${window.location.origin} und prüfe die Adresse. ${connectError?.message || ""}`
       );
@@ -847,8 +880,12 @@ export default function AdminThumbnailStudio({
   const enhanceImage = async (sourceBlob, sourceLabel) => {
     if (!sourceBlob || enhancing) return;
     const baseUrl = comfyEndpoint.trim().replace(/\/+$/, "");
-    if (!comfyModel) {
-      setError("Verbinde zuerst ComfyUI und wähle ein Upscale-Modell aus.");
+    if (enhancementMode === "deblur" ? !comfyDeblurModel : !comfyModel) {
+      setError(
+        enhancementMode === "deblur"
+          ? "Für den Entwackler fehlen die NAFNet-ComfyUI-Nodes oder das REDS-Modell. Installiere sie lokal und verbinde ComfyUI erneut."
+          : "Verbinde zuerst ComfyUI und wähle ein Upscale-Modell aus."
+      );
       return;
     }
     setEnhancing(true);
@@ -871,25 +908,35 @@ export default function AdminThumbnailStudio({
       const uploaded = await uploadResponse.json();
       if (!uploaded?.name) throw new Error("ComfyUI hat keinen Eingabedateinamen zurückgegeben.");
 
-      const prompt = {
-        "1": { class_type: "LoadImage", inputs: { image: uploaded.name } },
-        "2": { class_type: "UpscaleModelLoader", inputs: { model_name: comfyModel } },
-        "4": {
-          class_type: "ImageUpscaleWithModel",
-          inputs: { upscale_model: ["2", 0], image: ["1", 0] },
-        },
-        "5": {
-          class_type: "ImageScale",
-          inputs: {
-            image: ["4", 0],
-            upscale_method: "lanczos",
-            width: OUTPUT_WIDTH,
-            height: OUTPUT_HEIGHT,
-            crop: "disabled",
-          },
-        },
-        "6": { class_type: "SaveImage", inputs: { filename_prefix: "my1337-enhanced", images: ["5", 0] } },
-      };
+      const prompt = enhancementMode === "deblur"
+        ? {
+            "1": { class_type: "LoadImage", inputs: { image: uploaded.name } },
+            "2": { class_type: "NAFNetLoader", inputs: { model_name: comfyDeblurModel } },
+            "3": {
+              class_type: "NAFNetRestore",
+              inputs: { image: ["1", 0], model: ["2", 0], tile_size: 512, tile_overlap: 64 },
+            },
+            "6": { class_type: "SaveImage", inputs: { filename_prefix: "my1337-deblurred", images: ["3", 0] } },
+          }
+        : {
+            "1": { class_type: "LoadImage", inputs: { image: uploaded.name } },
+            "2": { class_type: "UpscaleModelLoader", inputs: { model_name: comfyModel } },
+            "4": {
+              class_type: "ImageUpscaleWithModel",
+              inputs: { upscale_model: ["2", 0], image: ["1", 0] },
+            },
+            "5": {
+              class_type: "ImageScale",
+              inputs: {
+                image: ["4", 0],
+                upscale_method: "lanczos",
+                width: OUTPUT_WIDTH,
+                height: OUTPUT_HEIGHT,
+                crop: "disabled",
+              },
+            },
+            "6": { class_type: "SaveImage", inputs: { filename_prefix: "my1337-enhanced", images: ["5", 0] } },
+          };
       const promptResponse = await fetch(`${baseUrl}/prompt`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -901,7 +948,11 @@ export default function AdminThumbnailStudio({
         throw new Error(details);
       }
 
-      setNotice(`KI wertet „${sourceLabel}“ lokal auf …`);
+      setNotice(
+        enhancementMode === "deblur"
+          ? `NAFNet entfernt Bewegungsunschärfe aus „${sourceLabel}“ …`
+          : `KI wertet „${sourceLabel}“ lokal auf …`
+      );
       let images = null;
       for (let attempt = 0; attempt < 240; attempt += 1) {
         await wait(1500);
@@ -937,7 +988,7 @@ export default function AdminThumbnailStudio({
         blob: resultBlob,
         url,
         time: videoRef.current?.currentTime || 0,
-        generator: "ai-enhance",
+        generator: enhancementMode === "deblur" ? "ai-deblur" : "ai-enhance",
         sourceLabel,
       };
       setCandidates((current) => {
@@ -1407,7 +1458,7 @@ export default function AdminThumbnailStudio({
       updateAiEnhancedIndex(
         selectedMovie.id,
         savePayload.thumbnail_url,
-        selectedCandidate.generator === "ai-enhance"
+        selectedCandidate.generator === "ai-enhance" || selectedCandidate.generator === "ai-deblur"
       );
       setNotice(`Thumbnail für „${selectedMovie.title}“ wurde gespeichert.`);
     } catch (saveError) {
@@ -1717,37 +1768,65 @@ export default function AdminThumbnailStudio({
                     {comfyStatus === "checking" ? "Verbinde …" : "ComfyUI verbinden"}
                   </button>
                   <select
-                    aria-label="Upscale-Modell"
-                    value={comfyModel}
-                    onChange={(event) => setComfyModel(event.target.value)}
-                    disabled={!comfyModels.length || enhancing}
+                    aria-label="KI-Verfahren"
+                    value={enhancementMode}
+                    onChange={(event) => setEnhancementMode(event.target.value)}
+                    disabled={enhancing}
                   >
-                    {comfyModels.length ? (
-                      comfyModels.map((model) => <option key={model} value={model}>{model}</option>)
-                    ) : (
-                      <option value="">Upscale-Modell auswählen</option>
-                    )}
+                    <option value="upscale">Schärfen / vergrößern</option>
+                    <option value="deblur">Bewegungsunschärfe entfernen</option>
                   </select>
+                  {enhancementMode === "deblur" ? (
+                    <select
+                      aria-label="NAFNet-Entwackler-Modell"
+                      value={comfyDeblurModel}
+                      onChange={(event) => setComfyDeblurModel(event.target.value)}
+                      disabled={!comfyDeblurModels.length || enhancing}
+                    >
+                      {comfyDeblurModels.length ? (
+                        comfyDeblurModels.map((model) => <option key={model} value={model}>{model}</option>)
+                      ) : (
+                        <option value="">NAFNet-REDS installieren</option>
+                      )}
+                    </select>
+                  ) : (
+                    <select
+                      aria-label="Upscale-Modell"
+                      value={comfyModel}
+                      onChange={(event) => setComfyModel(event.target.value)}
+                      disabled={!comfyModels.length || enhancing}
+                    >
+                      {comfyModels.length ? (
+                        comfyModels.map((model) => <option key={model} value={model}>{model}</option>)
+                      ) : (
+                        <option value="">Upscale-Modell auswählen</option>
+                      )}
+                    </select>
+                  )}
                 </div>
                 <div className="thumbnailStudio__aiActions">
-                  <button type="button" onClick={enhanceSelectedCandidate} disabled={!selectedCandidate || !comfyModel || enhancing || saving}>
-                    {enhancing ? "KI arbeitet …" : "Ausgewählten Frame aufwerten"}
+                  <button type="button" onClick={enhanceSelectedCandidate} disabled={!selectedCandidate || !canEnhance || enhancing || saving}>
+                    {enhancing ? "KI arbeitet …" : enhancementMode === "deblur" ? "Ausgewählten Frame entwackeln" : "Ausgewählten Frame aufwerten"}
                   </button>
                   <button
                     type="button"
                     onClick={enhanceExistingThumbnail}
-                    disabled={!selectedMovie.thumbnail_url || !comfyModel || enhancing || saving || loadingExistingThumbnail}
-                    title={!selectedMovie.thumbnail_url ? "Für diesen Film ist noch kein Thumbnail gespeichert" : "Gespeichertes Thumbnail mit lokaler KI aufwerten"}
+                    disabled={!selectedMovie.thumbnail_url || !canEnhance || enhancing || saving || loadingExistingThumbnail}
+                    title={!selectedMovie.thumbnail_url ? "Für diesen Film ist noch kein Thumbnail gespeichert" : "Gespeichertes Thumbnail lokal bearbeiten"}
                   >
-                    {loadingExistingThumbnail ? "Thumbnail wird geladen …" : "Aktuelles Thumbnail aufwerten"}
+                    {loadingExistingThumbnail ? "Thumbnail wird geladen …" : enhancementMode === "deblur" ? "Aktuelles Thumbnail entwackeln" : "Aktuelles Thumbnail aufwerten"}
                   </button>
-                  <label className={!comfyModel || enhancing || saving ? "is-disabled" : ""}>
+                  <label className={!canEnhance || enhancing || saving ? "is-disabled" : ""}>
                     Thumbnail-Bilddatei wählen
-                    <input type="file" accept="image/*" onChange={handleEnhancementFile} disabled={!comfyModel || enhancing || saving} />
+                    <input type="file" accept="image/*" onChange={handleEnhancementFile} disabled={!canEnhance || enhancing || saving} />
                   </label>
                 </div>
                 <small className="thumbnailStudio__aiHint">
-                  Falls die Verbindung blockiert wird: ComfyUI mit <code>--enable-cors-header {typeof window !== "undefined" ? window.location.origin : "https://beta.my1337.de"}</code> starten. Ein Modell wie 4x-UltraSharp muss in <code>models/upscale_models</code> liegen. Es schärft und vergrößert, entfernt aber keine starke Bewegungsunschärfe.
+                  {enhancementMode === "deblur" ? (
+                    <>NAFNet-REDS ist für Videobilder mit Bewegungsunschärfe trainiert. Dafür ComfyUI-NAFNet installieren und <code>NAFNet-REDS-width64.pth</code> in den Plugin-Ordner <code>custom_nodes/ComfyUI-NAFNet/models</code> legen; danach ComfyUI neu starten und erneut verbinden. Bei Artefakten width32 testen.</>
+                  ) : (
+                    <>ComfyUI mit <code>--enable-cors-header {typeof window !== "undefined" ? window.location.origin : "https://beta.my1337.de"}</code> starten. Ein Modell wie 4x-UltraSharp muss in <code>models/upscale_models</code> liegen. Es schärft und vergrößert, entfernt aber keine starke Bewegungsunschärfe.</>
+                  )}
                 </small>
               </section>
 
@@ -1835,7 +1914,9 @@ export default function AdminThumbnailStudio({
                         <img src={candidate.url} alt={`Thumbnail-Vorschlag ${index + 1}`} />
                         <span>{String(index + 1).padStart(2, "0")}</span>
                         <em>
-                          {candidate.generator === "ai-enhance"
+                          {candidate.generator === "ai-deblur"
+                            ? "KI ENTWACKELT"
+                            : candidate.generator === "ai-enhance"
                             ? "KI AUFGEWERTET"
                             : candidate.generator === "ai"
                             ? "KI BETA"
@@ -1909,7 +1990,9 @@ export default function AdminThumbnailStudio({
                       <span>Bereit zum Speichern</span>
                       <strong>{selectedMovie.title}</strong>
                       <small>
-                        {selectedCandidate.generator === "ai-enhance"
+                        {selectedCandidate.generator === "ai-deblur"
+                          ? `NAFNet-Entwacklung · ${selectedCandidate.sourceLabel || "Bild"}`
+                          : selectedCandidate.generator === "ai-enhance"
                           ? `KI-Aufwertung · ${selectedCandidate.sourceLabel || "Bild"}`
                           : `Frame bei ${formatTime(selectedCandidate.time)} · ${selectedCandidate.generator === "ai"
                           ? "KI Beta"

@@ -3348,7 +3348,8 @@
   position: sticky;
   top: 112px;
   display: grid;
-  grid-template-rows: auto auto auto minmax(0, 1fr);
+  /* Header, search, both filters, then the independently scrolling movie list. */
+  grid-template-rows: auto auto auto auto minmax(0, 1fr);
   height: calc(100vh - 136px);
   max-height: calc(100vh - 136px);
   min-height: 0;
