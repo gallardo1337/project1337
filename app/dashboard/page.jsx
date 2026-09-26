@@ -7,6 +7,7 @@ import dynamic from "next/dynamic";
 import AdminBetaOverview from "./beta/AdminBetaOverview.jsx";
 import AdminMediaHealth from "./beta/AdminMediaHealth.jsx";
 import AdminMovieFilePicker from "./AdminMovieFilePicker.jsx";
+import PlanetSuzyUpdates from "./beta/PlanetSuzyUpdates.jsx";
 import ResolutionIndicator from "../components/ResolutionIndicator.jsx";
 import wizardStyles from "./AdminMovieWizard.module.css";
 import {
@@ -496,6 +497,12 @@ const AdminNavIcon = ({ name }) => {
         <path d="M7 12h2l1.4-3.5 2.2 7 1.5-3.5H17" />
       </>
     ),
+    updates: (
+      <>
+        <path d="M20 7v5h-5M4 17v-5h5" />
+        <path d="M5.6 9a7 7 0 0 1 11.8-2L20 12M4 12l2.6 5a7 7 0 0 0 11.8-2" />
+      </>
+    ),
     nas: (
       <>
         <path d="M4 6.5h16v11H4z" />
@@ -589,6 +596,7 @@ export function DashboardExperience() {
 
   // Tabs: Filme / Neuer Film / Stammdaten
   const [activeFilmSection, setActiveFilmSection] = useState("overview");
+  const [planetUpdatesUnread, setPlanetUpdatesUnread] = useState(0);
   const [metaMenuOpen, setMetaMenuOpen] = useState(false);
   const [activeMetaSection, setActiveMetaSection] = useState("mainActors"); // "mainActors" | "supportActors" | "studios" | "tags"
 
@@ -1991,6 +1999,7 @@ export function DashboardExperience() {
     { key: "stats", label: "Filmarchiv", icon: "movies", section: "stats", count: filme.length },
     { key: "nas", label: "NAS-Analyse", icon: "nas", section: "nas" },
     { key: "health", label: "Medienprüfung", icon: "health", section: "health" },
+    { key: "updates", label: "Update", icon: "updates", section: "updates", count: planetUpdatesUnread },
     { key: "thumbnails", label: "Thumbnail Studio", icon: "thumbnail", section: "thumbnails" },
     { key: "new", label: editingFilmId ? "Film bearbeiten" : "Film hinzufügen", icon: "add", section: "new" },
     { key: "mainActors", label: "Hauptdarsteller", icon: "mainActors", section: "meta", meta: "mainActors", count: hauptdarsteller.length },
@@ -2055,7 +2064,14 @@ export function DashboardExperience() {
   const SidebarContent = BetaSidebarContent;
 
   const betaWorkspace =
-    activeFilmSection === "director"
+    activeFilmSection === "updates"
+      ? {
+          eyebrow: "PlanetSuzy Thread Monitor",
+          title: "Update",
+          description:
+            "Neue Beiträge in den hinterlegten Threads der Hauptdarsteller erkennen.",
+        }
+      : activeFilmSection === "director"
       ? {
           eyebrow: "Homepage Composition",
           title: "Startseiten-Regisseur",
@@ -2843,6 +2859,16 @@ export function DashboardExperience() {
                       studioMap={studioMap}
                       resolutionMap={resolutionMap}
                       onEditMovie={handleEditFilm}
+                    />
+                  ) : null}
+
+                  {activeFilmSection === "updates" ? (
+                    <PlanetSuzyUpdates
+                      actors={hauptdarsteller}
+                      visible={activeFilmSection === "updates"}
+                      enabled={loggedIn && sessionChecked && !loading}
+                      onUnreadCountChange={setPlanetUpdatesUnread}
+                      onUnauthorized={handleSessionExpired}
                     />
                   ) : null}
 
