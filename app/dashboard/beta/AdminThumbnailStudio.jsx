@@ -483,6 +483,7 @@ export default function AdminThumbnailStudio({
   const [videoError, setVideoError] = useState(null);
   const [candidates, setCandidates] = useState([]);
   const [selectedCandidateId, setSelectedCandidateId] = useState(null);
+  const [comparisonSplit, setComparisonSplit] = useState(50);
   const [previewCandidateId, setPreviewCandidateId] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
   const [generating, setGenerating] = useState({
@@ -501,6 +502,10 @@ export default function AdminThumbnailStudio({
   const [loadingExistingThumbnail, setLoadingExistingThumbnail] = useState(false);
   const [notice, setNotice] = useState(null);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    setComparisonSplit(50);
+  }, [selectedCandidateId]);
 
   useEffect(() => {
     try {
@@ -1828,40 +1833,41 @@ export default function AdminThumbnailStudio({
 
               {selectedCandidate ? (
                 <div className="thumbnailStudio__final">
-                  <div className="thumbnailStudio__comparison">
-                    <figure>
-                      <figcaption>Aktuell</figcaption>
+                  <div
+                    className={`thumbnailStudio__comparison${selectedMovie.thumbnail_url ? " has-old" : ""}`}
+                    style={{ "--comparison-split": `${comparisonSplit}%` }}
+                  >
+                    <div className="thumbnailStudio__comparisonStage">
                       {selectedMovie.thumbnail_url ? (
-                        <>
-                          <img src={selectedMovie.thumbnail_url} alt="Aktuelles Thumbnail" />
-                          <button
-                            type="button"
-                            className="thumbnailStudio__compareZoom"
-                            onClick={() => setPreviewImage({ url: selectedMovie.thumbnail_url, label: "Aktuelles Thumbnail" })}
-                            aria-label="Aktuelles Thumbnail groß ansehen"
-                            title="Groß ansehen"
-                          >
-                            ⛶
-                          </button>
-                        </>
+                        <img
+                          className="is-old"
+                          src={selectedMovie.thumbnail_url}
+                          alt="Altes Thumbnail links"
+                        />
                       ) : (
-                        <span>Kein Thumbnail</span>
+                        <div className="thumbnailStudio__comparisonMissing">Kein altes Thumbnail gespeichert</div>
                       )}
-                    </figure>
-                    <b>→</b>
-                    <figure className="is-new">
-                      <figcaption>Neu</figcaption>
-                      <img src={selectedCandidate.url} alt="Neues Thumbnail" />
-                      <button
-                        type="button"
-                        className="thumbnailStudio__compareZoom"
-                        onClick={() => setPreviewCandidateId(selectedCandidate.id)}
-                        aria-label="Neues Thumbnail groß ansehen"
-                        title="Groß ansehen"
-                      >
-                        ⛶
-                      </button>
-                    </figure>
+                      <img
+                        className="is-new"
+                        src={selectedCandidate.url}
+                        alt="Neues Thumbnail rechts"
+                      />
+                      <span className="thumbnailStudio__comparisonLabel is-old">ALT</span>
+                      <span className="thumbnailStudio__comparisonLabel is-new">NEU</span>
+                      <div className="thumbnailStudio__comparisonDivider" aria-hidden="true">
+                        <span>↔</span>
+                      </div>
+                      <input
+                        className="thumbnailStudio__comparisonRange"
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={comparisonSplit}
+                        onChange={(event) => setComparisonSplit(Number(event.target.value))}
+                        aria-label="Vergleich zwischen altem und neuem Thumbnail verschieben"
+                        aria-valuetext={`${100 - comparisonSplit}% alt links, ${comparisonSplit}% neu rechts`}
+                      />
+                    </div>
                   </div>
                   <div className="thumbnailStudio__saveBar">
                     <div>
