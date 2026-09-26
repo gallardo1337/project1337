@@ -857,7 +857,10 @@ export default function AdminThumbnailStudio({
     try {
       const normalizedSource = await fitImageToThumbnail(sourceBlob);
       const formData = new FormData();
-      formData.append("image", normalizedSource, "thumbnail-source.jpg");
+      // A stable filename can make ComfyUI reuse the previous LoadImage node
+      // output from its execution cache, even when the uploaded bytes changed.
+      const uploadName = `thumbnail-source-${Date.now()}-${Math.random().toString(36).slice(2, 9)}.jpg`;
+      formData.append("image", normalizedSource, uploadName);
       formData.append("type", "input");
       formData.append("overwrite", "true");
       const uploadResponse = await fetch(`${baseUrl}/upload/image`, {
@@ -871,19 +874,9 @@ export default function AdminThumbnailStudio({
       const prompt = {
         "1": { class_type: "LoadImage", inputs: { image: uploaded.name } },
         "2": { class_type: "UpscaleModelLoader", inputs: { model_name: comfyModel } },
-        "3": {
-          class_type: "ImageScale",
-          inputs: {
-            image: ["1", 0],
-            upscale_method: "lanczos",
-            width: OUTPUT_WIDTH / 2,
-            height: OUTPUT_HEIGHT / 2,
-            crop: "disabled",
-          },
-        },
         "4": {
           class_type: "ImageUpscaleWithModel",
-          inputs: { upscale_model: ["2", 0], image: ["3", 0] },
+          inputs: { upscale_model: ["2", 0], image: ["1", 0] },
         },
         "5": {
           class_type: "ImageScale",
@@ -1754,7 +1747,7 @@ export default function AdminThumbnailStudio({
                   </label>
                 </div>
                 <small className="thumbnailStudio__aiHint">
-                  Falls die Verbindung blockiert wird: ComfyUI mit <code>--enable-cors-header {typeof window !== "undefined" ? window.location.origin : "https://beta.my1337.de"}</code> starten. Ein Modell wie 4x-UltraSharp muss in <code>models/upscale_models</code> liegen.
+                  Falls die Verbindung blockiert wird: ComfyUI mit <code>--enable-cors-header {typeof window !== "undefined" ? window.location.origin : "https://beta.my1337.de"}</code> starten. Ein Modell wie 4x-UltraSharp muss in <code>models/upscale_models</code> liegen. Es schärft und vergrößert, entfernt aber keine starke Bewegungsunschärfe.
                 </small>
               </section>
 
