@@ -245,7 +245,7 @@ export default function PlanetSuzyUpdates({
                 <div className={styles.status}>
                   {unread ? (
                     <span className={styles.newBadge}>
-                      <span>1</span> Neuer Beitrag
+                      <span aria-hidden="true">!</span> Neuer Beitrag
                     </span>
                   ) : state?.maxPostId ? (
                     <span className={styles.postId}>{"Beitrag #" + state.maxPostId}</span>
@@ -265,13 +265,15 @@ export default function PlanetSuzyUpdates({
 
                 <div className={styles.actions}>
                   {unread ? (
-                    <button
-                      type="button"
+                    <a
+                      href={actor.planetsuzy_url}
+                      target="_blank"
+                      rel="noreferrer"
                       className={styles.readButton}
                       onClick={() => markRead(actor.id)}
                     >
-                      Gesehen
-                    </button>
+                      Öffnen <span aria-hidden="true">↗</span>
+                    </a>
                   ) : null}
                   {linked ? (
                     <button
