@@ -959,8 +959,15 @@ export default function AdminThumbnailStudio({
     setLoadingExistingThumbnail(true);
     setNotice("Vorhandenes Thumbnail wird geladen …");
     try {
-      const response = await fetch(selectedMovie.thumbnail_url);
-      if (!response.ok) throw new Error();
+      const response = await fetch(`/api/movies/${selectedMovie.id}/thumbnail`, {
+        method: "GET",
+        cache: "no-store",
+        credentials: "same-origin",
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error || `Abruf fehlgeschlagen (HTTP ${response.status}).`);
+      }
       const blob = await response.blob();
       if (!blob.type.startsWith("image/")) throw new Error();
       if (blob.size > 30 * 1024 * 1024) {
@@ -970,10 +977,10 @@ export default function AdminThumbnailStudio({
       }
       setNotice(null);
       await enhanceImage(blob, `aktuelles Thumbnail von ${selectedMovie.title}`);
-    } catch {
+    } catch (loadError) {
       setNotice(null);
       setError(
-        "Der Bildhost blockiert den direkten Zugriff. Lade das Thumbnail herunter und wähle es über „Thumbnail-Bilddatei wählen“ aus."
+        `Das gespeicherte Thumbnail konnte nicht geladen werden: ${loadError?.message || "unbekannter Fehler"}. Lade die Bilddatei herunter und wähle sie über „Thumbnail-Bilddatei wählen“ aus.`
       );
     } finally {
       setLoadingExistingThumbnail(false);
