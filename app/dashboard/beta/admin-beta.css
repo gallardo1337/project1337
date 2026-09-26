@@ -3348,7 +3348,11 @@
   position: sticky;
   top: 112px;
   display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  height: calc(100vh - 136px);
   max-height: calc(100vh - 136px);
+  min-height: 0;
+  overflow: hidden;
   border-right: 1px solid var(--admin-line);
   background: #0b0b0d;
 }
@@ -3479,7 +3483,8 @@
 }
 
 .adminBeta .thumbnailStudio__movieList {
-  min-height: 240px;
+  min-height: 0;
+  height: 100%;
   overflow-y: auto;
   border-top: 1px solid rgba(255, 255, 255, 0.075);
   scrollbar-color: #34343a #0b0b0d;
@@ -4765,10 +4770,16 @@
 
   .adminBeta .thumbnailStudio__library {
     position: static;
+    grid-template-rows: auto;
+    height: auto;
     max-height: none;
+    min-height: 0;
+    overflow: visible;
   }
 
   .adminBeta .thumbnailStudio__movieList {
+    height: auto;
+    min-height: 240px;
     max-height: 720px;
   }
 

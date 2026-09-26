@@ -21,6 +21,7 @@ const SUGGESTION_COUNT = 6;
 const EMPTY_MOVIES = [];
 const COMFY_ENDPOINT_STORAGE_KEY = "project1337-comfyui-endpoint";
 const DEFAULT_COMFY_ENDPOINT = "http://127.0.0.1:8188";
+const AI_ENHANCED_STORAGE_KEY = "project1337-ai-enhanced-thumbnails-v1";
 const CHAPTER_POINTS = [0.12, 0.26, 0.4, 0.54, 0.68, 0.82];
 const MEDIAPIPE_WASM_ROOT =
   "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm";
@@ -474,6 +475,8 @@ export default function AdminThumbnailStudio({
 
   const [search, setSearch] = useState("");
   const [onlyMissing, setOnlyMissing] = useState(false);
+  const [hideAiEnhanced, setHideAiEnhanced] = useState(true);
+  const [aiEnhancedThumbs, setAiEnhancedThumbs] = useState({});
   const [selectedMovieId, setSelectedMovieId] = useState(null);
   const [localSource, setLocalSource] = useState(null);
   const [remoteAccess, setRemoteAccess] = useState("idle");
@@ -511,8 +514,15 @@ export default function AdminThumbnailStudio({
     try {
       const savedEndpoint = window.localStorage.getItem(COMFY_ENDPOINT_STORAGE_KEY);
       if (savedEndpoint) setComfyEndpoint(savedEndpoint);
+      const savedEnhancedThumbs = window.localStorage.getItem(AI_ENHANCED_STORAGE_KEY);
+      if (savedEnhancedThumbs) {
+        const parsed = JSON.parse(savedEnhancedThumbs);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          setAiEnhancedThumbs(parsed);
+        }
+      }
     } catch {
-      // Local storage can be disabled; the default endpoint remains usable.
+      // Local storage can be disabled; defaults remain usable.
     }
   }, []);
 
@@ -536,6 +546,11 @@ export default function AdminThumbnailStudio({
 
     return sortedMovies.filter((movie) => {
       if (onlyMissing && movie.thumbnail_url) return false;
+      if (
+        hideAiEnhanced &&
+        movie.thumbnail_url &&
+        aiEnhancedThumbs[movie.id] === movie.thumbnail_url
+      ) return false;
       if (!query) return true;
 
       const haystack = `${movie.title || ""} ${
@@ -545,7 +560,7 @@ export default function AdminThumbnailStudio({
       );
       return haystack.includes(query);
     });
-  }, [sortedMovies, search, onlyMissing, studioMap, resolutionMap]);
+  }, [sortedMovies, search, onlyMissing, hideAiEnhanced, aiEnhancedThumbs, studioMap, resolutionMap]);
 
   const selectedMovie = useMemo(
     () => workingMovies.find((movie) => movie.id === selectedMovieId) || null,
@@ -1306,6 +1321,18 @@ export default function AdminThumbnailStudio({
     video.currentTime = duration * percent;
   };
 
+  const updateAiEnhancedIndex = (movieId, thumbnailUrl, isEnhanced) => {
+    const next = { ...aiEnhancedThumbs };
+    if (isEnhanced && thumbnailUrl) next[movieId] = thumbnailUrl;
+    else delete next[movieId];
+    setAiEnhancedThumbs(next);
+    try {
+      window.localStorage.setItem(AI_ENHANCED_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // Keep the filter functional for this session if storage is unavailable.
+    }
+  };
+
   const saveThumbnail = async () => {
     if (!selectedMovie || !selectedCandidate || saving) return;
 
@@ -1384,6 +1411,11 @@ export default function AdminThumbnailStudio({
       }
 
       onThumbnailSaved?.(selectedMovie.id, savePayload.thumbnail_url);
+      updateAiEnhancedIndex(
+        selectedMovie.id,
+        savePayload.thumbnail_url,
+        selectedCandidate.generator === "ai-enhance"
+      );
       setNotice(`Thumbnail für „${selectedMovie.title}“ wurde gespeichert.`);
     } catch (saveError) {
       setError(saveError?.message || "Thumbnail konnte nicht gespeichert werden.");
@@ -1479,6 +1511,16 @@ export default function AdminThumbnailStudio({
             />
             <span />
             Nur Filme ohne Thumbnail
+          </label>
+
+          <label className="thumbnailStudio__toggle">
+            <input
+              type="checkbox"
+              checked={hideAiEnhanced}
+              onChange={(event) => setHideAiEnhanced(event.target.checked)}
+            />
+            <span />
+            KI-aufgewertete ausblenden
           </label>
 
           <div className="thumbnailStudio__movieList">
