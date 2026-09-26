@@ -502,17 +502,23 @@ export default function AdminThumbnailStudio({
   const [comfyModel, setComfyModel] = useState("");
   const [comfyDeblurModels, setComfyDeblurModels] = useState([]);
   const [comfyDeblurModel, setComfyDeblurModel] = useState("");
+  const [comfySupirModels, setComfySupirModels] = useState([]);
+  const [comfySupirModel, setComfySupirModel] = useState("");
+  const [comfySdxlModels, setComfySdxlModels] = useState([]);
+  const [comfySdxlModel, setComfySdxlModel] = useState("");
   const [enhancementMode, setEnhancementMode] = useState("upscale");
   const [comfyStatus, setComfyStatus] = useState("idle");
   const [enhancing, setEnhancing] = useState(false);
   const [loadingExistingThumbnail, setLoadingExistingThumbnail] = useState(false);
   const [notice, setNotice] = useState(null);
   const [error, setError] = useState(null);
-  const requiresDeblur = enhancementMode !== "upscale";
-  const requiresUpscale = enhancementMode !== "deblur";
-  const canEnhance =
-    (!requiresDeblur || Boolean(comfyDeblurModel && comfyDeblurModels.includes(comfyDeblurModel))) &&
-    (!requiresUpscale || Boolean(comfyModel));
+  const requiresSupir = enhancementMode === "supir";
+  const requiresDeblur = enhancementMode === "deblur" || enhancementMode === "deblur-upscale";
+  const requiresUpscale = enhancementMode === "upscale" || enhancementMode === "deblur-upscale";
+  const canEnhance = requiresSupir
+    ? Boolean(comfySupirModel && comfySdxlModel)
+    : (!requiresDeblur || Boolean(comfyDeblurModel && comfyDeblurModels.includes(comfyDeblurModel))) &&
+      (!requiresUpscale || Boolean(comfyModel));
 
   useEffect(() => {
     setComparisonSplit(50);
@@ -859,13 +865,36 @@ export default function AdminThumbnailStudio({
               ? "NAFNet-REDS-width32.pth"
               : deblurModels[0] || ""
       );
+      let supirModels = [];
+      let sdxlModels = [];
+      try {
+        const nodeResponse = await fetch(`${baseUrl}/object_info/SUPIR_Upscale`, { cache: "no-store" });
+        if (nodeResponse.ok) {
+          const nodeInfo = await nodeResponse.json();
+          const required = nodeInfo?.SUPIR_Upscale?.input?.required;
+          const checkpoints = required?.supir_model?.[0];
+          const sdxlChoices = required?.sdxl_model?.[0];
+          if (Array.isArray(checkpoints)) {
+            supirModels = checkpoints.filter((model) => /supir/i.test(model));
+          }
+          if (Array.isArray(sdxlChoices)) {
+            sdxlModels = sdxlChoices.filter((model) => !/supir/i.test(model));
+          }
+        }
+      } catch {
+        // SUPIR remains an optional ComfyUI capability.
+      }
+      setComfySupirModels(supirModels);
+      setComfySupirModel((current) => supirModels.includes(current) ? current : supirModels[0] || "");
+      setComfySdxlModels(sdxlModels);
+      setComfySdxlModel((current) =>
+        sdxlModels.includes(current)
+          ? current
+          : sdxlModels.find((model) => /albedo/i.test(model)) || sdxlModels[0] || ""
+      );
       setComfyStatus("connected");
       setNotice(
-        deblurModels.length
-          ? `ComfyUI verbunden · NAFNet-Entwackler verfügbar (${deblurModels.length} Modell${deblurModels.length === 1 ? "" : "e"}).`
-          : models.length
-            ? `ComfyUI verbunden · ${models.length} Upscale-Modell${models.length === 1 ? "" : "e"} gefunden. Für Entwackeln NAFNet installieren.`
-            : "ComfyUI ist erreichbar. Es wurde noch kein Modell im Ordner models/upscale_models gefunden."
+        `ComfyUI verbunden · ${models.length} Upscale-, ${deblurModels.length} NAFNet- und ${supirModels.length} SUPIR-Modell${supirModels.length === 1 ? "" : "e"} gefunden.`
       );
     } catch (connectError) {
       setComfyStatus("error");
@@ -873,6 +902,10 @@ export default function AdminThumbnailStudio({
       setComfyModel("");
       setComfyDeblurModels([]);
       setComfyDeblurModel("");
+      setComfySupirModels([]);
+      setComfySupirModel("");
+      setComfySdxlModels([]);
+      setComfySdxlModel("");
       setError(
         `ComfyUI nicht erreichbar. Starte ComfyUI mit --enable-cors-header ${window.location.origin} und prüfe die Adresse. ${connectError?.message || ""}`
       );
@@ -884,7 +917,11 @@ export default function AdminThumbnailStudio({
     const baseUrl = comfyEndpoint.trim().replace(/\/+$/, "");
     if (!canEnhance) {
       setError(
-        requiresDeblur && !comfyDeblurModel
+        requiresSupir && !comfySupirModel
+          ? "SUPIR-Node oder SUPIR-Modell fehlt. Installiere die ComfyUI-SUPIR-Unterstützung und lege ein SUPIR-Modell unter models/checkpoints ab."
+          : requiresSupir && !comfySdxlModel
+            ? "Für SUPIR fehlt ein SDXL-Modell unter models/checkpoints."
+            : requiresDeblur && !comfyDeblurModel
           ? "Für den Entwackler fehlen die NAFNet-ComfyUI-Nodes oder das REDS-Modell. Installiere sie lokal und verbinde ComfyUI erneut."
           : "Verbinde ComfyUI und wähle die benötigten NAFNet- und Upscale-Modelle aus."
       );
@@ -915,6 +952,46 @@ export default function AdminThumbnailStudio({
       };
       let imageNode = "1";
       let nextNodeId = 2;
+      if (requiresSupir) {
+        const supirId = String(nextNodeId++);
+        prompt[supirId] = {
+          class_type: "SUPIR_Upscale",
+          inputs: {
+            supir_model: comfySupirModel,
+            sdxl_model: comfySdxlModel,
+            image: [imageNode, 0],
+            seed: Math.floor(Math.random() * 0xffffffff),
+            resize_method: "lanczos",
+            scale_by: 1.0,
+            steps: 45,
+            restoration_scale: -1.0,
+            cfg_scale: 4.0,
+            a_prompt: "high quality, realistic high resolution movie still, natural skin texture, sharp focus, preserve original composition",
+            n_prompt: "low quality, blurry, motion blur, artifacts, deformed face, changed identity, oversharpening",
+            s_churn: 5,
+            s_noise: 1.003,
+            control_scale: 1.0,
+            cfg_scale_start: 4.0,
+            control_scale_start: 0.0,
+            color_fix_type: "Wavelet",
+            keep_model_loaded: false,
+            use_tiled_vae: true,
+            encoder_tile_size_pixels: 512,
+            decoder_tile_size_latent: 64,
+            captions: "",
+            diffusion_dtype: "fp16",
+            encoder_dtype: "fp32",
+            batch_size: 1,
+            use_tiled_sampling: true,
+            sampler_tile_size: 1024,
+            sampler_tile_stride: 512,
+            fp8_unet: false,
+            fp8_vae: false,
+            sampler: "RestoreEDMSampler",
+          },
+        };
+        imageNode = supirId;
+      }
       if (requiresDeblur) {
         const loaderId = String(nextNodeId++);
         const restoreId = String(nextNodeId++);
@@ -960,7 +1037,9 @@ export default function AdminThumbnailStudio({
       prompt["8"] = {
         class_type: "SaveImage",
         inputs: {
-          filename_prefix: requiresDeblur && requiresUpscale
+          filename_prefix: requiresSupir
+            ? "my1337-supir-restored"
+            : requiresDeblur && requiresUpscale
             ? "my1337-deblurred-upscaled"
             : requiresDeblur
               ? "my1337-deblurred"
@@ -980,14 +1059,16 @@ export default function AdminThumbnailStudio({
       }
 
       setNotice(
-        enhancementMode === "deblur-upscale"
+        requiresSupir
+          ? `SUPIR restauriert „${sourceLabel}“ mit 45 Schritten – das kann einige Minuten dauern …`
+          : enhancementMode === "deblur-upscale"
           ? `NAFNet entwackelt „${sourceLabel}“, danach verfeinert UltraSharp das Bild …`
           : enhancementMode === "deblur"
             ? `NAFNet entfernt Bewegungsunschärfe aus „${sourceLabel}“ …`
             : `KI wertet „${sourceLabel}“ lokal auf …`
       );
       let images = null;
-      for (let attempt = 0; attempt < 240; attempt += 1) {
+      for (let attempt = 0; attempt < (requiresSupir ? 1200 : 240); attempt += 1) {
         await wait(1500);
         const historyResponse = await fetch(`${baseUrl}/history/${encodeURIComponent(promptPayload.prompt_id)}`, {
           cache: "no-store",
@@ -1003,7 +1084,13 @@ export default function AdminThumbnailStudio({
           throw new Error(job.status.messages?.find((item) => item?.[0] === "execution_error")?.[1]?.exception_message || "ComfyUI konnte das Bild nicht verarbeiten.");
         }
       }
-      if (!images?.length) throw new Error("Zeitüberschreitung: ComfyUI hat nach 6 Minuten kein Ergebnis geliefert.");
+      if (!images?.length) {
+        throw new Error(
+          requiresSupir
+            ? "Zeitüberschreitung: SUPIR hat nach 30 Minuten kein Ergebnis geliefert."
+            : "Zeitüberschreitung: ComfyUI hat nach 6 Minuten kein Ergebnis geliefert."
+        );
+      }
 
       const imageInfo = images[0];
       const imageQuery = new URLSearchParams({
@@ -1021,7 +1108,9 @@ export default function AdminThumbnailStudio({
         blob: resultBlob,
         url,
         time: videoRef.current?.currentTime || 0,
-        generator: enhancementMode === "deblur-upscale"
+        generator: requiresSupir
+          ? "ai-supir"
+          : enhancementMode === "deblur-upscale"
           ? "ai-deblur-upscale"
           : enhancementMode === "deblur"
             ? "ai-deblur"
@@ -1497,7 +1586,8 @@ export default function AdminThumbnailStudio({
         savePayload.thumbnail_url,
         selectedCandidate.generator === "ai-enhance" ||
           selectedCandidate.generator === "ai-deblur" ||
-          selectedCandidate.generator === "ai-deblur-upscale"
+          selectedCandidate.generator === "ai-deblur-upscale" ||
+          selectedCandidate.generator === "ai-supir"
       );
       setNotice(`Thumbnail für „${selectedMovie.title}“ wurde gespeichert.`);
     } catch (saveError) {
@@ -1815,7 +1905,28 @@ export default function AdminThumbnailStudio({
                     <option value="upscale">Schärfen / vergrößern</option>
                     <option value="deblur">Bewegungsunschärfe entfernen</option>
                     <option value="deblur-upscale">Entwackeln + hochauflösend verfeinern</option>
+                    <option value="supir">SUPIR-Restaurierung (langsamer, generativ)</option>
                   </select>
+                  {requiresSupir ? (
+                    <>
+                      <select
+                        aria-label="SUPIR-Restaurierungsmodell"
+                        value={comfySupirModel}
+                        onChange={(event) => setComfySupirModel(event.target.value)}
+                        disabled={!comfySupirModels.length || enhancing}
+                      >
+                        {comfySupirModels.length ? comfySupirModels.map((model) => <option key={model} value={model}>{model}</option>) : <option value="">SUPIR-Modell installieren</option>}
+                      </select>
+                      <select
+                        aria-label="SDXL-Basismodell für SUPIR"
+                        value={comfySdxlModel}
+                        onChange={(event) => setComfySdxlModel(event.target.value)}
+                        disabled={!comfySdxlModels.length || enhancing}
+                      >
+                        {comfySdxlModels.length ? comfySdxlModels.map((model) => <option key={model} value={model}>{model}</option>) : <option value="">SDXL-Modell auswählen</option>}
+                      </select>
+                    </>
+                  ) : null}
                   {requiresDeblur ? (
                     <select
                       aria-label="NAFNet-Entwackler-Modell"
@@ -1849,6 +1960,8 @@ export default function AdminThumbnailStudio({
                   <button type="button" onClick={enhanceSelectedCandidate} disabled={!selectedCandidate || !canEnhance || enhancing || saving}>
                     {enhancing
                       ? "KI arbeitet …"
+                      : requiresSupir
+                        ? "Ausgewählten Frame mit SUPIR restaurieren"
                       : enhancementMode === "deblur-upscale"
                         ? "Frame entwackeln + verfeinern"
                         : enhancementMode === "deblur"
@@ -1863,6 +1976,8 @@ export default function AdminThumbnailStudio({
                   >
                     {loadingExistingThumbnail
                       ? "Thumbnail wird geladen …"
+                      : requiresSupir
+                        ? "Aktuelles Thumbnail mit SUPIR restaurieren"
                       : enhancementMode === "deblur-upscale"
                         ? "Thumbnail entwackeln + verfeinern"
                         : enhancementMode === "deblur"
@@ -1875,7 +1990,9 @@ export default function AdminThumbnailStudio({
                   </label>
                 </div>
                 <small className="thumbnailStudio__aiHint">
-                  {enhancementMode === "deblur-upscale" ? (
+                  {requiresSupir ? (
+                    <>SUPIR rekonstruiert das Bild generativ in mehreren Schritten und kann mehrere Minuten benötigen. Das Modell kann Details neu erzeugen; prüfe das Ergebnis sorgfältig. Benötigt ComfyUI-SUPIR, ein SUPIR-Checkpoint und ein SDXL-Modell in <code>models/checkpoints</code>. Im ComfyUI Manager nach <code>ComfyUI-SUPIR</code> suchen, installieren und danach ComfyUI neu starten. Für den ersten Versuch eignet sich <code>SUPIR-v0F</code> bei leichteren Schäden; <code>SUPIR-v0Q</code> restauriert stärker. Es wird lokal verarbeitet.</>
+                  ) : enhancementMode === "deblur-upscale" ? (
                     <>NAFNet-REDS entfernt zuerst Bewegungsunschärfe; anschließend verfeinert das gewählte Upscale-Modell Details. Ergebnis bleibt 1920×1080. Für Videobilder NAFNet-REDS verwenden; danach 4x-UltraSharp auswählen. Bei Artefakten REDS-width32 testen.</>
                   ) : enhancementMode === "deblur" ? (
                     <>NAFNet-REDS ist für Videobilder mit Bewegungsunschärfe trainiert. Dafür ComfyUI-NAFNet installieren und <code>NAFNet-REDS-width64.pth</code> in den Plugin-Ordner <code>custom_nodes/ComfyUI-NAFNet/models</code> legen; danach ComfyUI neu starten und erneut verbinden. Bei Artefakten width32 testen.</>
@@ -1971,6 +2088,8 @@ export default function AdminThumbnailStudio({
                         <em>
                           {candidate.generator === "ai-deblur-upscale"
                             ? "ENTWACKELT + VERFEINERT"
+                            : candidate.generator === "ai-supir"
+                            ? "SUPIR RESTAURIERT"
                             : candidate.generator === "ai-deblur"
                             ? "KI ENTWACKELT"
                             : candidate.generator === "ai-enhance"
@@ -2049,6 +2168,8 @@ export default function AdminThumbnailStudio({
                       <small>
                         {selectedCandidate.generator === "ai-deblur-upscale"
                           ? `NAFNet + Upscaling · ${selectedCandidate.sourceLabel || "Bild"}`
+                          : selectedCandidate.generator === "ai-supir"
+                          ? `SUPIR-Restaurierung · ${selectedCandidate.sourceLabel || "Bild"}`
                           : selectedCandidate.generator === "ai-deblur"
                           ? `NAFNet-Entwacklung · ${selectedCandidate.sourceLabel || "Bild"}`
                           : selectedCandidate.generator === "ai-enhance"
