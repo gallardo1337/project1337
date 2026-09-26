@@ -498,6 +498,7 @@ export default function AdminThumbnailStudio({
   const [comfyModel, setComfyModel] = useState("");
   const [comfyStatus, setComfyStatus] = useState("idle");
   const [enhancing, setEnhancing] = useState(false);
+  const [loadingExistingThumbnail, setLoadingExistingThumbnail] = useState(false);
   const [notice, setNotice] = useState(null);
   const [error, setError] = useState(null);
 
@@ -950,6 +951,33 @@ export default function AdminThumbnailStudio({
 
   const enhanceSelectedCandidate = () => {
     if (selectedCandidate) enhanceImage(selectedCandidate.blob, "ausgewählter Frame");
+  };
+
+  const enhanceExistingThumbnail = async () => {
+    if (!selectedMovie?.thumbnail_url || enhancing || loadingExistingThumbnail) return;
+    setError(null);
+    setLoadingExistingThumbnail(true);
+    setNotice("Vorhandenes Thumbnail wird geladen …");
+    try {
+      const response = await fetch(selectedMovie.thumbnail_url);
+      if (!response.ok) throw new Error();
+      const blob = await response.blob();
+      if (!blob.type.startsWith("image/")) throw new Error();
+      if (blob.size > 30 * 1024 * 1024) {
+        setNotice(null);
+        setError("Das aktuelle Thumbnail ist größer als 30 MB.");
+        return;
+      }
+      setNotice(null);
+      await enhanceImage(blob, `aktuelles Thumbnail von ${selectedMovie.title}`);
+    } catch {
+      setNotice(null);
+      setError(
+        "Der Bildhost blockiert den direkten Zugriff. Lade das Thumbnail herunter und wähle es über „Thumbnail-Bilddatei wählen“ aus."
+      );
+    } finally {
+      setLoadingExistingThumbnail(false);
+    }
   };
 
   const handleEnhancementFile = (event) => {
@@ -1657,6 +1685,14 @@ export default function AdminThumbnailStudio({
                 <div className="thumbnailStudio__aiActions">
                   <button type="button" onClick={enhanceSelectedCandidate} disabled={!selectedCandidate || !comfyModel || enhancing || saving}>
                     {enhancing ? "KI arbeitet …" : "Ausgewählten Frame aufwerten"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={enhanceExistingThumbnail}
+                    disabled={!selectedMovie.thumbnail_url || !comfyModel || enhancing || saving || loadingExistingThumbnail}
+                    title={!selectedMovie.thumbnail_url ? "Für diesen Film ist noch kein Thumbnail gespeichert" : "Gespeichertes Thumbnail mit lokaler KI aufwerten"}
+                  >
+                    {loadingExistingThumbnail ? "Thumbnail wird geladen …" : "Aktuelles Thumbnail aufwerten"}
                   </button>
                   <label className={!comfyModel || enhancing || saving ? "is-disabled" : ""}>
                     Thumbnail-Bilddatei wählen
