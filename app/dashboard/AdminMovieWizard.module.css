@@ -351,66 +351,6 @@
   color: #f97316;
 }
 
-.selectionIntro {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 14px;
-  color: rgba(255, 255, 255, 0.36);
-  font-size: 10px;
-}
-
-.selectionIntro strong {
-  color: #fb923c;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 23px;
-  font-weight: 400;
-}
-
-.choices {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 9px;
-  padding: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  background: rgba(255, 255, 255, 0.015);
-}
-
-.choice {
-  min-height: 38px;
-  border: 1px solid rgba(255, 255, 255, 0.13);
-  border-radius: 999px;
-  background: #0e0e10;
-  padding: 0 14px;
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 10px;
-  cursor: pointer;
-}
-
-.choice:hover {
-  border-color: rgba(255, 255, 255, 0.34);
-  color: #fff;
-}
-
-.choiceActive {
-  border-color: #f97316;
-  background: #f97316;
-  color: #09090a;
-  font-weight: 800;
-}
-
-.choiceActive:hover {
-  border-color: #ff6868;
-  background: #ff6868;
-  color: #09090a;
-}
-
-.empty {
-  color: rgba(255, 255, 255, 0.32);
-  font-size: 10px;
-}
-
 .review {
   display: grid;
   overflow: hidden;

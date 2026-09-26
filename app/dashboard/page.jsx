@@ -7,6 +7,7 @@ import dynamic from "next/dynamic";
 import AdminBetaOverview from "./beta/AdminBetaOverview.jsx";
 import AdminMediaHealth from "./beta/AdminMediaHealth.jsx";
 import AdminMovieFilePicker from "./AdminMovieFilePicker.jsx";
+import AdminMovieMetadataPicker from "./AdminMovieMetadataPicker.jsx";
 import PlanetSuzyUpdates from "./beta/PlanetSuzyUpdates.jsx";
 import ResolutionIndicator from "../components/ResolutionIndicator.jsx";
 import wizardStyles from "./AdminMovieWizard.module.css";
@@ -81,6 +82,13 @@ async function loadAllMovies() {
 // -------------------------------
 
 const CHANGELOG = [
+  {
+    version: "2.7.2",
+    date: "2026-09-26",
+    items: [
+      "Darsteller- und Tag-Auswahl im Film-Assistenten mit Suche und kompakten Listen neu gestaltet",
+    ],
+  },
   {
     version: "2.7.1",
     date: "2026-09-26",
@@ -3178,127 +3186,46 @@ export function DashboardExperience() {
 
                             {/* Hauptdarsteller */}
                             {filmWizardStep === 3 ? (
-                              <div>
-                                <div className={wizardStyles.selectionIntro}>
-                                  <span>Klick zum Auswählen oder Entfernen</span>
-                                  <strong>{selectedMainActorIds.length}</strong>
-                                </div>
-                                <div className={wizardStyles.choices}>
-                                  {hauptdarsteller.length === 0 ? (
-                                    <span className={wizardStyles.empty}>
-                                      Noch keine Hauptdarsteller angelegt.
-                                    </span>
-                                  ) : (
-                                    hauptdarsteller.map((actor) => {
-                                      const active = selectedMainActorIds.includes(
-                                        actor.id
-                                      );
-                                      return (
-                                        <button
-                                          key={actor.id}
-                                          type="button"
-                                          onClick={() => handleToggleMainActor(actor)}
-                                          className={`${wizardStyles.choice} ${
-                                            active ? wizardStyles.choiceActive : ""
-                                          }`}
-                                          aria-pressed={active}
-                                        >
-                                          {active ? "✓ " : ""}{actor.name}
-                                        </button>
-                                      );
-                                    })
-                                  )}
-                                </div>
-                              </div>
+                              <AdminMovieMetadataPicker
+                                label="Hauptdarsteller"
+                                items={hauptdarsteller}
+                                selectedIds={selectedMainActorIds}
+                                onToggle={handleToggleMainActor}
+                                placeholder="Hauptdarsteller suchen…"
+                                emptyMessage="Noch keine Hauptdarsteller angelegt."
+                              />
                             ) : null}
 
                             {/* Nebendarsteller */}
                             {filmWizardStep === 4 ? (
-                              <div>
-                                <div className={wizardStyles.selectionIntro}>
-                                  <span>Klick zum Auswählen oder Entfernen</span>
-                                  <strong>{selectedSupportActorIds.length}</strong>
-                                </div>
-                                <div className={wizardStyles.choices}>
-                                  {nebendarsteller.length === 0 ? (
-                                    <span className={wizardStyles.empty}>
-                                      Noch keine Nebendarsteller angelegt.
-                                    </span>
-                                  ) : (
-                                    nebendarsteller.map((actor) => {
-                                      const active = selectedSupportActorIds.includes(
-                                        actor.id
-                                      );
-                                      return (
-                                        <button
-                                          key={actor.id}
-                                          type="button"
-                                          onClick={() =>
-                                            toggleId(
-                                              actor.id,
-                                              selectedSupportActorIds,
-                                              setSelectedSupportActorIds
-                                            )
-                                          }
-                                          className={`${wizardStyles.choice} ${
-                                            active ? wizardStyles.choiceActive : ""
-                                          }`}
-                                          aria-pressed={active}
-                                        >
-                                          {active ? "✓ " : ""}{actor.name}
-                                        </button>
-                                      );
-                                    })
-                                  )}
-                                </div>
-                              </div>
+                              <AdminMovieMetadataPicker
+                                label="Nebendarsteller"
+                                items={nebendarsteller}
+                                selectedIds={selectedSupportActorIds}
+                                onToggle={(actor) =>
+                                  toggleId(
+                                    actor.id,
+                                    selectedSupportActorIds,
+                                    setSelectedSupportActorIds
+                                  )
+                                }
+                                placeholder="Nebendarsteller suchen…"
+                                emptyMessage="Noch keine Nebendarsteller angelegt."
+                              />
                             ) : null}
 
                             {/* Tags */}
                             {filmWizardStep === 5 ? (
-                              <div>
-                                <div className={wizardStyles.selectionIntro}>
-                                  <span>Klick zum Auswählen oder Entfernen</span>
-                                  <strong>{selectedTagIds.length}</strong>
-                                </div>
-                                <div className={wizardStyles.choices}>
-                                  {tags.length === 0 ? (
-                                    <span className={wizardStyles.empty}>
-                                      Noch keine Tags angelegt.
-                                    </span>
-                                  ) : (
-                                    [...tags]
-                                      .sort(
-                                        (a, b) =>
-                                          Number(b.is_main === true) -
-                                            Number(a.is_main === true) ||
-                                          (a.name || "").localeCompare(b.name || "", "de", { sensitivity: "base" })
-                                      )
-                                      .map((tag) => {
-                                        const active = selectedTagIds.includes(tag.id);
-                                        return (
-                                          <button
-                                            key={tag.id}
-                                            type="button"
-                                            onClick={() =>
-                                              toggleId(
-                                                tag.id,
-                                                selectedTagIds,
-                                                setSelectedTagIds
-                                              )
-                                            }
-                                            className={`${wizardStyles.choice} ${
-                                              active ? wizardStyles.choiceActive : ""
-                                            }`}
-                                            aria-pressed={active}
-                                          >
-                                            {active ? "✓ " : ""}{tag.name}
-                                          </button>
-                                        );
-                                      })
-                                  )}
-                                </div>
-                              </div>
+                              <AdminMovieMetadataPicker
+                                label="Tags"
+                                items={tags}
+                                selectedIds={selectedTagIds}
+                                onToggle={(tag) =>
+                                  toggleId(tag.id, selectedTagIds, setSelectedTagIds)
+                                }
+                                placeholder="Tags suchen…"
+                                emptyMessage="Noch keine Tags angelegt."
+                              />
                             ) : null}
 
                             {/* Vorschau */}
