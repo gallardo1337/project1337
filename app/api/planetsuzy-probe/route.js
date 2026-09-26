@@ -28,9 +28,9 @@ export async function GET(request) {
     });
     const html = await response.text();
     const title =
-      html.match(/<title[^>]*>([\\s\\S]*?)<\\/title>/i)?.[1]
+      html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]
         ?.replace(/<[^>]+>/g, "")
-        ?.replace(/\\s+/g, " ")
+        ?.replace(/\s+/g, " ")
         ?.trim() || null;
 
     return Response.json(
@@ -41,7 +41,7 @@ export async function GET(request) {
         bytes: new TextEncoder().encode(html).length,
         title,
         looksUnavailable: /site unavailable|unable to access this site/i.test(html),
-        containsReaganFoxx: /reagan\\s*foxx/i.test(html),
+        containsReaganFoxx: /reagan\s*foxx/i.test(html),
         contains0938: /09[:.]38/.test(html),
         containsToday: /today/i.test(html),
       },
