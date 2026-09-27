@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import {
   hasUnreadPost,
   markPostsRead,
@@ -35,9 +36,13 @@ function ActorPortrait({ actor }) {
   if (!source) return null;
 
   return (
-    <img
+    <Image
       src={source}
       alt=""
+      width={60}
+      height={82}
+      sizes="60px"
+      quality={95}
       loading="lazy"
       onError={useNextSource}
       onLoad={(event) => {
