@@ -89,6 +89,13 @@ async function loadAllMovies() {
 
 const CHANGELOG = [
   {
+    version: "2.7.8",
+    date: "2026-09-27",
+    items: [
+      "Frühesten Suchzeitpunkt für Thumbnail-Vorschläge festlegen oder aktuelle Videoposition übernehmen",
+    ],
+  },
+  {
     version: "2.7.7",
     date: "2026-09-27",
     items: [

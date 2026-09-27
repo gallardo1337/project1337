@@ -7,6 +7,11 @@ import {
   appendThumbnailCandidate,
   clearUnlockedThumbnailCandidates,
 } from "../../../lib/thumbnailCandidates.mjs";
+import {
+  ANALYSIS_END_RATIO,
+  createThumbnailAnalysisPoints,
+  DEFAULT_ANALYSIS_START_RATIO,
+} from "../../../lib/thumbnailAnalysisPoints.mjs";
 
 const UPLOAD_URL = process.env.NEXT_PUBLIC_MOVIE_UPLOAD_URL;
 const OUTPUT_WIDTH = 1920;
@@ -17,10 +22,6 @@ const ANALYSIS_WIDTH = 192;
 const ANALYSIS_HEIGHT = 108;
 const AI_ANALYSIS_WIDTH = 640;
 const AI_ANALYSIS_HEIGHT = 360;
-const ANALYSIS_RANGE_START = 0.2;
-const ANALYSIS_RANGE_END = 0.95;
-const ANALYSIS_BAND_COUNT = 6;
-const SAMPLES_PER_BAND = 5;
 const SUGGESTION_COUNT = 6;
 const EMPTY_MOVIES = [];
 const COMFY_ENDPOINT_STORAGE_KEY = "project1337-comfyui-endpoint";
@@ -34,22 +35,12 @@ const FACE_LANDMARKER_MODEL =
 const POSE_LANDMARKER_MODEL =
   "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task";
 
-function createAnalysisPoints() {
-  const bandSize =
-    (ANALYSIS_RANGE_END - ANALYSIS_RANGE_START) / ANALYSIS_BAND_COUNT;
-
-  return Array.from({ length: ANALYSIS_BAND_COUNT }, (_, bandIndex) => {
-    const start = ANALYSIS_RANGE_START + bandIndex * bandSize;
-    const end = start + bandSize;
-    const sliceSize = (end - start) / SAMPLES_PER_BAND;
-
-    return Array.from({ length: SAMPLES_PER_BAND }, (_, sampleIndex) => ({
-      bandIndex,
-      point:
-        start +
-        sliceSize * (sampleIndex + 0.16 + Math.random() * 0.68),
-    }));
-  }).flat();
+function formatTimeInput(value) {
+  const seconds = Math.max(0, Math.floor(Number(value) || 0));
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainder = seconds % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(remainder).padStart(2, "0")}`;
 }
 
 function waitForFramePaint() {
@@ -490,6 +481,7 @@ export default function AdminThumbnailStudio({
   const [localSource, setLocalSource] = useState(null);
   const [remoteAccess, setRemoteAccess] = useState("idle");
   const [duration, setDuration] = useState(0);
+  const [analysisStartTime, setAnalysisStartTime] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [videoReady, setVideoReady] = useState(false);
   const [videoError, setVideoError] = useState(null);
@@ -789,7 +781,11 @@ export default function AdminThumbnailStudio({
   const handleLoadedMetadata = () => {
     const video = videoRef.current;
     if (!video) return;
-    setDuration(Number.isFinite(video.duration) ? video.duration : 0);
+    const videoDuration = Number.isFinite(video.duration) ? video.duration : 0;
+    setDuration(videoDuration);
+    setAnalysisStartTime(
+      Math.floor(videoDuration * DEFAULT_ANALYSIS_START_RATIO)
+    );
     setCurrentTime(video.currentTime || 0);
     setVideoReady(Boolean(video.videoWidth && video.videoHeight));
     setVideoError(null);
@@ -1230,7 +1226,11 @@ export default function AdminThumbnailStudio({
 
     setError(null);
     setNotice(null);
-    const analysisPoints = createAnalysisPoints();
+    const analysisPoints = createThumbnailAnalysisPoints(duration, analysisStartTime);
+    if (!analysisPoints.length) {
+      setError("Der Startzeitpunkt muss vor dem Ende des Suchbereichs liegen.");
+      return;
+    }
     setGenerating({
       active: true,
       kind: "standard",
@@ -1336,7 +1336,11 @@ export default function AdminThumbnailStudio({
 
     setError(null);
     setNotice(null);
-    const analysisPoints = createAnalysisPoints();
+    const analysisPoints = createThumbnailAnalysisPoints(duration, analysisStartTime);
+    if (!analysisPoints.length) {
+      setError("Der Startzeitpunkt muss vor dem Ende des Suchbereichs liegen.");
+      return;
+    }
     setGenerating({
       active: true,
       kind: "ai",
@@ -1867,6 +1871,54 @@ export default function AdminThumbnailStudio({
                     {Math.round(point * 100)}%
                   </button>
                 ))}
+              </div>
+
+              <div className="thumbnailStudio__scanStart">
+                <div>
+                  <strong>Frühester Suchzeitpunkt</strong>
+                  <span>
+                    Die 30 Szenen werden ab hier bis kurz vor Filmende geprüft.
+                    Standard: 20&nbsp;%.
+                  </span>
+                </div>
+                <div className="thumbnailStudio__scanStartControls">
+                  <input
+                    aria-label="Frühester Suchzeitpunkt"
+                    type="time"
+                    step="1"
+                    min="00:00:00"
+                    max={formatTimeInput(
+                      Math.max(0, Math.floor(duration * ANALYSIS_END_RATIO) - 1)
+                    )}
+                    value={formatTimeInput(
+                      Math.min(
+                        analysisStartTime,
+                        Math.max(0, Math.floor(duration * ANALYSIS_END_RATIO) - 1)
+                      )
+                    )}
+                    onChange={(event) => {
+                      const nextTime = event.currentTarget.valueAsNumber;
+                      if (Number.isFinite(nextTime)) {
+                        setAnalysisStartTime(Math.floor(nextTime / 1000));
+                      }
+                    }}
+                    disabled={!videoReady || generating.active || saving}
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setAnalysisStartTime(
+                        Math.min(
+                          Math.floor(currentTime),
+                          Math.max(0, Math.floor(duration * ANALYSIS_END_RATIO) - 1)
+                        )
+                      )
+                    }
+                    disabled={!videoReady || generating.active || saving}
+                  >
+                    Aktuelle Position übernehmen
+                  </button>
+                </div>
               </div>
 
               {remoteAccess === "playback-only" && !localSource ? (
