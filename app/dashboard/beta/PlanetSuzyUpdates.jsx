@@ -53,6 +53,11 @@ export default function PlanetSuzyUpdates({
   const statesRef = useRef({});
   const checkingRef = useRef(new Set());
   const batchRunningRef = useRef(false);
+  const unauthorizedRef = useRef(onUnauthorized);
+
+  useEffect(() => {
+    unauthorizedRef.current = onUnauthorized;
+  }, [onUnauthorized]);
 
   useEffect(() => {
     let cancelled = false;
@@ -64,7 +69,7 @@ export default function PlanetSuzyUpdates({
         });
         const result = await response.json().catch(() => ({}));
         if (response.status === 401) {
-          onUnauthorized?.();
+          unauthorizedRef.current?.();
           return;
         }
         if (!response.ok) throw new Error(result.error || "Update-Status konnte nicht geladen werden.");
@@ -81,7 +86,7 @@ export default function PlanetSuzyUpdates({
     };
     loadStates();
     return () => { cancelled = true; };
-  }, [onUnauthorized]);
+  }, []);
 
   const saveActorState = useCallback(async (actorId, nextState) => {
     const nextStates = { ...statesRef.current, [actorId]: nextState };
@@ -97,7 +102,7 @@ export default function PlanetSuzyUpdates({
       });
       const result = await response.json().catch(() => ({}));
       if (response.status === 401) {
-        onUnauthorized?.();
+        unauthorizedRef.current?.();
         throw new Error("Deine Admin-Sitzung ist abgelaufen.");
       }
       if (!response.ok) throw new Error(result.error || "Update-Status konnte online nicht gespeichert werden.");
@@ -106,7 +111,7 @@ export default function PlanetSuzyUpdates({
       setStorageError(error?.message || "Update-Status konnte online nicht gespeichert werden.");
       throw error;
     }
-  }, [onUnauthorized]);
+  }, []);
 
   useEffect(() => {
     if (!storageReady) return;
@@ -168,7 +173,7 @@ export default function PlanetSuzyUpdates({
         setCheckingIds([...checkingRef.current]);
       }
     },
-    [enabled, onUnauthorized, saveActorState, storageError, storageReady]
+    [enabled, saveActorState, storageError, storageReady]
   );
 
   useEffect(() => {
