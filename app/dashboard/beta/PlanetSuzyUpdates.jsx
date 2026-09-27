@@ -11,6 +11,7 @@ import styles from "./PlanetSuzyUpdates.module.css";
 const POLL_INTERVAL_MS = 5 * 60 * 1000;
 const CHECKED_AGAIN_AFTER_MS = 60 * 60 * 1000;
 const AUTO_BATCH_SIZE = 3;
+const LEGACY_STORAGE_KEY = "project1337:planet-suzy-updates:v1";
 
 function initials(name) {
   return String(name || "?")
@@ -75,6 +76,45 @@ export default function PlanetSuzyUpdates({
         if (!response.ok) throw new Error(result.error || "Update-Status konnte nicht geladen werden.");
         if (cancelled) return;
         const saved = result.states || {};
+        let legacyStates = {};
+        try {
+          const parsed = JSON.parse(window.localStorage.getItem(LEGACY_STORAGE_KEY) || "{}");
+          if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+            legacyStates = parsed;
+          }
+        } catch {
+          // Ignore malformed legacy browser data; Supabase remains the source of truth.
+        }
+
+        const legacyEntries = Object.entries(legacyStates);
+        if (legacyEntries.length > 0) {
+          const migrationResults = await Promise.all(legacyEntries.map(async ([actorId, state]) => {
+            const migrationResponse = await fetch("/api/planet-updates/state", {
+              method: "PUT",
+              cache: "no-store",
+              credentials: "same-origin",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ actorId, state }),
+            });
+            const migrationPayload = await migrationResponse.json().catch(() => ({}));
+            return { actorId, response: migrationResponse, payload: migrationPayload };
+          }));
+
+          const failedMigration = migrationResults.find(({ response }) => !response.ok);
+          if (failedMigration?.response.status === 401) {
+            unauthorizedRef.current?.();
+            return;
+          }
+          for (const { actorId, response, payload } of migrationResults) {
+            if (response.ok && payload.state) saved[actorId] = payload.state;
+          }
+          if (failedMigration) {
+            throw new Error("Alte Prüfstände konnten nicht vollständig zu Supabase übertragen werden.");
+          }
+          window.localStorage.removeItem(LEGACY_STORAGE_KEY);
+        }
+
+        if (cancelled) return;
         statesRef.current = saved;
         setStates(saved);
         setStorageError(null);
@@ -137,7 +177,7 @@ export default function PlanetSuzyUpdates({
         });
         const result = await response.json().catch(() => ({}));
         if (response.status === 401) {
-          onUnauthorized?.();
+          unauthorizedRef.current?.();
           return;
         }
 
