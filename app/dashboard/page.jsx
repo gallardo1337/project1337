@@ -12,6 +12,12 @@ import PlanetSuzyUpdates from "./beta/PlanetSuzyUpdates.jsx";
 import ResolutionIndicator from "../components/ResolutionIndicator.jsx";
 import wizardStyles from "./AdminMovieWizard.module.css";
 import {
+  isCategorizedTag,
+  prioritizeTagIds,
+  sortTagsByCategory,
+  tagCategoryLabel,
+} from "../../lib/tagCategories.mjs";
+import {
   PUBLIC_VIDEO_BASE,
   hasExactVideoFile,
   movieFileUrlKey,
@@ -82,6 +88,14 @@ async function loadAllMovies() {
 // -------------------------------
 
 const CHANGELOG = [
+  {
+    version: "2.7.7",
+    date: "2026-09-27",
+    items: [
+      "Main Tags durch Color-, Place- und Finish-Kategorien ersetzt und Kategorien zuerst sortiert",
+      "Haarfarbe wird im Schritt Hauptdarsteller gewählt und automatisch als Film-Tag übernommen",
+    ],
+  },
   {
     version: "2.7.6",
     date: "2026-09-27",
@@ -697,6 +711,7 @@ export function DashboardExperience() {
   const [newStudioName, setNewStudioName] = useState("");
 
   const [newTagName, setNewTagName] = useState("");
+  const [newTagCategory, setNewTagCategory] = useState("");
 
   const [editingActorMetaId, setEditingActorMetaId] = useState(null);
   const [actorEditForm, setActorEditForm] = useState({
@@ -1283,7 +1298,7 @@ export function DashboardExperience() {
 
     const { data, error: insertError } = await supabase
       .from("tags")
-      .insert({ name })
+      .insert({ name, category: newTagCategory || null })
       .select("*")
       .single();
 
@@ -1295,12 +1310,13 @@ export function DashboardExperience() {
 
     setTags((prev) => [...prev, data]);
     setNewTagName("");
+    setNewTagCategory("");
   };
 
-  const handleToggleMainTag = async (tag) => {
+  const handleSetTagCategory = async (tag, category) => {
     const { data, error: updateError } = await supabase
       .from("tags")
-      .update({ is_main: tag.is_main !== true })
+      .update({ category: category || null })
       .eq("id", tag.id)
       .select("*")
       .single();
@@ -3219,14 +3235,36 @@ export function DashboardExperience() {
 
                             {/* Hauptdarsteller */}
                             {filmWizardStep === 3 ? (
-                              <AdminMovieMetadataPicker
-                                label="Hauptdarsteller"
-                                items={hauptdarsteller}
-                                selectedIds={selectedMainActorIds}
-                                onToggle={handleToggleMainActor}
-                                placeholder="Hauptdarsteller suchen…"
-                                emptyMessage="Noch keine Hauptdarsteller angelegt."
-                              />
+                              <div className="grid gap-5">
+                                <AdminMovieMetadataPicker
+                                  label="Hauptdarsteller"
+                                  items={hauptdarsteller}
+                                  selectedIds={selectedMainActorIds}
+                                  onToggle={handleToggleMainActor}
+                                  placeholder="Hauptdarsteller suchen…"
+                                  emptyMessage="Noch keine Hauptdarsteller angelegt."
+                                />
+                                <div className="grid gap-2">
+                                  <div>
+                                    <h3 className="m-0 text-sm font-semibold text-neutral-100">
+                                      Haarfarbe
+                                    </h3>
+                                    <p className="mt-1 text-xs text-neutral-500">
+                                      Wird als Color-Tag gespeichert und erscheint im nächsten Schritt nicht erneut.
+                                    </p>
+                                  </div>
+                                  <AdminMovieMetadataPicker
+                                    label="Haarfarbe"
+                                    items={tags.filter((tag) => tag.category === "haircolor")}
+                                    selectedIds={selectedTagIds}
+                                    onToggle={(tag) =>
+                                      toggleId(tag.id, selectedTagIds, setSelectedTagIds)
+                                    }
+                                    placeholder="Haarfarbe suchen…"
+                                    emptyMessage="Noch keine Color-Tags kategorisiert."
+                                  />
+                                </div>
+                              </div>
                             ) : null}
 
                             {/* Nebendarsteller */}
@@ -3251,7 +3289,9 @@ export function DashboardExperience() {
                             {filmWizardStep === 5 ? (
                               <AdminMovieMetadataPicker
                                 label="Tags"
-                                items={tags}
+                                items={sortTagsByCategory(
+                                  tags.filter((tag) => tag.category !== "haircolor")
+                                )}
                                 selectedIds={selectedTagIds}
                                 onToggle={(tag) =>
                                   toggleId(tag.id, selectedTagIds, setSelectedTagIds)
@@ -3326,7 +3366,7 @@ export function DashboardExperience() {
                                       <span>Tags</span>
                                       <div className={wizardStyles.reviewChips}>
                                         {selectedTagIds.length ? (
-                                          selectedTagIds.map((id) => (
+                                          prioritizeTagIds(selectedTagIds, tags).map((id) => (
                                             <span key={id}>{tagMap[id]?.name || "Unbekannt"}</span>
                                           ))
                                         ) : (
@@ -3563,7 +3603,7 @@ export function DashboardExperience() {
                                 {Array.isArray(f.tag_ids) &&
                                   f.tag_ids.length > 0 && (
                                     <div className="mt-1 flex flex-wrap gap-2">
-                                      {f.tag_ids.map((id) => {
+                                      {prioritizeTagIds(f.tag_ids, tags).map((id) => {
                                         const t = tagMap[id];
                                         if (!t) return null;
                                         return (
@@ -3859,7 +3899,7 @@ export function DashboardExperience() {
                                       </div>
                                     </div>
                                   ) : (
-                                    <div className="flex items-center justify-between gap-3">
+                                    <div className="flex flex-wrap items-center justify-between gap-3">
                                       <div className="flex min-w-0 items-center gap-3">
                                         {a.profile_image ? (
                                           <img
@@ -4215,6 +4255,18 @@ export function DashboardExperience() {
                               onChange={(e) => setNewTagName(e.target.value)}
                             />
 
+                            <select
+                              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-sm text-neutral-100 focus:border-orange-500 focus:outline-none"
+                              value={newTagCategory}
+                              onChange={(event) => setNewTagCategory(event.target.value)}
+                              aria-label="Kategorie für neuen Tag"
+                            >
+                              <option value="">Ohne Kategorie</option>
+                              <option value="haircolor">Color</option>
+                              <option value="place">Place</option>
+                              <option value="finish">Finish</option>
+                            </select>
+
                             <button
                               type="submit"
                               className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-semibold text-black shadow shadow-orange-900/70 hover:bg-orange-400 disabled:opacity-60"
@@ -4227,7 +4279,7 @@ export function DashboardExperience() {
                           <div className="rounded-2xl border border-neutral-800 bg-neutral-950/95 p-5">
                             <div className="mb-3 flex items-center justify-between">
                               <div className="text-base font-semibold text-neutral-50">
-                                Vorhandene Tags
+                                Tags kategorisieren
                               </div>
                               <div className="text-xs text-neutral-500">
                                 {tags.length}
@@ -4235,13 +4287,7 @@ export function DashboardExperience() {
                             </div>
 
                             <div className="max-h-[560px] space-y-2 overflow-y-auto pr-1">
-                              {[...tags]
-                                .sort(
-                                  (a, b) =>
-                                    Number(b.is_main === true) -
-                                      Number(a.is_main === true) ||
-                                    (a.name || "").localeCompare(b.name || "", "de", { sensitivity: "base" })
-                                )
+                              {sortTagsByCategory(tags)
                                 .map((t) => (
                                 <div
                                   key={t.id}
@@ -4282,31 +4328,28 @@ export function DashboardExperience() {
                                         <span className="truncate text-sm font-medium text-neutral-50">
                                           {t.name}
                                         </span>
-                                        {t.is_main === true ? (
+                                        {isCategorizedTag(t) ? (
                                           <span className="shrink-0 rounded-full border border-orange-400/50 bg-orange-500/15 px-2 py-0.5 text-[11px] font-semibold text-orange-200">
-                                            Main Tag
+                                            {tagCategoryLabel(t.category)}
                                           </span>
                                         ) : null}
                                       </div>
 
                                       <div className="flex shrink-0 gap-1.5">
-                                        <button
-                                          type="button"
-                                          onClick={() => handleToggleMainTag(t)}
-                                          className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
-                                            t.is_main === true
-                                              ? "border-orange-500/60 bg-orange-500/15 text-orange-200 hover:bg-orange-500/25"
-                                              : "border-neutral-600 text-neutral-100 hover:bg-neutral-800"
-                                          }`}
-                                          aria-pressed={t.is_main === true}
-                                          aria-label={
-                                            t.is_main === true
-                                              ? `${t.name} nicht mehr als Main Tag markieren`
-                                              : `${t.name} als Main Tag markieren`
+                                        <select
+                                          className="max-w-36 rounded-lg border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-xs text-neutral-100 focus:border-orange-500 focus:outline-none"
+                                          value={t.category || ""}
+                                          onChange={(event) =>
+                                            handleSetTagCategory(t, event.target.value)
                                           }
+                                          aria-label={`${t.name} kategorisieren`}
+                                          title="Tag-Kategorie ändern"
                                         >
-                                          {t.is_main === true ? "★ Main" : "Als Main markieren"}
-                                        </button>
+                                          <option value="">Ohne Kategorie</option>
+                                          <option value="haircolor">Color</option>
+                                          <option value="place">Place</option>
+                                          <option value="finish">Finish</option>
+                                        </select>
                                         <button
                                           type="button"
                                           onClick={() => startEditTagInline(t)}

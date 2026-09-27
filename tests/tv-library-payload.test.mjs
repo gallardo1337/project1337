@@ -111,21 +111,21 @@ test("uses the supporting actor fallback only when no image is stored", () => {
   );
 });
 
-test("places Main Tags first in each tvOS movie while preserving tag order within groups", () => {
+test("orders categorized tags by Color, Place, Finish, then uncategorized", () => {
   const payload = buildTvLibraryPayload({
     movies: [{ id: "movie-1", tag_ids: ["regular-1", "main-1", "regular-2", "main-2"] }],
-    tags: [
+  tags: [
       { id: "regular-1", name: "Drama" },
-      { id: "main-1", name: "Action", is_main: true },
+      { id: "main-1", name: "Action", category: "haircolor" },
       { id: "regular-2", name: "Comedy" },
-      { id: "main-2", name: "Iconic", is_main: true },
+      { id: "main-2", name: "Iconic", category: "place" },
     ],
   });
 
   assert.deepEqual(payload.movies[0].tag_ids, ["main-1", "main-2", "regular-1", "regular-2"]);
   assert.deepEqual(payload.movies[0].tags, ["Action", "Iconic", "Drama", "Comedy"]);
   assert.deepEqual(
-    payload.filters.tags.map(({ name, is_main }) => [name, is_main]),
-    [["Action", true], ["Iconic", true], ["Comedy", false], ["Drama", false]]
+    payload.filters.tags.map(({ name, category }) => [name, category]),
+    [["Action", "haircolor"], ["Iconic", "place"], ["Comedy", null], ["Drama", null]]
   );
 });

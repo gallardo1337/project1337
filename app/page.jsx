@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabaseClient"; // app/page.jsx -> ../lib/supabaseClient
 import { prioritizeTagIds } from "../lib/tvLibraryPayload.mjs";
+import { isCategorizedTag } from "../lib/tagCategories.mjs";
 import BetaExperience from "./beta/BetaExperience";
 
 const SUPPORT_ACTOR_FALLBACK_IMAGE = "/support-actor-fallback.webp";
@@ -200,8 +201,8 @@ export default function HomePage() {
           const tagNames = orderedTagIds
             .map((id) => tagMap[id])
             .filter(Boolean);
-          const mainTagNames = orderedTagIds
-            .filter((id) => tagRowsById[String(id)]?.is_main === true)
+          const categorizedTagNames = orderedTagIds
+            .filter((id) => isCategorizedTag(tagRowsById[String(id)]))
             .map((id) => tagRowsById[String(id)]?.name)
             .filter(Boolean);
 
@@ -226,7 +227,7 @@ export default function HomePage() {
             favorite: metric?.is_favorite === true,
             actors: allActors,
             tags: tagNames,
-            mainTags: mainTagNames,
+            categorizedTags: categorizedTagNames,
             mainActorIds: mainIds,
             supportingActorIds: supportIds,
             mainActorNames: mainNames,

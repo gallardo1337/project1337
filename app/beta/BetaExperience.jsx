@@ -813,13 +813,13 @@ function FavoriteToggle({ movie, onToggleFavorite, className = "" }) {
   );
 }
 
-function MainTagList({ tags, className = "" }) {
+function CategorizedTagList({ tags, className = "" }) {
   if (!Array.isArray(tags) || tags.length === 0) return null;
 
   return (
     <span
       className={`${styles.mainTagList} ${className}`.trim()}
-      aria-label="Main Tags"
+      aria-label="Kategorisierte Tags"
     >
       {tags.map((tag) => (
         <span className={styles.mainTagBadge} key={tag}>
@@ -924,7 +924,7 @@ function MovieCard({
             mainActors={movie.mainActorNames}
             supportingActors={movie.supportingActorNames}
           />
-          <MainTagList tags={movie.mainTags} />
+          <CategorizedTagList tags={movie.categorizedTags} />
         </span>
       </button>
     </article>
@@ -976,7 +976,7 @@ function SimilarMovieCard({ recommendation, onOpen, index }) {
           <i />
           {movie.year || "–"}
         </span>
-        <MainTagList tags={movie.mainTags} />
+        <CategorizedTagList tags={movie.categorizedTags} />
       </span>
     </button>
   );
@@ -1811,7 +1811,7 @@ function Discovery({
               ? featured.actors.slice(0, 3).join(" · ")
               : "Eine persönlich kuratierte Screening Collection."}
           </p>
-          <MainTagList tags={featured?.mainTags} className={styles.spotlightMainTags} />
+          <CategorizedTagList tags={featured?.categorizedTags} className={styles.spotlightMainTags} />
           <div className={styles.spotlightActions}>
             {featured ? <button type="button" className={styles.primaryAction} onClick={() => onOpenMovie(featured)}><Icon name="play" /> Film öffnen</button> : null}
             <button type="button" className={styles.secondaryAction} onClick={onShowMovies}>Gesamtes Archiv <Icon name="arrow" /></button>
@@ -2396,10 +2396,10 @@ function MovieDetail({
           {movie.tags?.length ? (
             <div className={styles.detailTags} aria-label="Film-Tags">
               {movie.tags.map((tag) => {
-                const isMainTag = movie.mainTags?.includes(tag);
+                const isCategorized = movie.categorizedTags?.includes(tag);
                 return (
                   <span
-                    className={isMainTag ? styles.detailTagMain : styles.detailTag}
+                    className={isCategorized ? styles.detailTagMain : styles.detailTag}
                     key={tag}
                   >
                     {tag}

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import styles from "./AdminMovieMetadataPicker.module.css";
+import { sortTagsByCategory, tagCategoryLabel } from "../../lib/tagCategories.mjs";
 
 function normalizeSearch(value) {
   return String(value || "")
@@ -24,17 +25,7 @@ export default function AdminMovieMetadataPicker({
   const [query, setQuery] = useState("");
   const normalizedQuery = normalizeSearch(query);
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
-  const sortedItems = useMemo(
-    () =>
-      [...items].sort(
-        (left, right) =>
-          Number(right.is_main === true) - Number(left.is_main === true) ||
-          (left.name || "").localeCompare(right.name || "", "de", {
-            sensitivity: "base",
-          })
-      ),
-    [items]
-  );
+  const sortedItems = useMemo(() => sortTagsByCategory(items), [items]);
   const selectedItems = sortedItems.filter((item) => selectedIdSet.has(item.id));
   const matchingItems = normalizedQuery
     ? sortedItems.filter((item) =>
@@ -92,7 +83,7 @@ export default function AdminMovieMetadataPicker({
               title={`${item.name} entfernen`}
             >
               <span>{item.name}</span>
-              {item.is_main === true ? <small>Main</small> : null}
+              {item.category ? <small>{tagCategoryLabel(item.category)}</small> : null}
               <i aria-hidden="true">×</i>
             </button>
           ))}
@@ -112,8 +103,8 @@ export default function AdminMovieMetadataPicker({
             >
               <span className={styles.addMark} aria-hidden="true">+</span>
               <span className={styles.optionName}>{item.name}</span>
-              {item.is_main === true ? (
-                <span className={styles.mainTag}>Main</span>
+              {item.category ? (
+                <span className={styles.tagCategory}>{tagCategoryLabel(item.category)}</span>
               ) : null}
             </button>
           ))
