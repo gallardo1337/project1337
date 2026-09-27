@@ -242,9 +242,13 @@ export default function PlanetSuzyUpdates({
     () => [...actorList].sort((a, b) => {
       const aFavorite = favoriteOverrides[a.id] ?? Boolean(a.planet_suzy_update_favorite);
       const bFavorite = favoriteOverrides[b.id] ?? Boolean(b.planet_suzy_update_favorite);
-      return Number(bFavorite) - Number(aFavorite) || a.name.localeCompare(b.name, "de");
+      const aCheckedAt = Number(states[a.id]?.checkedAt || 0);
+      const bCheckedAt = Number(states[b.id]?.checkedAt || 0);
+      return bCheckedAt - aCheckedAt ||
+        Number(bFavorite) - Number(aFavorite) ||
+        a.name.localeCompare(b.name, "de");
     }),
-    [actorList, favoriteOverrides]
+    [actorList, favoriteOverrides, states]
   );
 
   if (!visible) return null;
