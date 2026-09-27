@@ -90,6 +90,9 @@ test("Update-Liste verwendet Cast-Bilder und Favoriten-Schalter", async () => {
   ]);
 
   assert.match(component, /actor\.cast_image/);
+  assert.match(component, /actor\.transparent_image/);
+  assert.match(component, /image\.naturalWidth < image\.clientWidth \* pixelRatio/);
+  assert.match(component, /image\.naturalHeight < image\.clientHeight \* pixelRatio/);
   assert.match(component, /planet_suzy_update_favorite/);
   assert.match(component, /Favoriten stündlich · übrige täglich oder manuell/);
   assert.match(component, /\/api\/planet-updates\/favorite/);

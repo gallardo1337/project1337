@@ -20,6 +20,41 @@ function formatCheckedAt(value) {
   });
 }
 
+function ActorPortrait({ actor }) {
+  const sources = [...new Set([
+    actor.cast_image,
+    actor.transparent_image,
+    actor.profile_image,
+  ].filter((source) => typeof source === "string" && source.trim()))];
+  const [sourceIndex, setSourceIndex] = useState(0);
+  const source = sources[sourceIndex];
+  const useNextSource = () => {
+    setSourceIndex((current) => Math.min(current + 1, sources.length - 1));
+  };
+
+  if (!source) return null;
+
+  return (
+    <img
+      src={source}
+      alt=""
+      loading="lazy"
+      onError={useNextSource}
+      onLoad={(event) => {
+        const image = event.currentTarget;
+        const pixelRatio = Math.max(1, window.devicePixelRatio || 1);
+        if (
+          sourceIndex < sources.length - 1 &&
+          (image.naturalWidth < image.clientWidth * pixelRatio ||
+            image.naturalHeight < image.clientHeight * pixelRatio)
+        ) {
+          useNextSource();
+        }
+      }}
+    />
+  );
+}
+
 export default function PlanetSuzyUpdates({
   actors = [],
   visible = false,
@@ -287,7 +322,6 @@ export default function PlanetSuzyUpdates({
             const linked = Boolean(actor.planetsuzy_url);
             const favorite = favoriteOverrides[actor.id] ?? Boolean(actor.planet_suzy_update_favorite);
             const savingFavorite = savingFavoriteIds.includes(actor.id);
-            const castImage = actor.cast_image || actor.profile_image || actor.image_url;
 
             return (
               <article
@@ -296,7 +330,7 @@ export default function PlanetSuzyUpdates({
               >
                 <div className={styles.identity}>
                   <span className={styles.avatar}>
-                    {castImage ? <img src={castImage} alt="" loading="lazy" /> : null}
+                    <ActorPortrait actor={actor} key={`${actor.cast_image || ""}:${actor.transparent_image || ""}:${actor.profile_image || ""}`} />
                   </span>
                   <div className={styles.actorInfo}>
                     <div className={styles.actorName}>
