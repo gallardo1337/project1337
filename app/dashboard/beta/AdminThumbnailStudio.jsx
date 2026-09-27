@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { scoreAiFrame } from "../../../lib/thumbnailAiScoring.mjs";
+import { appendThumbnailCandidate } from "../../../lib/thumbnailCandidates.mjs";
 
 const UPLOAD_URL = process.env.NEXT_PUBLIC_MOVIE_UPLOAD_URL;
 const OUTPUT_WIDTH = 1920;
@@ -603,6 +604,10 @@ export default function AdminThumbnailStudio({
   const previewCandidateNumber = previewCandidate
     ? candidates.findIndex((candidate) => candidate.id === previewCandidate.id) + 1
     : 0;
+  const lockedCandidateCount = useMemo(
+    () => candidates.filter((candidate) => candidate.locked).length,
+    [candidates]
+  );
 
   const resetCandidates = () => {
     generatedUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
@@ -797,15 +802,12 @@ export default function AdminThumbnailStudio({
       };
 
       setCandidates((current) => {
-        const next = [...current, candidate];
-        if (next.length <= 12) return next;
-
-        const removed = next.shift();
-        if (removed) {
+        const result = appendThumbnailCandidate(current, candidate);
+        result.removed.forEach((removed) => {
           URL.revokeObjectURL(removed.url);
           generatedUrlsRef.current.delete(removed.url);
-        }
-        return next;
+        });
+        return result.candidates;
       });
 
       if (select) setSelectedCandidateId(candidate.id);
@@ -1123,14 +1125,12 @@ export default function AdminThumbnailStudio({
         sourceLabel,
       };
       setCandidates((current) => {
-        const next = [...current, candidate];
-        if (next.length <= 12) return next;
-        const removed = next.shift();
-        if (removed) {
+        const result = appendThumbnailCandidate(current, candidate);
+        result.removed.forEach((removed) => {
           URL.revokeObjectURL(removed.url);
           generatedUrlsRef.current.delete(removed.url);
-        }
-        return next;
+        });
+        return result.candidates;
       });
       setSelectedCandidateId(candidate.id);
       setNotice("KI-Ergebnis bereit · du kannst es prüfen und anschließend wie gewohnt speichern.");
@@ -1495,6 +1495,23 @@ export default function AdminThumbnailStudio({
     const video = videoRef.current;
     if (!video || !duration) return;
     video.currentTime = duration * percent;
+  };
+
+  const seekToCandidate = (candidate) => {
+    const video = videoRef.current;
+    if (!video || !videoReady || !Number.isFinite(candidate?.time)) return;
+    video.currentTime = Math.max(0, Math.min(duration || 0, candidate.time));
+    setCurrentTime(video.currentTime);
+  };
+
+  const toggleCandidateLock = (candidateId) => {
+    setCandidates((current) =>
+      current.map((candidate) =>
+        candidate.id === candidateId
+          ? { ...candidate, locked: !candidate.locked }
+          : candidate
+      )
+    );
   };
 
   const updateAiEnhancedIndex = (movieId, thumbnailUrl, isEnhanced) => {
@@ -2054,6 +2071,11 @@ export default function AdminThumbnailStudio({
                   <span>03 / Auswahl</span>
                   <h3>Favorit festlegen</h3>
                 </div>
+                {lockedCandidateCount > 0 ? (
+                  <span className="thumbnailStudio__lockedCount">
+                    {lockedCandidateCount} gesperrt
+                  </span>
+                ) : null}
                 {candidates.length ? (
                   <div className="thumbnailStudio__selectionActions">
                     <button
@@ -2080,7 +2102,9 @@ export default function AdminThumbnailStudio({
                   {candidates.map((candidate, index) => (
                     <div
                       key={candidate.id}
-                      className="thumbnailStudio__candidateCard"
+                      className={`thumbnailStudio__candidateCard${
+                        candidate.locked ? " is-locked" : ""
+                      }`}
                     >
                       <button
                         type="button"
@@ -2111,15 +2135,59 @@ export default function AdminThumbnailStudio({
                         <small>{candidate.sourceLabel || formatTime(candidate.time)}</small>
                         <i>{candidate.id === selectedCandidateId ? "Ausgewählt" : "Wählen"}</i>
                       </button>
-                      <button
-                        type="button"
-                        className="thumbnailStudio__candidateZoom"
-                        onClick={() => setPreviewCandidateId(candidate.id)}
-                        aria-label={`Thumbnail-Vorschlag ${index + 1} vergrößern`}
-                        title="Groß ansehen"
-                      >
-                        ⛶
-                      </button>
+                      <div className="thumbnailStudio__candidateActions">
+                        <button
+                          type="button"
+                          className="thumbnailStudio__candidateAction thumbnailStudio__candidateZoom"
+                          onClick={() => setPreviewCandidateId(candidate.id)}
+                          aria-label={`Thumbnail-Vorschlag ${index + 1} vergrößern`}
+                          title="Groß ansehen"
+                        >
+                          ⛶
+                        </button>
+                        <button
+                          type="button"
+                          className={`thumbnailStudio__candidateAction thumbnailStudio__candidateLock${
+                            candidate.locked ? " is-locked" : ""
+                          }`}
+                          onClick={() => toggleCandidateLock(candidate.id)}
+                          aria-label={
+                            candidate.locked
+                              ? `Thumbnail-Vorschlag ${index + 1} entsperren`
+                              : `Thumbnail-Vorschlag ${index + 1} sperren`
+                          }
+                          aria-pressed={candidate.locked}
+                          title={candidate.locked ? "Gesperrt · anklicken zum Entsperren" : "Vorschlag sperren"}
+                        >
+                          <svg viewBox="0 0 24 24" aria-hidden="true">
+                            {candidate.locked ? (
+                              <>
+                                <rect x="5" y="10" width="14" height="11" rx="2" />
+                                <path d="M8 10V7a4 4 0 0 1 8 0" />
+                              </>
+                            ) : (
+                              <>
+                                <rect x="5" y="10" width="14" height="11" rx="2" />
+                                <path d="M8 10V7a4 4 0 0 1 7-2.6" />
+                              </>
+                            )}
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          className="thumbnailStudio__candidateAction thumbnailStudio__candidateSeek"
+                          onClick={() => seekToCandidate(candidate)}
+                          disabled={!videoReady}
+                          aria-label={`Im Video zu ${formatTime(candidate.time)} springen`}
+                          title={`Im Video zu ${formatTime(candidate.time)} springen`}
+                        >
+                          <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="10.5" cy="12" r="7.5" />
+                            <path d="M10.5 8v4l2.8 1.8M16.5 4.5 20 4v3.5" />
+                            <path d="M20 4 16 8" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

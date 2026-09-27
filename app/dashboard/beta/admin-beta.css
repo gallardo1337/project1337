@@ -4185,6 +4185,11 @@
   aspect-ratio: 16 / 9;
 }
 
+.adminBeta .thumbnailStudio__candidateCard.is-locked {
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(255, 154, 66, 0.68), 0 0 14px rgba(255, 126, 44, 0.16);
+}
+
 .adminBeta .thumbnailStudio__candidateSelect {
   position: relative;
   width: 100%;
@@ -4279,11 +4284,16 @@
   color: #09090a;
 }
 
-.adminBeta .thumbnailStudio__candidateZoom {
+.adminBeta .thumbnailStudio__candidateActions {
   position: absolute;
   top: 7px;
   right: 7px;
   z-index: 4;
+  display: flex;
+  gap: 4px;
+}
+
+.adminBeta .thumbnailStudio__candidateAction {
   display: grid;
   width: 30px;
   height: 30px;
@@ -4292,17 +4302,48 @@
   background: rgba(3, 3, 4, 0.84);
   color: #e6e6e9;
   backdrop-filter: blur(7px);
-  cursor: zoom-in;
+  cursor: pointer;
   font-size: 14px;
   opacity: 0.78;
   transition: border-color 160ms ease, background 160ms ease, opacity 160ms ease;
 }
 
-.adminBeta .thumbnailStudio__candidateZoom:hover {
+.adminBeta .thumbnailStudio__candidateAction svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+.adminBeta .thumbnailStudio__candidateZoom {
+  cursor: zoom-in;
+}
+
+.adminBeta .thumbnailStudio__candidateAction:hover:not(:disabled),
+.adminBeta .thumbnailStudio__candidateAction.is-locked {
   border-color: var(--admin-orange);
   background: var(--admin-orange);
   color: #09090a;
   opacity: 1;
+}
+
+.adminBeta .thumbnailStudio__candidateAction:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.adminBeta .thumbnailStudio__lockedCount {
+  align-self: center;
+  border: 1px solid rgba(255, 154, 66, 0.34);
+  border-radius: 999px;
+  background: rgba(255, 126, 44, 0.08);
+  padding: 5px 8px;
+  color: #ffb16d;
+  font-size: 9px;
+  font-weight: 800;
 }
 
 .adminBeta .thumbnailStudio__lightbox {

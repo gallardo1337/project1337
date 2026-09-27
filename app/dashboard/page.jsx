@@ -83,6 +83,17 @@ async function loadAllMovies() {
 
 const CHANGELOG = [
   {
+    version: "2.7.4",
+    date: "2026-09-27",
+    items: [
+      "Thumbnail-Vorschläge lassen sich sperren und bleiben bei weiteren Generierungen erhalten",
+      "Über eine Sprungtaste lässt sich der Film direkt an der Stelle eines Vorschlags fortsetzen",
+      "Die KI-Auswahl berücksichtigt nur noch Frames mit vollständig sichtbarem Gesicht",
+      "Update-Monitor für Hauptdarsteller mit Favoriten, automatischen Prüfungen alle zwei Minuten und Sortierung nach letzter Prüfung ergänzt",
+      "Cast-Bilder und lokale KI-Aufwertung im Thumbnail Studio verbessert; Vergleich, Entwackeln, Upscaling und SUPIR-Restaurierung ergänzt",
+    ],
+  },
+  {
     version: "2.7.3",
     date: "2026-09-26",
     items: [
