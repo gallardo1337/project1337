@@ -83,6 +83,13 @@ async function loadAllMovies() {
 
 const CHANGELOG = [
   {
+    version: "2.7.5",
+    date: "2026-09-27",
+    items: [
+      "Doppelte Zeitanzeige unten rechts in der Videovorschau entfernt",
+    ],
+  },
+  {
     version: "2.7.4",
     date: "2026-09-27",
     items: [

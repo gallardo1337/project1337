@@ -1833,10 +1833,6 @@ export default function AdminThumbnailStudio({
                     <span>Wähle unten eine lokale MP4-Datei als Quelle.</span>
                   </div>
                 )}
-                <div className="thumbnailStudio__timecode">
-                  <strong>{formatTime(currentTime)}</strong>
-                  <span>/ {formatTime(duration)}</span>
-                </div>
               </div>
 
               <div className="thumbnailStudio__transport">

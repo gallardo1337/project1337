@@ -3713,31 +3713,6 @@
   font-size: 9px;
 }
 
-.adminBeta .thumbnailStudio__timecode {
-  position: absolute;
-  right: 14px;
-  bottom: 14px;
-  z-index: 3;
-  display: flex;
-  align-items: baseline;
-  gap: 5px;
-  padding: 7px 9px;
-  background: rgba(3, 3, 4, 0.82);
-  backdrop-filter: blur(9px);
-  pointer-events: none;
-}
-
-.adminBeta .thumbnailStudio__timecode strong {
-  color: #fff;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 11px;
-}
-
-.adminBeta .thumbnailStudio__timecode span {
-  color: #77777f;
-  font-size: 8px;
-}
-
 .adminBeta .thumbnailStudio__transport {
   display: grid;
   grid-template-columns: auto auto minmax(90px, 1fr) auto auto;
