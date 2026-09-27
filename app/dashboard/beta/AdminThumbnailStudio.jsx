@@ -189,8 +189,13 @@ function analyzeVideoFrame(video, canvas) {
   };
 }
 
-function chooseBestFrames(analyses) {
-  const ranked = [...analyses].sort((left, right) => right.score - left.score);
+function chooseBestFrames(analyses, { requireFullyVisibleFace = false } = {}) {
+  const ranked = [...analyses]
+    .filter(
+      (analysis) =>
+        !requireFullyVisibleFace || analysis.ai?.hasFullyVisibleFace === true
+    )
+    .sort((left, right) => right.score - left.score);
   const selected = [];
   const passes = [
     { minimumDistance: 0.07, minimumHashDistance: 0.14 },
@@ -1393,9 +1398,13 @@ export default function AdminThumbnailStudio({
         });
       }
 
-      const bestFrames = chooseBestFrames(analyses);
-      if (bestFrames.length < SUGGESTION_COUNT) {
-        throw new Error("Die KI konnte nicht genug unterschiedliche Frames finden.");
+      const bestFrames = chooseBestFrames(analyses, {
+        requireFullyVisibleFace: true,
+      });
+      if (!bestFrames.length) {
+        throw new Error(
+          "In den geprüften Szenen wurde kein vollständig sichtbares Gesicht erkannt. Wähle eine andere Szene oder erfasse den Frame manuell."
+        );
       }
 
       setGenerating({
@@ -1428,14 +1437,11 @@ export default function AdminThumbnailStudio({
       }
 
       if (firstCandidate) setSelectedCandidateId(firstCandidate.id);
-      const framesWithFaces = analyses.filter(
-        (analysis) => analysis.faceCount > 0
-      ).length;
-      const framesWithPoses = analyses.filter(
-        (analysis) => analysis.poseCount > 0
+      const framesWithCompleteFaces = analyses.filter(
+        (analysis) => analysis.ai?.hasFullyVisibleFace
       ).length;
       setNotice(
-        `KI-Beta: ${analysisPoints.length} Szenen geprüft, davon ${framesWithFaces} mit Gesicht und ${framesWithPoses} mit Körperpunkten. Die sechs stärksten Frames sind fertig.`
+        `KI-Auswahl: ${analysisPoints.length} Szenen geprüft, ${framesWithCompleteFaces} mit vollständig sichtbarem Gesicht. ${bestFrames.length} passende Vorschläge sind fertig.`
       );
     } catch (generationError) {
       if (
@@ -1622,8 +1628,8 @@ export default function AdminThumbnailStudio({
         ? "Personen und Gesichter werden analysiert"
         : "KI-Frames werden erstellt"
     : candidates.length
-      ? "6 weitere KI-Vorschläge"
-      : "Beta KI-Generator";
+      ? "Weitere vollständige Gesichter finden"
+      : "Vollständige Gesichter finden";
   const generationActionLabel = generating.active
     ? generating.phase === "models"
       ? "KI-Modelle werden geladen…"
@@ -2027,7 +2033,7 @@ export default function AdminThumbnailStudio({
                       {aiGenerationTitle}
                       <b>BETA</b>
                     </strong>
-                    <small>30 Szenen · Gesichter · Augen · Körper · Bildschnitt</small>
+                    <small>30 Szenen · vollständiges Gesicht · Mindestgröße · Bildrand</small>
                   </div>
                 </button>
                 <button
@@ -2095,7 +2101,9 @@ export default function AdminThumbnailStudio({
                             : candidate.generator === "ai-enhance"
                             ? "KI AUFGEWERTET"
                             : candidate.generator === "ai"
-                            ? "KI BETA"
+                            ? candidate.ai?.hasFullyVisibleFace
+                              ? "KI · GANZES GESICHT"
+                              : "KI BETA"
                             : candidate.generator === "standard"
                               ? "STANDARD"
                               : "MANUELL"}
