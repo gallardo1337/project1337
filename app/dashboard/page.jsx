@@ -83,6 +83,13 @@ async function loadAllMovies() {
 
 const CHANGELOG = [
   {
+    version: "2.7.6",
+    date: "2026-09-27",
+    items: [
+      "Beim Bearbeiten eines Films lassen sich alle sieben Assistenten-Schritte direkt öffnen",
+    ],
+  },
+  {
     version: "2.7.5",
     date: "2026-09-27",
     items: [
@@ -1934,7 +1941,7 @@ export function DashboardExperience() {
   };
 
   const handleWizardStepSelect = (step) => {
-    if (step > filmWizardMaxStep) return;
+    if (!editingFilmId && step > filmWizardMaxStep) return;
     setError(null);
     setFilmWizardStep(step);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -3000,8 +3007,8 @@ export function DashboardExperience() {
                         >
                           {MOVIE_WIZARD_STEPS.map((step, index) => {
                             const current = index === filmWizardStep;
-                            const done = index < filmWizardStep;
-                            const enabled = index <= filmWizardMaxStep;
+                            const done = !editingFilmId && index < filmWizardStep;
+                            const enabled = Boolean(editingFilmId) || index <= filmWizardMaxStep;
 
                             return (
                               <button
