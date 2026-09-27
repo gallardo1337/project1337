@@ -10,15 +10,6 @@ import styles from "./PlanetSuzyUpdates.module.css";
 
 const LEGACY_STORAGE_KEY = "project1337:planet-suzy-updates:v1";
 
-function initials(name) {
-  return String(name || "?")
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("");
-}
-
 function formatCheckedAt(value) {
   if (!value) return "Noch nicht geprüft";
   const date = new Date(value);
@@ -43,7 +34,10 @@ export default function PlanetSuzyUpdates({
   const [states, setStates] = useState({});
   const [storageReady, setStorageReady] = useState(false);
   const [storageError, setStorageError] = useState(null);
+  const [favoriteError, setFavoriteError] = useState(null);
   const [checkingIds, setCheckingIds] = useState([]);
+  const [favoriteOverrides, setFavoriteOverrides] = useState({});
+  const [savingFavoriteIds, setSavingFavoriteIds] = useState([]);
   const statesRef = useRef({});
   const checkingRef = useRef(new Set());
   const unauthorizedRef = useRef(onUnauthorized);
@@ -217,6 +211,42 @@ export default function PlanetSuzyUpdates({
     [saveActorState]
   );
 
+  const toggleFavorite = useCallback(async (actorId, currentValue) => {
+    const nextValue = !currentValue;
+    setFavoriteOverrides((previous) => ({ ...previous, [actorId]: nextValue }));
+    setSavingFavoriteIds((previous) => [...new Set([...previous, actorId])]);
+    setFavoriteError(null);
+    try {
+      const response = await fetch("/api/planet-updates/favorite", {
+        method: "PUT",
+        cache: "no-store",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ actorId, favorite: nextValue }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (response.status === 401) {
+        unauthorizedRef.current?.();
+        throw new Error("Deine Admin-Sitzung ist abgelaufen.");
+      }
+      if (!response.ok) throw new Error(result.error || "Favorit konnte nicht gespeichert werden.");
+    } catch (error) {
+      setFavoriteOverrides((previous) => ({ ...previous, [actorId]: currentValue }));
+      setFavoriteError(error?.message || "Favorit konnte nicht gespeichert werden.");
+    } finally {
+      setSavingFavoriteIds((previous) => previous.filter((id) => id !== actorId));
+    }
+  }, []);
+
+  const sortedActorList = useMemo(
+    () => [...actorList].sort((a, b) => {
+      const aFavorite = favoriteOverrides[a.id] ?? Boolean(a.planet_suzy_update_favorite);
+      const bFavorite = favoriteOverrides[b.id] ?? Boolean(b.planet_suzy_update_favorite);
+      return Number(bFavorite) - Number(aFavorite) || a.name.localeCompare(b.name, "de");
+    }),
+    [actorList, favoriteOverrides]
+  );
+
   if (!visible) return null;
 
   return (
@@ -233,7 +263,7 @@ export default function PlanetSuzyUpdates({
         </div>
         <div className={styles.polling}>
           <span className={styles.pulse} />
-          Automatische Prüfung: 1 Thread alle 2 Minuten
+          Favoriten stündlich · übrige täglich oder manuell
         </div>
       </div>
 
@@ -244,12 +274,16 @@ export default function PlanetSuzyUpdates({
       ) : (
         <>
         {storageError ? <div className={styles.error} role="alert">{storageError}</div> : null}
+        {favoriteError ? <div className={styles.error} role="alert">{favoriteError}</div> : null}
         <div className={styles.list}>
-          {actorList.map((actor) => {
+          {sortedActorList.map((actor) => {
             const state = states[actor.id];
             const unread = hasUnreadPost(state);
             const checking = checkingIds.includes(actor.id);
             const linked = Boolean(actor.planetsuzy_url);
+            const favorite = favoriteOverrides[actor.id] ?? Boolean(actor.planet_suzy_update_favorite);
+            const savingFavorite = savingFavoriteIds.includes(actor.id);
+            const castImage = actor.cast_image || actor.profile_image || actor.image_url;
 
             return (
               <article
@@ -257,9 +291,14 @@ export default function PlanetSuzyUpdates({
                 key={actor.id}
               >
                 <div className={styles.identity}>
-                  <span className={styles.avatar}>{initials(actor.name)}</span>
+                  <span className={styles.avatar}>
+                    {castImage ? <img src={castImage} alt="" loading="lazy" /> : null}
+                  </span>
                   <div className={styles.actorInfo}>
-                    <strong>{actor.name}</strong>
+                    <div className={styles.actorName}>
+                      <strong>{actor.name}</strong>
+                      {favorite ? <span className={styles.favoriteLabel}>Favorit</span> : null}
+                    </div>
                     {linked ? (
                       <a
                         href={actor.planetsuzy_url}
@@ -297,6 +336,17 @@ export default function PlanetSuzyUpdates({
                 </div>
 
                 <div className={styles.actions}>
+                  <button
+                    type="button"
+                    className={favorite ? styles.favoriteButton + " " + styles.favoriteActive : styles.favoriteButton}
+                    onClick={() => toggleFavorite(actor.id, favorite)}
+                    disabled={savingFavorite}
+                    aria-label={favorite ? `${actor.name} nicht mehr priorisieren` : `${actor.name} für regelmäßige Prüfungen priorisieren`}
+                    aria-pressed={favorite}
+                    title={favorite ? "Aus Favoriten entfernen" : "Als Favorit markieren – häufiger prüfen"}
+                  >
+                    {favorite ? "★" : "☆"}
+                  </button>
                   {unread ? (
                     <a
                       href={actor.planetsuzy_url}

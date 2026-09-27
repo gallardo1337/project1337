@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import {
   comparePostIds,
   extractLatestPostId,
@@ -56,4 +57,34 @@ test("deleted latest posts do not lower the saved high-water mark", () => {
   const nextNewPost = observePostId(deletedLatest, "251", 4);
   assert.equal(nextNewPost.maxPostId, "251");
   assert.equal(hasUnreadPost(nextNewPost), true);
+});
+
+test("PlanetSuzy-Favoriten sind sitzungsgeschützt und werden gespeichert", async () => {
+  const route = await readFile(
+    new URL("../app/api/planet-updates/favorite/route.js", import.meta.url),
+    "utf8"
+  );
+  const migration = await readFile(
+    new URL("../supabase/migrations/20260927112000_planet_suzy_update_favorites.sql", import.meta.url),
+    "utf8"
+  );
+
+  assert.match(route, /await hasLibrarySession\(\)/);
+  assert.match(route, /typeof body\?\.favorite !== "boolean"/);
+  assert.match(route, /planet_suzy_update_favorite: body\.favorite/);
+  assert.match(migration, /interval '60 minutes'/);
+  assert.match(migration, /interval '24 hours'/);
+  assert.match(migration, /order by actor\.planet_suzy_update_favorite desc/);
+});
+
+test("Update-Liste verwendet Cast-Bilder und Favoriten-Schalter", async () => {
+  const component = await readFile(
+    new URL("../app/dashboard/beta/PlanetSuzyUpdates.jsx", import.meta.url),
+    "utf8"
+  );
+
+  assert.match(component, /actor\.cast_image/);
+  assert.match(component, /planet_suzy_update_favorite/);
+  assert.match(component, /Favoriten stündlich · übrige täglich oder manuell/);
+  assert.match(component, /\/api\/planet-updates\/favorite/);
 });
