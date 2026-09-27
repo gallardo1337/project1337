@@ -21,41 +21,20 @@ function formatCheckedAt(value) {
   });
 }
 
-function ActorPortrait({ actor }) {
-  const sources = [...new Set([
-    actor.cast_image,
-    actor.transparent_image,
-    actor.profile_image,
-  ].filter((source) => typeof source === "string" && source.trim()))];
-  const [sourceIndex, setSourceIndex] = useState(0);
-  const source = sources[sourceIndex];
-  const useNextSource = () => {
-    setSourceIndex((current) => Math.min(current + 1, sources.length - 1));
-  };
-
-  if (!source) return null;
+function ActorPortrait({ src }) {
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) return null;
 
   return (
     <Image
-      src={source}
+      src={src}
       alt=""
       width={60}
       height={82}
       sizes="60px"
       quality={95}
       loading="lazy"
-      onError={useNextSource}
-      onLoad={(event) => {
-        const image = event.currentTarget;
-        const pixelRatio = Math.max(1, window.devicePixelRatio || 1);
-        if (
-          sourceIndex < sources.length - 1 &&
-          (image.naturalWidth < image.clientWidth * pixelRatio ||
-            image.naturalHeight < image.clientHeight * pixelRatio)
-        ) {
-          useNextSource();
-        }
-      }}
+      onError={() => setFailed(true)}
     />
   );
 }
@@ -334,9 +313,11 @@ export default function PlanetSuzyUpdates({
                 key={actor.id}
               >
                 <div className={styles.identity}>
-                  <span className={styles.avatar}>
-                    <ActorPortrait actor={actor} key={`${actor.cast_image || ""}:${actor.transparent_image || ""}:${actor.profile_image || ""}`} />
-                  </span>
+                  {actor.cast_image ? (
+                    <span className={styles.avatar}>
+                      <ActorPortrait src={actor.cast_image} key={actor.cast_image} />
+                    </span>
+                  ) : null}
                   <div className={styles.actorInfo}>
                     <div className={styles.actorName}>
                       <strong>{actor.name}</strong>
