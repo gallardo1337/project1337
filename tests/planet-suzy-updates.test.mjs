@@ -78,14 +78,22 @@ test("PlanetSuzy-Favoriten sind sitzungsgeschützt und werden gespeichert", asyn
 });
 
 test("Update-Liste verwendet Cast-Bilder und Favoriten-Schalter", async () => {
-  const component = await readFile(
+  const [component, styles] = await Promise.all([
+    readFile(
     new URL("../app/dashboard/beta/PlanetSuzyUpdates.jsx", import.meta.url),
     "utf8"
-  );
+    ),
+    readFile(
+      new URL("../app/dashboard/beta/PlanetSuzyUpdates.module.css", import.meta.url),
+      "utf8"
+    ),
+  ]);
 
   assert.match(component, /actor\.cast_image/);
   assert.match(component, /planet_suzy_update_favorite/);
   assert.match(component, /Favoriten stündlich · übrige täglich oder manuell/);
   assert.match(component, /\/api\/planet-updates\/favorite/);
   assert.match(component, /bCheckedAt - aCheckedAt/);
+  assert.match(styles, /\.avatar \{[^}]*width:\s*60px;[^}]*height:\s*82px;/s);
+  assert.doesNotMatch(styles, /\.avatar \{[^}]*border-radius:\s*50%/s);
 });
