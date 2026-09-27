@@ -3,7 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { scoreAiFrame } from "../../../lib/thumbnailAiScoring.mjs";
-import { appendThumbnailCandidate } from "../../../lib/thumbnailCandidates.mjs";
+import {
+  appendThumbnailCandidate,
+  clearUnlockedThumbnailCandidates,
+} from "../../../lib/thumbnailCandidates.mjs";
 
 const UPLOAD_URL = process.env.NEXT_PUBLIC_MOVIE_UPLOAD_URL;
 const OUTPUT_WIDTH = 1920;
@@ -613,6 +616,19 @@ export default function AdminThumbnailStudio({
     generatedUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
     generatedUrlsRef.current.clear();
     setCandidates([]);
+    setSelectedCandidateId(null);
+    setPreviewCandidateId(null);
+  };
+
+  const clearUnlockedCandidates = () => {
+    const { candidates: locked, removed } =
+      clearUnlockedThumbnailCandidates(candidates);
+    removed.forEach((candidate) => {
+      if (!candidate.url) return;
+      URL.revokeObjectURL(candidate.url);
+      generatedUrlsRef.current.delete(candidate.url);
+    });
+    setCandidates(locked);
     setSelectedCandidateId(null);
     setPreviewCandidateId(null);
   };
@@ -2088,7 +2104,7 @@ export default function AdminThumbnailStudio({
                     </button>
                     <button
                       type="button"
-                      onClick={resetCandidates}
+                      onClick={clearUnlockedCandidates}
                       disabled={saving || generating.active}
                     >
                       Auswahl leeren

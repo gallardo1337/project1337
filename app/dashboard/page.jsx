@@ -87,6 +87,7 @@ const CHANGELOG = [
     date: "2026-09-27",
     items: [
       "Thumbnail-Vorschläge lassen sich sperren und bleiben bei weiteren Generierungen erhalten",
+      "Auswahl leeren entfernt nur freie Vorschläge; gesperrte bleiben verfügbar",
       "Über eine Sprungtaste lässt sich der Film direkt an der Stelle eines Vorschlags fortsetzen",
       "Die KI-Auswahl berücksichtigt nur noch Frames mit vollständig sichtbarem Gesicht",
       "Update-Monitor für Hauptdarsteller mit Favoriten, automatischen Prüfungen alle zwei Minuten und Sortierung nach letzter Prüfung ergänzt",

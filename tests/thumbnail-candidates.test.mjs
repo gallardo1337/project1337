@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { appendThumbnailCandidate } from "../lib/thumbnailCandidates.mjs";
+import {
+  appendThumbnailCandidate,
+  clearUnlockedThumbnailCandidates,
+} from "../lib/thumbnailCandidates.mjs";
 
 test("gesperrte Vorschläge bleiben erhalten und verdrängen die ältesten freien Vorschläge", () => {
   const locked = { id: "locked", locked: true };
@@ -30,4 +33,14 @@ test("gesperrte Vorschläge bleiben auch bei mehr als zwölf Einträgen bestehen
   assert.equal(result.candidates.length, 14);
   assert.equal(result.candidates.filter((candidate) => candidate.locked).length, 13);
   assert.deepEqual(result.removed, []);
+});
+
+test("Auswahl leeren entfernt freie Vorschläge und behält gesperrte", () => {
+  const locked = { id: "locked", locked: true };
+  const unlocked = { id: "unlocked", locked: false };
+
+  const result = clearUnlockedThumbnailCandidates([locked, unlocked]);
+
+  assert.deepEqual(result.candidates, [locked]);
+  assert.deepEqual(result.removed, [unlocked]);
 });
