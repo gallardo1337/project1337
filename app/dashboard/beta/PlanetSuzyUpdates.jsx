@@ -8,21 +8,9 @@ import {
 } from "../../../lib/planetSuzyUpdates.mjs";
 import styles from "./PlanetSuzyUpdates.module.css";
 
-const STORAGE_KEY = "project1337:planet-suzy-updates:v1";
 const POLL_INTERVAL_MS = 5 * 60 * 1000;
 const CHECKED_AGAIN_AFTER_MS = 60 * 60 * 1000;
 const AUTO_BATCH_SIZE = 3;
-
-function readStoredStates() {
-  try {
-    const parsed = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || "{}");
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? parsed
-      : {};
-  } catch {
-    return {};
-  }
-}
 
 function initials(name) {
   return String(name || "?")
@@ -60,28 +48,65 @@ export default function PlanetSuzyUpdates({
   );
   const [states, setStates] = useState({});
   const [storageReady, setStorageReady] = useState(false);
+  const [storageError, setStorageError] = useState(null);
   const [checkingIds, setCheckingIds] = useState([]);
   const statesRef = useRef({});
   const checkingRef = useRef(new Set());
   const batchRunningRef = useRef(false);
 
   useEffect(() => {
-    const saved = readStoredStates();
-    statesRef.current = saved;
-    setStates(saved);
-    setStorageReady(true);
-  }, []);
+    let cancelled = false;
+    const loadStates = async () => {
+      try {
+        const response = await fetch("/api/planet-updates/state", {
+          cache: "no-store",
+          credentials: "same-origin",
+        });
+        const result = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+          onUnauthorized?.();
+          return;
+        }
+        if (!response.ok) throw new Error(result.error || "Update-Status konnte nicht geladen werden.");
+        if (cancelled) return;
+        const saved = result.states || {};
+        statesRef.current = saved;
+        setStates(saved);
+        setStorageError(null);
+      } catch (error) {
+        if (!cancelled) setStorageError(error?.message || "Online gespeicherter Update-Status ist nicht erreichbar.");
+      } finally {
+        if (!cancelled) setStorageReady(true);
+      }
+    };
+    loadStates();
+    return () => { cancelled = true; };
+  }, [onUnauthorized]);
 
-  const saveActorState = useCallback((actorId, nextState) => {
+  const saveActorState = useCallback(async (actorId, nextState) => {
     const nextStates = { ...statesRef.current, [actorId]: nextState };
     statesRef.current = nextStates;
     setStates(nextStates);
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextStates));
+      const response = await fetch("/api/planet-updates/state", {
+        method: "PUT",
+        cache: "no-store",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ actorId, state: nextState }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (response.status === 401) {
+        onUnauthorized?.();
+        throw new Error("Deine Admin-Sitzung ist abgelaufen.");
+      }
+      if (!response.ok) throw new Error(result.error || "Update-Status konnte online nicht gespeichert werden.");
+      setStorageError(null);
     } catch (error) {
-      console.error("PlanetSuzy-Update-Status konnte nicht gespeichert werden:", error);
+      setStorageError(error?.message || "Update-Status konnte online nicht gespeichert werden.");
+      throw error;
     }
-  }, []);
+  }, [onUnauthorized]);
 
   useEffect(() => {
     if (!storageReady) return;
@@ -94,7 +119,7 @@ export default function PlanetSuzyUpdates({
 
   const checkActor = useCallback(
     async (actorId) => {
-      if (!enabled || !storageReady || checkingRef.current.has(actorId)) return;
+      if (!enabled || !storageReady || storageError || checkingRef.current.has(actorId)) return;
       checkingRef.current.add(actorId);
       setCheckingIds([...checkingRef.current]);
 
@@ -114,7 +139,7 @@ export default function PlanetSuzyUpdates({
         const checkedAt = Date.now();
         if (!response.ok || !result.latestPostId) {
           const previous = statesRef.current[actorId] || {};
-          saveActorState(actorId, {
+          await saveActorState(actorId, {
             ...previous,
             checkedAt,
             error: result.error || "Beitrag konnte nicht geprüft werden.",
@@ -123,27 +148,31 @@ export default function PlanetSuzyUpdates({
         }
 
         const previous = statesRef.current[actorId] || null;
-        saveActorState(
+        await saveActorState(
           actorId,
           observePostId(previous, result.latestPostId, checkedAt)
         );
       } catch {
         const previous = statesRef.current[actorId] || {};
-        saveActorState(actorId, {
-          ...previous,
-          checkedAt: Date.now(),
-          error: "PlanetSuzy ist gerade nicht erreichbar. Bitte später erneut prüfen.",
-        });
+        try {
+          await saveActorState(actorId, {
+            ...previous,
+            checkedAt: Date.now(),
+            error: "PlanetSuzy ist gerade nicht erreichbar. Bitte später erneut prüfen.",
+          });
+        } catch {
+          // storageError is surfaced below; do not fall back to per-device state.
+        }
       } finally {
         checkingRef.current.delete(actorId);
         setCheckingIds([...checkingRef.current]);
       }
     },
-    [enabled, onUnauthorized, saveActorState, storageReady]
+    [enabled, onUnauthorized, saveActorState, storageError, storageReady]
   );
 
   useEffect(() => {
-    if (!enabled || !storageReady || linkedActors.length === 0) return undefined;
+    if (!enabled || !storageReady || storageError || linkedActors.length === 0) return undefined;
 
     const runNextBatch = async () => {
       if (batchRunningRef.current) return;
@@ -175,13 +204,13 @@ export default function PlanetSuzyUpdates({
       window.clearTimeout(initialTimer);
       window.clearInterval(interval);
     };
-  }, [checkActor, enabled, linkedActors, storageReady]);
+  }, [checkActor, enabled, linkedActors, storageError, storageReady]);
 
   const markRead = useCallback(
     (actorId) => {
       const previous = statesRef.current[actorId];
       if (!previous) return;
-      saveActorState(actorId, markPostsRead(previous));
+      saveActorState(actorId, markPostsRead(previous)).catch(() => {});
     },
     [saveActorState]
   );
@@ -211,6 +240,8 @@ export default function PlanetSuzyUpdates({
       ) : actorList.length === 0 ? (
         <div className={styles.empty}>Keine Hauptdarsteller vorhanden.</div>
       ) : (
+        <>
+        {storageError ? <div className={styles.error} role="alert">{storageError}</div> : null}
         <div className={styles.list}>
           {actorList.map((actor) => {
             const state = states[actor.id];
@@ -280,7 +311,8 @@ export default function PlanetSuzyUpdates({
                       type="button"
                       className={styles.checkButton}
                       onClick={() => checkActor(actor.id)}
-                      disabled={checking}
+                      disabled={checking || Boolean(storageError)}
+                      title={storageError || undefined}
                     >
                       {checking ? "Prüft…" : "Jetzt prüfen"}
                     </button>
@@ -290,6 +322,7 @@ export default function PlanetSuzyUpdates({
             );
           })}
         </div>
+        </>
       )}
     </section>
   );
