@@ -89,6 +89,13 @@ async function loadAllMovies() {
 
 const CHANGELOG = [
   {
+    version: "2.7.9",
+    date: "2026-09-27",
+    items: [
+      "Darstellerstatistik liest Haarfarben aus Color-Tags und Finish-Werte aus Finish-Tags",
+    ],
+  },
+  {
     version: "2.7.8",
     date: "2026-09-27",
     items: [

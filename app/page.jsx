@@ -205,6 +205,18 @@ export default function HomePage() {
             .filter((id) => isCategorizedTag(tagRowsById[String(id)]))
             .map((id) => tagRowsById[String(id)]?.name)
             .filter(Boolean);
+          const tagDetails = orderedTagIds
+            .map((id) => {
+              const tag = tagRowsById[String(id)];
+              return tag
+                ? {
+                    id: String(id),
+                    name: tag.name,
+                    category: tag.category || null,
+                  }
+                : null;
+            })
+            .filter(Boolean);
 
           const resolutionName = m.resolution_id
             ? resolutionMap[m.resolution_id] || null
@@ -228,6 +240,7 @@ export default function HomePage() {
             actors: allActors,
             tags: tagNames,
             categorizedTags: categorizedTagNames,
+            tagDetails,
             mainActorIds: mainIds,
             supportingActorIds: supportIds,
             mainActorNames: mainNames,

@@ -627,43 +627,6 @@ function spotlightTitleClass(title) {
   return "";
 }
 
-function normalizeStatValue(value) {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
-const HAIR_COLOR_TAGS = [
-  "Blonde",
-  "Brunette",
-  "Dark Hair",
-  "Red Hair",
-].map(normalizeStatValue);
-
-const FINISH_TAGS = [
-  "Anal Creampie",
-  "Creampie",
-  "Cum in Mouth",
-  "Cum on Ass",
-  "Cum on Belly",
-  "Cum on Pussy",
-  "Cum on Tits",
-  "Swallow",
-  "Facial",
-].map(normalizeStatValue);
-
-function isHairColorTag(tag) {
-  return HAIR_COLOR_TAGS.includes(normalizeStatValue(tag));
-}
-
-function isFinishTag(tag) {
-  return FINISH_TAGS.includes(normalizeStatValue(tag));
-}
-
 function countStatValues(values) {
   const counts = new Map();
 
@@ -700,14 +663,23 @@ function buildActorStats(movies) {
       ? String(minYear)
       : `${minYear}–${maxYear}`
     : "–";
-  const allTags = list.flatMap((movie) =>
-    Array.isArray(movie.tags) ? movie.tags : []
+  const allTagDetails = list.flatMap((movie) =>
+    Array.isArray(movie.tagDetails)
+      ? movie.tagDetails
+      : (Array.isArray(movie.tags) ? movie.tags : []).map((name) => ({
+          name,
+          category: null,
+        }))
   );
-  const hairTags = allTags.filter(isHairColorTag);
-  const finishTags = allTags.filter(isFinishTag);
-  const regularTags = allTags.filter(
-    (tag) => !isHairColorTag(tag) && !isFinishTag(tag)
-  );
+  const hairTags = allTagDetails
+    .filter((tag) => tag.category === "haircolor")
+    .map((tag) => tag.name);
+  const finishTags = allTagDetails
+    .filter((tag) => tag.category === "finish")
+    .map((tag) => tag.name);
+  const regularTags = allTagDetails
+    .filter((tag) => tag.category !== "haircolor" && tag.category !== "finish")
+    .map((tag) => tag.name);
   const resolutions = list.map((movie) => movie.resolution).filter(Boolean);
   const ratings = list
     .map((movie) => Number(movie.rating))

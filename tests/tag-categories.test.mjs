@@ -75,3 +75,16 @@ test("web and tvOS prioritize categorized tags and retain their category", async
   assert.match(filters, /sortTagsByCategory/);
   assert.doesNotMatch(filters, /is_main/);
 });
+
+test("actor statistics use Color and Finish categories instead of fixed tag names", async () => {
+  const [home, experience] = await Promise.all([
+    readProjectFile("app/page.jsx"),
+    readProjectFile("app/beta/BetaExperience.jsx"),
+  ]);
+
+  assert.match(home, /tagDetails,/);
+  assert.match(home, /category: tag\.category \|\| null/);
+  assert.match(experience, /tag\.category === "haircolor"/);
+  assert.match(experience, /tag\.category === "finish"/);
+  assert.doesNotMatch(experience, /HAIR_COLOR_TAGS|FINISH_TAGS/);
+});
