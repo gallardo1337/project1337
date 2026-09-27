@@ -8,9 +8,6 @@ import {
 } from "../../../lib/planetSuzyUpdates.mjs";
 import styles from "./PlanetSuzyUpdates.module.css";
 
-const POLL_INTERVAL_MS = 5 * 60 * 1000;
-const CHECKED_AGAIN_AFTER_MS = 60 * 60 * 1000;
-const AUTO_BATCH_SIZE = 3;
 const LEGACY_STORAGE_KEY = "project1337:planet-suzy-updates:v1";
 
 function initials(name) {
@@ -43,17 +40,12 @@ export default function PlanetSuzyUpdates({
     () => [...actors].sort((a, b) => a.name.localeCompare(b.name, "de")),
     [actors]
   );
-  const linkedActors = useMemo(
-    () => actorList.filter((actor) => actor.planetsuzy_url),
-    [actorList]
-  );
   const [states, setStates] = useState({});
   const [storageReady, setStorageReady] = useState(false);
   const [storageError, setStorageError] = useState(null);
   const [checkingIds, setCheckingIds] = useState([]);
   const statesRef = useRef({});
   const checkingRef = useRef(new Set());
-  const batchRunningRef = useRef(false);
   const unauthorizedRef = useRef(onUnauthorized);
 
   useEffect(() => {
@@ -216,41 +208,6 @@ export default function PlanetSuzyUpdates({
     [enabled, saveActorState, storageError, storageReady]
   );
 
-  useEffect(() => {
-    if (!enabled || !storageReady || storageError || linkedActors.length === 0) return undefined;
-
-    const runNextBatch = async () => {
-      if (batchRunningRef.current) return;
-      const now = Date.now();
-      const dueActors = linkedActors
-        .filter((actor) => {
-          const checkedAt = Number(statesRef.current[actor.id]?.checkedAt || 0);
-          return now - checkedAt >= CHECKED_AGAIN_AFTER_MS;
-        })
-        .sort(
-          (a, b) =>
-            Number(statesRef.current[a.id]?.checkedAt || 0) -
-            Number(statesRef.current[b.id]?.checkedAt || 0)
-        )
-        .slice(0, AUTO_BATCH_SIZE);
-
-      if (dueActors.length === 0) return;
-      batchRunningRef.current = true;
-      try {
-        await Promise.all(dueActors.map((actor) => checkActor(actor.id)));
-      } finally {
-        batchRunningRef.current = false;
-      }
-    };
-
-    const initialTimer = window.setTimeout(runNextBatch, 900);
-    const interval = window.setInterval(runNextBatch, POLL_INTERVAL_MS);
-    return () => {
-      window.clearTimeout(initialTimer);
-      window.clearInterval(interval);
-    };
-  }, [checkActor, enabled, linkedActors, storageError, storageReady]);
-
   const markRead = useCallback(
     (actorId) => {
       const previous = statesRef.current[actorId];
@@ -276,7 +233,7 @@ export default function PlanetSuzyUpdates({
         </div>
         <div className={styles.polling}>
           <span className={styles.pulse} />
-          Automatische Prüfung: 3 Threads alle 5 Minuten
+          Automatische Prüfung: 1 Thread alle 2 Minuten
         </div>
       </div>
 
