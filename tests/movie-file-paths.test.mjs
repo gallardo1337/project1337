@@ -29,6 +29,13 @@ test("equivalent encoded paths share one duplicate key", () => {
   );
 });
 
+test("literal and encoded URL path characters share one duplicate key", () => {
+  assert.equal(
+    movieFileUrlKey("Madison Ivy/M!vy-M@d!$0n.mp4"),
+    movieFileUrlKey("Madison Ivy/M!vy-M%40d!%240n.mp4")
+  );
+});
+
 test("same filenames in different actor folders stay distinct", () => {
   assert.notEqual(
     movieFileUrlKey("Madison Ivy/Film.mp4"),

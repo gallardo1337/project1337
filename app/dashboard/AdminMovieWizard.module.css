@@ -44,7 +44,7 @@
 }
 
 .progressButtonCurrent {
-  background: rgba(239, 68, 68, 0.075);
+  background: rgba(229, 9, 20, 0.075);
   color: #fff;
 }
 
@@ -54,7 +54,7 @@
   bottom: -1px;
   left: 0;
   height: 2px;
-  background: #ef4444;
+  background: #e50914;
   content: "";
 }
 
@@ -75,8 +75,8 @@
 
 .progressButtonCurrent .progressNumber,
 .progressButtonDone .progressNumber {
-  border-color: rgba(239, 68, 68, 0.65);
-  color: #ef6a6a;
+  border-color: rgba(229, 9, 20, 0.65);
+  color: #ff6b76;
 }
 
 .progressCopy {
@@ -124,7 +124,7 @@
 .eyebrow {
   display: block;
   margin-bottom: 7px;
-  color: #ef4444;
+  color: #e50914;
   font-size: 8px;
   font-weight: 850;
   letter-spacing: 0.18em;
@@ -237,7 +237,7 @@
 }
 
 .manualPath input:focus {
-  border-color: rgba(239, 68, 68, 0.68);
+  border-color: rgba(229, 9, 20, 0.68);
 }
 
 .duplicate {
@@ -344,71 +344,11 @@
 
 .field input:focus,
 .field select:focus {
-  border-color: rgba(239, 68, 68, 0.72);
+  border-color: rgba(229, 9, 20, 0.72);
 }
 
 .required {
-  color: #ef4444;
-}
-
-.selectionIntro {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 14px;
-  color: rgba(255, 255, 255, 0.36);
-  font-size: 10px;
-}
-
-.selectionIntro strong {
-  color: #ef6a6a;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 23px;
-  font-weight: 400;
-}
-
-.choices {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 9px;
-  padding: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  background: rgba(255, 255, 255, 0.015);
-}
-
-.choice {
-  min-height: 38px;
-  border: 1px solid rgba(255, 255, 255, 0.13);
-  border-radius: 999px;
-  background: #0e0e10;
-  padding: 0 14px;
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 10px;
-  cursor: pointer;
-}
-
-.choice:hover {
-  border-color: rgba(255, 255, 255, 0.34);
-  color: #fff;
-}
-
-.choiceActive {
-  border-color: #ef4444;
-  background: #ef4444;
-  color: #09090a;
-  font-weight: 800;
-}
-
-.choiceActive:hover {
-  border-color: #ff6868;
-  background: #ff6868;
-  color: #09090a;
-}
-
-.empty {
-  color: rgba(255, 255, 255, 0.32);
-  font-size: 10px;
+  color: #e50914;
 }
 
 .review {
@@ -416,7 +356,7 @@
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background:
-    radial-gradient(circle at 92% 100%, rgba(239, 68, 68, 0.07), transparent 32%),
+    radial-gradient(circle at 92% 100%, rgba(229, 9, 20, 0.07), transparent 32%),
     #0a0a0c;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.22);
 }
@@ -429,7 +369,7 @@
   overflow: hidden;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   background:
-    linear-gradient(130deg, rgba(239, 68, 68, 0.12), transparent 48%),
+    linear-gradient(130deg, rgba(229, 9, 20, 0.12), transparent 48%),
     #050506;
 }
 
@@ -487,7 +427,7 @@
 }
 
 .reviewTitle span {
-  color: #ef4444;
+  color: #e50914;
   font-size: 8px;
   font-weight: 850;
   letter-spacing: 0.16em;
@@ -630,8 +570,8 @@
 
 .primaryButton,
 .saveButton {
-  border-color: #ef4444;
-  background: #ef4444;
+  border-color: #e50914;
+  background: #e50914;
   color: #080809;
 }
 

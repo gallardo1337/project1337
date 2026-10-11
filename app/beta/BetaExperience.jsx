@@ -627,43 +627,6 @@ function spotlightTitleClass(title) {
   return "";
 }
 
-function normalizeStatValue(value) {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
-const HAIR_COLOR_TAGS = [
-  "Blonde",
-  "Brunette",
-  "Dark Hair",
-  "Red Hair",
-].map(normalizeStatValue);
-
-const FINISH_TAGS = [
-  "Anal Creampie",
-  "Creampie",
-  "Cum in Mouth",
-  "Cum on Ass",
-  "Cum on Belly",
-  "Cum on Pussy",
-  "Cum on Tits",
-  "Swallow",
-  "Facial",
-].map(normalizeStatValue);
-
-function isHairColorTag(tag) {
-  return HAIR_COLOR_TAGS.includes(normalizeStatValue(tag));
-}
-
-function isFinishTag(tag) {
-  return FINISH_TAGS.includes(normalizeStatValue(tag));
-}
-
 function countStatValues(values) {
   const counts = new Map();
 
@@ -700,14 +663,23 @@ function buildActorStats(movies) {
       ? String(minYear)
       : `${minYear}–${maxYear}`
     : "–";
-  const allTags = list.flatMap((movie) =>
-    Array.isArray(movie.tags) ? movie.tags : []
+  const allTagDetails = list.flatMap((movie) =>
+    Array.isArray(movie.tagDetails)
+      ? movie.tagDetails
+      : (Array.isArray(movie.tags) ? movie.tags : []).map((name) => ({
+          name,
+          category: null,
+        }))
   );
-  const hairTags = allTags.filter(isHairColorTag);
-  const finishTags = allTags.filter(isFinishTag);
-  const regularTags = allTags.filter(
-    (tag) => !isHairColorTag(tag) && !isFinishTag(tag)
-  );
+  const hairTags = allTagDetails
+    .filter((tag) => tag.category === "haircolor")
+    .map((tag) => tag.name);
+  const finishTags = allTagDetails
+    .filter((tag) => tag.category === "finish")
+    .map((tag) => tag.name);
+  const regularTags = allTagDetails
+    .filter((tag) => tag.category !== "haircolor" && tag.category !== "finish")
+    .map((tag) => tag.name);
   const resolutions = list.map((movie) => movie.resolution).filter(Boolean);
   const ratings = list
     .map((movie) => Number(movie.rating))
@@ -813,6 +785,49 @@ function FavoriteToggle({ movie, onToggleFavorite, className = "" }) {
   );
 }
 
+function CategorizedTagList({ tags, className = "" }) {
+  if (!Array.isArray(tags) || tags.length === 0) return null;
+
+  return (
+    <span
+      className={`${styles.mainTagList} ${className}`.trim()}
+      aria-label="Kategorisierte Tags"
+    >
+      {tags.map((tag) => (
+        <span className={styles.mainTagBadge} key={tag}>
+          {tag}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function MovieCardCast({ mainActors, supportingActors }) {
+  const formatNames = (names) => {
+    if (!Array.isArray(names) || names.length === 0) return "";
+    const visibleNames = names.slice(0, 2);
+    const remaining = names.length - visibleNames.length;
+    return `${visibleNames.join(", ")}${remaining > 0 ? ` +${remaining}` : ""}`;
+  };
+  const mainText = formatNames(mainActors);
+  const supportingText = formatNames(supportingActors);
+  if (!mainText && !supportingText) return null;
+
+  return (
+    <span
+      className={styles.movieCastRow}
+      title={[
+        mainActors?.length ? `Hauptdarsteller: ${mainActors.join(", ")}` : "",
+        supportingActors?.length ? `Nebendarsteller: ${supportingActors.join(", ")}` : "",
+      ].filter(Boolean).join(" · ")}
+    >
+      {mainText ? <span className={styles.movieCastMain}><small className={styles.movieCastFemale} aria-hidden="true">♀</small>{mainText}</span> : null}
+      {mainText && supportingText ? <i aria-hidden="true" /> : null}
+      {supportingText ? <span className={styles.movieCastSupporting}><small className={styles.movieCastMale} aria-hidden="true">♂</small>{supportingText}</span> : null}
+    </span>
+  );
+}
+
 function MovieCard({
   movie,
   onOpen,
@@ -862,19 +877,26 @@ function MovieCard({
             <i />
             {movie.year || "–"}
           </span>
-          {showMetrics ? (
-            <span className={styles.movieMetrics}>
-              <span>
-                <Icon name="star" />
-                {Number(movie.rating) > 0 ? `${formatRating(movie.rating)} / 10` : "– / 10"}
-              </span>
-              <i />
-              <span>
-                <Icon name="play" />
-                {formatNumber(movie.viewCount)} Aufrufe
-              </span>
+          <span className={styles.movieMetrics}>
+            <span>
+              <Icon name="star" />
+              {Number(movie.rating) > 0 ? `${formatRating(movie.rating)} / 10` : "– / 10"}
             </span>
-          ) : null}
+            {showMetrics ? (
+              <>
+                <i />
+                <span>
+                  <Icon name="play" />
+                  {formatNumber(movie.viewCount)} Aufrufe
+                </span>
+              </>
+            ) : null}
+          </span>
+          <MovieCardCast
+            mainActors={movie.mainActorNames}
+            supportingActors={movie.supportingActorNames}
+          />
+          <CategorizedTagList tags={movie.categorizedTags} />
         </span>
       </button>
     </article>
@@ -926,6 +948,7 @@ function SimilarMovieCard({ recommendation, onOpen, index }) {
           <i />
           {movie.year || "–"}
         </span>
+        <CategorizedTagList tags={movie.categorizedTags} />
       </span>
     </button>
   );
@@ -1760,6 +1783,7 @@ function Discovery({
               ? featured.actors.slice(0, 3).join(" · ")
               : "Eine persönlich kuratierte Screening Collection."}
           </p>
+          <CategorizedTagList tags={featured?.categorizedTags} className={styles.spotlightMainTags} />
           <div className={styles.spotlightActions}>
             {featured ? <button type="button" className={styles.primaryAction} onClick={() => onOpenMovie(featured)}><Icon name="play" /> Film öffnen</button> : null}
             <button type="button" className={styles.secondaryAction} onClick={onShowMovies}>Gesamtes Archiv <Icon name="arrow" /></button>
@@ -2341,7 +2365,21 @@ function MovieDetail({
             </span>
             <h1>{movie.title || "Unbenannt"}</h1>
           </div>
-          {movie.tags?.length ? <div className={styles.detailTags}>{movie.tags.map((tag) => <span key={tag}>{tag}</span>)}</div> : null}
+          {movie.tags?.length ? (
+            <div className={styles.detailTags} aria-label="Film-Tags">
+              {movie.tags.map((tag) => {
+                const isCategorized = movie.categorizedTags?.includes(tag);
+                return (
+                  <span
+                    className={isCategorized ? styles.detailTagMain : styles.detailTag}
+                    key={tag}
+                  >
+                    {tag}
+                  </span>
+                );
+              })}
+            </div>
+          ) : null}
           <aside className={styles.compactRating}>
             <div className={styles.ratingHeader}>
               <span>Personal score</span>

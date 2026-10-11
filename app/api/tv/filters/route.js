@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { sortTagsByCategory } from "../../../../lib/tagCategories.mjs";
 
 export const dynamic = "force-dynamic";
 
@@ -92,9 +93,12 @@ export async function GET() {
       );
     }
 
-    const tags = (tagsResult.data || [])
-      .map(normalizeOption)
-      .sort(sortByName);
+    const tags = sortTagsByCategory(
+      (tagsResult.data || []).map((tag) => ({
+        ...normalizeOption(tag),
+        category: tag.category || null,
+      }))
+    );
 
     const studios = (studiosResult.data || [])
       .map(normalizeOption)

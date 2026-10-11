@@ -7,8 +7,16 @@ import dynamic from "next/dynamic";
 import AdminBetaOverview from "./beta/AdminBetaOverview.jsx";
 import AdminMediaHealth from "./beta/AdminMediaHealth.jsx";
 import AdminMovieFilePicker from "./AdminMovieFilePicker.jsx";
+import AdminMovieMetadataPicker from "./AdminMovieMetadataPicker.jsx";
+import PlanetSuzyUpdates from "./beta/PlanetSuzyUpdates.jsx";
 import ResolutionIndicator from "../components/ResolutionIndicator.jsx";
 import wizardStyles from "./AdminMovieWizard.module.css";
+import {
+  isCategorizedTag,
+  prioritizeTagIds,
+  sortTagsByCategory,
+  tagCategoryLabel,
+} from "../../lib/tagCategories.mjs";
 import {
   PUBLIC_VIDEO_BASE,
   hasExactVideoFile,
@@ -55,11 +63,108 @@ const AdminNasLibrary = dynamic(
 
 const TransparentActorUploader = dynamic(() => import("./TransparentActorUploader.jsx"), { ssr: false });
 
+const MOVIE_PAGE_SIZE = 1000;
+
+async function loadAllMovies() {
+  const allMovies = [];
+
+  for (let offset = 0; ; offset += MOVIE_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from("movies")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: true })
+      .range(offset, offset + MOVIE_PAGE_SIZE - 1);
+
+    if (error) throw error;
+
+    allMovies.push(...(data || []));
+    if (!data || data.length < MOVIE_PAGE_SIZE) return allMovies;
+  }
+}
+
 // -------------------------------
 // Version / Changelog
 // -------------------------------
 
 const CHANGELOG = [
+  {
+    version: "2.7.9",
+    date: "2026-09-27",
+    items: [
+      "Darstellerstatistik liest Haarfarben aus Color-Tags und Finish-Werte aus Finish-Tags",
+    ],
+  },
+  {
+    version: "2.7.8",
+    date: "2026-09-27",
+    items: [
+      "Frühesten Suchzeitpunkt für Thumbnail-Vorschläge festlegen oder aktuelle Videoposition übernehmen",
+    ],
+  },
+  {
+    version: "2.7.7",
+    date: "2026-09-27",
+    items: [
+      "Main Tags durch Color-, Place- und Finish-Kategorien ersetzt und Kategorien zuerst sortiert",
+      "Haarfarbe wird im Schritt Hauptdarsteller gewählt und automatisch als Film-Tag übernommen",
+    ],
+  },
+  {
+    version: "2.7.6",
+    date: "2026-09-27",
+    items: [
+      "Beim Bearbeiten eines Films lassen sich alle sieben Assistenten-Schritte direkt öffnen",
+    ],
+  },
+  {
+    version: "2.7.5",
+    date: "2026-09-27",
+    items: [
+      "Doppelte Zeitanzeige unten rechts in der Videovorschau entfernt",
+    ],
+  },
+  {
+    version: "2.7.4",
+    date: "2026-09-27",
+    items: [
+      "Thumbnail-Vorschläge lassen sich sperren und bleiben bei weiteren Generierungen erhalten",
+      "Auswahl leeren entfernt nur freie Vorschläge; gesperrte bleiben verfügbar",
+      "Über eine Sprungtaste lässt sich der Film direkt an der Stelle eines Vorschlags fortsetzen",
+      "Die KI-Auswahl berücksichtigt nur noch Frames mit vollständig sichtbarem Gesicht",
+      "Update-Monitor für Hauptdarsteller mit Favoriten, automatischen Prüfungen alle zwei Minuten und Sortierung nach letzter Prüfung ergänzt",
+      "Cast-Bilder und lokale KI-Aufwertung im Thumbnail Studio verbessert; Vergleich, Entwackeln, Upscaling und SUPIR-Restaurierung ergänzt",
+    ],
+  },
+  {
+    version: "2.7.3",
+    date: "2026-09-26",
+    items: [
+      "Suchfelder für die Darsteller- und Tag-Auswahl kompakter ausgerichtet",
+    ],
+  },
+  {
+    version: "2.7.2",
+    date: "2026-09-26",
+    items: [
+      "Darsteller- und Tag-Auswahl im Film-Assistenten mit Suche und kompakten Listen neu gestaltet",
+    ],
+  },
+  {
+    version: "2.7.1",
+    date: "2026-09-26",
+    items: [
+      "Dateiabgleich im Film-Wizard um vollständige Filmpaginierung und einheitliche Behandlung kodierter Sonderzeichen erweitert",
+    ],
+  },
+  {
+    version: "2.7.0",
+    date: "2026-09-25",
+    items: [
+      "Main Tags in der Tag-Verwaltung markierbar und in tvOS vor normalen Tags priorisiert",
+      "Main Tags im Film-Assistenten und in der Admin-Liste zuerst angezeigt",
+    ],
+  },
   {
     version: "2.6.1",
     date: "2026-08-16",
@@ -385,7 +490,7 @@ function VersionHint() {
   );
 }
 
-// Helper für Chips – Rot als Akzent
+// Helper für Chips – Red als Beta-Akzent
 const chipClass = (active) =>
   "px-3 py-1 rounded-full border text-sm " +
   (active
@@ -488,6 +593,12 @@ const AdminNavIcon = ({ name }) => {
         <path d="M7 12h2l1.4-3.5 2.2 7 1.5-3.5H17" />
       </>
     ),
+    updates: (
+      <>
+        <path d="M20 7v5h-5M4 17v-5h5" />
+        <path d="M5.6 9a7 7 0 0 1 11.8-2L20 12M4 12l2.6 5a7 7 0 0 0 11.8-2" />
+      </>
+    ),
     nas: (
       <>
         <path d="M4 6.5h16v11H4z" />
@@ -581,6 +692,7 @@ export function DashboardExperience() {
 
   // Tabs: Filme / Neuer Film / Stammdaten
   const [activeFilmSection, setActiveFilmSection] = useState("overview");
+  const [planetUpdatesUnread, setPlanetUpdatesUnread] = useState(0);
   const [metaMenuOpen, setMetaMenuOpen] = useState(false);
   const [activeMetaSection, setActiveMetaSection] = useState("mainActors"); // "mainActors" | "supportActors" | "studios" | "tags"
 
@@ -613,6 +725,7 @@ export function DashboardExperience() {
   const [newStudioName, setNewStudioName] = useState("");
 
   const [newTagName, setNewTagName] = useState("");
+  const [newTagCategory, setNewTagCategory] = useState("");
 
   const [editingActorMetaId, setEditingActorMetaId] = useState(null);
   const [actorEditForm, setActorEditForm] = useState({
@@ -798,7 +911,7 @@ export function DashboardExperience() {
           actors2Res,
           studiosRes,
           tagsRes,
-          moviesRes,
+          allMovies,
           resolutionsRes,
           metricsData,
         ] = await Promise.all([
@@ -806,10 +919,7 @@ export function DashboardExperience() {
           supabase.from("actors2").select("*").order("name"),
           supabase.from("studios").select("*").order("name"),
           supabase.from("tags").select("*").order("name"),
-          supabase
-            .from("movies")
-            .select("*")
-            .order("created_at", { ascending: false }),
+          loadAllMovies(),
           supabase.from("resolutions").select("*").order("name"),
           metricsPromise,
         ]);
@@ -818,14 +928,13 @@ export function DashboardExperience() {
         if (actors2Res.error) throw actors2Res.error;
         if (studiosRes.error) throw studiosRes.error;
         if (tagsRes.error) throw tagsRes.error;
-        if (moviesRes.error) throw moviesRes.error;
         if (resolutionsRes.error) throw resolutionsRes.error;
 
         setHauptdarsteller(actorsRes.data || []);
         setNebendarsteller(actors2Res.data || []);
         setStudios(studiosRes.data || []);
         setTags(tagsRes.data || []);
-        setFilme(moviesRes.data || []);
+        setFilme(allMovies);
         setResolutions(resolutionsRes.data || []);
         setMovieMetrics(metricsData);
 
@@ -1203,7 +1312,7 @@ export function DashboardExperience() {
 
     const { data, error: insertError } = await supabase
       .from("tags")
-      .insert({ name })
+      .insert({ name, category: newTagCategory || null })
       .select("*")
       .single();
 
@@ -1215,6 +1324,24 @@ export function DashboardExperience() {
 
     setTags((prev) => [...prev, data]);
     setNewTagName("");
+    setNewTagCategory("");
+  };
+
+  const handleSetTagCategory = async (tag, category) => {
+    const { data, error: updateError } = await supabase
+      .from("tags")
+      .update({ category: category || null })
+      .eq("id", tag.id)
+      .select("*")
+      .single();
+
+    if (updateError) {
+      console.error(updateError);
+      setError(updateError.message);
+      return;
+    }
+
+    setTags((prev) => prev.map((item) => (item.id === tag.id ? data : item)));
   };
 
   const handleDeleteStudio = async (studioId) => {
@@ -1844,7 +1971,7 @@ export function DashboardExperience() {
   };
 
   const handleWizardStepSelect = (step) => {
-    if (step > filmWizardMaxStep) return;
+    if (!editingFilmId && step > filmWizardMaxStep) return;
     setError(null);
     setFilmWizardStep(step);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1966,6 +2093,7 @@ export function DashboardExperience() {
     { key: "stats", label: "Filmarchiv", icon: "movies", section: "stats", count: filme.length },
     { key: "nas", label: "NAS-Analyse", icon: "nas", section: "nas" },
     { key: "health", label: "Medienprüfung", icon: "health", section: "health" },
+    { key: "updates", label: "Update", icon: "updates", section: "updates", count: planetUpdatesUnread },
     { key: "thumbnails", label: "Thumbnail Studio", icon: "thumbnail", section: "thumbnails" },
     { key: "new", label: editingFilmId ? "Film bearbeiten" : "Film hinzufügen", icon: "add", section: "new" },
     { key: "mainActors", label: "Hauptdarsteller", icon: "mainActors", section: "meta", meta: "mainActors", count: hauptdarsteller.length },
@@ -2030,7 +2158,14 @@ export function DashboardExperience() {
   const SidebarContent = BetaSidebarContent;
 
   const betaWorkspace =
-    activeFilmSection === "director"
+    activeFilmSection === "updates"
+      ? {
+          eyebrow: "PlanetSuzy Thread Monitor",
+          title: "Update",
+          description:
+            "Neue Beiträge in den hinterlegten Threads der Hauptdarsteller erkennen.",
+        }
+      : activeFilmSection === "director"
       ? {
           eyebrow: "Homepage Composition",
           title: "Startseiten-Regisseur",
@@ -2241,10 +2376,10 @@ export function DashboardExperience() {
         .dashBtn--primary:hover {
           background: linear-gradient(
             180deg,
-            rgba(255, 21, 33, 0.95),
+            rgba(238, 64, 83, 0.95),
             rgba(229, 9, 20, 0.8)
           );
-          border-color: rgba(255, 21, 33, 0.65);
+          border-color: rgba(238, 64, 83, 0.65);
         }
 
         .dashBtn--ghost {
@@ -2821,6 +2956,16 @@ export function DashboardExperience() {
                     />
                   ) : null}
 
+                  {activeFilmSection === "updates" ? (
+                    <PlanetSuzyUpdates
+                      actors={hauptdarsteller}
+                      visible={activeFilmSection === "updates"}
+                      enabled={loggedIn && sessionChecked && !loading}
+                      onUnreadCountChange={setPlanetUpdatesUnread}
+                      onUnauthorized={handleSessionExpired}
+                    />
+                  ) : null}
+
                   {activeFilmSection === "nas" ? (
                     <AdminNasLibrary
                       onUnauthorized={handleSessionExpired}
@@ -2892,8 +3037,8 @@ export function DashboardExperience() {
                         >
                           {MOVIE_WIZARD_STEPS.map((step, index) => {
                             const current = index === filmWizardStep;
-                            const done = index < filmWizardStep;
-                            const enabled = index <= filmWizardMaxStep;
+                            const done = !editingFilmId && index < filmWizardStep;
+                            const enabled = Boolean(editingFilmId) || index <= filmWizardMaxStep;
 
                             return (
                               <button
@@ -3104,120 +3249,70 @@ export function DashboardExperience() {
 
                             {/* Hauptdarsteller */}
                             {filmWizardStep === 3 ? (
-                              <div>
-                                <div className={wizardStyles.selectionIntro}>
-                                  <span>Klick zum Auswählen oder Entfernen</span>
-                                  <strong>{selectedMainActorIds.length}</strong>
-                                </div>
-                                <div className={wizardStyles.choices}>
-                                  {hauptdarsteller.length === 0 ? (
-                                    <span className={wizardStyles.empty}>
-                                      Noch keine Hauptdarsteller angelegt.
-                                    </span>
-                                  ) : (
-                                    hauptdarsteller.map((actor) => {
-                                      const active = selectedMainActorIds.includes(
-                                        actor.id
-                                      );
-                                      return (
-                                        <button
-                                          key={actor.id}
-                                          type="button"
-                                          onClick={() => handleToggleMainActor(actor)}
-                                          className={`${wizardStyles.choice} ${
-                                            active ? wizardStyles.choiceActive : ""
-                                          }`}
-                                          aria-pressed={active}
-                                        >
-                                          {active ? "✓ " : ""}{actor.name}
-                                        </button>
-                                      );
-                                    })
-                                  )}
+                              <div className="grid gap-5">
+                                <AdminMovieMetadataPicker
+                                  label="Hauptdarsteller"
+                                  items={hauptdarsteller}
+                                  selectedIds={selectedMainActorIds}
+                                  onToggle={handleToggleMainActor}
+                                  placeholder="Hauptdarsteller suchen…"
+                                  emptyMessage="Noch keine Hauptdarsteller angelegt."
+                                />
+                                <div className="grid gap-2">
+                                  <div>
+                                    <h3 className="m-0 text-sm font-semibold text-neutral-100">
+                                      Haarfarbe
+                                    </h3>
+                                    <p className="mt-1 text-xs text-neutral-500">
+                                      Wird als Color-Tag gespeichert und erscheint im nächsten Schritt nicht erneut.
+                                    </p>
+                                  </div>
+                                  <AdminMovieMetadataPicker
+                                    label="Haarfarbe"
+                                    items={tags.filter((tag) => tag.category === "haircolor")}
+                                    selectedIds={selectedTagIds}
+                                    onToggle={(tag) =>
+                                      toggleId(tag.id, selectedTagIds, setSelectedTagIds)
+                                    }
+                                    placeholder="Haarfarbe suchen…"
+                                    emptyMessage="Noch keine Color-Tags kategorisiert."
+                                  />
                                 </div>
                               </div>
                             ) : null}
 
                             {/* Nebendarsteller */}
                             {filmWizardStep === 4 ? (
-                              <div>
-                                <div className={wizardStyles.selectionIntro}>
-                                  <span>Klick zum Auswählen oder Entfernen</span>
-                                  <strong>{selectedSupportActorIds.length}</strong>
-                                </div>
-                                <div className={wizardStyles.choices}>
-                                  {nebendarsteller.length === 0 ? (
-                                    <span className={wizardStyles.empty}>
-                                      Noch keine Nebendarsteller angelegt.
-                                    </span>
-                                  ) : (
-                                    nebendarsteller.map((actor) => {
-                                      const active = selectedSupportActorIds.includes(
-                                        actor.id
-                                      );
-                                      return (
-                                        <button
-                                          key={actor.id}
-                                          type="button"
-                                          onClick={() =>
-                                            toggleId(
-                                              actor.id,
-                                              selectedSupportActorIds,
-                                              setSelectedSupportActorIds
-                                            )
-                                          }
-                                          className={`${wizardStyles.choice} ${
-                                            active ? wizardStyles.choiceActive : ""
-                                          }`}
-                                          aria-pressed={active}
-                                        >
-                                          {active ? "✓ " : ""}{actor.name}
-                                        </button>
-                                      );
-                                    })
-                                  )}
-                                </div>
-                              </div>
+                              <AdminMovieMetadataPicker
+                                label="Nebendarsteller"
+                                items={nebendarsteller}
+                                selectedIds={selectedSupportActorIds}
+                                onToggle={(actor) =>
+                                  toggleId(
+                                    actor.id,
+                                    selectedSupportActorIds,
+                                    setSelectedSupportActorIds
+                                  )
+                                }
+                                placeholder="Nebendarsteller suchen…"
+                                emptyMessage="Noch keine Nebendarsteller angelegt."
+                              />
                             ) : null}
 
                             {/* Tags */}
                             {filmWizardStep === 5 ? (
-                              <div>
-                                <div className={wizardStyles.selectionIntro}>
-                                  <span>Klick zum Auswählen oder Entfernen</span>
-                                  <strong>{selectedTagIds.length}</strong>
-                                </div>
-                                <div className={wizardStyles.choices}>
-                                  {tags.length === 0 ? (
-                                    <span className={wizardStyles.empty}>
-                                      Noch keine Tags angelegt.
-                                    </span>
-                                  ) : (
-                                    tags.map((tag) => {
-                                      const active = selectedTagIds.includes(tag.id);
-                                      return (
-                                        <button
-                                          key={tag.id}
-                                          type="button"
-                                          onClick={() =>
-                                            toggleId(
-                                              tag.id,
-                                              selectedTagIds,
-                                              setSelectedTagIds
-                                            )
-                                          }
-                                          className={`${wizardStyles.choice} ${
-                                            active ? wizardStyles.choiceActive : ""
-                                          }`}
-                                          aria-pressed={active}
-                                        >
-                                          {active ? "✓ " : ""}{tag.name}
-                                        </button>
-                                      );
-                                    })
-                                  )}
-                                </div>
-                              </div>
+                              <AdminMovieMetadataPicker
+                                label="Tags"
+                                items={sortTagsByCategory(
+                                  tags.filter((tag) => tag.category !== "haircolor")
+                                )}
+                                selectedIds={selectedTagIds}
+                                onToggle={(tag) =>
+                                  toggleId(tag.id, selectedTagIds, setSelectedTagIds)
+                                }
+                                placeholder="Tags suchen…"
+                                emptyMessage="Noch keine Tags angelegt."
+                              />
                             ) : null}
 
                             {/* Vorschau */}
@@ -3285,7 +3380,7 @@ export function DashboardExperience() {
                                       <span>Tags</span>
                                       <div className={wizardStyles.reviewChips}>
                                         {selectedTagIds.length ? (
-                                          selectedTagIds.map((id) => (
+                                          prioritizeTagIds(selectedTagIds, tags).map((id) => (
                                             <span key={id}>{tagMap[id]?.name || "Unbekannt"}</span>
                                           ))
                                         ) : (
@@ -3522,7 +3617,7 @@ export function DashboardExperience() {
                                 {Array.isArray(f.tag_ids) &&
                                   f.tag_ids.length > 0 && (
                                     <div className="mt-1 flex flex-wrap gap-2">
-                                      {f.tag_ids.map((id) => {
+                                      {prioritizeTagIds(f.tag_ids, tags).map((id) => {
                                         const t = tagMap[id];
                                         if (!t) return null;
                                         return (
@@ -3818,7 +3913,7 @@ export function DashboardExperience() {
                                       </div>
                                     </div>
                                   ) : (
-                                    <div className="flex items-center justify-between gap-3">
+                                    <div className="flex flex-wrap items-center justify-between gap-3">
                                       <div className="flex min-w-0 items-center gap-3">
                                         {a.profile_image ? (
                                           <img
@@ -4174,6 +4269,18 @@ export function DashboardExperience() {
                               onChange={(e) => setNewTagName(e.target.value)}
                             />
 
+                            <select
+                              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-sm text-neutral-100 focus:border-red-500 focus:outline-none"
+                              value={newTagCategory}
+                              onChange={(event) => setNewTagCategory(event.target.value)}
+                              aria-label="Kategorie für neuen Tag"
+                            >
+                              <option value="">Ohne Kategorie</option>
+                              <option value="haircolor">Color</option>
+                              <option value="place">Place</option>
+                              <option value="finish">Finish</option>
+                            </select>
+
                             <button
                               type="submit"
                               className="rounded-xl bg-red-500 px-4 py-2 text-sm font-semibold text-black shadow shadow-red-900/70 hover:bg-red-400 disabled:opacity-60"
@@ -4186,7 +4293,7 @@ export function DashboardExperience() {
                           <div className="rounded-2xl border border-neutral-800 bg-neutral-950/95 p-5">
                             <div className="mb-3 flex items-center justify-between">
                               <div className="text-base font-semibold text-neutral-50">
-                                Vorhandene Tags
+                                Tags kategorisieren
                               </div>
                               <div className="text-xs text-neutral-500">
                                 {tags.length}
@@ -4194,7 +4301,8 @@ export function DashboardExperience() {
                             </div>
 
                             <div className="max-h-[560px] space-y-2 overflow-y-auto pr-1">
-                              {tags.map((t) => (
+                              {sortTagsByCategory(tags)
+                                .map((t) => (
                                 <div
                                   key={t.id}
                                   className="rounded-xl border border-neutral-800 bg-neutral-950 px-3 py-2.5"
@@ -4230,11 +4338,32 @@ export function DashboardExperience() {
                                     </div>
                                   ) : (
                                     <div className="flex items-center justify-between gap-3">
-                                      <span className="truncate text-sm font-medium text-neutral-50">
-                                        {t.name}
-                                      </span>
+                                      <div className="flex min-w-0 items-center gap-2">
+                                        <span className="truncate text-sm font-medium text-neutral-50">
+                                          {t.name}
+                                        </span>
+                                        {isCategorizedTag(t) ? (
+                                          <span className="shrink-0 rounded-full border border-red-400/50 bg-red-500/15 px-2 py-0.5 text-[11px] font-semibold text-red-200">
+                                            {tagCategoryLabel(t.category)}
+                                          </span>
+                                        ) : null}
+                                      </div>
 
                                       <div className="flex shrink-0 gap-1.5">
+                                        <select
+                                          className="max-w-36 rounded-lg border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-xs text-neutral-100 focus:border-red-500 focus:outline-none"
+                                          value={t.category || ""}
+                                          onChange={(event) =>
+                                            handleSetTagCategory(t, event.target.value)
+                                          }
+                                          aria-label={`${t.name} kategorisieren`}
+                                          title="Tag-Kategorie ändern"
+                                        >
+                                          <option value="">Ohne Kategorie</option>
+                                          <option value="haircolor">Color</option>
+                                          <option value="place">Place</option>
+                                          <option value="finish">Finish</option>
+                                        </select>
                                         <button
                                           type="button"
                                           onClick={() => startEditTagInline(t)}
@@ -4253,7 +4382,7 @@ export function DashboardExperience() {
                                     </div>
                                   )}
                                 </div>
-                              ))}
+                                ))}
                             </div>
                           </div>
                         </div>

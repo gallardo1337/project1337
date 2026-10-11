@@ -1,7 +1,10 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "1337 Library",
+  title: {
+    default: "1337 Library",
+    template: "%s",
+  },
   description: "Eigene Film-Bibliothek mit Tags, Actors und Supabase",
   icons: {
     icon: [

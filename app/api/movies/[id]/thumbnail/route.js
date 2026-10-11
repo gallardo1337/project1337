@@ -46,6 +46,111 @@ function noStoreJson(body, init = {}) {
   });
 }
 
+async function readResponseWithLimit(response, maxBytes) {
+  const declaredSize = Number(response.headers.get("content-length") || 0);
+  if (declaredSize > maxBytes) throw new Error("Thumbnail-Datei ist zu groß.");
+  if (!response.body) throw new Error("Thumbnail-Datei ist leer.");
+
+  const reader = response.body.getReader();
+  const chunks = [];
+  let totalSize = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    totalSize += value.byteLength;
+    if (totalSize > maxBytes) {
+      await reader.cancel();
+      throw new Error("Thumbnail-Datei ist zu groß.");
+    }
+    chunks.push(Buffer.from(value));
+  }
+  return Buffer.concat(chunks, totalSize);
+}
+
+async function fetchAllowedThumbnail(sourceUrl) {
+  let url = sourceUrl;
+  for (let redirectCount = 0; redirectCount <= 3; redirectCount += 1) {
+    if (url.protocol !== "https:" || !allowedThumbnailHost(url.hostname)) {
+      throw new Error("Thumbnail-Host ist nicht freigegeben.");
+    }
+
+    const response = await fetch(url, {
+      cache: "no-store",
+      redirect: "manual",
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get("location");
+      if (!location || redirectCount === 3) throw new Error("Zu viele Thumbnail-Weiterleitungen.");
+      url = new URL(location, url);
+      continue;
+    }
+    if (!response.ok) throw new Error(`Thumbnail-Host antwortet mit HTTP ${response.status}.`);
+
+    const contentType = (response.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+    if (!["image/jpeg", "image/png", "image/webp", "image/avif", "image/gif"].includes(contentType)) {
+      throw new Error("Der Thumbnail-Host hat keine Bilddatei geliefert.");
+    }
+    const image = await readResponseWithLimit(response, 25 * 1024 * 1024);
+    if (!image.length) throw new Error("Thumbnail-Datei ist leer.");
+    return { image, contentType };
+  }
+  throw new Error("Thumbnail konnte nicht geladen werden.");
+}
+
+export async function GET(_request, { params }) {
+  if (!(await hasLibrarySession())) {
+    return noStoreJson({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const { id } = await params;
+    if (!id || !UUID_PATTERN.test(id)) {
+      return noStoreJson({ error: "Ungültige Film-ID." }, { status: 400 });
+    }
+
+    const supabase = createServerSupabase();
+    const { data, error } = await supabase
+      .from("movies")
+      .select("thumbnail_url")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) return noStoreJson({ error: "Film nicht gefunden." }, { status: 404 });
+    if (!data.thumbnail_url) {
+      return noStoreJson({ error: "Für diesen Film ist kein Thumbnail gespeichert." }, { status: 404 });
+    }
+
+    let sourceUrl;
+    try {
+      sourceUrl = new URL(data.thumbnail_url);
+    } catch {
+      return noStoreJson({ error: "Die gespeicherte Thumbnail-URL ist ungültig." }, { status: 400 });
+    }
+    if (sourceUrl.protocol !== "https:" || !allowedThumbnailHost(sourceUrl.hostname)) {
+      return noStoreJson({ error: "Dieser Thumbnail-Host ist nicht freigegeben." }, { status: 400 });
+    }
+
+    const { image, contentType } = await fetchAllowedThumbnail(sourceUrl);
+    return new NextResponse(image, {
+      headers: {
+        "Content-Type": contentType,
+        "Content-Length": String(image.length),
+        "Cache-Control": "private, no-store",
+        "X-Content-Type-Options": "nosniff",
+      },
+    });
+  } catch (error) {
+    console.error("Movie thumbnail source could not be loaded:", error);
+    return noStoreJson(
+      { error: error?.message || "Thumbnail konnte nicht geladen werden." },
+      { status: 502 }
+    );
+  }
+}
+
 export async function PUT(request, { params }) {
   if (!(await hasLibrarySession())) {
     return noStoreJson({ error: "Unauthorized" }, { status: 401 });

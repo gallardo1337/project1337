@@ -47,6 +47,22 @@ test("angeschnittene Randgesichter werden schlechter bewertet", () => {
 
   assert.ok(centered.score > cropped.score);
   assert.ok(centered.framingScore > cropped.framingScore);
+  assert.equal(centered.hasFullyVisibleFace, true);
+  assert.equal(cropped.hasFullyVisibleFace, false);
+});
+
+test("kleine oder knapp am Rand liegende Gesichter gelten nicht als vollständig sichtbar", () => {
+  const tooSmall = scoreAiFrame({
+    technicalScore: 0.9,
+    faceLandmarks: [faceAt({ width: 0.05, height: 0.08 })],
+  });
+  const tooCloseToEdge = scoreAiFrame({
+    technicalScore: 0.9,
+    faceLandmarks: [faceAt({ left: 0.01 })],
+  });
+
+  assert.equal(tooSmall.hasFullyVisibleFace, false);
+  assert.equal(tooCloseToEdge.hasFullyVisibleFace, false);
 });
 
 test("geschlossene Augen sind ein weicher und kein harter Ausschluss", () => {

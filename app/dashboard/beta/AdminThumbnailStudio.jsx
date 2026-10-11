@@ -3,6 +3,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { scoreAiFrame } from "../../../lib/thumbnailAiScoring.mjs";
+import {
+  appendThumbnailCandidate,
+  clearUnlockedThumbnailCandidates,
+} from "../../../lib/thumbnailCandidates.mjs";
+import {
+  ANALYSIS_END_RATIO,
+  createThumbnailAnalysisPoints,
+  DEFAULT_ANALYSIS_START_RATIO,
+} from "../../../lib/thumbnailAnalysisPoints.mjs";
 
 const UPLOAD_URL = process.env.NEXT_PUBLIC_MOVIE_UPLOAD_URL;
 const OUTPUT_WIDTH = 1920;
@@ -13,12 +22,11 @@ const ANALYSIS_WIDTH = 192;
 const ANALYSIS_HEIGHT = 108;
 const AI_ANALYSIS_WIDTH = 640;
 const AI_ANALYSIS_HEIGHT = 360;
-const ANALYSIS_RANGE_START = 0.2;
-const ANALYSIS_RANGE_END = 0.95;
-const ANALYSIS_BAND_COUNT = 6;
-const SAMPLES_PER_BAND = 5;
 const SUGGESTION_COUNT = 6;
 const EMPTY_MOVIES = [];
+const COMFY_ENDPOINT_STORAGE_KEY = "project1337-comfyui-endpoint";
+const DEFAULT_COMFY_ENDPOINT = "http://127.0.0.1:8188";
+const AI_ENHANCED_STORAGE_KEY = "project1337-ai-enhanced-thumbnails-v1";
 const CHAPTER_POINTS = [0.12, 0.26, 0.4, 0.54, 0.68, 0.82];
 const MEDIAPIPE_WASM_ROOT =
   "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm";
@@ -27,22 +35,12 @@ const FACE_LANDMARKER_MODEL =
 const POSE_LANDMARKER_MODEL =
   "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task";
 
-function createAnalysisPoints() {
-  const bandSize =
-    (ANALYSIS_RANGE_END - ANALYSIS_RANGE_START) / ANALYSIS_BAND_COUNT;
-
-  return Array.from({ length: ANALYSIS_BAND_COUNT }, (_, bandIndex) => {
-    const start = ANALYSIS_RANGE_START + bandIndex * bandSize;
-    const end = start + bandSize;
-    const sliceSize = (end - start) / SAMPLES_PER_BAND;
-
-    return Array.from({ length: SAMPLES_PER_BAND }, (_, sampleIndex) => ({
-      bandIndex,
-      point:
-        start +
-        sliceSize * (sampleIndex + 0.16 + Math.random() * 0.68),
-    }));
-  }).flat();
+function formatTimeInput(value) {
+  const seconds = Math.max(0, Math.floor(Number(value) || 0));
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainder = seconds % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(remainder).padStart(2, "0")}`;
 }
 
 function waitForFramePaint() {
@@ -186,8 +184,13 @@ function analyzeVideoFrame(video, canvas) {
   };
 }
 
-function chooseBestFrames(analyses) {
-  const ranked = [...analyses].sort((left, right) => right.score - left.score);
+function chooseBestFrames(analyses, { requireFullyVisibleFace = false } = {}) {
+  const ranked = [...analyses]
+    .filter(
+      (analysis) =>
+        !requireFullyVisibleFace || analysis.ai?.hasFullyVisibleFace === true
+    )
+    .sort((left, right) => right.score - left.score);
   const selected = [];
   const passes = [
     { minimumDistance: 0.07, minimumHashDistance: 0.14 },
@@ -357,6 +360,42 @@ function frameToBlob(video) {
   });
 }
 
+async function fitImageToThumbnail(blob) {
+  const image = await createImageBitmap(blob);
+  const canvas = document.createElement("canvas");
+  canvas.width = OUTPUT_WIDTH;
+  canvas.height = OUTPUT_HEIGHT;
+  const ctx = canvas.getContext("2d", { alpha: false });
+  if (!ctx) {
+    image.close?.();
+    throw new Error("Der Browser konnte das KI-Ergebnis nicht verarbeiten.");
+  }
+  const scale = Math.max(OUTPUT_WIDTH / image.width, OUTPUT_HEIGHT / image.height);
+  const cropWidth = OUTPUT_WIDTH / scale;
+  const cropHeight = OUTPUT_HEIGHT / scale;
+  ctx.drawImage(
+    image,
+    (image.width - cropWidth) / 2,
+    (image.height - cropHeight) / 2,
+    cropWidth,
+    cropHeight,
+    0,
+    0,
+    OUTPUT_WIDTH,
+    OUTPUT_HEIGHT
+  );
+  image.close?.();
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (result) => (result ? resolve(result) : reject(new Error("JPEG-Ergebnis ist leer."))),
+      "image/jpeg",
+      JPEG_QUALITY
+    );
+  });
+}
+
+const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
 async function createAiModels() {
   const { FilesetResolver, FaceLandmarker, PoseLandmarker } = await import(
     "@mediapipe/tasks-vision"
@@ -436,16 +475,21 @@ export default function AdminThumbnailStudio({
 
   const [search, setSearch] = useState("");
   const [onlyMissing, setOnlyMissing] = useState(false);
+  const [hideAiEnhanced, setHideAiEnhanced] = useState(true);
+  const [aiEnhancedThumbs, setAiEnhancedThumbs] = useState({});
   const [selectedMovieId, setSelectedMovieId] = useState(null);
   const [localSource, setLocalSource] = useState(null);
   const [remoteAccess, setRemoteAccess] = useState("idle");
   const [duration, setDuration] = useState(0);
+  const [analysisStartTime, setAnalysisStartTime] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [videoReady, setVideoReady] = useState(false);
   const [videoError, setVideoError] = useState(null);
   const [candidates, setCandidates] = useState([]);
   const [selectedCandidateId, setSelectedCandidateId] = useState(null);
+  const [comparisonSplit, setComparisonSplit] = useState(50);
   const [previewCandidateId, setPreviewCandidateId] = useState(null);
+  const [previewImage, setPreviewImage] = useState(null);
   const [generating, setGenerating] = useState({
     active: false,
     kind: null,
@@ -454,8 +498,48 @@ export default function AdminThumbnailStudio({
     total: 0,
   });
   const [saving, setSaving] = useState(false);
+  const [comfyEndpoint, setComfyEndpoint] = useState(DEFAULT_COMFY_ENDPOINT);
+  const [comfyModels, setComfyModels] = useState([]);
+  const [comfyModel, setComfyModel] = useState("");
+  const [comfyDeblurModels, setComfyDeblurModels] = useState([]);
+  const [comfyDeblurModel, setComfyDeblurModel] = useState("");
+  const [comfySupirModels, setComfySupirModels] = useState([]);
+  const [comfySupirModel, setComfySupirModel] = useState("");
+  const [comfySdxlModels, setComfySdxlModels] = useState([]);
+  const [comfySdxlModel, setComfySdxlModel] = useState("");
+  const [enhancementMode, setEnhancementMode] = useState("upscale");
+  const [comfyStatus, setComfyStatus] = useState("idle");
+  const [enhancing, setEnhancing] = useState(false);
+  const [loadingExistingThumbnail, setLoadingExistingThumbnail] = useState(false);
   const [notice, setNotice] = useState(null);
   const [error, setError] = useState(null);
+  const requiresSupir = enhancementMode === "supir";
+  const requiresDeblur = enhancementMode === "deblur" || enhancementMode === "deblur-upscale";
+  const requiresUpscale = enhancementMode === "upscale" || enhancementMode === "deblur-upscale";
+  const canEnhance = requiresSupir
+    ? Boolean(comfySupirModel && comfySdxlModel)
+    : (!requiresDeblur || Boolean(comfyDeblurModel && comfyDeblurModels.includes(comfyDeblurModel))) &&
+      (!requiresUpscale || Boolean(comfyModel));
+
+  useEffect(() => {
+    setComparisonSplit(50);
+  }, [selectedCandidateId]);
+
+  useEffect(() => {
+    try {
+      const savedEndpoint = window.localStorage.getItem(COMFY_ENDPOINT_STORAGE_KEY);
+      if (savedEndpoint) setComfyEndpoint(savedEndpoint);
+      const savedEnhancedThumbs = window.localStorage.getItem(AI_ENHANCED_STORAGE_KEY);
+      if (savedEnhancedThumbs) {
+        const parsed = JSON.parse(savedEnhancedThumbs);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          setAiEnhancedThumbs(parsed);
+        }
+      }
+    } catch {
+      // Local storage can be disabled; defaults remain usable.
+    }
+  }, []);
 
   const workingMovies = useMemo(
     () => (embeddedMovie ? [embeddedMovie] : movies),
@@ -477,6 +561,11 @@ export default function AdminThumbnailStudio({
 
     return sortedMovies.filter((movie) => {
       if (onlyMissing && movie.thumbnail_url) return false;
+      if (
+        hideAiEnhanced &&
+        movie.thumbnail_url &&
+        aiEnhancedThumbs[movie.id] === movie.thumbnail_url
+      ) return false;
       if (!query) return true;
 
       const haystack = `${movie.title || ""} ${
@@ -486,7 +575,7 @@ export default function AdminThumbnailStudio({
       );
       return haystack.includes(query);
     });
-  }, [sortedMovies, search, onlyMissing, studioMap, resolutionMap]);
+  }, [sortedMovies, search, onlyMissing, hideAiEnhanced, aiEnhancedThumbs, studioMap, resolutionMap]);
 
   const selectedMovie = useMemo(
     () => workingMovies.find((movie) => movie.id === selectedMovieId) || null,
@@ -510,11 +599,28 @@ export default function AdminThumbnailStudio({
   const previewCandidateNumber = previewCandidate
     ? candidates.findIndex((candidate) => candidate.id === previewCandidate.id) + 1
     : 0;
+  const lockedCandidateCount = useMemo(
+    () => candidates.filter((candidate) => candidate.locked).length,
+    [candidates]
+  );
 
   const resetCandidates = () => {
     generatedUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
     generatedUrlsRef.current.clear();
     setCandidates([]);
+    setSelectedCandidateId(null);
+    setPreviewCandidateId(null);
+  };
+
+  const clearUnlockedCandidates = () => {
+    const { candidates: locked, removed } =
+      clearUnlockedThumbnailCandidates(candidates);
+    removed.forEach((candidate) => {
+      if (!candidate.url) return;
+      URL.revokeObjectURL(candidate.url);
+      generatedUrlsRef.current.delete(candidate.url);
+    });
+    setCandidates(locked);
     setSelectedCandidateId(null);
     setPreviewCandidateId(null);
   };
@@ -609,7 +715,7 @@ export default function AdminThumbnailStudio({
   );
 
   useEffect(() => {
-    if (!previewCandidateId) return undefined;
+    if (!previewCandidateId && !previewImage) return undefined;
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -617,10 +723,12 @@ export default function AdminThumbnailStudio({
     const handleKeyDown = (event) => {
       if (event.key === "Escape") {
         setPreviewCandidateId(null);
+        setPreviewImage(null);
         return;
       }
 
       if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+      if (!previewCandidateId) return;
 
       const currentIndex = candidates.findIndex(
         (candidate) => candidate.id === previewCandidateId
@@ -638,7 +746,7 @@ export default function AdminThumbnailStudio({
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [candidates, previewCandidateId]);
+  }, [candidates, previewCandidateId, previewImage]);
 
   const videoSource = localSource?.url || selectedMovie?.file_url || "";
   const canCapture = Boolean(
@@ -673,7 +781,11 @@ export default function AdminThumbnailStudio({
   const handleLoadedMetadata = () => {
     const video = videoRef.current;
     if (!video) return;
-    setDuration(Number.isFinite(video.duration) ? video.duration : 0);
+    const videoDuration = Number.isFinite(video.duration) ? video.duration : 0;
+    setDuration(videoDuration);
+    setAnalysisStartTime(
+      Math.floor(videoDuration * DEFAULT_ANALYSIS_START_RATIO)
+    );
     setCurrentTime(video.currentTime || 0);
     setVideoReady(Boolean(video.videoWidth && video.videoHeight));
     setVideoError(null);
@@ -702,15 +814,12 @@ export default function AdminThumbnailStudio({
       };
 
       setCandidates((current) => {
-        const next = [...current, candidate];
-        if (next.length <= 12) return next;
-
-        const removed = next.shift();
-        if (removed) {
+        const result = appendThumbnailCandidate(current, candidate);
+        result.removed.forEach((removed) => {
           URL.revokeObjectURL(removed.url);
           generatedUrlsRef.current.delete(removed.url);
-        }
-        return next;
+        });
+        return result.candidates;
       });
 
       if (select) setSelectedCandidateId(candidate.id);
@@ -727,6 +836,377 @@ export default function AdminThumbnailStudio({
       }
       throw captureError;
     }
+  };
+
+  const connectComfy = async () => {
+    const baseUrl = comfyEndpoint.trim().replace(/\/+$/, "");
+    try {
+      const parsedUrl = new URL(baseUrl);
+      if (!["http:", "https:"].includes(parsedUrl.protocol)) throw new Error();
+      window.localStorage.setItem(COMFY_ENDPOINT_STORAGE_KEY, baseUrl);
+    } catch {
+      setComfyStatus("error");
+      setError("Bitte eine gültige ComfyUI-Adresse eingeben, z. B. http://127.0.0.1:8188.");
+      return;
+    }
+
+    setComfyStatus("checking");
+    setError(null);
+    try {
+      const response = await fetch(`${baseUrl}/models/upscale_models`, {
+        cache: "no-store",
+      });
+      if (!response.ok) throw new Error(`ComfyUI antwortet mit HTTP ${response.status}.`);
+      const models = await response.json();
+      if (!Array.isArray(models)) throw new Error("ComfyUI hat eine ungültige Modellliste geliefert.");
+      let deblurModels = [];
+      try {
+        const nodeResponse = await fetch(`${baseUrl}/object_info/NAFNetLoader`, { cache: "no-store" });
+        if (nodeResponse.ok) {
+          const nodeInfo = await nodeResponse.json();
+          const modelChoices = nodeInfo?.NAFNetLoader?.input?.required?.model_name?.[0];
+          if (Array.isArray(modelChoices)) {
+            deblurModels = modelChoices.filter((model) => /^NAFNet-(REDS|GoPro)-width(32|64)\.pth$/.test(model));
+          }
+        }
+      } catch {
+        // Keep normal upscaling available when the optional NAFNet nodes are not installed.
+      }
+      setComfyModels(models);
+      setComfyModel((current) => (models.includes(current) ? current : models[0] || ""));
+      setComfyDeblurModels(deblurModels);
+      setComfyDeblurModel((current) =>
+        deblurModels.includes(current)
+          ? current
+          : deblurModels.includes("NAFNet-REDS-width64.pth")
+            ? "NAFNet-REDS-width64.pth"
+            : deblurModels.includes("NAFNet-REDS-width32.pth")
+              ? "NAFNet-REDS-width32.pth"
+              : deblurModels[0] || ""
+      );
+      let supirModels = [];
+      let sdxlModels = [];
+      try {
+        const nodeResponse = await fetch(`${baseUrl}/object_info/SUPIR_Upscale`, { cache: "no-store" });
+        if (nodeResponse.ok) {
+          const nodeInfo = await nodeResponse.json();
+          const required = nodeInfo?.SUPIR_Upscale?.input?.required;
+          const checkpoints = required?.supir_model?.[0];
+          const sdxlChoices = required?.sdxl_model?.[0];
+          if (Array.isArray(checkpoints)) {
+            supirModels = checkpoints.filter((model) => /supir/i.test(model));
+          }
+          if (Array.isArray(sdxlChoices)) {
+            sdxlModels = sdxlChoices.filter((model) => !/supir/i.test(model));
+          }
+        }
+      } catch {
+        // SUPIR remains an optional ComfyUI capability.
+      }
+      setComfySupirModels(supirModels);
+      setComfySupirModel((current) => supirModels.includes(current) ? current : supirModels[0] || "");
+      setComfySdxlModels(sdxlModels);
+      setComfySdxlModel((current) =>
+        sdxlModels.includes(current)
+          ? current
+          : sdxlModels.find((model) => /albedo/i.test(model)) || sdxlModels[0] || ""
+      );
+      setComfyStatus("connected");
+      setNotice(
+        `ComfyUI verbunden · ${models.length} Upscale-, ${deblurModels.length} NAFNet- und ${supirModels.length} SUPIR-Modell${supirModels.length === 1 ? "" : "e"} gefunden.`
+      );
+    } catch (connectError) {
+      setComfyStatus("error");
+      setComfyModels([]);
+      setComfyModel("");
+      setComfyDeblurModels([]);
+      setComfyDeblurModel("");
+      setComfySupirModels([]);
+      setComfySupirModel("");
+      setComfySdxlModels([]);
+      setComfySdxlModel("");
+      setError(
+        `ComfyUI nicht erreichbar. Starte ComfyUI mit --enable-cors-header ${window.location.origin} und prüfe die Adresse. ${connectError?.message || ""}`
+      );
+    }
+  };
+
+  const enhanceImage = async (sourceBlob, sourceLabel) => {
+    if (!sourceBlob || enhancing) return;
+    const baseUrl = comfyEndpoint.trim().replace(/\/+$/, "");
+    if (!canEnhance) {
+      setError(
+        requiresSupir && !comfySupirModel
+          ? "SUPIR-Node oder SUPIR-Modell fehlt. Installiere die ComfyUI-SUPIR-Unterstützung und lege ein SUPIR-Modell unter models/checkpoints ab."
+          : requiresSupir && !comfySdxlModel
+            ? "Für SUPIR fehlt ein SDXL-Modell unter models/checkpoints."
+            : requiresDeblur && !comfyDeblurModel
+          ? "Für den Entwackler fehlen die NAFNet-ComfyUI-Nodes oder das REDS-Modell. Installiere sie lokal und verbinde ComfyUI erneut."
+          : "Verbinde ComfyUI und wähle die benötigten NAFNet- und Upscale-Modelle aus."
+      );
+      return;
+    }
+    setEnhancing(true);
+    setError(null);
+    setNotice("Bild wird lokal an ComfyUI übergeben …");
+    try {
+      const normalizedSource = await fitImageToThumbnail(sourceBlob);
+      const formData = new FormData();
+      // A stable filename can make ComfyUI reuse the previous LoadImage node
+      // output from its execution cache, even when the uploaded bytes changed.
+      const uploadName = `thumbnail-source-${Date.now()}-${Math.random().toString(36).slice(2, 9)}.jpg`;
+      formData.append("image", normalizedSource, uploadName);
+      formData.append("type", "input");
+      formData.append("overwrite", "true");
+      const uploadResponse = await fetch(`${baseUrl}/upload/image`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!uploadResponse.ok) throw new Error(`ComfyUI-Upload fehlgeschlagen (HTTP ${uploadResponse.status}).`);
+      const uploaded = await uploadResponse.json();
+      if (!uploaded?.name) throw new Error("ComfyUI hat keinen Eingabedateinamen zurückgegeben.");
+
+      const prompt = {
+        "1": { class_type: "LoadImage", inputs: { image: uploaded.name } },
+      };
+      let imageNode = "1";
+      let nextNodeId = 2;
+      if (requiresSupir) {
+        const supirId = String(nextNodeId++);
+        prompt[supirId] = {
+          class_type: "SUPIR_Upscale",
+          inputs: {
+            supir_model: comfySupirModel,
+            sdxl_model: comfySdxlModel,
+            image: [imageNode, 0],
+            seed: Math.floor(Math.random() * 0xffffffff),
+            resize_method: "lanczos",
+            scale_by: 1.0,
+            steps: 45,
+            restoration_scale: 4.0,
+            cfg_scale: 4.0,
+            a_prompt: "high quality, detailed photo",
+            n_prompt: "bad quality, blurry, messy, compression artifacts",
+            s_churn: 5,
+            s_noise: 1.003,
+            control_scale: 1.0,
+            cfg_scale_start: 4.0,
+            control_scale_start: 0.0,
+            color_fix_type: "Wavelet",
+            keep_model_loaded: false,
+            use_tiled_vae: true,
+            encoder_tile_size_pixels: 512,
+            decoder_tile_size_latent: 64,
+            captions: "",
+            diffusion_dtype: "fp16",
+            encoder_dtype: "fp32",
+            batch_size: 1,
+            use_tiled_sampling: true,
+            sampler_tile_size: 1024,
+            sampler_tile_stride: 512,
+            fp8_unet: false,
+            fp8_vae: false,
+            sampler: "RestoreEDMSampler",
+          },
+        };
+        imageNode = supirId;
+      }
+      if (requiresDeblur) {
+        const loaderId = String(nextNodeId++);
+        const restoreId = String(nextNodeId++);
+        prompt[loaderId] = {
+          class_type: "NAFNetLoader",
+          inputs: { model_name: comfyDeblurModel },
+        };
+        prompt[restoreId] = {
+          class_type: "NAFNetRestore",
+          inputs: {
+            image: [imageNode, 0],
+            model: [loaderId, 0],
+            tile_size: 512,
+            tile_overlap: 64,
+          },
+        };
+        imageNode = restoreId;
+      }
+      if (requiresUpscale) {
+        const loaderId = String(nextNodeId++);
+        const upscaleId = String(nextNodeId++);
+        const scaleId = String(nextNodeId++);
+        prompt[loaderId] = {
+          class_type: "UpscaleModelLoader",
+          inputs: { model_name: comfyModel },
+        };
+        prompt[upscaleId] = {
+          class_type: "ImageUpscaleWithModel",
+          inputs: { upscale_model: [loaderId, 0], image: [imageNode, 0] },
+        };
+        prompt[scaleId] = {
+          class_type: "ImageScale",
+          inputs: {
+            image: [upscaleId, 0],
+            upscale_method: "lanczos",
+            width: OUTPUT_WIDTH,
+            height: OUTPUT_HEIGHT,
+            crop: "disabled",
+          },
+        };
+        imageNode = scaleId;
+      }
+      prompt["8"] = {
+        class_type: "SaveImage",
+        inputs: {
+          filename_prefix: requiresSupir
+            ? "my1337-supir-restored"
+            : requiresDeblur && requiresUpscale
+            ? "my1337-deblurred-upscaled"
+            : requiresDeblur
+              ? "my1337-deblurred"
+              : "my1337-enhanced",
+          images: [imageNode, 0],
+        },
+      };
+      const promptResponse = await fetch(`${baseUrl}/prompt`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      });
+      const promptPayload = await promptResponse.json().catch(() => null);
+      if (!promptResponse.ok || !promptPayload?.prompt_id) {
+        const details = promptPayload?.error?.message || "ComfyUI hat den Workflow abgelehnt.";
+        throw new Error(details);
+      }
+
+      setNotice(
+        requiresSupir
+          ? `SUPIR restauriert „${sourceLabel}“ mit 45 Schritten – das kann einige Minuten dauern …`
+          : enhancementMode === "deblur-upscale"
+          ? `NAFNet entwackelt „${sourceLabel}“, danach verfeinert UltraSharp das Bild …`
+          : enhancementMode === "deblur"
+            ? `NAFNet entfernt Bewegungsunschärfe aus „${sourceLabel}“ …`
+            : `KI wertet „${sourceLabel}“ lokal auf …`
+      );
+      let images = null;
+      for (let attempt = 0; attempt < (requiresSupir ? 1200 : 240); attempt += 1) {
+        await wait(1500);
+        const historyResponse = await fetch(`${baseUrl}/history/${encodeURIComponent(promptPayload.prompt_id)}`, {
+          cache: "no-store",
+        });
+        if (!historyResponse.ok) throw new Error(`ComfyUI-Status konnte nicht gelesen werden (HTTP ${historyResponse.status}).`);
+        const history = await historyResponse.json();
+        const job = history?.[promptPayload.prompt_id];
+        if (job?.outputs?.["8"]?.images?.length) {
+          images = job.outputs["8"].images;
+          break;
+        }
+        if (job?.status?.status_str === "error") {
+          throw new Error(job.status.messages?.find((item) => item?.[0] === "execution_error")?.[1]?.exception_message || "ComfyUI konnte das Bild nicht verarbeiten.");
+        }
+      }
+      if (!images?.length) {
+        throw new Error(
+          requiresSupir
+            ? "Zeitüberschreitung: SUPIR hat nach 30 Minuten kein Ergebnis geliefert."
+            : "Zeitüberschreitung: ComfyUI hat nach 6 Minuten kein Ergebnis geliefert."
+        );
+      }
+
+      const imageInfo = images[0];
+      const imageQuery = new URLSearchParams({
+        filename: imageInfo.filename,
+        subfolder: imageInfo.subfolder || "",
+        type: imageInfo.type || "output",
+      });
+      const resultResponse = await fetch(`${baseUrl}/view?${imageQuery.toString()}`);
+      if (!resultResponse.ok) throw new Error("Das fertige KI-Bild konnte nicht geladen werden.");
+      const resultBlob = await fitImageToThumbnail(await resultResponse.blob());
+      const url = URL.createObjectURL(resultBlob);
+      generatedUrlsRef.current.add(url);
+      const candidate = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        blob: resultBlob,
+        url,
+        time: videoRef.current?.currentTime || 0,
+        generator: requiresSupir
+          ? "ai-supir"
+          : enhancementMode === "deblur-upscale"
+          ? "ai-deblur-upscale"
+          : enhancementMode === "deblur"
+            ? "ai-deblur"
+            : "ai-enhance",
+        sourceLabel,
+      };
+      setCandidates((current) => {
+        const result = appendThumbnailCandidate(current, candidate);
+        result.removed.forEach((removed) => {
+          URL.revokeObjectURL(removed.url);
+          generatedUrlsRef.current.delete(removed.url);
+        });
+        return result.candidates;
+      });
+      setSelectedCandidateId(candidate.id);
+      setNotice("KI-Ergebnis bereit · du kannst es prüfen und anschließend wie gewohnt speichern.");
+    } catch (enhanceError) {
+      setError(
+        `${enhanceError?.message || "KI-Aufwertung fehlgeschlagen."} Prüfe, ob ComfyUI mit CORS für ${window.location.origin} gestartet wurde.`
+      );
+      setNotice(null);
+    } finally {
+      setEnhancing(false);
+    }
+  };
+
+  const enhanceSelectedCandidate = () => {
+    if (selectedCandidate) enhanceImage(selectedCandidate.blob, "ausgewählter Frame");
+  };
+
+  const enhanceExistingThumbnail = async () => {
+    if (!selectedMovie?.thumbnail_url || enhancing || loadingExistingThumbnail) return;
+    setError(null);
+    setLoadingExistingThumbnail(true);
+    setNotice("Vorhandenes Thumbnail wird geladen …");
+    try {
+      const response = await fetch(`/api/movies/${selectedMovie.id}/thumbnail`, {
+        method: "GET",
+        cache: "no-store",
+        credentials: "same-origin",
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error || `Abruf fehlgeschlagen (HTTP ${response.status}).`);
+      }
+      const blob = await response.blob();
+      if (!blob.type.startsWith("image/")) throw new Error();
+      if (blob.size > 30 * 1024 * 1024) {
+        setNotice(null);
+        setError("Das aktuelle Thumbnail ist größer als 30 MB.");
+        return;
+      }
+      setNotice(null);
+      await enhanceImage(blob, `aktuelles Thumbnail von ${selectedMovie.title}`);
+    } catch (loadError) {
+      setNotice(null);
+      setError(
+        `Das gespeicherte Thumbnail konnte nicht geladen werden: ${loadError?.message || "unbekannter Fehler"}. Lade die Bilddatei herunter und wähle sie über „Thumbnail-Bilddatei wählen“ aus.`
+      );
+    } finally {
+      setLoadingExistingThumbnail(false);
+    }
+  };
+
+  const handleEnhancementFile = (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("Bitte eine Bilddatei auswählen.");
+      return;
+    }
+    if (file.size > 30 * 1024 * 1024) {
+      setError("Das Bild ist größer als 30 MB.");
+      return;
+    }
+    enhanceImage(file, file.name);
   };
 
   const handleSingleCapture = async () => {
@@ -746,7 +1226,11 @@ export default function AdminThumbnailStudio({
 
     setError(null);
     setNotice(null);
-    const analysisPoints = createAnalysisPoints();
+    const analysisPoints = createThumbnailAnalysisPoints(duration, analysisStartTime);
+    if (!analysisPoints.length) {
+      setError("Der Startzeitpunkt muss vor dem Ende des Suchbereichs liegen.");
+      return;
+    }
     setGenerating({
       active: true,
       kind: "standard",
@@ -852,7 +1336,11 @@ export default function AdminThumbnailStudio({
 
     setError(null);
     setNotice(null);
-    const analysisPoints = createAnalysisPoints();
+    const analysisPoints = createThumbnailAnalysisPoints(duration, analysisStartTime);
+    if (!analysisPoints.length) {
+      setError("Der Startzeitpunkt muss vor dem Ende des Suchbereichs liegen.");
+      return;
+    }
     setGenerating({
       active: true,
       kind: "ai",
@@ -930,9 +1418,13 @@ export default function AdminThumbnailStudio({
         });
       }
 
-      const bestFrames = chooseBestFrames(analyses);
-      if (bestFrames.length < SUGGESTION_COUNT) {
-        throw new Error("Die KI konnte nicht genug unterschiedliche Frames finden.");
+      const bestFrames = chooseBestFrames(analyses, {
+        requireFullyVisibleFace: true,
+      });
+      if (!bestFrames.length) {
+        throw new Error(
+          "In den geprüften Szenen wurde kein vollständig sichtbares Gesicht erkannt. Wähle eine andere Szene oder erfasse den Frame manuell."
+        );
       }
 
       setGenerating({
@@ -965,14 +1457,11 @@ export default function AdminThumbnailStudio({
       }
 
       if (firstCandidate) setSelectedCandidateId(firstCandidate.id);
-      const framesWithFaces = analyses.filter(
-        (analysis) => analysis.faceCount > 0
-      ).length;
-      const framesWithPoses = analyses.filter(
-        (analysis) => analysis.poseCount > 0
+      const framesWithCompleteFaces = analyses.filter(
+        (analysis) => analysis.ai?.hasFullyVisibleFace
       ).length;
       setNotice(
-        `KI-Beta: ${analysisPoints.length} Szenen geprüft, davon ${framesWithFaces} mit Gesicht und ${framesWithPoses} mit Körperpunkten. Die sechs stärksten Frames sind fertig.`
+        `KI-Auswahl: ${analysisPoints.length} Szenen geprüft, ${framesWithCompleteFaces} mit vollständig sichtbarem Gesicht. ${bestFrames.length} passende Vorschläge sind fertig.`
       );
     } catch (generationError) {
       if (
@@ -1026,6 +1515,35 @@ export default function AdminThumbnailStudio({
     const video = videoRef.current;
     if (!video || !duration) return;
     video.currentTime = duration * percent;
+  };
+
+  const seekToCandidate = (candidate) => {
+    const video = videoRef.current;
+    if (!video || !videoReady || !Number.isFinite(candidate?.time)) return;
+    video.currentTime = Math.max(0, Math.min(duration || 0, candidate.time));
+    setCurrentTime(video.currentTime);
+  };
+
+  const toggleCandidateLock = (candidateId) => {
+    setCandidates((current) =>
+      current.map((candidate) =>
+        candidate.id === candidateId
+          ? { ...candidate, locked: !candidate.locked }
+          : candidate
+      )
+    );
+  };
+
+  const updateAiEnhancedIndex = (movieId, thumbnailUrl, isEnhanced) => {
+    const next = { ...aiEnhancedThumbs };
+    if (isEnhanced && thumbnailUrl) next[movieId] = thumbnailUrl;
+    else delete next[movieId];
+    setAiEnhancedThumbs(next);
+    try {
+      window.localStorage.setItem(AI_ENHANCED_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // Keep the filter functional for this session if storage is unavailable.
+    }
   };
 
   const saveThumbnail = async () => {
@@ -1106,6 +1624,14 @@ export default function AdminThumbnailStudio({
       }
 
       onThumbnailSaved?.(selectedMovie.id, savePayload.thumbnail_url);
+      updateAiEnhancedIndex(
+        selectedMovie.id,
+        savePayload.thumbnail_url,
+        selectedCandidate.generator === "ai-enhance" ||
+          selectedCandidate.generator === "ai-deblur" ||
+          selectedCandidate.generator === "ai-deblur-upscale" ||
+          selectedCandidate.generator === "ai-supir"
+      );
       setNotice(`Thumbnail für „${selectedMovie.title}“ wurde gespeichert.`);
     } catch (saveError) {
       setError(saveError?.message || "Thumbnail konnte nicht gespeichert werden.");
@@ -1139,8 +1665,8 @@ export default function AdminThumbnailStudio({
         ? "Personen und Gesichter werden analysiert"
         : "KI-Frames werden erstellt"
     : candidates.length
-      ? "6 weitere KI-Vorschläge"
-      : "Beta KI-Generator";
+      ? "Weitere vollständige Gesichter finden"
+      : "Vollständige Gesichter finden";
   const generationActionLabel = generating.active
     ? generating.phase === "models"
       ? "KI-Modelle werden geladen…"
@@ -1201,6 +1727,16 @@ export default function AdminThumbnailStudio({
             />
             <span />
             Nur Filme ohne Thumbnail
+          </label>
+
+          <label className="thumbnailStudio__toggle">
+            <input
+              type="checkbox"
+              checked={hideAiEnhanced}
+              onChange={(event) => setHideAiEnhanced(event.target.checked)}
+            />
+            <span />
+            KI-aufgewertete ausblenden
           </label>
 
           <div className="thumbnailStudio__movieList">
@@ -1301,10 +1837,6 @@ export default function AdminThumbnailStudio({
                     <span>Wähle unten eine lokale MP4-Datei als Quelle.</span>
                   </div>
                 )}
-                <div className="thumbnailStudio__timecode">
-                  <strong>{formatTime(currentTime)}</strong>
-                  <span>/ {formatTime(duration)}</span>
-                </div>
               </div>
 
               <div className="thumbnailStudio__transport">
@@ -1339,6 +1871,54 @@ export default function AdminThumbnailStudio({
                     {Math.round(point * 100)}%
                   </button>
                 ))}
+              </div>
+
+              <div className="thumbnailStudio__scanStart">
+                <div>
+                  <strong>Frühester Suchzeitpunkt</strong>
+                  <span>
+                    Die 30 Szenen werden ab hier bis kurz vor Filmende geprüft.
+                    Standard: 20&nbsp;%.
+                  </span>
+                </div>
+                <div className="thumbnailStudio__scanStartControls">
+                  <input
+                    aria-label="Frühester Suchzeitpunkt"
+                    type="time"
+                    step="1"
+                    min="00:00:00"
+                    max={formatTimeInput(
+                      Math.max(0, Math.floor(duration * ANALYSIS_END_RATIO) - 1)
+                    )}
+                    value={formatTimeInput(
+                      Math.min(
+                        analysisStartTime,
+                        Math.max(0, Math.floor(duration * ANALYSIS_END_RATIO) - 1)
+                      )
+                    )}
+                    onChange={(event) => {
+                      const nextTime = event.currentTarget.valueAsNumber;
+                      if (Number.isFinite(nextTime)) {
+                        setAnalysisStartTime(Math.floor(nextTime / 1000));
+                      }
+                    }}
+                    disabled={!videoReady || generating.active || saving}
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setAnalysisStartTime(
+                        Math.min(
+                          Math.floor(currentTime),
+                          Math.max(0, Math.floor(duration * ANALYSIS_END_RATIO) - 1)
+                        )
+                      )
+                    }
+                    disabled={!videoReady || generating.active || saving}
+                  >
+                    Aktuelle Position übernehmen
+                  </button>
+                </div>
               </div>
 
               {remoteAccess === "playback-only" && !localSource ? (
@@ -1381,6 +1961,134 @@ export default function AdminThumbnailStudio({
                 </div>
               </div>
 
+              <section className="thumbnailStudio__aiEnhancer" aria-label="Lokale KI-Aufwertung">
+                <div className="thumbnailStudio__aiEnhancerTitle">
+                  <div>
+                    <span>LOKALE KI</span>
+                    <strong>Verwackelte oder weiche Bilder aufwerten</strong>
+                    <small>ComfyUI verarbeitet das Bild auf deinem Rechner.</small>
+                  </div>
+                  <span className={`thumbnailStudio__aiStatus is-${comfyStatus}`}>
+                    {comfyStatus === "connected" ? "Verbunden" : comfyStatus === "checking" ? "Prüfe …" : "Nicht verbunden"}
+                  </span>
+                </div>
+                <div className="thumbnailStudio__aiControls">
+                  <input
+                    type="url"
+                    aria-label="ComfyUI-Adresse"
+                    value={comfyEndpoint}
+                    onChange={(event) => setComfyEndpoint(event.target.value)}
+                    placeholder={DEFAULT_COMFY_ENDPOINT}
+                  />
+                  <button type="button" onClick={connectComfy} disabled={comfyStatus === "checking" || enhancing}>
+                    {comfyStatus === "checking" ? "Verbinde …" : "ComfyUI verbinden"}
+                  </button>
+                  <select
+                    aria-label="KI-Verfahren"
+                    value={enhancementMode}
+                    onChange={(event) => setEnhancementMode(event.target.value)}
+                    disabled={enhancing}
+                  >
+                    <option value="upscale">Schärfen / vergrößern</option>
+                    <option value="deblur">Bewegungsunschärfe entfernen</option>
+                    <option value="deblur-upscale">Entwackeln + hochauflösend verfeinern</option>
+                    <option value="supir">SUPIR-Restaurierung (langsamer, generativ)</option>
+                  </select>
+                  {requiresSupir ? (
+                    <>
+                      <select
+                        aria-label="SUPIR-Restaurierungsmodell"
+                        value={comfySupirModel}
+                        onChange={(event) => setComfySupirModel(event.target.value)}
+                        disabled={!comfySupirModels.length || enhancing}
+                      >
+                        {comfySupirModels.length ? comfySupirModels.map((model) => <option key={model} value={model}>{model}</option>) : <option value="">SUPIR-Modell installieren</option>}
+                      </select>
+                      <select
+                        aria-label="SDXL-Basismodell für SUPIR"
+                        value={comfySdxlModel}
+                        onChange={(event) => setComfySdxlModel(event.target.value)}
+                        disabled={!comfySdxlModels.length || enhancing}
+                      >
+                        {comfySdxlModels.length ? comfySdxlModels.map((model) => <option key={model} value={model}>{model}</option>) : <option value="">SDXL-Modell auswählen</option>}
+                      </select>
+                    </>
+                  ) : null}
+                  {requiresDeblur ? (
+                    <select
+                      aria-label="NAFNet-Entwackler-Modell"
+                      value={comfyDeblurModel}
+                      onChange={(event) => setComfyDeblurModel(event.target.value)}
+                      disabled={!comfyDeblurModels.length || enhancing}
+                    >
+                      {comfyDeblurModels.length ? (
+                        comfyDeblurModels.map((model) => <option key={model} value={model}>{model}</option>)
+                      ) : (
+                        <option value="">NAFNet-REDS installieren</option>
+                      )}
+                    </select>
+                  ) : null}
+                  {requiresUpscale ? (
+                    <select
+                      aria-label={requiresDeblur ? "Upscale-Modell nach Entwackeln" : "Upscale-Modell"}
+                      value={comfyModel}
+                      onChange={(event) => setComfyModel(event.target.value)}
+                      disabled={!comfyModels.length || enhancing}
+                    >
+                      {comfyModels.length ? (
+                        comfyModels.map((model) => <option key={model} value={model}>{model}</option>)
+                      ) : (
+                        <option value="">Upscale-Modell auswählen</option>
+                      )}
+                    </select>
+                  ) : null}
+                </div>
+                <div className="thumbnailStudio__aiActions">
+                  <button type="button" onClick={enhanceSelectedCandidate} disabled={!selectedCandidate || !canEnhance || enhancing || saving}>
+                    {enhancing
+                      ? "KI arbeitet …"
+                      : requiresSupir
+                        ? "Ausgewählten Frame mit SUPIR restaurieren"
+                      : enhancementMode === "deblur-upscale"
+                        ? "Frame entwackeln + verfeinern"
+                        : enhancementMode === "deblur"
+                          ? "Ausgewählten Frame entwackeln"
+                          : "Ausgewählten Frame aufwerten"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={enhanceExistingThumbnail}
+                    disabled={!selectedMovie.thumbnail_url || !canEnhance || enhancing || saving || loadingExistingThumbnail}
+                    title={!selectedMovie.thumbnail_url ? "Für diesen Film ist noch kein Thumbnail gespeichert" : "Gespeichertes Thumbnail lokal bearbeiten"}
+                  >
+                    {loadingExistingThumbnail
+                      ? "Thumbnail wird geladen …"
+                      : requiresSupir
+                        ? "Aktuelles Thumbnail mit SUPIR restaurieren"
+                      : enhancementMode === "deblur-upscale"
+                        ? "Thumbnail entwackeln + verfeinern"
+                        : enhancementMode === "deblur"
+                          ? "Aktuelles Thumbnail entwackeln"
+                          : "Aktuelles Thumbnail aufwerten"}
+                  </button>
+                  <label className={!canEnhance || enhancing || saving ? "is-disabled" : ""}>
+                    Thumbnail-Bilddatei wählen
+                    <input type="file" accept="image/*" onChange={handleEnhancementFile} disabled={!canEnhance || enhancing || saving} />
+                  </label>
+                </div>
+                <small className="thumbnailStudio__aiHint">
+                  {requiresSupir ? (
+                    <>SUPIR rekonstruiert das Bild generativ in mehreren Schritten und kann mehrere Minuten benötigen. Das Modell kann Details neu erzeugen; prüfe das Ergebnis sorgfältig. Benötigt ComfyUI-SUPIR, ein SUPIR-Checkpoint und ein SDXL-Modell in <code>models/checkpoints</code>. Im ComfyUI Manager nach <code>ComfyUI-SUPIR</code> suchen, installieren und danach ComfyUI neu starten. Für den ersten Versuch eignet sich <code>SUPIR-v0F</code> bei leichteren Schäden; <code>SUPIR-v0Q</code> restauriert stärker. Es wird lokal verarbeitet.</>
+                  ) : enhancementMode === "deblur-upscale" ? (
+                    <>NAFNet-REDS entfernt zuerst Bewegungsunschärfe; anschließend verfeinert das gewählte Upscale-Modell Details. Ergebnis bleibt 1920×1080. Für Videobilder NAFNet-REDS verwenden; danach 4x-UltraSharp auswählen. Bei Artefakten REDS-width32 testen.</>
+                  ) : enhancementMode === "deblur" ? (
+                    <>NAFNet-REDS ist für Videobilder mit Bewegungsunschärfe trainiert. Dafür ComfyUI-NAFNet installieren und <code>NAFNet-REDS-width64.pth</code> in den Plugin-Ordner <code>custom_nodes/ComfyUI-NAFNet/models</code> legen; danach ComfyUI neu starten und erneut verbinden. Bei Artefakten width32 testen.</>
+                  ) : (
+                    <>ComfyUI mit <code>--enable-cors-header {typeof window !== "undefined" ? window.location.origin : "https://beta.my1337.de"}</code> starten. Ein Modell wie 4x-UltraSharp muss in <code>models/upscale_models</code> liegen. Es schärft und vergrößert, entfernt aber keine starke Bewegungsunschärfe.</>
+                  )}
+                </small>
+              </section>
+
               <div className="thumbnailStudio__captureActions">
                 <button
                   type="button"
@@ -1406,7 +2114,7 @@ export default function AdminThumbnailStudio({
                       {aiGenerationTitle}
                       <b>BETA</b>
                     </strong>
-                    <small>30 Szenen · Gesichter · Augen · Körper · Bildschnitt</small>
+                    <small>30 Szenen · vollständiges Gesicht · Mindestgröße · Bildrand</small>
                   </div>
                 </button>
                 <button
@@ -1427,6 +2135,11 @@ export default function AdminThumbnailStudio({
                   <span>03 / Auswahl</span>
                   <h3>Favorit festlegen</h3>
                 </div>
+                {lockedCandidateCount > 0 ? (
+                  <span className="thumbnailStudio__lockedCount">
+                    {lockedCandidateCount} gesperrt
+                  </span>
+                ) : null}
                 {candidates.length ? (
                   <div className="thumbnailStudio__selectionActions">
                     <button
@@ -1439,7 +2152,7 @@ export default function AdminThumbnailStudio({
                     </button>
                     <button
                       type="button"
-                      onClick={resetCandidates}
+                      onClick={clearUnlockedCandidates}
                       disabled={saving || generating.active}
                     >
                       Auswahl leeren
@@ -1453,7 +2166,9 @@ export default function AdminThumbnailStudio({
                   {candidates.map((candidate, index) => (
                     <div
                       key={candidate.id}
-                      className="thumbnailStudio__candidateCard"
+                      className={`thumbnailStudio__candidateCard${
+                        candidate.locked ? " is-locked" : ""
+                      }`}
                     >
                       <button
                         type="button"
@@ -1465,24 +2180,78 @@ export default function AdminThumbnailStudio({
                         <img src={candidate.url} alt={`Thumbnail-Vorschlag ${index + 1}`} />
                         <span>{String(index + 1).padStart(2, "0")}</span>
                         <em>
-                          {candidate.generator === "ai"
-                            ? "KI BETA"
+                          {candidate.generator === "ai-deblur-upscale"
+                            ? "ENTWACKELT + VERFEINERT"
+                            : candidate.generator === "ai-supir"
+                            ? "SUPIR RESTAURIERT"
+                            : candidate.generator === "ai-deblur"
+                            ? "KI ENTWACKELT"
+                            : candidate.generator === "ai-enhance"
+                            ? "KI AUFGEWERTET"
+                            : candidate.generator === "ai"
+                            ? candidate.ai?.hasFullyVisibleFace
+                              ? "KI · GANZES GESICHT"
+                              : "KI BETA"
                             : candidate.generator === "standard"
                               ? "STANDARD"
                               : "MANUELL"}
                         </em>
-                        <small>{formatTime(candidate.time)}</small>
+                        <small>{candidate.sourceLabel || formatTime(candidate.time)}</small>
                         <i>{candidate.id === selectedCandidateId ? "Ausgewählt" : "Wählen"}</i>
                       </button>
-                      <button
-                        type="button"
-                        className="thumbnailStudio__candidateZoom"
-                        onClick={() => setPreviewCandidateId(candidate.id)}
-                        aria-label={`Thumbnail-Vorschlag ${index + 1} vergrößern`}
-                        title="Groß ansehen"
-                      >
-                        ⛶
-                      </button>
+                      <div className="thumbnailStudio__candidateActions">
+                        <button
+                          type="button"
+                          className="thumbnailStudio__candidateAction thumbnailStudio__candidateZoom"
+                          onClick={() => setPreviewCandidateId(candidate.id)}
+                          aria-label={`Thumbnail-Vorschlag ${index + 1} vergrößern`}
+                          title="Groß ansehen"
+                        >
+                          ⛶
+                        </button>
+                        <button
+                          type="button"
+                          className={`thumbnailStudio__candidateAction thumbnailStudio__candidateLock${
+                            candidate.locked ? " is-locked" : ""
+                          }`}
+                          onClick={() => toggleCandidateLock(candidate.id)}
+                          aria-label={
+                            candidate.locked
+                              ? `Thumbnail-Vorschlag ${index + 1} entsperren`
+                              : `Thumbnail-Vorschlag ${index + 1} sperren`
+                          }
+                          aria-pressed={candidate.locked}
+                          title={candidate.locked ? "Gesperrt · anklicken zum Entsperren" : "Vorschlag sperren"}
+                        >
+                          <svg viewBox="0 0 24 24" aria-hidden="true">
+                            {candidate.locked ? (
+                              <>
+                                <rect x="5" y="10" width="14" height="11" rx="2" />
+                                <path d="M8 10V7a4 4 0 0 1 8 0" />
+                              </>
+                            ) : (
+                              <>
+                                <rect x="5" y="10" width="14" height="11" rx="2" />
+                                <path d="M8 10V7a4 4 0 0 1 7-2.6" />
+                              </>
+                            )}
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          className="thumbnailStudio__candidateAction thumbnailStudio__candidateSeek"
+                          onClick={() => seekToCandidate(candidate)}
+                          disabled={!videoReady}
+                          aria-label={`Im Video zu ${formatTime(candidate.time)} springen`}
+                          title={`Im Video zu ${formatTime(candidate.time)} springen`}
+                        >
+                          <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="10.5" cy="12" r="7.5" />
+                            <path d="M10.5 8v4l2.8 1.8M16.5 4.5 20 4v3.5" />
+                            <path d="M20 4 16 8" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1496,31 +2265,60 @@ export default function AdminThumbnailStudio({
 
               {selectedCandidate ? (
                 <div className="thumbnailStudio__final">
-                  <div className="thumbnailStudio__comparison">
-                    <figure>
-                      <figcaption>Aktuell</figcaption>
+                  <div
+                    className={`thumbnailStudio__comparison${selectedMovie.thumbnail_url ? " has-old" : ""}`}
+                    style={{ "--comparison-split": `${comparisonSplit}%` }}
+                  >
+                    <div className="thumbnailStudio__comparisonStage">
                       {selectedMovie.thumbnail_url ? (
-                        <img src={selectedMovie.thumbnail_url} alt="Aktuelles Thumbnail" />
+                        <img
+                          className="is-old"
+                          src={selectedMovie.thumbnail_url}
+                          alt="Altes Thumbnail links"
+                        />
                       ) : (
-                        <span>Kein Thumbnail</span>
+                        <div className="thumbnailStudio__comparisonMissing">Kein altes Thumbnail gespeichert</div>
                       )}
-                    </figure>
-                    <b>→</b>
-                    <figure className="is-new">
-                      <figcaption>Neu</figcaption>
-                      <img src={selectedCandidate.url} alt="Neues Thumbnail" />
-                    </figure>
+                      <img
+                        className="is-new"
+                        src={selectedCandidate.url}
+                        alt="Neues Thumbnail rechts"
+                      />
+                      <span className="thumbnailStudio__comparisonLabel is-old">ALT</span>
+                      <span className="thumbnailStudio__comparisonLabel is-new">NEU</span>
+                      <div className="thumbnailStudio__comparisonDivider" aria-hidden="true">
+                        <span>↔</span>
+                      </div>
+                      <input
+                        className="thumbnailStudio__comparisonRange"
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={comparisonSplit}
+                        onChange={(event) => setComparisonSplit(Number(event.target.value))}
+                        aria-label="Vergleich zwischen altem und neuem Thumbnail verschieben"
+                        aria-valuetext={`${100 - comparisonSplit}% alt links, ${comparisonSplit}% neu rechts`}
+                      />
+                    </div>
                   </div>
                   <div className="thumbnailStudio__saveBar">
                     <div>
                       <span>Bereit zum Speichern</span>
                       <strong>{selectedMovie.title}</strong>
                       <small>
-                        Frame bei {formatTime(selectedCandidate.time)} · {selectedCandidate.generator === "ai"
+                        {selectedCandidate.generator === "ai-deblur-upscale"
+                          ? `NAFNet + Upscaling · ${selectedCandidate.sourceLabel || "Bild"}`
+                          : selectedCandidate.generator === "ai-supir"
+                          ? `SUPIR-Restaurierung · ${selectedCandidate.sourceLabel || "Bild"}`
+                          : selectedCandidate.generator === "ai-deblur"
+                          ? `NAFNet-Entwacklung · ${selectedCandidate.sourceLabel || "Bild"}`
+                          : selectedCandidate.generator === "ai-enhance"
+                          ? `KI-Aufwertung · ${selectedCandidate.sourceLabel || "Bild"}`
+                          : `Frame bei ${formatTime(selectedCandidate.time)} · ${selectedCandidate.generator === "ai"
                           ? "KI Beta"
                           : selectedCandidate.generator === "standard"
                             ? "Standard"
-                            : "Manuell"}
+                            : "Manuell"}`}
                       </small>
                     </div>
                     <button type="button" onClick={saveThumbnail} disabled={saving}>
@@ -1556,7 +2354,7 @@ export default function AdminThumbnailStudio({
         </div>
       </div>
 
-      {previewCandidate ? (
+      {previewCandidate || previewImage ? (
         <div
           className="thumbnailStudio__lightbox"
           role="dialog"
@@ -1565,20 +2363,28 @@ export default function AdminThumbnailStudio({
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
               setPreviewCandidateId(null);
+              setPreviewImage(null);
             }
           }}
         >
           <div className="thumbnailStudio__lightboxPanel">
             <header>
               <div>
-                <span>Detailansicht · {String(previewCandidateNumber).padStart(2, "0")}/{String(candidates.length).padStart(2, "0")}</span>
+                <span>
+                  {previewCandidate
+                    ? `Detailansicht · ${String(previewCandidateNumber).padStart(2, "0")}/${String(candidates.length).padStart(2, "0")}`
+                    : previewImage.label}
+                </span>
                 <h3 id="thumbnail-preview-title">
                   {selectedMovie?.title || "Thumbnail-Vorschlag"}
                 </h3>
               </div>
               <button
                 type="button"
-                onClick={() => setPreviewCandidateId(null)}
+                onClick={() => {
+                  setPreviewCandidateId(null);
+                  setPreviewImage(null);
+                }}
                 aria-label="Detailansicht schließen"
               >
                 ×
@@ -1586,7 +2392,7 @@ export default function AdminThumbnailStudio({
             </header>
 
             <div className="thumbnailStudio__lightboxStage">
-              {candidates.length > 1 ? (
+              {previewCandidate && candidates.length > 1 ? (
                 <button
                   type="button"
                   className="is-previous"
@@ -1597,10 +2403,12 @@ export default function AdminThumbnailStudio({
                 </button>
               ) : null}
               <img
-                src={previewCandidate.url}
-                alt={`Vergrößerter Thumbnail-Vorschlag ${previewCandidateNumber}`}
+                src={previewCandidate?.url || previewImage.url}
+                alt={previewCandidate
+                  ? `Vergrößerter Thumbnail-Vorschlag ${previewCandidateNumber}`
+                  : `Großansicht: ${previewImage.label}`}
               />
-              {candidates.length > 1 ? (
+              {previewCandidate && candidates.length > 1 ? (
                 <button
                   type="button"
                   className="is-next"
@@ -1614,20 +2422,26 @@ export default function AdminThumbnailStudio({
 
             <footer>
               <div>
-                <span>Frame bei {formatTime(previewCandidate.time)}</span>
-                <small>Pfeiltasten wechseln · Esc schließt</small>
+                <span>
+                  {previewCandidate
+                    ? `Frame bei ${formatTime(previewCandidate.time)}`
+                    : previewImage.label}
+                </span>
+                <small>{previewCandidate && candidates.length > 1 ? "Pfeiltasten wechseln · Esc schließt" : "Esc schließt"}</small>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedCandidateId(previewCandidate.id);
-                  setPreviewCandidateId(null);
-                }}
-              >
-                {previewCandidate.id === selectedCandidateId
-                  ? "Bereits ausgewählt"
-                  : "Diesen Frame auswählen"}
-              </button>
+              {previewCandidate ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedCandidateId(previewCandidate.id);
+                    setPreviewCandidateId(null);
+                  }}
+                >
+                  {previewCandidate.id === selectedCandidateId
+                    ? "Bereits ausgewählt"
+                    : "Diesen Frame auswählen"}
+                </button>
+              ) : null}
             </footer>
           </div>
         </div>

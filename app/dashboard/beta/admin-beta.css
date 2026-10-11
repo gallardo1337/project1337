@@ -1,6 +1,6 @@
 .adminBeta {
-  --admin-red: #f04444;
-  --admin-red-deep: #a6161d;
+  --admin-red: #e50914;
+  --admin-red-deep: #8e0716;
   --admin-ink: #070708;
   --admin-panel: #0d0d0f;
   --admin-panel-soft: #121215;
@@ -10,7 +10,7 @@
   min-height: 100vh;
   overflow-x: clip;
   background:
-    radial-gradient(circle at 88% 4%, rgba(240, 68, 68, 0.13), transparent 23rem),
+    radial-gradient(circle at 88% 4%, rgba(229, 9, 20, 0.13), transparent 23rem),
     linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px),
     #070708 !important;
@@ -82,7 +82,7 @@
   width: 34px;
   height: 34px;
   object-fit: contain;
-  filter: drop-shadow(0 8px 18px rgba(240, 68, 68, 0.26));
+  filter: drop-shadow(0 8px 18px rgba(229, 9, 20, 0.26));
 }
 
 .adminBeta .adminBrand > span {
@@ -124,9 +124,9 @@
 }
 
 .adminBeta .dashInput:focus-within {
-  border-color: rgba(240, 68, 68, 0.72) !important;
+  border-color: rgba(229, 9, 20, 0.72) !important;
   background: rgba(255, 255, 255, 0.055) !important;
-  box-shadow: 0 0 0 1px rgba(240, 68, 68, 0.16);
+  box-shadow: 0 0 0 1px rgba(229, 9, 20, 0.16);
 }
 
 .adminBeta .dashInput input {
@@ -151,7 +151,7 @@
 .adminBeta .dashUserMenu__btn:hover,
 .adminBeta .dashIconBtn:hover {
   border-color: var(--admin-red) !important;
-  background: rgba(240, 68, 68, 0.08) !important;
+  background: rgba(229, 9, 20, 0.08) !important;
   transform: none !important;
 }
 
@@ -279,7 +279,7 @@
 }
 
 .adminBeta .adminPrimaryAction:hover {
-  background: #ff5d5d;
+  background: #ff6b76;
 }
 
 .adminBeta .adminPrimaryAction > span {
@@ -402,7 +402,7 @@
 
 .adminBeta .dashSidebarNav button[class*="bg-red-"] {
   border-left-color: var(--admin-red) !important;
-  background: rgba(240, 68, 68, 0.08) !important;
+  background: rgba(229, 9, 20, 0.08) !important;
   color: #fff !important;
 }
 
@@ -498,8 +498,8 @@
 }
 
 .adminBeta .dashPanel :where(input, select, textarea):focus {
-  border-color: rgba(240, 68, 68, 0.76) !important;
-  box-shadow: 0 0 0 1px rgba(240, 68, 68, 0.18);
+  border-color: rgba(229, 9, 20, 0.76) !important;
+  box-shadow: 0 0 0 1px rgba(229, 9, 20, 0.18);
 }
 
 .adminBeta .dashPanel :where(input, textarea)::placeholder {
@@ -521,7 +521,7 @@
 }
 
 .adminBeta .dashPanel button[class*="bg-red-"]:hover {
-  background: #ff5d5d !important;
+  background: #ff6b76 !important;
 }
 
 .adminBeta .dashPanel button[class*="border-neutral-"] {
@@ -561,8 +561,8 @@
 
 .adminBeta .dashMovieRow:hover,
 .adminBeta .dashMovieRow[open] {
-  border-color: rgba(240, 68, 68, 0.42) !important;
-  background: rgba(240, 68, 68, 0.035) !important;
+  border-color: rgba(229, 9, 20, 0.42) !important;
+  background: rgba(229, 9, 20, 0.035) !important;
 }
 
 .adminBeta .dashMovieRow summary {
@@ -581,7 +581,7 @@
 
 .adminBeta .dashMovieRow[open] summary > div:first-child::before {
   background: var(--admin-red);
-  box-shadow: 0 0 12px rgba(240, 68, 68, 0.65);
+  box-shadow: 0 0 12px rgba(229, 9, 20, 0.65);
 }
 
 .adminBeta .dashMovieRow summary span[class*="text-base"] {
@@ -796,7 +796,7 @@
 }
 
 .adminBeta .adminTopCreate:hover {
-  background: #ff5d5d;
+  background: #ff6b76;
 }
 
 .adminBeta .adminTopCreate span {
@@ -891,7 +891,7 @@
 
 .adminBeta .adminBetaRail__group button.is-active {
   border-left-color: var(--admin-red);
-  background: linear-gradient(90deg, rgba(240, 68, 68, 0.12), transparent 88%);
+  background: linear-gradient(90deg, rgba(229, 9, 20, 0.12), transparent 88%);
   color: #fff;
 }
 
@@ -901,7 +901,7 @@
 }
 
 .adminBeta .adminBetaRail__group button.is-active small {
-  border-color: rgba(240, 68, 68, 0.26);
+  border-color: rgba(229, 9, 20, 0.26);
   color: var(--admin-red);
 }
 
@@ -1035,7 +1035,7 @@
 
 .adminBeta .adminOverview__primaryButton:hover,
 .adminBeta .adminWorkspaceHeader__primary:hover {
-  background: #ff5d5d;
+  background: #ff6b76;
 }
 
 .adminBeta .adminOverview__secondaryButton:hover,
@@ -1110,7 +1110,7 @@
   padding: 0;
   border: 0;
   background: transparent;
-  color: rgba(240, 68, 68, 0.72);
+  color: rgba(229, 9, 20, 0.72);
   font-size: 8px;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -1457,7 +1457,7 @@
 .adminBeta .adminBarTrack i {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, var(--admin-red), #ff7777);
+  background: linear-gradient(90deg, var(--admin-red), #fdba74);
 }
 
 .adminBeta .adminStudioRanking {
@@ -1520,8 +1520,8 @@
 }
 
 .adminBeta .adminQuickLinks button:hover {
-  border-color: rgba(240, 68, 68, 0.4);
-  background: rgba(240, 68, 68, 0.035);
+  border-color: rgba(229, 9, 20, 0.4);
+  background: rgba(229, 9, 20, 0.035);
   color: #fff;
 }
 
@@ -1774,7 +1774,7 @@
 
 .adminBeta .homepageDirectorMessage.is-error {
   border-color: rgba(255, 62, 83, 0.38);
-  background: rgba(255, 43, 69, 0.09);
+  background: rgba(229, 9, 20, 0.09);
   color: #ffb3bd;
 }
 
@@ -2091,7 +2091,7 @@
 }
 
 .adminBeta .homepageDirectorCard__remove:hover {
-  border-color: rgba(255, 43, 69, 0.5);
+  border-color: rgba(229, 9, 20, 0.5);
   color: var(--admin-red);
 }
 
@@ -2269,8 +2269,8 @@
   }
 
   .adminBeta .adminBetaRail__group button.is-active {
-    border-color: rgba(240, 68, 68, 0.5);
-    background: rgba(240, 68, 68, 0.1);
+    border-color: rgba(229, 9, 20, 0.5);
+    background: rgba(229, 9, 20, 0.1);
   }
 
   .adminBeta .adminBetaRail__group button svg {
@@ -2495,7 +2495,7 @@
 }
 
 .adminBeta .mediaHealth__scanActions button:last-child {
-  border-color: #f43f4c;
+  border-color: #ff6b76;
   color: #fff;
   background: #e50914;
 }
@@ -3270,7 +3270,7 @@
   padding: 26px 30px;
   border: 1px solid var(--admin-line);
   background:
-    linear-gradient(110deg, rgba(240, 68, 68, 0.08), transparent 42%),
+    linear-gradient(110deg, rgba(229, 9, 20, 0.08), transparent 42%),
     rgba(10, 10, 11, 0.86);
 }
 
@@ -3348,7 +3348,12 @@
   position: sticky;
   top: 112px;
   display: grid;
+  /* Header, search, both filters, then the independently scrolling movie list. */
+  grid-template-rows: auto auto auto auto minmax(0, 1fr);
+  height: calc(100vh - 136px);
   max-height: calc(100vh - 136px);
+  min-height: 0;
+  overflow: hidden;
   border-right: 1px solid var(--admin-line);
   background: #0b0b0d;
 }
@@ -3412,7 +3417,7 @@
 }
 
 .adminBeta .thumbnailStudio__search:focus-within {
-  border-color: rgba(240, 68, 68, 0.62);
+  border-color: rgba(229, 9, 20, 0.62);
 }
 
 .adminBeta .thumbnailStudio__search > span {
@@ -3439,10 +3444,12 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 15px 13px;
+  min-height: 28px;
+  padding: 4px 15px;
   color: #77777f;
   cursor: pointer;
   font-size: 9px;
+  line-height: 12px;
 }
 
 .adminBeta .thumbnailStudio__toggle input {
@@ -3452,6 +3459,7 @@
 
 .adminBeta .thumbnailStudio__toggle > span {
   position: relative;
+  flex: 0 0 24px;
   width: 24px;
   height: 12px;
   border: 1px solid #3a3a40;
@@ -3470,7 +3478,7 @@
 }
 
 .adminBeta .thumbnailStudio__toggle input:checked + span {
-  border-color: rgba(240, 68, 68, 0.54);
+  border-color: rgba(229, 9, 20, 0.54);
 }
 
 .adminBeta .thumbnailStudio__toggle input:checked + span::after {
@@ -3479,7 +3487,8 @@
 }
 
 .adminBeta .thumbnailStudio__movieList {
-  min-height: 240px;
+  min-height: 0;
+  height: 100%;
   overflow-y: auto;
   border-top: 1px solid rgba(255, 255, 255, 0.075);
   scrollbar-color: #34343a #0b0b0d;
@@ -3509,7 +3518,7 @@
 
 .adminBeta .thumbnailStudio__movieList > button.is-active {
   border-left-color: var(--admin-red);
-  background: rgba(240, 68, 68, 0.065);
+  background: rgba(229, 9, 20, 0.065);
 }
 
 .adminBeta .thumbnailStudio__movieCover {
@@ -3704,31 +3713,6 @@
   font-size: 9px;
 }
 
-.adminBeta .thumbnailStudio__timecode {
-  position: absolute;
-  right: 14px;
-  bottom: 14px;
-  z-index: 3;
-  display: flex;
-  align-items: baseline;
-  gap: 5px;
-  padding: 7px 9px;
-  background: rgba(3, 3, 4, 0.82);
-  backdrop-filter: blur(9px);
-  pointer-events: none;
-}
-
-.adminBeta .thumbnailStudio__timecode strong {
-  color: #fff;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 11px;
-}
-
-.adminBeta .thumbnailStudio__timecode span {
-  color: #77777f;
-  font-size: 8px;
-}
-
 .adminBeta .thumbnailStudio__transport {
   display: grid;
   grid-template-columns: auto auto minmax(90px, 1fr) auto auto;
@@ -3874,7 +3858,7 @@
 }
 
 .adminBeta .thumbnailStudio__localSource label {
-  border-color: rgba(240, 68, 68, 0.48);
+  border-color: rgba(229, 9, 20, 0.48);
   color: #ef8d8d;
 }
 
@@ -3886,10 +3870,188 @@
   opacity: 0;
 }
 
+.adminBeta .thumbnailStudio__aiEnhancer {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid rgba(229, 9, 20, 0.25);
+  background: linear-gradient(120deg, rgba(229, 9, 20, 0.07), rgba(255, 255, 255, 0.015));
+}
+
+.adminBeta .thumbnailStudio__aiEnhancerTitle,
+.adminBeta .thumbnailStudio__aiControls,
+.adminBeta .thumbnailStudio__aiActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.adminBeta .thumbnailStudio__aiEnhancerTitle {
+  justify-content: space-between;
+}
+
+.adminBeta .thumbnailStudio__aiEnhancerTitle > div {
+  display: grid;
+  gap: 3px;
+}
+
+.adminBeta .thumbnailStudio__aiEnhancerTitle > div > span {
+  color: var(--admin-red);
+  font: 800 8px ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .12em;
+}
+
+.adminBeta .thumbnailStudio__aiEnhancerTitle strong {
+  color: #e7e7eb;
+  font-size: 11px;
+}
+
+.adminBeta .thumbnailStudio__aiEnhancerTitle small,
+.adminBeta .thumbnailStudio__aiHint {
+  color: #777780;
+  font-size: 8px;
+  line-height: 1.55;
+}
+
+.adminBeta .thumbnailStudio__aiStatus {
+  flex: 0 0 auto;
+  color: #8d8d94;
+  font-size: 8px;
+}
+
+.adminBeta .thumbnailStudio__aiStatus.is-connected {
+  color: #86efac;
+}
+
+.adminBeta .thumbnailStudio__aiStatus.is-checking {
+  color: #fbbf24;
+}
+
+.adminBeta .thumbnailStudio__aiControls input,
+.adminBeta .thumbnailStudio__aiControls select,
+.adminBeta .thumbnailStudio__aiControls button,
+.adminBeta .thumbnailStudio__aiActions button,
+.adminBeta .thumbnailStudio__aiActions label {
+  min-width: 0;
+  min-height: 33px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 3px;
+  background: rgba(5, 5, 6, 0.56);
+  padding: 0 10px;
+  color: #c9c9ce;
+  font-size: 8px;
+}
+
+.adminBeta .thumbnailStudio__aiControls input {
+  flex: 1 1 190px;
+}
+
+.adminBeta .thumbnailStudio__aiControls select {
+  flex: 1 1 220px;
+}
+
+.adminBeta .thumbnailStudio__aiControls button,
+.adminBeta .thumbnailStudio__aiActions button,
+.adminBeta .thumbnailStudio__aiActions label {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-color: rgba(229, 9, 20, 0.35);
+  color: #f0a36f;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.adminBeta .thumbnailStudio__aiActions input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+}
+
+.adminBeta .thumbnailStudio__aiControls button:disabled,
+.adminBeta .thumbnailStudio__aiActions button:disabled,
+.adminBeta .thumbnailStudio__aiActions label.is-disabled {
+  cursor: not-allowed;
+  opacity: .45;
+}
+
+.adminBeta .thumbnailStudio__aiHint code {
+  color: #c8c8cf;
+  overflow-wrap: anywhere;
+}
+
 .adminBeta .thumbnailStudio__selectionHeader {
   margin-top: 32px;
   padding-top: 25px;
   border-top: 1px solid var(--admin-line);
+}
+
+.adminBeta .thumbnailStudio__scanStart {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 18px;
+  padding: 13px 15px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.adminBeta .thumbnailStudio__scanStart > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.adminBeta .thumbnailStudio__scanStart strong {
+  color: #e9e7e5;
+  font-size: 10px;
+}
+
+.adminBeta .thumbnailStudio__scanStart span {
+  color: #85838a;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.adminBeta .thumbnailStudio__scanStartControls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.adminBeta .thumbnailStudio__scanStartControls input {
+  min-height: 36px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  padding: 0 9px;
+  background: #101012;
+  color: #f1eeee;
+  color-scheme: dark;
+  font: 11px ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.adminBeta .thumbnailStudio__scanStartControls button {
+  min-height: 36px;
+  border: 1px solid rgba(229, 9, 20, 0.32);
+  padding: 0 11px;
+  background: rgba(229, 9, 20, 0.08);
+  color: #f2b07d;
+  cursor: pointer;
+  font-size: 9px;
+}
+
+.adminBeta .thumbnailStudio__scanStartControls button:hover:not(:disabled) {
+  border-color: rgba(229, 9, 20, 0.65);
+  background: rgba(229, 9, 20, 0.14);
+}
+
+.adminBeta .thumbnailStudio__scanStartControls button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .adminBeta .thumbnailStudio__captureActions {
@@ -3920,9 +4082,9 @@
 }
 
 .adminBeta .thumbnailStudio__generateAi {
-  border-color: rgba(240, 68, 68, 0.58);
+  border-color: rgba(229, 9, 20, 0.58);
   background:
-    radial-gradient(circle at 12% 20%, rgba(240, 68, 68, 0.17), transparent 46%),
+    radial-gradient(circle at 12% 20%, rgba(229, 9, 20, 0.17), transparent 46%),
     rgba(255, 255, 255, 0.025);
   color: #f1eeee;
 }
@@ -3930,7 +4092,7 @@
 .adminBeta .thumbnailStudio__generateAi:hover:not(:disabled) {
   border-color: var(--admin-red);
   background:
-    radial-gradient(circle at 12% 20%, rgba(240, 68, 68, 0.27), transparent 48%),
+    radial-gradient(circle at 12% 20%, rgba(229, 9, 20, 0.27), transparent 48%),
     rgba(255, 255, 255, 0.04);
 }
 
@@ -3964,7 +4126,7 @@
 }
 
 .adminBeta .thumbnailStudio__generateAi strong b {
-  border: 1px solid rgba(240, 68, 68, 0.46);
+  border: 1px solid rgba(229, 9, 20, 0.46);
   padding: 2px 4px;
   color: #f06b6b;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -4061,6 +4223,11 @@
   aspect-ratio: 16 / 9;
 }
 
+.adminBeta .thumbnailStudio__candidateCard.is-locked {
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(255, 154, 66, 0.68), 0 0 14px rgba(255, 126, 44, 0.16);
+}
+
 .adminBeta .thumbnailStudio__candidateSelect {
   position: relative;
   width: 100%;
@@ -4155,11 +4322,16 @@
   color: #09090a;
 }
 
-.adminBeta .thumbnailStudio__candidateZoom {
+.adminBeta .thumbnailStudio__candidateActions {
   position: absolute;
   top: 7px;
   right: 7px;
   z-index: 4;
+  display: flex;
+  gap: 4px;
+}
+
+.adminBeta .thumbnailStudio__candidateAction {
   display: grid;
   width: 30px;
   height: 30px;
@@ -4168,17 +4340,48 @@
   background: rgba(3, 3, 4, 0.84);
   color: #e6e6e9;
   backdrop-filter: blur(7px);
-  cursor: zoom-in;
+  cursor: pointer;
   font-size: 14px;
   opacity: 0.78;
   transition: border-color 160ms ease, background 160ms ease, opacity 160ms ease;
 }
 
-.adminBeta .thumbnailStudio__candidateZoom:hover {
+.adminBeta .thumbnailStudio__candidateAction svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+.adminBeta .thumbnailStudio__candidateZoom {
+  cursor: zoom-in;
+}
+
+.adminBeta .thumbnailStudio__candidateAction:hover:not(:disabled),
+.adminBeta .thumbnailStudio__candidateAction.is-locked {
   border-color: var(--admin-red);
   background: var(--admin-red);
   color: #09090a;
   opacity: 1;
+}
+
+.adminBeta .thumbnailStudio__candidateAction:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.adminBeta .thumbnailStudio__lockedCount {
+  align-self: center;
+  border: 1px solid rgba(255, 154, 66, 0.34);
+  border-radius: 999px;
+  background: rgba(255, 126, 44, 0.08);
+  padding: 5px 8px;
+  color: #ffb16d;
+  font-size: 9px;
+  font-weight: 800;
 }
 
 .adminBeta .thumbnailStudio__lightbox {
@@ -4364,55 +4567,193 @@
 }
 
 .adminBeta .thumbnailStudio__comparison {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 34px minmax(0, 1fr);
-  align-items: center;
-  gap: 10px;
-}
-
-.adminBeta .thumbnailStudio__comparison figure {
-  position: relative;
-  display: grid;
-  aspect-ratio: 16 / 9;
-  place-items: center;
+  width: 100%;
+  margin: 0 auto;
   overflow: hidden;
-  margin: 0;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(229, 9, 20, 0.42);
   background: #050506;
-  color: #55555d;
-  font-size: 9px;
 }
 
-.adminBeta .thumbnailStudio__comparison figure.is-new {
-  border-color: rgba(240, 68, 68, 0.58);
+.adminBeta .thumbnailStudio__comparisonStage {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  isolation: isolate;
 }
 
-.adminBeta .thumbnailStudio__comparison img {
+.adminBeta .thumbnailStudio__comparisonStage > img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.adminBeta .thumbnailStudio__comparison figcaption {
-  position: absolute;
-  top: 7px;
-  left: 7px;
-  z-index: 2;
-  padding: 5px 7px;
-  background: rgba(3, 3, 4, 0.82);
-  color: #aaaab0;
-  font-size: 7px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+.adminBeta .thumbnailStudio__comparisonStage > img.is-old {
+  z-index: 0;
 }
 
-.adminBeta .thumbnailStudio__comparison > b {
-  color: var(--admin-red);
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 22px;
-  font-weight: 400;
-  text-align: center;
+.adminBeta .thumbnailStudio__comparisonStage > img.is-new {
+  z-index: 1;
+  clip-path: inset(0 0 0 var(--comparison-split));
+}
+
+.adminBeta .thumbnailStudio__comparisonLabel {
+  position: absolute;
+  top: 12px;
+  z-index: 2;
+  background: rgba(3, 3, 4, 0.86);
+  color: #fff;
+  padding: 6px 9px;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .1em;
+}
+
+.adminBeta .thumbnailStudio__comparisonLabel.is-old {
+  left: 12px;
+}
+
+.adminBeta .thumbnailStudio__comparisonLabel.is-new {
+  right: 12px;
+  border: 1px solid rgba(229, 9, 20, .55);
+  color: #ffb278;
+}
+
+.adminBeta .thumbnailStudio__comparisonDivider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--comparison-split);
+  z-index: 3;
+  width: 2px;
+  background: #fff;
+  box-shadow: 0 0 12px rgba(0, 0, 0, .75);
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.adminBeta .thumbnailStudio__comparisonDivider span {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--admin-red);
+  color: #09090a;
+  font-size: 18px;
+  font-weight: 900;
+  box-shadow: 0 3px 16px rgba(0, 0, 0, .6);
+  transform: translate(-50%, -50%);
+}
+
+.adminBeta .thumbnailStudio__comparisonRange {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  cursor: ew-resize;
+  opacity: .001;
+  appearance: none;
+  background: transparent;
+}
+
+.adminBeta .thumbnailStudio__comparisonRange::-webkit-slider-runnable-track {
+  height: 100%;
+  background: transparent;
+}
+
+.adminBeta .thumbnailStudio__comparisonRange::-webkit-slider-thumb {
+  width: 42px;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  appearance: none;
+}
+
+.adminBeta .thumbnailStudio__comparisonRange::-moz-range-track {
+  height: 100%;
+  background: transparent;
+}
+
+.adminBeta .thumbnailStudio__comparisonRange::-moz-range-thumb {
+  width: 42px;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+/* Keep the full image as the native range hit area despite the transport slider defaults. */
+.adminBeta .thumbnailStudio input.thumbnailStudio__comparisonRange {
+  display: block;
+  min-height: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  opacity: .001;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.adminBeta .thumbnailStudio input.thumbnailStudio__comparisonRange::-webkit-slider-runnable-track {
+  height: 100%;
+  background: transparent;
+}
+
+.adminBeta .thumbnailStudio input.thumbnailStudio__comparisonRange::-webkit-slider-thumb {
+  width: 42px;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  appearance: none;
+}
+
+.adminBeta .thumbnailStudio input.thumbnailStudio__comparisonRange::-moz-range-track {
+  height: 100%;
+  border: 0;
+  background: transparent;
+}
+
+.adminBeta .thumbnailStudio input.thumbnailStudio__comparisonRange::-moz-range-thumb {
+  width: 42px;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.adminBeta .thumbnailStudio__comparisonStage:focus-within .thumbnailStudio__comparisonDivider {
+  background: var(--admin-red);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, .9), 0 0 14px var(--admin-red);
+}
+
+.adminBeta .thumbnailStudio__comparisonMissing {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #888891;
+  font-size: 11px;
+}
+
+.adminBeta .thumbnailStudio__comparison:not(.has-old) .thumbnailStudio__comparisonDivider,
+.adminBeta .thumbnailStudio__comparison:not(.has-old) .thumbnailStudio__comparisonRange,
+.adminBeta .thumbnailStudio__comparison:not(.has-old) .thumbnailStudio__comparisonLabel.is-old {
+  display: none;
+}
+
+.adminBeta .thumbnailStudio__comparison:not(.has-old) .thumbnailStudio__comparisonStage > img.is-new {
+  clip-path: none;
 }
 
 .adminBeta .thumbnailStudio__saveBar {
@@ -4512,10 +4853,16 @@
 
   .adminBeta .thumbnailStudio__library {
     position: static;
+    grid-template-rows: auto;
+    height: auto;
     max-height: none;
+    min-height: 0;
+    overflow: visible;
   }
 
   .adminBeta .thumbnailStudio__movieList {
+    height: auto;
+    min-height: 240px;
     max-height: 720px;
   }
 
@@ -4544,6 +4891,11 @@
   .adminBeta .thumbnailStudio__library {
     border-right: 0;
     border-bottom: 1px solid var(--admin-line);
+  }
+
+  .adminBeta .thumbnailStudio__scanStart {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .adminBeta .thumbnailStudio__movieList {
@@ -4575,7 +4927,8 @@
   .adminBeta .thumbnailStudio__sourceHeader,
   .adminBeta .thumbnailStudio__localSource,
   .adminBeta .thumbnailStudio__saveBar,
-  .adminBeta .thumbnailStudio__editLink {
+  .adminBeta .thumbnailStudio__editLink,
+  .adminBeta .thumbnailStudio__scanStartControls {
     align-items: stretch;
     flex-direction: column;
   }
@@ -4600,8 +4953,22 @@
   }
 
   .adminBeta .thumbnailStudio__localSource > div:last-child,
-  .adminBeta .thumbnailStudio__captureActions {
+  .adminBeta .thumbnailStudio__captureActions,
+  .adminBeta .thumbnailStudio__aiControls,
+  .adminBeta .thumbnailStudio__aiActions {
     grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .adminBeta .thumbnailStudio__aiControls {
+    display: grid;
+  }
+
+  .adminBeta .thumbnailStudio__aiControls input,
+  .adminBeta .thumbnailStudio__aiControls select,
+  .adminBeta .thumbnailStudio__aiControls button,
+  .adminBeta .thumbnailStudio__aiActions button,
+  .adminBeta .thumbnailStudio__aiActions label {
     width: 100%;
   }
 
@@ -4652,14 +5019,6 @@
 
   .adminBeta .thumbnailStudio__lightboxStage .is-next {
     right: 7px;
-  }
-
-  .adminBeta .thumbnailStudio__comparison {
-    grid-template-columns: 1fr;
-  }
-
-  .adminBeta .thumbnailStudio__comparison > b {
-    transform: rotate(90deg);
   }
 
   .adminBeta .thumbnailStudio__saveBar button {
