@@ -2579,7 +2579,7 @@ export default function BetaExperience({
 
   if (!loggedIn) {
     return (
-      <div className={`${styles.experience} ${styles.landingTheme}`}>
+      <div className={`${styles.experience} ${styles.landingTheme}`} data-landing-theme="system">
         <LoginGate
           loginUser={loginUser}
           loginPassword={loginPassword}
@@ -2594,7 +2594,7 @@ export default function BetaExperience({
   }
 
   return (
-    <div className={`${styles.experience} ${!selectedActor && !selectedMovieId && viewMode === "actors" ? styles.landingTheme : ""}`}>
+    <div className={`${styles.experience} ${!selectedActor && !selectedMovieId && viewMode === "actors" ? styles.landingTheme : ""}`} data-landing-theme={!selectedActor && !selectedMovieId && viewMode === "actors" ? "system" : undefined}>
       <AppHeader
         viewMode={viewMode}
         selectedActor={selectedActor}

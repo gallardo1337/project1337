@@ -45,6 +45,24 @@ body {
 }
 
 /* Global text rendering */
+/* Match the document canvas to the landing theme, including overscroll and
+   native controls. Other library views keep their existing palette. */
+html:has([data-landing-theme="system"]),
+body:has([data-landing-theme="system"]) {
+  color-scheme: light;
+  background-color: #f7f5f0;
+  color: #202024;
+}
+
+@media (prefers-color-scheme: dark) {
+  html:has([data-landing-theme="system"]),
+  body:has([data-landing-theme="system"]) {
+    color-scheme: dark;
+    background-color: #070707;
+    color: #dedee2;
+  }
+}
+
 body {
   text-rendering: optimizeLegibility;
 }
