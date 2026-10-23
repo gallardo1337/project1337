@@ -3,7 +3,7 @@
   --surface: #0e0e0f;
   --surface-2: #151517;
   --paper: #f1eee8;
-  --muted: rgba(241, 238, 232, 0.58);
+  --muted: #dedee2;
   --line: rgba(255, 255, 255, 0.12);
   --orange: #ff7a1a;
   --orange-dark: #b34700;
@@ -46,7 +46,7 @@
   font-family: Georgia, "Times New Roman", serif;
   font-size: clamp(36px, 7vw, 86px);
   font-style: italic;
-  letter-spacing: -0.07em;
+  letter-spacing: -0.02em;
 }
 
 /* Login — deliberately unlike the production header/login */
@@ -74,7 +74,7 @@
 }
 
 .gateHeader span {
-  color: rgba(255, 255, 255, 0.42);
+  color: var(--muted);
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.25em;
@@ -136,7 +136,7 @@
   font-style: italic;
   font-weight: 400;
   line-height: 0.57;
-  letter-spacing: -0.16em;
+  letter-spacing: -0.02em;
   text-shadow: 30px 50px 90px rgba(0, 0, 0, 0.55);
 }
 
@@ -168,7 +168,7 @@
   left: 7%;
   bottom: 6%;
   z-index: 2;
-  color: rgba(255, 255, 255, 0.48);
+  color: var(--muted);
   font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.28em;
@@ -188,7 +188,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--muted);
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.2em;
@@ -209,7 +209,7 @@
   font-size: clamp(54px, 5.3vw, 94px);
   font-weight: 400;
   line-height: 0.88;
-  letter-spacing: -0.065em;
+  letter-spacing: -0.02em;
 }
 
 .gatePanel h1 em {
@@ -237,7 +237,7 @@
 }
 
 .loginForm label > span {
-  color: rgba(255, 255, 255, 0.44);
+  color: var(--muted);
   font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.18em;
@@ -304,7 +304,7 @@
   align-items: center;
   gap: 10px;
   margin-top: 34px;
-  color: rgba(255, 255, 255, 0.3);
+  color: var(--muted);
   font-size: 8px;
   font-weight: 800;
   letter-spacing: 0.18em;
@@ -354,7 +354,7 @@
 .brand span {
   padding-left: 15px;
   border-left: 1px solid rgba(255,255,255,.18);
-  color: rgba(255,255,255,.36);
+  color: var(--muted);
   font-size: 8px;
   font-weight: 800;
   letter-spacing: .18em;
@@ -376,7 +376,7 @@
   padding: 0;
   border: 0;
   background: transparent;
-  color: rgba(255,255,255,.48);
+  color: var(--muted);
   font-size: 11px;
   font-weight: 750;
   letter-spacing: .08em;
@@ -424,7 +424,7 @@
 
 .searchBox svg {
   width: 18px;
-  color: rgba(255,255,255,.45);
+  color: var(--muted);
 }
 
 .searchBox input {
@@ -438,7 +438,7 @@
 }
 
 .searchBox input::placeholder {
-  color: rgba(255,255,255,.33);
+  color: var(--muted);
 }
 
 .toolButton,
@@ -519,7 +519,7 @@
 
 .accountMenu strong {
   padding: 10px 11px 14px;
-  color: rgba(255,255,255,.55);
+  color: var(--muted);
   font-size: 10px;
   letter-spacing: .08em;
 }
@@ -657,7 +657,7 @@
   z-index: 2;
   top: 132px;
   right: clamp(24px, 4vw, 72px);
-  color: rgba(255,255,255,.42);
+  color: var(--muted);
   font-size: 9px;
   font-weight: 800;
   letter-spacing: .22em;
@@ -695,7 +695,7 @@
   font-size: clamp(70px, 9vw, 154px);
   font-weight: 400;
   line-height: .82;
-  letter-spacing: -.075em;
+  letter-spacing: -0.02em;
   text-wrap: balance;
   overflow-wrap: anywhere;
 }
@@ -703,26 +703,26 @@
 .spotlightCopy h1.spotlightTitleLong {
   font-size: clamp(54px, 6.4vw, 108px);
   line-height: .86;
-  letter-spacing: -.06em;
+  letter-spacing: -0.02em;
 }
 
 .spotlightCopy h1.spotlightTitleVeryLong {
   font-size: clamp(44px, 5.2vw, 86px);
   line-height: .9;
-  letter-spacing: -.05em;
+  letter-spacing: -0.02em;
 }
 
 .spotlightCopy h1.spotlightTitleExtreme {
   font-size: clamp(36px, 4.2vw, 68px);
   line-height: .94;
-  letter-spacing: -.04em;
+  letter-spacing: -0.02em;
 }
 
 .spotlightMeta {
   display: flex;
   align-items: center;
   gap: 12px;
-  color: rgba(255,255,255,.7);
+  color: var(--muted);
   font-size: 10px;
   font-weight: 800;
   letter-spacing: .14em;
@@ -790,7 +790,7 @@
 .spotlightCopy > p {
   max-width: 680px;
   margin: 18px 0 0;
-  color: rgba(255,255,255,.56);
+  color: var(--muted);
   font-size: 15px;
   line-height: 1.65;
 }
@@ -915,11 +915,11 @@
   font-family: Georgia, "Times New Roman", serif;
   font-size: 32px;
   font-weight: 400;
-  letter-spacing: -.04em;
+  letter-spacing: -0.02em;
 }
 
 .libraryStrip span {
-  color: rgba(255,255,255,.4);
+  color: var(--muted);
   font-size: 8px;
   font-weight: 800;
   letter-spacing: .14em;
@@ -949,7 +949,7 @@
 
 .sectionHeading > div:nth-child(2) > span,
 .profileCollectionHead span {
-  color: rgba(255,255,255,.37);
+  color: var(--muted);
   font-size: 9px;
   font-weight: 800;
   letter-spacing: .2em;
@@ -963,7 +963,7 @@
   font-size: clamp(40px, 5vw, 74px);
   font-weight: 400;
   line-height: .95;
-  letter-spacing: -.055em;
+  letter-spacing: -0.02em;
 }
 
 .sectionHeading > button {
@@ -1008,7 +1008,7 @@
   place-items: center;
   border: 1px solid rgba(255,255,255,.09);
   background: rgba(255,255,255,.025);
-  color: rgba(255,255,255,.36);
+  color: var(--muted);
   font-size: 10px;
   font-weight: 750;
   letter-spacing: .08em;
@@ -1072,7 +1072,7 @@
 .movieIndex {
   top: 15px;
   left: 16px;
-  color: rgba(255,255,255,.58);
+  color: var(--muted);
   font-family: Georgia, serif;
   font-size: 13px;
   font-style: italic;
@@ -1194,7 +1194,7 @@
   align-items: center;
   gap: 8px;
   overflow: hidden;
-  color: rgba(255,255,255,.42);
+  color: var(--muted);
   font-size: 9px;
   font-weight: 750;
   letter-spacing: .09em;
@@ -1217,7 +1217,7 @@
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 2px;
-  color: rgba(255,255,255,.62);
+  color: var(--muted);
   font-size: 9px;
   font-weight: 800;
   letter-spacing: .04em;
@@ -1270,11 +1270,11 @@
 }
 
 .movieCastMain {
-  color: rgba(255,255,255,.77);
+  color: var(--muted);
 }
 
 .movieCastSupporting {
-  color: rgba(255,255,255,.44);
+  color: var(--muted);
 }
 
 .movieCastMain small,
@@ -1399,13 +1399,13 @@
   font-family: Georgia, serif;
   font-size: clamp(20px, 2vw, 34px);
   font-weight: 400;
-  letter-spacing: -.035em;
+  letter-spacing: -0.02em;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .actorCopy small {
-  color: rgba(255,255,255,.48);
+  color: var(--muted);
   font-size: 8px;
   font-weight: 800;
   letter-spacing: .14em;
@@ -1442,7 +1442,7 @@
 }
 
 .manifesto > span {
-  color: rgba(255,255,255,.32);
+  color: var(--muted);
   font-size: 9px;
   font-weight: 800;
   letter-spacing: .22em;
@@ -1455,7 +1455,7 @@
   font-size: clamp(70px, 9vw, 148px);
   font-weight: 400;
   line-height: .78;
-  letter-spacing: -.08em;
+  letter-spacing: -0.02em;
 }
 
 .manifesto h2 em {
@@ -1521,7 +1521,7 @@
 .actorArchiveLabel {
   position: relative;
   z-index: 2;
-  color: rgba(255,255,255,.4);
+  color: var(--muted);
   font-size: 9px;
   font-weight: 800;
   letter-spacing: .22em;
@@ -1538,7 +1538,7 @@
   font-size: clamp(82px, 11vw, 175px);
   font-weight: 400;
   line-height: .62;
-  letter-spacing: -.09em;
+  letter-spacing: -0.02em;
 }
 
 .actorArchiveIntro h1 em {
@@ -1586,7 +1586,7 @@
 }
 
 .actorArchiveStats span {
-  color: rgba(255,255,255,.35);
+  color: var(--muted);
   font-size: 7px;
   font-weight: 800;
   letter-spacing: .15em;
@@ -1601,7 +1601,7 @@
   font-family: Georgia, serif;
   font-size: 19vw;
   line-height: 1;
-  letter-spacing: -.08em;
+  letter-spacing: -0.02em;
   transform: translateY(-53%);
   user-select: none;
 }
@@ -1634,7 +1634,7 @@
 .actorArchiveSearch svg {
   width: 18px;
   flex: 0 0 18px;
-  color: rgba(255,255,255,.44);
+  color: var(--muted);
 }
 
 .actorArchiveSearch input {
@@ -1648,7 +1648,7 @@
 }
 
 .actorArchiveSearch input::placeholder {
-  color: rgba(255,255,255,.32);
+  color: var(--muted);
 }
 
 .actorArchiveResult {
@@ -1659,7 +1659,7 @@
 }
 
 .actorArchiveResult span {
-  color: rgba(255,255,255,.34);
+  color: var(--muted);
   font-size: 7px;
   font-weight: 800;
   letter-spacing: .16em;
@@ -1707,7 +1707,7 @@
   position: absolute;
   top: 0;
   left: 0;
-  color: rgba(255,255,255,.35);
+  color: var(--muted);
   font-family: Georgia, serif;
   font-size: 13px;
   font-style: italic;
@@ -1770,11 +1770,11 @@
   font-family: Georgia, serif;
   font-size: 20vw;
   line-height: .7;
-  letter-spacing: -.08em;
+  letter-spacing: -0.02em;
 }
 
 .archiveIntro > span {
-  color: rgba(255,255,255,.4);
+  color: var(--muted);
   font-size: 9px;
   font-weight: 800;
   letter-spacing: .22em;
@@ -1789,7 +1789,7 @@
   font-size: clamp(76px, 11vw, 170px);
   font-weight: 400;
   line-height: .65;
-  letter-spacing: -.09em;
+  letter-spacing: -0.02em;
 }
 
 .archiveIntro h1 em {
@@ -1830,7 +1830,7 @@
 }
 
 .archiveToolbar span {
-  color: rgba(255,255,255,.35);
+  color: var(--muted);
   font-size: 8px;
   font-weight: 800;
   letter-spacing: .16em;
@@ -1986,7 +1986,7 @@
   position: absolute;
   top: 44px;
   right: clamp(24px, 4vw, 72px);
-  color: rgba(255,255,255,.34);
+  color: var(--muted);
   font-size: 9px;
   font-weight: 800;
   letter-spacing: .2em;
@@ -2002,7 +2002,7 @@
 }
 
 .profileCopy > span {
-  color: rgba(255,255,255,.4);
+  color: var(--muted);
   font-size: 9px;
   font-weight: 800;
   letter-spacing: .23em;
@@ -2015,7 +2015,7 @@
   font-size: clamp(76px, 10vw, 165px);
   font-weight: 400;
   line-height: .74;
-  letter-spacing: -.09em;
+  letter-spacing: -0.02em;
   text-wrap: balance;
 }
 
@@ -2042,7 +2042,7 @@
 }
 
 .profileFacts small {
-  color: rgba(255,255,255,.35);
+  color: var(--muted);
   font-size: 8px;
   font-weight: 800;
   letter-spacing: .17em;
@@ -2087,7 +2087,7 @@
 }
 
 .profileMetrics small {
-  color: rgba(255,255,255,.36);
+  color: var(--muted);
   font-size: 7px;
   font-weight: 800;
   letter-spacing: .15em;
@@ -2103,13 +2103,13 @@
 
 .profileMetrics strong em {
   margin-left: 3px;
-  color: rgba(255,255,255,.35);
+  color: var(--muted);
   font-size: 12px;
   font-style: normal;
 }
 
 .profileMetrics > div > i {
-  color: rgba(255,255,255,.34);
+  color: var(--muted);
   font-size: 8px;
   font-style: normal;
   white-space: nowrap;
@@ -2194,7 +2194,7 @@
 
 .profileStudioLine > span {
   padding-left: 0;
-  color: rgba(255,255,255,.36);
+  color: var(--muted);
   font-size: 8px;
   font-weight: 800;
   letter-spacing: .16em;
@@ -2299,7 +2299,7 @@
   font-family: Georgia, serif;
   font-size: 190px;
   line-height: 1;
-  letter-spacing: -.08em;
+  letter-spacing: -0.02em;
   pointer-events: none;
 }
 
@@ -2317,7 +2317,7 @@
 }
 
 .statsHeader > div:nth-child(2) > span {
-  color: rgba(255,255,255,.38);
+  color: var(--muted);
   font-size: 9px;
   font-weight: 800;
   letter-spacing: .2em;
@@ -2330,13 +2330,13 @@
   font-size: clamp(48px, 6vw, 88px);
   font-weight: 400;
   line-height: .86;
-  letter-spacing: -.065em;
+  letter-spacing: -0.02em;
   overflow-wrap: anywhere;
 }
 
 .statsHeader p {
   margin: 0;
-  color: rgba(255,255,255,.5);
+  color: var(--muted);
   font-size: 11px;
   letter-spacing: .04em;
 }
@@ -2398,7 +2398,7 @@
   font-family: Georgia, "Times New Roman", serif;
   font-size: 28px;
   font-weight: 400;
-  letter-spacing: -.035em;
+  letter-spacing: -0.02em;
 }
 
 .statsList {
@@ -2418,7 +2418,7 @@
 }
 
 .statsRank {
-  color: rgba(255,255,255,.24);
+  color: var(--muted);
   font-size: 9px;
   font-weight: 800;
   letter-spacing: .1em;
@@ -2458,7 +2458,7 @@
   display: grid;
   place-items: center;
   border: 1px dashed rgba(255,255,255,.1);
-  color: rgba(255,255,255,.28);
+  color: var(--muted);
   font-size: 9px;
   font-weight: 800;
   letter-spacing: .12em;
@@ -2583,7 +2583,7 @@
 .playerTopbar strong {
   max-width: min(680px, 64vw);
   overflow: hidden;
-  color: rgba(255,255,255,.86);
+  color: var(--muted);
   font-size: 14px;
   font-weight: 650;
   line-height: 1.25;
@@ -2597,7 +2597,7 @@
   border: 1px solid rgba(255,255,255,.14);
   border-radius: 999px;
   background: rgba(8,8,9,.48);
-  color: rgba(255,255,255,.68);
+  color: var(--muted);
   font-size: 7px;
   font-weight: 850;
   letter-spacing: .15em;
@@ -2659,7 +2659,7 @@
 }
 
 .playerCenterButton small {
-  color: rgba(255,255,255,.62);
+  color: var(--muted);
   font-size: 7px;
   font-weight: 850;
   letter-spacing: .18em;
@@ -2758,7 +2758,7 @@
   border: 1px solid transparent;
   border-radius: 50%;
   background: transparent;
-  color: rgba(255,255,255,.82);
+  color: var(--muted);
   cursor: pointer;
   transition: color 180ms ease, background 180ms ease, border-color 180ms ease;
 }
@@ -2775,7 +2775,7 @@
 }
 
 .playerTime {
-  color: rgba(255,255,255,.55);
+  color: var(--muted);
   font-variant-numeric: tabular-nums;
   font-size: 9px;
   font-weight: 700;
@@ -2785,7 +2785,7 @@
 
 .playerTime i {
   margin: 0 4px;
-  color: rgba(255,255,255,.22);
+  color: var(--muted);
   font-style: normal;
 }
 
@@ -2806,7 +2806,7 @@
   place-content: center;
   justify-items: center;
   gap: 15px;
-  color: rgba(255,255,255,.45);
+  color: var(--muted);
 }
 
 .noVideo svg {
@@ -2820,7 +2820,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  color: rgba(255,255,255,.25);
+  color: var(--muted);
   font-size: 8px;
   font-weight: 800;
   letter-spacing: .22em;
@@ -2876,7 +2876,7 @@
   font-size: clamp(54px, 5.8vw, 94px);
   font-weight: 400;
   line-height: .9;
-  letter-spacing: -.06em;
+  letter-spacing: -0.02em;
 }
 
 .detailFavoriteButton {
@@ -2888,7 +2888,7 @@
   padding: 0;
   border: 0;
   background: transparent;
-  color: rgba(255,255,255,.45);
+  color: var(--muted);
   cursor: pointer;
   transition: color 180ms ease, transform 180ms ease;
 }
@@ -2927,7 +2927,7 @@
   border: 1px solid rgba(255,255,255,.09);
   border-radius: 6px;
   background: rgba(255,255,255,.035);
-  color: rgba(255,255,255,.62);
+  color: var(--muted);
   font-size: 11px;
   font-weight: 550;
   letter-spacing: .01em;
@@ -3008,7 +3008,7 @@
 }
 
 .ratingHeader small {
-  color: rgba(255,255,255,.32);
+  color: var(--muted);
   font-size: 7px;
 }
 
@@ -3026,7 +3026,7 @@
   padding: 0;
   border: 1px solid rgba(255,255,255,.1);
   background: #101012;
-  color: rgba(255,255,255,.25);
+  color: var(--muted);
   cursor: pointer;
   transition: border-color 180ms ease, background 180ms ease, color 180ms ease, transform 180ms ease;
 }
@@ -3057,7 +3057,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  color: rgba(255,255,255,.35);
+  color: var(--muted);
   font-size: 7px;
   white-space: nowrap;
 }
@@ -3114,7 +3114,7 @@
 }
 
 .detailCastHeader > small {
-  color: rgba(255,255,255,.3);
+  color: var(--muted);
   font-size: 7px;
   font-weight: 800;
   letter-spacing: .12em;
@@ -3167,7 +3167,7 @@
 }
 
 .castRail small {
-  color: rgba(255,255,255,.36);
+  color: var(--muted);
   font-size: 8px;
   font-weight: 800;
   letter-spacing: .14em;
@@ -3204,12 +3204,12 @@
   font-size: clamp(48px, 5vw, 78px);
   font-weight: 400;
   line-height: .92;
-  letter-spacing: -.055em;
+  letter-spacing: -0.02em;
 }
 
 .similarHeader p {
   margin: 13px 0 0;
-  color: rgba(255,255,255,.38);
+  color: var(--muted);
   font-size: 11px;
   line-height: 1.6;
 }
@@ -3217,7 +3217,7 @@
 .similarHeader > strong {
   flex: 0 0 auto;
   padding-bottom: 7px;
-  color: rgba(255,255,255,.32);
+  color: var(--muted);
   font-size: 8px;
   font-weight: 800;
   letter-spacing: .17em;
@@ -3285,7 +3285,7 @@
 .similarIndex {
   top: 14px;
   left: 14px;
-  color: rgba(255,255,255,.6);
+  color: var(--muted);
   font-family: Georgia, "Times New Roman", serif;
   font-size: 13px;
   font-style: italic;
@@ -3366,7 +3366,7 @@
   align-items: center;
   gap: 8px;
   overflow: hidden;
-  color: rgba(255,255,255,.38);
+  color: var(--muted);
   font-size: 8px;
   font-weight: 750;
   letter-spacing: .08em;
@@ -3447,7 +3447,7 @@
 }
 
 .drawerHead span {
-  color: rgba(255,255,255,.35);
+  color: var(--muted);
   font-size: 8px;
   font-weight: 800;
   letter-spacing: .2em;
@@ -3524,7 +3524,7 @@
 }
 
 .filterSection label span {
-  color: rgba(255,255,255,.36);
+  color: var(--muted);
   font-size: 8px;
   font-weight: 800;
   letter-spacing: .14em;
@@ -3557,7 +3557,7 @@
   border: 1px solid rgba(255,255,255,.12);
   border-radius: 999px;
   background: rgba(255,255,255,.025);
-  color: rgba(255,255,255,.58);
+  color: var(--muted);
   font-size: 9px;
   cursor: pointer;
 }
@@ -3665,7 +3665,7 @@
 }
 
 .rouletteTopbar span {
-  color: rgba(255,255,255,.35);
+  color: var(--muted);
   font-size: 8px;
   font-weight: 800;
   letter-spacing: .18em;
@@ -3788,13 +3788,13 @@
   font-style: italic;
   font-weight: 500;
   line-height: .93;
-  letter-spacing: -.055em;
+  letter-spacing: -0.02em;
   text-wrap: balance;
 }
 
 .roulettePosterCopy p {
   margin: 20px 0 0;
-  color: rgba(255,255,255,.56);
+  color: var(--muted);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: .09em;
@@ -3849,12 +3849,12 @@
   font-style: italic;
   font-weight: 500;
   line-height: .95;
-  letter-spacing: -.045em;
+  letter-spacing: -0.02em;
 }
 
 .roulettePanelIntro p {
   margin: 0;
-  color: rgba(255,255,255,.48);
+  color: var(--muted);
   font-size: 12px;
   line-height: 1.7;
 }
@@ -3876,7 +3876,7 @@
 }
 
 .rouletteFacts span {
-  color: rgba(255,255,255,.36);
+  color: var(--muted);
   font-size: 8px;
   font-weight: 800;
   letter-spacing: .14em;
@@ -3894,7 +3894,7 @@
   margin: 0;
   padding: 15px 17px;
   border-top: 1px solid rgba(255,255,255,.1);
-  color: rgba(255,255,255,.72);
+  color: var(--muted);
   font-size: 11px;
   line-height: 1.5;
 }
@@ -3971,7 +3971,7 @@
 }
 
 .rouletteFilters label > span {
-  color: rgba(255,255,255,.4);
+  color: var(--muted);
   font-size: 8px;
   font-weight: 800;
   letter-spacing: .12em;
@@ -4008,7 +4008,7 @@
 }
 
 .rouletteRetroToggle span {
-  color: rgba(255,255,255,.7) !important;
+  color: var(--muted) !important;
 }
 
 .rouletteFilterFoot {
@@ -4017,7 +4017,7 @@
   align-items: center;
   justify-content: space-between;
   padding-top: 10px;
-  color: rgba(255,255,255,.38);
+  color: var(--muted);
   font-size: 9px;
   font-weight: 800;
   letter-spacing: .1em;
@@ -4038,7 +4038,7 @@
   padding: 15px;
   border: 1px solid rgba(255, 122, 26,.28);
   background: rgba(255, 122, 26,.08);
-  color: rgba(255,255,255,.72);
+  color: var(--muted);
   font-size: 11px;
   line-height: 1.55;
 }
@@ -4058,7 +4058,7 @@
   font-family: Georgia, serif;
   font-size: 80px;
   font-style: italic;
-  letter-spacing: -.08em;
+  letter-spacing: -0.02em;
 }
 
 .loadingLine {
@@ -4081,7 +4081,7 @@
 }
 
 .loadingScreen p {
-  color: rgba(255,255,255,.35);
+  color: var(--muted);
   font-size: 9px;
   font-weight: 800;
   letter-spacing: .18em;
@@ -5156,4 +5156,155 @@
     animation-iteration-count: 1 !important;
     transition-duration: .01ms !important;
   }
+}
+
+
+/* System theme is scoped to the login and landing page. Media and player
+   surfaces retain their dark palette so image overlays stay legible. */
+.landingTheme {
+  color-scheme: light dark;
+  --landing-bg: #f7f5f0;
+  --landing-panel: #fffdf9;
+  --landing-text: #202024;
+  --landing-muted: #51515a;
+  --landing-line: rgba(32, 32, 36, .18);
+  --landing-tint: rgba(32, 32, 36, .04);
+  --landing-accent: #a84200;
+  background: var(--landing-bg);
+}
+
+@media (prefers-color-scheme: dark) {
+  .landingTheme {
+    --landing-bg: #070707;
+    --landing-panel: #0d0d0f;
+    --landing-text: #f1eee8;
+    --landing-muted: #dedee2;
+    --landing-line: rgba(255, 255, 255, .12);
+    --landing-tint: rgba(255, 255, 255, .035);
+    --landing-accent: #ff7a1a;
+  }
+}
+
+.landingTheme .loginGate {
+  background: radial-gradient(circle at 4% 2%, rgba(255, 122, 26, .1), transparent 30rem), var(--landing-bg);
+}
+
+.landingTheme :is(.gatePanel, .accountMenu) {
+  background: var(--landing-panel);
+}
+
+.landingTheme :is(.gateHeader, .gateStage, .header, .searchBox, .toolButton, .accountButton, .accountMenu) {
+  border-color: var(--landing-line);
+}
+
+.landingTheme :is(.gateHeader > span, .gatePanel > p, .loginForm label > span, .gateFooter,
+  .brand > span, .nav button, .searchBox svg, .accountMenu strong) {
+  color: var(--landing-muted);
+}
+
+.landingTheme :is(.gatePanel h1, .loginForm input, .searchBox input,
+  .toolButton, .accountButton, .accountMenu button, .nav button:hover, .nav .navActive) {
+  color: var(--landing-text);
+}
+
+.landingTheme .gatePanel h1 em {
+  color: var(--landing-accent);
+}
+
+.landingTheme :is(.loginForm input, .searchBox, .toolButton, .accountButton) {
+  border-color: var(--landing-line);
+  background: var(--landing-tint);
+}
+
+.landingTheme :is(.loginForm input, .searchBox input)::placeholder {
+  color: var(--landing-muted);
+  opacity: 1;
+}
+
+.landingTheme .loginForm input:focus {
+  border-color: var(--landing-accent);
+}
+
+.landingTheme :is(button, input):focus-visible {
+  outline: 2px solid var(--landing-accent);
+  outline-offset: 4px;
+}
+
+.landingTheme .header {
+  background: var(--landing-bg);
+}
+
+.landingTheme :is(.gateHeader img, .brand img) {
+  /* The existing logo has white lettering; give it a stable dark backing. */
+  background: #080808;
+  border-radius: 4px;
+}
+
+.landingTheme .contentSection {
+  background: var(--landing-bg);
+  color: var(--landing-text);
+}
+
+.landingTheme :is(.sectionHeading h2, .sectionHeading > button, .movieTitle) {
+  color: var(--landing-text);
+}
+
+.landingTheme :is(.sectionHeadingIndex, .movieMetrics svg) {
+  color: var(--landing-accent);
+}
+
+.landingTheme :is(.movieMeta, .movieMetrics, .movieCastMain, .movieCastSupporting, .directedEmpty) {
+  color: var(--landing-muted);
+}
+
+.landingTheme :is(.sectionHeading > button, .directedEmpty) {
+  border-color: var(--landing-line);
+}
+
+.landingTheme .directedEmpty {
+  background: var(--landing-tint);
+}
+
+.landingTheme .movieCard .mainTagBadge {
+  color: var(--landing-accent);
+}
+
+.landingTheme .manifesto {
+  color: var(--landing-text);
+  border-color: var(--landing-line);
+  background: radial-gradient(circle at 82% 50%, rgba(255, 122, 26, .17), transparent 28%), var(--landing-panel);
+}
+
+.landingTheme .manifesto h2 em {
+  color: var(--landing-accent);
+}
+
+.landingTheme .manifesto p {
+  color: var(--landing-muted);
+}
+
+.landingTheme .manifesto button {
+  color: var(--landing-text);
+}
+
+.landingTheme :is(.spotlight, .gateArt, .actorCard, .loadingScreen) {
+  color-scheme: dark;
+}
+
+.landingTheme :is(.loginForm > button, .primaryAction) {
+  color: #202024;
+}
+
+.landingTheme .formError {
+  color: var(--landing-accent);
+}
+
+.gatePanel h1,
+.spotlightCopy h1,
+.manifesto h2 {
+  line-height: 1.02;
+}
+
+.gatePanel h1 {
+  overflow-wrap: anywhere;
 }

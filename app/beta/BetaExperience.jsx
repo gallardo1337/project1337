@@ -979,12 +979,11 @@ function ActorCard({ actor, onOpen, feature = false }) {
   );
 }
 
-function SectionHeading({ index, eyebrow, title, action, onAction }) {
+function SectionHeading({ index, title, action, onAction }) {
   return (
     <div className={styles.sectionHeading}>
       <div className={styles.sectionHeadingIndex}>{index}</div>
       <div>
-        <span>{eyebrow}</span>
         <h2>{title}</h2>
       </div>
       {action ? (
@@ -1031,7 +1030,6 @@ function LoginGate({
         </div>
 
         <section className={styles.gatePanel}>
-          <div className={styles.gateKicker}><i /> Members only</div>
           <h1>Enter your<br /><em>private cinema.</em></h1>
           <p>
             Ein persönliches Filmarchiv, neu gedacht als digitale Screening
@@ -1769,7 +1767,6 @@ function Discovery({
           {String(activeFeature + 1).padStart(2, "0")} / {String(Math.max(featuredMovies.length, 1)).padStart(2, "0")}
         </div>
         <div className={styles.spotlightCopy} key={featured?.id || "empty-feature"}>
-          <div className={styles.kicker}><Icon name="spark" /> {section.eyebrow}</div>
           <h1 className={spotlightTitleClass(featured?.title)}>
             {featured?.title || "Your private cinema"}
           </h1>
@@ -1820,7 +1817,6 @@ function Discovery({
       <section className={styles.contentSection} key={section.id}>
         <SectionHeading
           index={String(sectionIndex + 1).padStart(2, "0")}
-          eyebrow={section.eyebrow}
           title={section.title}
           action="Alle Filme"
           onAction={onShowMovies}
@@ -1855,7 +1851,6 @@ function Discovery({
       >
         <SectionHeading
           index={String(sectionIndex + 1).padStart(2, "0")}
-          eyebrow={section.eyebrow}
           title={section.title}
           action="Alle Darsteller"
           onAction={onShowActors}
@@ -1877,7 +1872,6 @@ function Discovery({
 
   const renderManifesto = (section, sectionIndex) => (
       <section className={styles.manifesto} key={section.id}>
-        <span>{String(sectionIndex + 1).padStart(2, "0")} / THE ARCHIVE</span>
         <h2>{section.title}<br /><em>{section.eyebrow}</em></h2>
         <p>Eine private Library ohne Algorithmus – persönlich ausgewählt, sauber organisiert und jederzeit abspielbar.</p>
         <button type="button" onClick={onShowMovies}>Collection öffnen <Icon name="arrow" /></button>
@@ -2585,7 +2579,7 @@ export default function BetaExperience({
 
   if (!loggedIn) {
     return (
-      <div className={styles.experience}>
+      <div className={`${styles.experience} ${styles.landingTheme}`}>
         <LoginGate
           loginUser={loginUser}
           loginPassword={loginPassword}
@@ -2600,7 +2594,7 @@ export default function BetaExperience({
   }
 
   return (
-    <div className={styles.experience}>
+    <div className={`${styles.experience} ${!selectedActor && !selectedMovieId && viewMode === "actors" ? styles.landingTheme : ""}`}>
       <AppHeader
         viewMode={viewMode}
         selectedActor={selectedActor}
