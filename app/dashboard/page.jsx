@@ -2988,11 +2988,20 @@ export function DashboardExperience() {
                       studioMap={studioMap}
                       resolutionMap={resolutionMap}
                       initialMovieId={thumbnailTargetId}
-                      onThumbnailSaved={(movieId, thumbnailUrl) =>
+                      onThumbnailSaved={(movieId, thumbnailUrl, aiOptimized) =>
                         setFilme((current) =>
                           current.map((movie) =>
                             movie.id === movieId
-                              ? { ...movie, thumbnail_url: thumbnailUrl }
+                              ? { ...movie, thumbnail_url: thumbnailUrl, ai_optimized: aiOptimized }
+                              : movie
+                          )
+                        )
+                      }
+                      onAiOptimizedChanged={(movieId, aiOptimized) =>
+                        setFilme((current) =>
+                          current.map((movie) =>
+                            movie.id === movieId
+                              ? { ...movie, ai_optimized: aiOptimized }
                               : movie
                           )
                         )
