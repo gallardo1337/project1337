@@ -394,6 +394,44 @@ async function fitImageToThumbnail(blob) {
   });
 }
 
+async function prepareImageForUpscale(blob) {
+  const image = await createImageBitmap(blob);
+  const maxScale = Math.min(1, OUTPUT_WIDTH / image.width, OUTPUT_HEIGHT / image.height);
+  const scaledWidth = image.width * maxScale;
+  const scaledHeight = image.height * maxScale;
+  const targetWidth = Math.round(Math.min(scaledWidth, scaledHeight * (OUTPUT_WIDTH / OUTPUT_HEIGHT)));
+  const targetHeight = Math.round(targetWidth * (OUTPUT_HEIGHT / OUTPUT_WIDTH));
+  const sourceWidth = targetWidth / maxScale;
+  const sourceHeight = targetHeight / maxScale;
+  const canvas = document.createElement("canvas");
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
+  const ctx = canvas.getContext("2d", { alpha: false });
+  if (!ctx) {
+    image.close?.();
+    throw new Error("Der Browser konnte das Bild für den Upscaler nicht vorbereiten.");
+  }
+  ctx.drawImage(
+    image,
+    (image.width - sourceWidth) / 2,
+    (image.height - sourceHeight) / 2,
+    sourceWidth,
+    sourceHeight,
+    0,
+    0,
+    targetWidth,
+    targetHeight
+  );
+  image.close?.();
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (result) => (result ? resolve(result) : reject(new Error("Das vorbereitete Upscale-Bild ist leer."))),
+      "image/jpeg",
+      JPEG_QUALITY
+    );
+  });
+}
+
 const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
 async function createAiModels() {
@@ -950,7 +988,12 @@ export default function AdminThumbnailStudio({
     setError(null);
     setNotice("Bild wird lokal an ComfyUI übergeben …");
     try {
-      const normalizedSource = await fitImageToThumbnail(sourceBlob);
+      // Feed low-resolution originals to the upscaler at their native size.
+      // Pre-expanding them to 1920x1080 makes a 4x model process up to 16x
+      // more pixels before the result is shrunk back to the thumbnail size.
+      const normalizedSource = enhancementMode === "upscale"
+        ? await prepareImageForUpscale(sourceBlob)
+        : await fitImageToThumbnail(sourceBlob);
       const formData = new FormData();
       // A stable filename can make ComfyUI reuse the previous LoadImage node
       // output from its execution cache, even when the uploaded bytes changed.
