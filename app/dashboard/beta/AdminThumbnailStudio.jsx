@@ -955,7 +955,7 @@ export default function AdminThumbnailStudio({
           : sdxlModels.find((model) => /albedo/i.test(model)) || sdxlModels[0] || ""
       );
       if (missingNodes.length && requiresSupir) {
-        setError(`Die Standard-Restaurierung ist auf diesem ComfyUI nicht vollständig eingerichtet. Fehlende Nodes: ${missingNodes.join(", ")}.`);
+        setError(`Die SUPIR-Restaurierung ist auf diesem ComfyUI nicht vollständig eingerichtet. Fehlende Nodes: ${missingNodes.join(", ")}.`);
       }
       setComfyStatus("connected");
       setNotice(
@@ -984,9 +984,9 @@ export default function AdminThumbnailStudio({
     if (!canEnhance) {
       setError(
         requiresSupir && comfySupirMissingNodes.length
-          ? `Die Standard-Restaurierung ist nicht vollständig eingerichtet. Fehlende Nodes: ${comfySupirMissingNodes.join(", ")}.`
+          ? `Die SUPIR-Restaurierung ist nicht vollständig eingerichtet. Fehlende Nodes: ${comfySupirMissingNodes.join(", ")}.`
           : requiresSupir && !comfySupirModel
-          ? "Für die Standard-Restaurierung fehlt ein SUPIR-Modell unter models/checkpoints."
+          ? "Für die SUPIR-Restaurierung fehlt ein SUPIR-Modell unter models/checkpoints."
           : requiresSupir && !comfySdxlModel
             ? "Für SUPIR fehlt ein SDXL-Modell unter models/checkpoints."
             : requiresDeblur && !comfyDeblurModel
@@ -2024,8 +2024,8 @@ if (job?.outputs?.[outputNodeId]?.images?.length) {
                     onChange={(event) => setEnhancementMode(event.target.value)}
                     disabled={enhancing}
                   >
-                    <option value="supir">Restaurieren + Entrauschen (Standard)</option>
-                    <option value="upscale">Schärfen / vergrößern</option>
+                    <option value="upscale">Schärfen / vergrößern (Standard)</option>
+                    <option value="supir">Starke Restaurierung + Entrauschen (generativ)</option>
                     <option value="deblur">Bewegungsunschärfe entfernen</option>
                     <option value="deblur-upscale">Entwackeln + hochauflösend verfeinern</option>
                   </select>
@@ -2138,7 +2138,7 @@ if (job?.outputs?.[outputNodeId]?.images?.length) {
                 </div>
                 <small className="thumbnailStudio__aiHint">
                   {requiresSupir ? (
-                    <>Rekonstruiert Details und reduziert anschließend feines Rauschen. Ergebnis: 1920×1080, lokal auf deinem Rechner verarbeitet, etwa zwei Minuten pro Bild. Die Restaurierung kann feine Bildmerkmale verändern; prüfe das Ergebnis vor dem Speichern.</>
+                    <>Rekonstruiert Details und reduziert anschließend feines Rauschen. Dabei können Gesichter, Schrift und verdeckte Bildbereiche falsch rekonstruiert werden. Nutze dieses Verfahren gezielt und vergleiche das Ergebnis mit dem Original, bevor du es speicherst. Ergebnis: 1920×1080, etwa zwei Minuten pro Bild.</>
                   ) : enhancementMode === "deblur-upscale" ? (
                     <>NAFNet-GoPro entfernt zuerst Bewegungsunschärfe; anschließend verfeinert das gewählte Upscale-Modell Details. Ergebnis bleibt 1920×1080. GoPro-width64 wird standardmäßig gewählt.</>
                   ) : enhancementMode === "deblur" ? (

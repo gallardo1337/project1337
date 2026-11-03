@@ -8,8 +8,8 @@ import {
   getSupirThumbnailSupport,
 } from "../lib/thumbnailComfyWorkflow.mjs";
 
-test("the default processes the approved SUPIR profile and saves the denoised image", () => {
-  assert.equal(DEFAULT_THUMBNAIL_ENHANCEMENT, "supir");
+test("the default avoids generative reconstruction while the manual SUPIR profile remains available", () => {
+  assert.equal(DEFAULT_THUMBNAIL_ENHANCEMENT, "upscale");
   const p = createSupirThumbnailPrompt({ imageName: "fresh-upload.jpg" });
   assert.equal(p["1"].inputs.image, "fresh-upload.jpg");
   assert.equal(p["3"].inputs.supir_model, "SUPIR-v0F_fp16.safetensors");
