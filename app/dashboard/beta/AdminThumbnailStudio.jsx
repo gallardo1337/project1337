@@ -2099,6 +2099,20 @@ export default function AdminThumbnailStudio({
                   ) : null}
                 </div>
                 <div className="thumbnailStudio__aiActions">
+                  {!embeddedMovie && selectedMovie?.thumbnail_url ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPreviewImage({
+                          url: selectedMovie.thumbnail_url,
+                          label: "Gespeichertes Thumbnail",
+                        })
+                      }
+                      title="Gespeichertes Thumbnail groß ansehen"
+                    >
+                      Aktuelles Thumbnail ansehen
+                    </button>
+                  ) : null}
                   {!embeddedMovie && selectedMovie ? (
                     <button
                       type="button"
