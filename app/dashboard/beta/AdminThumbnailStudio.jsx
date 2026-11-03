@@ -916,11 +916,15 @@ export default function AdminThumbnailStudio({
       setComfyDeblurModel((current) =>
         deblurModels.includes(current)
           ? current
-          : deblurModels.includes("NAFNet-REDS-width64.pth")
-            ? "NAFNet-REDS-width64.pth"
-            : deblurModels.includes("NAFNet-REDS-width32.pth")
-              ? "NAFNet-REDS-width32.pth"
-              : deblurModels[0] || ""
+          : deblurModels.includes("NAFNet-GoPro-width64.pth")
+            ? "NAFNet-GoPro-width64.pth"
+            : deblurModels.includes("NAFNet-GoPro-width32.pth")
+              ? "NAFNet-GoPro-width32.pth"
+              : deblurModels.includes("NAFNet-REDS-width64.pth")
+                ? "NAFNet-REDS-width64.pth"
+                : deblurModels.includes("NAFNet-REDS-width32.pth")
+                  ? "NAFNet-REDS-width32.pth"
+                  : deblurModels[0] || ""
       );
       let supirModels = [];
       let sdxlModels = [];
@@ -2071,7 +2075,7 @@ export default function AdminThumbnailStudio({
                       {comfyDeblurModels.length ? (
                         comfyDeblurModels.map((model) => <option key={model} value={model}>{model}</option>)
                       ) : (
-                        <option value="">NAFNet-REDS installieren</option>
+                        <option value="">NAFNet-GoPro installieren</option>
                       )}
                     </select>
                   ) : null}
@@ -2127,9 +2131,9 @@ export default function AdminThumbnailStudio({
                   {requiresSupir ? (
                     <>SUPIR rekonstruiert das Bild generativ in mehreren Schritten und kann mehrere Minuten benötigen. Das Modell kann Details neu erzeugen; prüfe das Ergebnis sorgfältig. Benötigt ComfyUI-SUPIR, ein SUPIR-Checkpoint und ein SDXL-Modell in <code>models/checkpoints</code>. Im ComfyUI Manager nach <code>ComfyUI-SUPIR</code> suchen, installieren und danach ComfyUI neu starten. Für den ersten Versuch eignet sich <code>SUPIR-v0F</code> bei leichteren Schäden; <code>SUPIR-v0Q</code> restauriert stärker. Es wird lokal verarbeitet.</>
                   ) : enhancementMode === "deblur-upscale" ? (
-                    <>NAFNet-REDS entfernt zuerst Bewegungsunschärfe; anschließend verfeinert das gewählte Upscale-Modell Details. Ergebnis bleibt 1920×1080. Für Videobilder NAFNet-REDS verwenden; danach 4x-UltraSharp auswählen. Bei Artefakten REDS-width32 testen.</>
+                    <>NAFNet-GoPro entfernt zuerst Bewegungsunschärfe; anschließend verfeinert das gewählte Upscale-Modell Details. Ergebnis bleibt 1920×1080. GoPro-width64 wird standardmäßig gewählt.</>
                   ) : enhancementMode === "deblur" ? (
-                    <>NAFNet-REDS ist für Videobilder mit Bewegungsunschärfe trainiert. Dafür ComfyUI-NAFNet installieren und <code>NAFNet-REDS-width64.pth</code> in den Plugin-Ordner <code>custom_nodes/ComfyUI-NAFNet/models</code> legen; danach ComfyUI neu starten und erneut verbinden. Bei Artefakten width32 testen.</>
+                    <>NAFNet-GoPro ist als Standard für Bewegungsunschärfe ausgewählt. Dafür ComfyUI-NAFNet installieren und <code>NAFNet-GoPro-width64.pth</code> in den Plugin-Ordner <code>custom_nodes/ComfyUI-NAFNet/models</code> legen; danach ComfyUI neu starten und erneut verbinden.</>
                   ) : (
                     <>ComfyUI mit <code>--enable-cors-header {typeof window !== "undefined" ? window.location.origin : "https://beta.my1337.de"}</code> starten. Ein Modell wie 4x-UltraSharp muss in <code>models/upscale_models</code> liegen. Es schärft und vergrößert, entfernt aber keine starke Bewegungsunschärfe.</>
                   )}
