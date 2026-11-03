@@ -163,24 +163,45 @@ export async function PUT(request, { params }) {
     }
 
     const body = await request.json();
-    const thumbnailUrl = String(body?.thumbnail_url || "").trim();
+    const updates = {};
 
-    let parsedUrl;
-    try {
-      parsedUrl = new URL(thumbnailUrl);
-    } catch {
-      return noStoreJson(
-        { error: "Die Thumbnail-URL ist ungültig." },
-        { status: 400 }
-      );
+    if (Object.prototype.hasOwnProperty.call(body || {}, "thumbnail_url")) {
+      const thumbnailUrl = String(body?.thumbnail_url || "").trim();
+      let parsedUrl;
+      try {
+        parsedUrl = new URL(thumbnailUrl);
+      } catch {
+        return noStoreJson(
+          { error: "Die Thumbnail-URL ist ungültig." },
+          { status: 400 }
+        );
+      }
+
+      if (
+        parsedUrl.protocol !== "https:" ||
+        !allowedThumbnailHost(parsedUrl.hostname)
+      ) {
+        return noStoreJson(
+          { error: "Dieser Thumbnail-Host ist nicht freigegeben." },
+          { status: 400 }
+        );
+      }
+      updates.thumbnail_url = parsedUrl.toString();
     }
 
-    if (
-      parsedUrl.protocol !== "https:" ||
-      !allowedThumbnailHost(parsedUrl.hostname)
-    ) {
+    if (Object.prototype.hasOwnProperty.call(body || {}, "ai_optimized")) {
+      if (typeof body.ai_optimized !== "boolean") {
+        return noStoreJson(
+          { error: "Der KI-Status muss true oder false sein." },
+          { status: 400 }
+        );
+      }
+      updates.ai_optimized = body.ai_optimized;
+    }
+
+    if (!Object.keys(updates).length) {
       return noStoreJson(
-        { error: "Dieser Thumbnail-Host ist nicht freigegeben." },
+        { error: "Es wurden keine Thumbnail-Daten zum Speichern übergeben." },
         { status: 400 }
       );
     }
@@ -188,9 +209,9 @@ export async function PUT(request, { params }) {
     const supabase = createServerSupabase();
     const { data, error } = await supabase
       .from("movies")
-      .update({ thumbnail_url: parsedUrl.toString() })
+      .update(updates)
       .eq("id", id)
-      .select("id,thumbnail_url")
+      .select("id,thumbnail_url,ai_optimized")
       .maybeSingle();
 
     if (error) throw error;
@@ -201,6 +222,7 @@ export async function PUT(request, { params }) {
     return noStoreJson({
       movie_id: data.id,
       thumbnail_url: data.thumbnail_url,
+      ai_optimized: data.ai_optimized,
     });
   } catch (error) {
     console.error("Movie thumbnail could not be saved:", error);
