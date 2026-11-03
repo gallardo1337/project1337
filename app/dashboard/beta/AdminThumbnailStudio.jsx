@@ -1138,11 +1138,8 @@ if (job?.outputs?.[outputNodeId]?.images?.length) {
       const resultResponse = await fetch(`${baseUrl}/view?${imageQuery.toString()}`);
       if (!resultResponse.ok) throw new Error("Das fertige KI-Bild konnte nicht geladen werden.");
       const comfyResultBlob = await resultResponse.blob();
-      const resultBlob =
-Number(imageInfo.width ?? imageInfo.metadata?.width) === OUTPUT_WIDTH &&
-        Number(imageInfo.height ?? imageInfo.metadata?.height) === OUTPUT_HEIGHT
-          ? comfyResultBlob
-          : await fitImageToThumbnail(comfyResultBlob);
+      // Saved thumbnails use .jpg filenames, including ComfyUI PNG results.
+      const resultBlob = await fitImageToThumbnail(comfyResultBlob);
       const url = URL.createObjectURL(resultBlob);
       generatedUrlsRef.current.add(url);
       const candidate = {
