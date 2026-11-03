@@ -4,6 +4,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { scoreAiFrame } from "../../../lib/thumbnailAiScoring.mjs";
 import {
+  DEFAULT_THUMBNAIL_ENHANCEMENT,
+  SUPIR_THUMBNAIL_OUTPUT_NODE,
+  SUPIR_THUMBNAIL_REQUIRED_NODES,
+  createSupirThumbnailPrompt,
+  getSupirThumbnailSupport,
+} from "../../../lib/thumbnailComfyWorkflow.mjs";
+import {
   appendThumbnailCandidate,
   clearUnlockedThumbnailCandidates,
 } from "../../../lib/thumbnailCandidates.mjs";
@@ -545,7 +552,8 @@ export default function AdminThumbnailStudio({
   const [comfySupirModel, setComfySupirModel] = useState("");
   const [comfySdxlModels, setComfySdxlModels] = useState([]);
   const [comfySdxlModel, setComfySdxlModel] = useState("");
-  const [enhancementMode, setEnhancementMode] = useState("upscale");
+  const [comfySupirMissingNodes, setComfySupirMissingNodes] = useState([]);
+  const [enhancementMode, setEnhancementMode] = useState(DEFAULT_THUMBNAIL_ENHANCEMENT);
   const [comfyStatus, setComfyStatus] = useState("idle");
   const [enhancing, setEnhancing] = useState(false);
   const [loadingExistingThumbnail, setLoadingExistingThumbnail] = useState(false);
@@ -555,7 +563,7 @@ export default function AdminThumbnailStudio({
   const requiresDeblur = enhancementMode === "deblur" || enhancementMode === "deblur-upscale";
   const requiresUpscale = enhancementMode === "upscale" || enhancementMode === "deblur-upscale";
   const canEnhance = requiresSupir
-    ? Boolean(comfySupirModel && comfySdxlModel)
+    ? Boolean(comfySupirModel && comfySdxlModel && !comfySupirMissingNodes.length)
     : (!requiresDeblur || Boolean(comfyDeblurModel && comfyDeblurModels.includes(comfyDeblurModel))) &&
       (!requiresUpscale || Boolean(comfyModel));
 
@@ -918,33 +926,37 @@ export default function AdminThumbnailStudio({
                   ? "NAFNet-REDS-width32.pth"
                   : deblurModels[0] || ""
       );
-      let supirModels = [];
-      let sdxlModels = [];
-      try {
-        const nodeResponse = await fetch(`${baseUrl}/object_info/SUPIR_Upscale`, { cache: "no-store" });
-        if (nodeResponse.ok) {
-          const nodeInfo = await nodeResponse.json();
-          const required = nodeInfo?.SUPIR_Upscale?.input?.required;
-          const checkpoints = required?.supir_model?.[0];
-          const sdxlChoices = required?.sdxl_model?.[0];
-          if (Array.isArray(checkpoints)) {
-            supirModels = checkpoints.filter((model) => /supir/i.test(model));
-          }
-          if (Array.isArray(sdxlChoices)) {
-            sdxlModels = sdxlChoices.filter((model) => !/supir/i.test(model));
-          }
-        }
-      } catch {
-        // SUPIR remains an optional ComfyUI capability.
-      }
+      const nodeResults = await Promise.allSettled(
+        SUPIR_THUMBNAIL_REQUIRED_NODES.map(async (name) => {
+          const response = await fetch(`${baseUrl}/object_info/${name}`, { cache: "no-store" });
+          if (!response.ok) return null;
+          const info = await response.json();
+          return info[name] || null;
+        })
+      );
+      const nodeInfo = Object.fromEntries(
+        SUPIR_THUMBNAIL_REQUIRED_NODES.map((name, index) => [
+          name,
+          nodeResults[index].status === "fulfilled" ? nodeResults[index].value : null,
+        ])
+      );
+      const { supirModels, sdxlModels, missingNodes } = getSupirThumbnailSupport(nodeInfo);
+      setComfySupirMissingNodes(missingNodes);
       setComfySupirModels(supirModels);
-      setComfySupirModel((current) => supirModels.includes(current) ? current : supirModels[0] || "");
+      setComfySupirModel((current) =>
+        supirModels.includes(current)
+          ? current
+          : supirModels.find((model) => /SUPIR-v0F/i.test(model)) || supirModels[0] || ""
+      );
       setComfySdxlModels(sdxlModels);
       setComfySdxlModel((current) =>
         sdxlModels.includes(current)
           ? current
           : sdxlModels.find((model) => /albedo/i.test(model)) || sdxlModels[0] || ""
       );
+      if (missingNodes.length && requiresSupir) {
+        setError(`Die Standard-Restaurierung ist auf diesem ComfyUI nicht vollständig eingerichtet. Fehlende Nodes: ${missingNodes.join(", ")}.`);
+      }
       setComfyStatus("connected");
       setNotice(
         `ComfyUI verbunden · ${models.length} Upscale-, ${deblurModels.length} NAFNet- und ${supirModels.length} SUPIR-Modell${supirModels.length === 1 ? "" : "e"} gefunden.`
@@ -956,6 +968,7 @@ export default function AdminThumbnailStudio({
       setComfyDeblurModels([]);
       setComfyDeblurModel("");
       setComfySupirModels([]);
+      setComfySupirMissingNodes([]);
       setComfySupirModel("");
       setComfySdxlModels([]);
       setComfySdxlModel("");
@@ -970,8 +983,10 @@ export default function AdminThumbnailStudio({
     const baseUrl = comfyEndpoint.trim().replace(/\/+$/, "");
     if (!canEnhance) {
       setError(
-        requiresSupir && !comfySupirModel
-          ? "SUPIR-Node oder SUPIR-Modell fehlt. Installiere die ComfyUI-SUPIR-Unterstützung und lege ein SUPIR-Modell unter models/checkpoints ab."
+        requiresSupir && comfySupirMissingNodes.length
+          ? `Die Standard-Restaurierung ist nicht vollständig eingerichtet. Fehlende Nodes: ${comfySupirMissingNodes.join(", ")}.`
+          : requiresSupir && !comfySupirModel
+          ? "Für die Standard-Restaurierung fehlt ein SUPIR-Modell unter models/checkpoints."
           : requiresSupir && !comfySdxlModel
             ? "Für SUPIR fehlt ein SDXL-Modell unter models/checkpoints."
             : requiresDeblur && !comfyDeblurModel
@@ -1002,51 +1017,16 @@ export default function AdminThumbnailStudio({
       const uploaded = await uploadResponse.json();
       if (!uploaded?.name) throw new Error("ComfyUI hat keinen Eingabedateinamen zurückgegeben.");
 
-      const prompt = {
-        "1": { class_type: "LoadImage", inputs: { image: uploaded.name } },
-      };
+      const prompt = requiresSupir
+        ? createSupirThumbnailPrompt({
+            imageName: uploaded.subfolder ? `${uploaded.subfolder}/${uploaded.name}` : uploaded.name,
+            supirModel: comfySupirModel,
+            sdxlModel: comfySdxlModel,
+          })
+        : { "1": { class_type: "LoadImage", inputs: { image: uploaded.name } } };
+      const outputNodeId = requiresSupir ? SUPIR_THUMBNAIL_OUTPUT_NODE : "8";
       let imageNode = "1";
       let nextNodeId = 2;
-      if (requiresSupir) {
-        const supirId = String(nextNodeId++);
-        prompt[supirId] = {
-          class_type: "SUPIR_Upscale",
-          inputs: {
-            supir_model: comfySupirModel,
-            sdxl_model: comfySdxlModel,
-            image: [imageNode, 0],
-            seed: Math.floor(Math.random() * 0xffffffff),
-            resize_method: "lanczos",
-            scale_by: 1.0,
-            steps: 45,
-            restoration_scale: 4.0,
-            cfg_scale: 4.0,
-            a_prompt: "high quality, detailed photo",
-            n_prompt: "bad quality, blurry, messy, compression artifacts",
-            s_churn: 5,
-            s_noise: 1.003,
-            control_scale: 1.0,
-            cfg_scale_start: 4.0,
-            control_scale_start: 0.0,
-            color_fix_type: "Wavelet",
-            keep_model_loaded: false,
-            use_tiled_vae: true,
-            encoder_tile_size_pixels: 512,
-            decoder_tile_size_latent: 64,
-            captions: "",
-            diffusion_dtype: "fp16",
-            encoder_dtype: "fp32",
-            batch_size: 1,
-            use_tiled_sampling: true,
-            sampler_tile_size: 1024,
-            sampler_tile_stride: 512,
-            fp8_unet: false,
-            fp8_vae: false,
-            sampler: "RestoreEDMSampler",
-          },
-        };
-        imageNode = supirId;
-      }
       if (requiresDeblur) {
         const loaderId = String(nextNodeId++);
         const restoreId = String(nextNodeId++);
@@ -1089,19 +1069,21 @@ export default function AdminThumbnailStudio({
         };
         imageNode = scaleId;
       }
-      prompt["8"] = {
-        class_type: "SaveImage",
-        inputs: {
-          filename_prefix: requiresSupir
-            ? "my1337-supir-restored"
-            : requiresDeblur && requiresUpscale
-            ? "my1337-deblurred-upscaled"
-            : requiresDeblur
-              ? "my1337-deblurred"
-              : "my1337-enhanced",
-          images: [imageNode, 0],
-        },
-      };
+      if (!requiresSupir) {
+        prompt["8"] = {
+          class_type: "SaveImage",
+          inputs: {
+            filename_prefix: requiresSupir
+              ? "my1337-supir-restored"
+              : requiresDeblur && requiresUpscale
+              ? "my1337-deblurred-upscaled"
+              : requiresDeblur
+                ? "my1337-deblurred"
+                : "my1337-enhanced",
+            images: [imageNode, 0],
+          },
+        };
+      }
       const promptResponse = await fetch(`${baseUrl}/prompt`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1115,7 +1097,7 @@ export default function AdminThumbnailStudio({
 
       setNotice(
         requiresSupir
-          ? `SUPIR restauriert „${sourceLabel}“ mit 45 Schritten – das kann einige Minuten dauern …`
+? `SUPIR restauriert „${sourceLabel}“ mit 40 Schritten und reduziert anschließend das Rauschen – das dauert etwa zwei Minuten …`
           : enhancementMode === "deblur-upscale"
           ? `NAFNet entwackelt „${sourceLabel}“, danach verfeinert UltraSharp das Bild …`
           : enhancementMode === "deblur"
@@ -1131,8 +1113,8 @@ export default function AdminThumbnailStudio({
         if (!historyResponse.ok) throw new Error(`ComfyUI-Status konnte nicht gelesen werden (HTTP ${historyResponse.status}).`);
         const history = await historyResponse.json();
         const job = history?.[promptPayload.prompt_id];
-        if (job?.outputs?.["8"]?.images?.length) {
-          images = job.outputs["8"].images;
+if (job?.outputs?.[outputNodeId]?.images?.length) {
+          images = job.outputs[outputNodeId].images;
           break;
         }
         if (job?.status?.status_str === "error") {
@@ -1157,7 +1139,8 @@ export default function AdminThumbnailStudio({
       if (!resultResponse.ok) throw new Error("Das fertige KI-Bild konnte nicht geladen werden.");
       const comfyResultBlob = await resultResponse.blob();
       const resultBlob =
-        Number(imageInfo.width) === OUTPUT_WIDTH && Number(imageInfo.height) === OUTPUT_HEIGHT
+Number(imageInfo.width ?? imageInfo.metadata?.width) === OUTPUT_WIDTH &&
+        Number(imageInfo.height ?? imageInfo.metadata?.height) === OUTPUT_HEIGHT
           ? comfyResultBlob
           : await fitImageToThumbnail(comfyResultBlob);
       const url = URL.createObjectURL(resultBlob);
@@ -2044,10 +2027,10 @@ export default function AdminThumbnailStudio({
                     onChange={(event) => setEnhancementMode(event.target.value)}
                     disabled={enhancing}
                   >
+                    <option value="supir">Restaurieren + Entrauschen (Standard)</option>
                     <option value="upscale">Schärfen / vergrößern</option>
                     <option value="deblur">Bewegungsunschärfe entfernen</option>
                     <option value="deblur-upscale">Entwackeln + hochauflösend verfeinern</option>
-                    <option value="supir">SUPIR-Restaurierung (langsamer, generativ)</option>
                   </select>
                   {requiresSupir ? (
                     <>
@@ -2158,7 +2141,7 @@ export default function AdminThumbnailStudio({
                 </div>
                 <small className="thumbnailStudio__aiHint">
                   {requiresSupir ? (
-                    <>SUPIR rekonstruiert das Bild generativ in mehreren Schritten und kann mehrere Minuten benötigen. Das Modell kann Details neu erzeugen; prüfe das Ergebnis sorgfältig. Benötigt ComfyUI-SUPIR, ein SUPIR-Checkpoint und ein SDXL-Modell in <code>models/checkpoints</code>. Im ComfyUI Manager nach <code>ComfyUI-SUPIR</code> suchen, installieren und danach ComfyUI neu starten. Für den ersten Versuch eignet sich <code>SUPIR-v0F</code> bei leichteren Schäden; <code>SUPIR-v0Q</code> restauriert stärker. Es wird lokal verarbeitet.</>
+                    <>Rekonstruiert Details und reduziert anschließend feines Rauschen. Ergebnis: 1920×1080, lokal auf deinem Rechner verarbeitet, etwa zwei Minuten pro Bild. Die Restaurierung kann feine Bildmerkmale verändern; prüfe das Ergebnis vor dem Speichern.</>
                   ) : enhancementMode === "deblur-upscale" ? (
                     <>NAFNet-GoPro entfernt zuerst Bewegungsunschärfe; anschließend verfeinert das gewählte Upscale-Modell Details. Ergebnis bleibt 1920×1080. GoPro-width64 wird standardmäßig gewählt.</>
                   ) : enhancementMode === "deblur" ? (
