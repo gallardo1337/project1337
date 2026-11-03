@@ -1162,7 +1162,11 @@ export default function AdminThumbnailStudio({
       });
       const resultResponse = await fetch(`${baseUrl}/view?${imageQuery.toString()}`);
       if (!resultResponse.ok) throw new Error("Das fertige KI-Bild konnte nicht geladen werden.");
-      const resultBlob = await fitImageToThumbnail(await resultResponse.blob());
+      const comfyResultBlob = await resultResponse.blob();
+      const resultBlob =
+        Number(imageInfo.width) === OUTPUT_WIDTH && Number(imageInfo.height) === OUTPUT_HEIGHT
+          ? comfyResultBlob
+          : await fitImageToThumbnail(comfyResultBlob);
       const url = URL.createObjectURL(resultBlob);
       generatedUrlsRef.current.add(url);
       const candidate = {
