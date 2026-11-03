@@ -26,7 +26,6 @@ const SUGGESTION_COUNT = 6;
 const EMPTY_MOVIES = [];
 const COMFY_ENDPOINT_STORAGE_KEY = "project1337-comfyui-endpoint";
 const DEFAULT_COMFY_ENDPOINT = "http://127.0.0.1:8188";
-const AI_ENHANCED_STORAGE_KEY = "project1337-ai-enhanced-thumbnails-v1";
 const CHAPTER_POINTS = [0.12, 0.26, 0.4, 0.54, 0.68, 0.82];
 const MEDIAPIPE_WASM_ROOT =
   "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm";
@@ -503,6 +502,7 @@ export default function AdminThumbnailStudio({
   localVideoFile = null,
   onThumbnailReady,
   onThumbnailSaved,
+  onAiOptimizedChanged,
   onEditMovie,
   onUnauthorized,
 }) {
@@ -514,7 +514,6 @@ export default function AdminThumbnailStudio({
   const [search, setSearch] = useState("");
   const [onlyMissing, setOnlyMissing] = useState(false);
   const [hideAiEnhanced, setHideAiEnhanced] = useState(true);
-  const [aiEnhancedThumbs, setAiEnhancedThumbs] = useState({});
   const [selectedMovieId, setSelectedMovieId] = useState(null);
   const [localSource, setLocalSource] = useState(null);
   const [remoteAccess, setRemoteAccess] = useState("idle");
@@ -536,6 +535,7 @@ export default function AdminThumbnailStudio({
     total: 0,
   });
   const [saving, setSaving] = useState(false);
+  const [savingAiMovieId, setSavingAiMovieId] = useState(null);
   const [comfyEndpoint, setComfyEndpoint] = useState(DEFAULT_COMFY_ENDPOINT);
   const [comfyModels, setComfyModels] = useState([]);
   const [comfyModel, setComfyModel] = useState("");
@@ -567,13 +567,7 @@ export default function AdminThumbnailStudio({
     try {
       const savedEndpoint = window.localStorage.getItem(COMFY_ENDPOINT_STORAGE_KEY);
       if (savedEndpoint) setComfyEndpoint(savedEndpoint);
-      const savedEnhancedThumbs = window.localStorage.getItem(AI_ENHANCED_STORAGE_KEY);
-      if (savedEnhancedThumbs) {
-        const parsed = JSON.parse(savedEnhancedThumbs);
-        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-          setAiEnhancedThumbs(parsed);
-        }
-      }
+      window.localStorage.removeItem("project1337-ai-enhanced-thumbnails-v1");
     } catch {
       // Local storage can be disabled; defaults remain usable.
     }
@@ -600,8 +594,7 @@ export default function AdminThumbnailStudio({
     return sortedMovies.filter((movie) => {
       if (onlyMissing && movie.thumbnail_url) return false;
       if (
-        hideAiEnhanced &&
-        aiEnhancedThumbs[movie.id]
+        hideAiEnhanced && movie.ai_optimized
       ) return false;
       if (!query) return true;
 
@@ -612,7 +605,7 @@ export default function AdminThumbnailStudio({
       );
       return haystack.includes(query);
     });
-  }, [sortedMovies, search, onlyMissing, hideAiEnhanced, aiEnhancedThumbs, studioMap, resolutionMap]);
+  }, [sortedMovies, search, onlyMissing, hideAiEnhanced, studioMap, resolutionMap]);
 
   const selectedMovie = useMemo(
     () => workingMovies.find((movie) => movie.id === selectedMovieId) || null,
@@ -1581,15 +1574,31 @@ export default function AdminThumbnailStudio({
     );
   };
 
-  const updateAiEnhancedIndex = (movieId, thumbnailUrl, isEnhanced) => {
-    const next = { ...aiEnhancedThumbs };
-    if (isEnhanced) next[movieId] = thumbnailUrl || true;
-    else delete next[movieId];
-    setAiEnhancedThumbs(next);
+  const updateMovieAiOptimized = async (movie, aiOptimized) => {
+    if (!movie?.id || savingAiMovieId) return;
+    setSavingAiMovieId(movie.id);
+    setError(null);
     try {
-      window.localStorage.setItem(AI_ENHANCED_STORAGE_KEY, JSON.stringify(next));
-    } catch {
-      // Keep the filter functional for this session if storage is unavailable.
+      const response = await fetch(`/api/movies/${movie.id}/thumbnail`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ai_optimized: aiOptimized }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        if (response.status === 401) onUnauthorized?.();
+        throw new Error(payload?.error || "KI-Status konnte nicht gespeichert werden.");
+      }
+      onAiOptimizedChanged?.(movie.id, payload.ai_optimized);
+      setNotice(
+        payload.ai_optimized
+          ? `„${movie.title}“ ist als KI-optimiert markiert.`
+          : `KI-Markierung für „${movie.title}“ wurde entfernt.`
+      );
+    } catch (statusError) {
+      setError(statusError?.message || "KI-Status konnte nicht gespeichert werden.");
+    } finally {
+      setSavingAiMovieId(null);
     }
   };
 
@@ -1658,7 +1667,10 @@ export default function AdminThumbnailStudio({
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ thumbnail_url: uploadPayload.url }),
+          body: JSON.stringify({
+            thumbnail_url: uploadPayload.url,
+            ai_optimized: ["ai-enhance", "ai-deblur", "ai-deblur-upscale", "ai-supir"].includes(selectedCandidate.generator),
+          }),
         }
       );
       const savePayload = await saveResponse.json().catch(() => null);
@@ -1670,14 +1682,10 @@ export default function AdminThumbnailStudio({
         );
       }
 
-      onThumbnailSaved?.(selectedMovie.id, savePayload.thumbnail_url);
-      updateAiEnhancedIndex(
+      onThumbnailSaved?.(
         selectedMovie.id,
         savePayload.thumbnail_url,
-        selectedCandidate.generator === "ai-enhance" ||
-          selectedCandidate.generator === "ai-deblur" ||
-          selectedCandidate.generator === "ai-deblur-upscale" ||
-          selectedCandidate.generator === "ai-supir"
+        savePayload.ai_optimized
       );
       setNotice(`Thumbnail für „${selectedMovie.title}“ wurde gespeichert.`);
     } catch (saveError) {
@@ -2094,12 +2102,12 @@ export default function AdminThumbnailStudio({
                   {!embeddedMovie && selectedMovie ? (
                     <button
                       type="button"
-                      onClick={() => updateAiEnhancedIndex(selectedMovie.id, selectedMovie.thumbnail_url, !aiEnhancedThumbs[selectedMovie.id])}
-                      disabled={saving || enhancing}
-                      aria-pressed={Boolean(aiEnhancedThumbs[selectedMovie.id])}
-                      title={Boolean(aiEnhancedThumbs[selectedMovie.id]) ? "KI-Markierung entfernen" : "Aus der Liste ausblenden"}
+                      onClick={() => updateMovieAiOptimized(selectedMovie, !selectedMovie.ai_optimized)}
+                      disabled={saving || enhancing || savingAiMovieId === selectedMovie.id}
+                      aria-pressed={Boolean(selectedMovie.ai_optimized)}
+                      title={selectedMovie.ai_optimized ? "KI-Markierung entfernen" : "Aus der Liste ausblenden"}
                     >
-                      {aiEnhancedThumbs[selectedMovie.id] ? "KI-Markierung entfernen" : "Als KI-generiert markieren"}
+                      {selectedMovie.ai_optimized ? "KI-Markierung entfernen" : "Als KI-optimiert markieren"}
                     </button>
                   ) : null}
                   <button type="button" onClick={enhanceSelectedCandidate} disabled={!selectedCandidate || !canEnhance || enhancing || saving}>
