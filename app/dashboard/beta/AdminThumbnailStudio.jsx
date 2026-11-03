@@ -394,6 +394,44 @@ async function fitImageToThumbnail(blob) {
   });
 }
 
+async function prepareImageForUpscale(blob) {
+  const image = await createImageBitmap(blob);
+  const maxScale = Math.min(1, OUTPUT_WIDTH / image.width, OUTPUT_HEIGHT / image.height);
+  const scaledWidth = image.width * maxScale;
+  const scaledHeight = image.height * maxScale;
+  const targetWidth = Math.round(Math.min(scaledWidth, scaledHeight * (OUTPUT_WIDTH / OUTPUT_HEIGHT)));
+  const targetHeight = Math.round(targetWidth * (OUTPUT_HEIGHT / OUTPUT_WIDTH));
+  const sourceWidth = targetWidth / maxScale;
+  const sourceHeight = targetHeight / maxScale;
+  const canvas = document.createElement("canvas");
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
+  const ctx = canvas.getContext("2d", { alpha: false });
+  if (!ctx) {
+    image.close?.();
+    throw new Error("Der Browser konnte das Bild für den Upscaler nicht vorbereiten.");
+  }
+  ctx.drawImage(
+    image,
+    (image.width - sourceWidth) / 2,
+    (image.height - sourceHeight) / 2,
+    sourceWidth,
+    sourceHeight,
+    0,
+    0,
+    targetWidth,
+    targetHeight
+  );
+  image.close?.();
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (result) => (result ? resolve(result) : reject(new Error("Das vorbereitete Upscale-Bild ist leer."))),
+      "image/jpeg",
+      JPEG_QUALITY
+    );
+  });
+}
+
 const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
 async function createAiModels() {
@@ -563,8 +601,7 @@ export default function AdminThumbnailStudio({
       if (onlyMissing && movie.thumbnail_url) return false;
       if (
         hideAiEnhanced &&
-        movie.thumbnail_url &&
-        aiEnhancedThumbs[movie.id] === movie.thumbnail_url
+        aiEnhancedThumbs[movie.id]
       ) return false;
       if (!query) return true;
 
@@ -878,11 +915,15 @@ export default function AdminThumbnailStudio({
       setComfyDeblurModel((current) =>
         deblurModels.includes(current)
           ? current
-          : deblurModels.includes("NAFNet-REDS-width64.pth")
-            ? "NAFNet-REDS-width64.pth"
-            : deblurModels.includes("NAFNet-REDS-width32.pth")
-              ? "NAFNet-REDS-width32.pth"
-              : deblurModels[0] || ""
+          : deblurModels.includes("NAFNet-GoPro-width64.pth")
+            ? "NAFNet-GoPro-width64.pth"
+            : deblurModels.includes("NAFNet-GoPro-width32.pth")
+              ? "NAFNet-GoPro-width32.pth"
+              : deblurModels.includes("NAFNet-REDS-width64.pth")
+                ? "NAFNet-REDS-width64.pth"
+                : deblurModels.includes("NAFNet-REDS-width32.pth")
+                  ? "NAFNet-REDS-width32.pth"
+                  : deblurModels[0] || ""
       );
       let supirModels = [];
       let sdxlModels = [];
@@ -950,7 +991,9 @@ export default function AdminThumbnailStudio({
     setError(null);
     setNotice("Bild wird lokal an ComfyUI übergeben …");
     try {
-      const normalizedSource = await fitImageToThumbnail(sourceBlob);
+      const normalizedSource = enhancementMode === "upscale"
+        ? await prepareImageForUpscale(sourceBlob)
+        : await fitImageToThumbnail(sourceBlob);
       const formData = new FormData();
       // A stable filename can make ComfyUI reuse the previous LoadImage node
       // output from its execution cache, even when the uploaded bytes changed.
@@ -1119,7 +1162,11 @@ export default function AdminThumbnailStudio({
       });
       const resultResponse = await fetch(`${baseUrl}/view?${imageQuery.toString()}`);
       if (!resultResponse.ok) throw new Error("Das fertige KI-Bild konnte nicht geladen werden.");
-      const resultBlob = await fitImageToThumbnail(await resultResponse.blob());
+      const comfyResultBlob = await resultResponse.blob();
+      const resultBlob =
+        Number(imageInfo.width) === OUTPUT_WIDTH && Number(imageInfo.height) === OUTPUT_HEIGHT
+          ? comfyResultBlob
+          : await fitImageToThumbnail(comfyResultBlob);
       const url = URL.createObjectURL(resultBlob);
       generatedUrlsRef.current.add(url);
       const candidate = {
@@ -1536,7 +1583,7 @@ export default function AdminThumbnailStudio({
 
   const updateAiEnhancedIndex = (movieId, thumbnailUrl, isEnhanced) => {
     const next = { ...aiEnhancedThumbs };
-    if (isEnhanced && thumbnailUrl) next[movieId] = thumbnailUrl;
+    if (isEnhanced) next[movieId] = thumbnailUrl || true;
     else delete next[movieId];
     setAiEnhancedThumbs(next);
     try {
@@ -2024,7 +2071,7 @@ export default function AdminThumbnailStudio({
                       {comfyDeblurModels.length ? (
                         comfyDeblurModels.map((model) => <option key={model} value={model}>{model}</option>)
                       ) : (
-                        <option value="">NAFNet-REDS installieren</option>
+                        <option value="">NAFNet-GoPro installieren</option>
                       )}
                     </select>
                   ) : null}
@@ -2044,6 +2091,17 @@ export default function AdminThumbnailStudio({
                   ) : null}
                 </div>
                 <div className="thumbnailStudio__aiActions">
+                  {!embeddedMovie && selectedMovie ? (
+                    <button
+                      type="button"
+                      onClick={() => updateAiEnhancedIndex(selectedMovie.id, selectedMovie.thumbnail_url, !aiEnhancedThumbs[selectedMovie.id])}
+                      disabled={saving || enhancing}
+                      aria-pressed={Boolean(aiEnhancedThumbs[selectedMovie.id])}
+                      title={Boolean(aiEnhancedThumbs[selectedMovie.id]) ? "KI-Markierung entfernen" : "Aus der Liste ausblenden"}
+                    >
+                      {aiEnhancedThumbs[selectedMovie.id] ? "KI-Markierung entfernen" : "Als KI-generiert markieren"}
+                    </button>
+                  ) : null}
                   <button type="button" onClick={enhanceSelectedCandidate} disabled={!selectedCandidate || !canEnhance || enhancing || saving}>
                     {enhancing
                       ? "KI arbeitet …"
@@ -2080,9 +2138,9 @@ export default function AdminThumbnailStudio({
                   {requiresSupir ? (
                     <>SUPIR rekonstruiert das Bild generativ in mehreren Schritten und kann mehrere Minuten benötigen. Das Modell kann Details neu erzeugen; prüfe das Ergebnis sorgfältig. Benötigt ComfyUI-SUPIR, ein SUPIR-Checkpoint und ein SDXL-Modell in <code>models/checkpoints</code>. Im ComfyUI Manager nach <code>ComfyUI-SUPIR</code> suchen, installieren und danach ComfyUI neu starten. Für den ersten Versuch eignet sich <code>SUPIR-v0F</code> bei leichteren Schäden; <code>SUPIR-v0Q</code> restauriert stärker. Es wird lokal verarbeitet.</>
                   ) : enhancementMode === "deblur-upscale" ? (
-                    <>NAFNet-REDS entfernt zuerst Bewegungsunschärfe; anschließend verfeinert das gewählte Upscale-Modell Details. Ergebnis bleibt 1920×1080. Für Videobilder NAFNet-REDS verwenden; danach 4x-UltraSharp auswählen. Bei Artefakten REDS-width32 testen.</>
+                    <>NAFNet-GoPro entfernt zuerst Bewegungsunschärfe; anschließend verfeinert das gewählte Upscale-Modell Details. Ergebnis bleibt 1920×1080. GoPro-width64 wird standardmäßig gewählt.</>
                   ) : enhancementMode === "deblur" ? (
-                    <>NAFNet-REDS ist für Videobilder mit Bewegungsunschärfe trainiert. Dafür ComfyUI-NAFNet installieren und <code>NAFNet-REDS-width64.pth</code> in den Plugin-Ordner <code>custom_nodes/ComfyUI-NAFNet/models</code> legen; danach ComfyUI neu starten und erneut verbinden. Bei Artefakten width32 testen.</>
+                    <>NAFNet-GoPro ist als Standard für Bewegungsunschärfe ausgewählt. Dafür ComfyUI-NAFNet installieren und <code>NAFNet-GoPro-width64.pth</code> in den Plugin-Ordner <code>custom_nodes/ComfyUI-NAFNet/models</code> legen; danach ComfyUI neu starten und erneut verbinden.</>
                   ) : (
                     <>ComfyUI mit <code>--enable-cors-header {typeof window !== "undefined" ? window.location.origin : "https://beta.my1337.de"}</code> starten. Ein Modell wie 4x-UltraSharp muss in <code>models/upscale_models</code> liegen. Es schärft und vergrößert, entfernt aber keine starke Bewegungsunschärfe.</>
                   )}
