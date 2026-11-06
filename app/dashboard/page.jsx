@@ -5,6 +5,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import AdminBetaOverview from "./beta/AdminBetaOverview.jsx";
+import AdminUsageAnalytics from "./beta/AdminUsageAnalytics.jsx";
 import AdminMediaHealth from "./beta/AdminMediaHealth.jsx";
 import AdminMovieFilePicker from "./AdminMovieFilePicker.jsx";
 import AdminMovieMetadataPicker from "./AdminMovieMetadataPicker.jsx";
@@ -585,6 +586,12 @@ const AdminNavIcon = ({ name }) => {
       <>
         <rect x="3" y="5" width="18" height="14" rx="1" />
         <path d="M3 9h18M8 5l3 4M14 5l3 4" />
+      </>
+    ),
+    analytics: (
+      <>
+        <path d="M4 20V12M10 20V5M16 20v-9M22 20V8" />
+        <path d="M2 21h21" />
       </>
     ),
     health: (
@@ -2089,6 +2096,7 @@ export function DashboardExperience() {
 
   const betaNavItems = [
     { key: "overview", label: "Übersicht", icon: "overview", section: "overview" },
+    { key: "analytics", label: "Nutzungsstatistik", icon: "analytics", section: "analytics" },
     { key: "director", label: "Startseiten-Regisseur", icon: "director", section: "director" },
     { key: "stats", label: "Filmarchiv", icon: "movies", section: "stats", count: filme.length },
     { key: "nas", label: "NAS-Analyse", icon: "nas", section: "nas" },
@@ -2158,7 +2166,13 @@ export function DashboardExperience() {
   const SidebarContent = BetaSidebarContent;
 
   const betaWorkspace =
-    activeFilmSection === "updates"
+    activeFilmSection === "analytics"
+      ? {
+          eyebrow: "Beta Usage Intelligence",
+          title: "Nutzungsstatistik",
+          description: "Webseite und Apple TV getrennt auswerten – anonym und ab Aktivierung.",
+        }
+      : activeFilmSection === "updates"
       ? {
           eyebrow: "PlanetSuzy Thread Monitor",
           title: "Update",
@@ -2955,6 +2969,8 @@ export function DashboardExperience() {
                       onEditMovie={handleEditFilm}
                     />
                   ) : null}
+
+                  {activeFilmSection === "analytics" ? <AdminUsageAnalytics /> : null}
 
                   {activeFilmSection === "updates" ? (
                     <PlanetSuzyUpdates

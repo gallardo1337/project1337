@@ -1,4 +1,5 @@
 import "./globals.css";
+import BetaAnalyticsTracker from "./beta/BetaAnalyticsTracker";
 
 export const metadata = {
   title: {
@@ -28,7 +29,7 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
         />
       </head>
-      <body>{children}</body>
+      <body>{children}<BetaAnalyticsTracker /></body>
     </html>
   );
 }

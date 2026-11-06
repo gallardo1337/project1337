@@ -1,4 +1,5 @@
 import "./beta/admin-beta.css";
+import "./beta/usage-analytics.css";
 
 export const metadata = {
   title: "Admin | Project1337",
