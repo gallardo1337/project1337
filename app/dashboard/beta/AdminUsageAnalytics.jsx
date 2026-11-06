@@ -3,6 +3,15 @@
 import { useEffect, useState } from "react";
 
 const number = (value) => new Intl.NumberFormat("de-DE").format(value || 0);
+const countryNames = new Intl.DisplayNames(["de"], { type: "region" });
+
+function countryLabel(code) {
+  if (!/^[A-Z]{2}$/.test(code)) return { flag: "🌐", name: code || "Unbekannt" };
+  const flag = String.fromCodePoint(
+    ...[...code].map((letter) => 0x1f1e6 + letter.charCodeAt(0) - 65)
+  );
+  return { flag, name: countryNames.of(code) || code };
+}
 
 export default function AdminUsageAnalytics() {
   const [days, setDays] = useState(7);
@@ -75,7 +84,11 @@ export default function AdminUsageAnalytics() {
               <h2>Herkunftsländer</h2>
               {data.countries.length ? data.countries.map((item) => (
                 <div className="usageAnalytics__country" key={item.country}>
-                  <span>{item.country}</span><strong>{number(item.count)}</strong>
+                  <span className="usageAnalytics__countryLabel">
+                    <span className="usageAnalytics__flag" aria-hidden="true">{countryLabel(item.country).flag}</span>
+                    {countryLabel(item.country).name}
+                  </span>
+                  <strong>{number(item.count)}</strong>
                 </div>
               )) : <p className="usageAnalytics__note">Noch keine Länderinformationen verfügbar.</p>}
             </section>
