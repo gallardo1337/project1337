@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import { mediaUrl } from "../../lib/mediaUrl.mjs";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import AdminBetaOverview from "./beta/AdminBetaOverview.jsx";
@@ -88,6 +89,11 @@ async function loadAllMovies() {
 // -------------------------------
 
 const CHANGELOG = [
+  {
+    version: "2.7.10",
+    date: "2026-11-06",
+    items: ["Bilder und Uploads auf media.gallardo1337.io umgestellt; unabhängig von der KH7-Domain erreichbar"],
+  },
   {
     version: "2.7.9",
     date: "2026-09-27",
@@ -1008,7 +1014,7 @@ export function DashboardExperience() {
       studio_id: filmStudioId || null,
       resolution_id: filmResolutionId || null,
       file_url: filmFileUrl,
-      thumbnail_url: filmThumbnailUrl || null,
+      thumbnail_url: mediaUrl(filmThumbnailUrl) || null,
     }),
     [
       editingFilmId,
@@ -1233,8 +1239,8 @@ export function DashboardExperience() {
       .from("actors")
       .insert({
         name,
-        cast_image: newActorCastImage.trim() || null,
-        transparent_image: newActorTransparentImage.trim() || null,
+        cast_image: mediaUrl(newActorCastImage.trim()) || null,
+        transparent_image: mediaUrl(newActorTransparentImage.trim()) || null,
         origin: newActorOrigin.trim() || null,
         birth_date: newActorBirthDate || null,
         iafd_url: newActorIafdUrl.trim() || null,
@@ -1268,7 +1274,7 @@ export function DashboardExperience() {
       .from("actors2")
       .insert({
         name,
-        cast_image: newSupportCastImage.trim() || null,
+        cast_image: mediaUrl(newSupportCastImage.trim()) || null,
       })
       .select("*")
       .single();
@@ -1601,9 +1607,9 @@ export function DashboardExperience() {
 
     const payload = {
       name,
-      profile_image: actorEditForm.profile_image.trim() || null,
-      cast_image: actorEditForm.cast_image.trim() || null,
-      transparent_image: actorEditForm.transparent_image.trim() || null,
+      profile_image: mediaUrl(actorEditForm.profile_image.trim()) || null,
+      cast_image: mediaUrl(actorEditForm.cast_image.trim()) || null,
+      transparent_image: mediaUrl(actorEditForm.transparent_image.trim()) || null,
       origin: actorEditForm.origin.trim() || null,
       birth_date: actorEditForm.birth_date || null,
       iafd_url: actorEditForm.iafd_url.trim() || null,
@@ -1653,8 +1659,8 @@ export function DashboardExperience() {
 
     const payload = {
       name,
-      profile_image: supportEditForm.profile_image.trim() || null,
-      cast_image: supportEditForm.cast_image.trim() || null,
+      profile_image: mediaUrl(supportEditForm.profile_image.trim()) || null,
+      cast_image: mediaUrl(supportEditForm.cast_image.trim()) || null,
     };
 
     const { data, error: updateError } = await supabase
@@ -1808,7 +1814,7 @@ export function DashboardExperience() {
       studio_id: filmStudioId || null,
       file_url: normalizeMovieFileUrl(filmFileUrl),
       resolution_id: filmResolutionId,
-      thumbnail_url: filmThumbnailUrl.trim() || null,
+      thumbnail_url: mediaUrl(filmThumbnailUrl.trim()) || null,
       main_actor_ids:
         selectedMainActorIds.length > 0 ? selectedMainActorIds : null,
       supporting_actor_ids:

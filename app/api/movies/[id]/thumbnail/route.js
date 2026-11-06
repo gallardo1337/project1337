@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { mediaUrl } from "../../../../../lib/mediaUrl.mjs";
 import {
   createServerSupabase,
   hasLibrarySession,
@@ -125,7 +126,7 @@ export async function GET(_request, { params }) {
 
     let sourceUrl;
     try {
-      sourceUrl = new URL(data.thumbnail_url);
+      sourceUrl = new URL(mediaUrl(data.thumbnail_url));
     } catch {
       return noStoreJson({ error: "Die gespeicherte Thumbnail-URL ist ungültig." }, { status: 400 });
     }
@@ -166,7 +167,7 @@ export async function PUT(request, { params }) {
     const updates = {};
 
     if (Object.prototype.hasOwnProperty.call(body || {}, "thumbnail_url")) {
-      const thumbnailUrl = String(body?.thumbnail_url || "").trim();
+      const thumbnailUrl = mediaUrl(String(body?.thumbnail_url || "").trim());
       let parsedUrl;
       try {
         parsedUrl = new URL(thumbnailUrl);

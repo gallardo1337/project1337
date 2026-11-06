@@ -20,7 +20,9 @@ import {
   DEFAULT_ANALYSIS_START_RATIO,
 } from "../../../lib/thumbnailAnalysisPoints.mjs";
 
-const UPLOAD_URL = process.env.NEXT_PUBLIC_MOVIE_UPLOAD_URL;
+import { mediaUrl } from "../../../lib/mediaUrl.mjs";
+
+const UPLOAD_URL = mediaUrl(process.env.NEXT_PUBLIC_MOVIE_UPLOAD_URL);
 const OUTPUT_WIDTH = 1920;
 const OUTPUT_HEIGHT = 1080;
 const JPEG_QUALITY = 0.94;
@@ -1637,7 +1639,7 @@ if (job?.outputs?.[outputNodeId]?.images?.length) {
       }
 
       if (embeddedMovie) {
-        onThumbnailReady?.(uploadPayload.url);
+        onThumbnailReady?.(mediaUrl(uploadPayload.url));
         setNotice("Thumbnail wurde für den neuen Film übernommen.");
         return;
       }
@@ -1648,7 +1650,7 @@ if (job?.outputs?.[outputNodeId]?.images?.length) {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            thumbnail_url: uploadPayload.url,
+            thumbnail_url: mediaUrl(uploadPayload.url),
             ai_optimized: ["ai-enhance", "ai-deblur", "ai-deblur-upscale", "ai-supir"].includes(selectedCandidate.generator),
           }),
         }

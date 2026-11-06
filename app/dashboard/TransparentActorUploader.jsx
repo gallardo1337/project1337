@@ -1,8 +1,9 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { mediaUrl } from "../../lib/mediaUrl.mjs";
 
-const UPLOAD_URL = process.env.NEXT_PUBLIC_ACTOR_UPLOAD_URL;
+const UPLOAD_URL = mediaUrl(process.env.NEXT_PUBLIC_ACTOR_UPLOAD_URL);
 
 export default function TransparentActorUploader({
   value,
@@ -40,7 +41,7 @@ export default function TransparentActorUploader({
       if (typeof data?.url !== "string" || !/^https?:\/\//i.test(data.url)) {
         throw new Error("Der Upload hat keine gültige Bildadresse zurückgegeben.");
       }
-      onChange(data.url);
+      onChange(mediaUrl(data.url));
     } catch (cause) {
       setError(cause.message || "Upload fehlgeschlagen.");
     } finally {

@@ -2,8 +2,9 @@
 
 import { useCallback, useRef, useState } from "react";
 import Cropper from "react-easy-crop";
+import { mediaUrl } from "../../lib/mediaUrl.mjs";
 
-const UPLOAD_URL = process.env.NEXT_PUBLIC_ACTOR_UPLOAD_URL;
+const UPLOAD_URL = mediaUrl(process.env.NEXT_PUBLIC_ACTOR_UPLOAD_URL);
 
 // Hilfsfunktion: Bild anhand der Crop-Area zuschneiden
 async function getCroppedImage(imageSrc, pixelCrop) {
@@ -119,8 +120,8 @@ export default function ActorImageUploader({ onUploaded }) {
         return;
       }
 
-      setPreviewUrl(data.url);
-      onUploaded && onUploaded(data.url);
+      setPreviewUrl(mediaUrl(data.url));
+      onUploaded && onUploaded(mediaUrl(data.url));
     } catch (err) {
       console.error(err);
       alert("Fehler beim Croppen oder Upload");
