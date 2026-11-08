@@ -52,7 +52,7 @@ export default function AdminUsageAnalytics() {
   return (
     <div className="usageAnalytics">
       <div className="usageAnalytics__toolbar">
-        <span>Erfassung seit Aktivierung · ausschließlich Beta</span>
+        <span>Erfassung seit Aktivierung · frühere Aufrufe sind nicht enthalten</span>
         <div className="usageAnalytics__filters" aria-label="Plattform">
           {[["all", "Alle"], ["web", "Web"], ["tvos", "Apple TV"]].map(([value, label]) => (
             <button key={value} type="button" onClick={() => setPlatform(value)}

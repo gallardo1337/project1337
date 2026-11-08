@@ -8,6 +8,7 @@ import {
 } from "../../lib/homepageSections";
 import ResolutionIndicator from "../components/ResolutionIndicator";
 import styles from "./experience.module.css";
+import ActorStatChart from "./ActorStatChart";
 
 function Icon({ name, className = "" }) {
   const paths = {
@@ -696,18 +697,18 @@ function buildActorStats(movies) {
       : null,
     ratedMovies: ratings.length,
     totalViews,
-    hairColors: withStatPercent(countStatValues(hairTags).slice(0, 5), hairTags.length),
+    hairColors: withStatPercent(countStatValues(hairTags), hairTags.length),
     qualities: withStatPercent(countStatValues(resolutions), resolutions.length),
-    studios: countStatValues(list.map((movie) => movie.studio)).slice(0, 5),
+    studios: countStatValues(list.map((movie) => movie.studio)),
     supportingActors: countStatValues(
       list.flatMap((movie) =>
         Array.isArray(movie.supportingActorNames)
           ? movie.supportingActorNames
           : []
       )
-    ).slice(0, 5),
-    tags: countStatValues(regularTags).slice(0, 5),
-    finishes: countStatValues(finishTags).slice(0, 5),
+    ),
+    tags: countStatValues(regularTags),
+    finishes: countStatValues(finishTags),
   };
 }
 
@@ -2080,34 +2081,14 @@ function ActorArchive({ actors, onShowActor }) {
   );
 }
 
-function StatsGroup({ index, title, items, percentage = false }) {
+function StatsGroup({ index, title, items }) {
   return (
     <section className={styles.statsCard}>
       <header className={styles.statsCardHeader}>
         <span>{index}</span>
         <h3>{title}</h3>
       </header>
-
-      {items.length ? (
-        <div className={styles.statsList}>
-          {items.map((item, position) => (
-            <div className={styles.statsItem} key={`${item.value}-${position}`}>
-              <div className={styles.statsItemLine}>
-                <span className={styles.statsRank}>{String(position + 1).padStart(2, "0")}</span>
-                <strong>{item.value}</strong>
-                <em>{percentage ? `${item.percent}%` : String(item.count).padStart(2, "0")}</em>
-              </div>
-              {percentage ? (
-                <div className={styles.statsBar} aria-hidden="true">
-                  <span style={{ width: `${item.percent}%` }} />
-                </div>
-              ) : null}
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className={styles.statsEmpty}>Keine Daten hinterlegt</div>
-      )}
+      <ActorStatChart items={items} title={title} />
     </section>
   );
 }
@@ -2151,10 +2132,10 @@ function ActorStatsModal({ actor, movies, stats, onClose }) {
         <div className={styles.statsGrid}>
           <StatsGroup index="01" title="Haarfarbe" items={stats.hairColors} percentage />
           <StatsGroup index="02" title="Qualität" items={stats.qualities} percentage />
-          <StatsGroup index="03" title="Top 5 Studios" items={stats.studios} />
-          <StatsGroup index="04" title="Top 5 Nebendarsteller" items={stats.supportingActors} />
-          <StatsGroup index="05" title="Top 5 Tags" items={stats.tags} />
-          <StatsGroup index="06" title="Top 5 Finish" items={stats.finishes} />
+          <StatsGroup index="03" title="Studios" items={stats.studios} />
+          <StatsGroup index="04" title="Nebendarsteller" items={stats.supportingActors} />
+          <StatsGroup index="05" title="Tags" items={stats.tags} />
+          <StatsGroup index="06" title="Finish" items={stats.finishes} />
         </div>
       </div>
     </div>

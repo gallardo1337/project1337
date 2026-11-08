@@ -1,0 +1,25 @@
+.chart { display: grid; gap: 20px; min-width: 0; }
+.visual { position: relative; width: min(100%, 228px); aspect-ratio: 1; margin: 0 auto; }
+.visual svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.segment { stroke: #0b0b0c; stroke-width: 2; stroke-linejoin: round; cursor: pointer; transition: opacity 160ms ease; }
+.segment[data-muted="true"] { opacity: .42; }
+.center { position: absolute; inset: 28%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; pointer-events: none; text-align: center; }
+.center strong { color: #f4f2f0; font-size: clamp(22px, 2.4vw, 32px); font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.1; white-space: nowrap; }
+.center span { max-width: 100%; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; color: #c6c2c9; font-size: 11px; line-height: 1.4; }
+.legend { display: grid; gap: 3px; margin: 0; padding: 0; list-style: none; }
+.legendItem { display: grid; width: 100%; grid-template-columns: 8px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 9px 8px; border: 1px solid transparent; border-radius: 7px; background: transparent; color: #dcd9df; font: inherit; text-align: left; cursor: pointer; }
+.legendItem[data-active="true"] { background: rgba(255,255,255,.055); border-color: rgba(255,255,255,.12); color: #fff; }
+.legendItem:focus-visible { outline: 2px solid var(--red, #f08080); outline-offset: 2px; }
+.legendItem i { width: 8px; height: 8px; border-radius: 50%; }
+.name { min-width: 0; overflow-wrap: anywhere; font-size: 12px; line-height: 1.4; }
+.value { display: grid; gap: 2px; text-align: right; font-size: 13px; font-variant-numeric: tabular-nums; }
+.value small { color: #a7a3ac; font-size: 10px; }
+.note { margin: 0; color: #a7a3ac; font-size: 10px; line-height: 1.5; }
+.empty { min-height: 220px; display: grid; place-items: center; margin: 0; color: #a7a3ac; font-size: 12px; }
+@media (hover: hover) and (pointer: fine) {
+  .segment { transition: transform 160ms ease, opacity 160ms ease; }
+  .segment[data-hovered="true"] { transform: translate(var(--offset-x), var(--offset-y)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .segment, .segment[data-hovered="true"] { transform: none; transition: opacity 160ms ease; }
+}
