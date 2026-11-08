@@ -106,7 +106,7 @@ export default function AdminUsageAnalytics() {
           <p className="usageAnalytics__note">
             Web-Besucher werden anonym über eine lokale Besucher-ID gezählt. Länder sind Schätzungen aus Vercel-Headern.
             Apple-TV-Besucher entsprechen anonymen Installationen; Sitzungen enden nach 30 Minuten im Hintergrund.
-            Verlauf und Länder zählen Ereignisse; Tage werden in UTC gruppiert. Web und TV werden nicht personenübergreifend zusammengeführt.
+            Herkunftsländer zählen eindeutige Besucher je Land im gewählten Zeitraum. Der Verlauf zählt Ereignisse; Tage werden in UTC gruppiert. Web und TV werden nicht personenübergreifend zusammengeführt.
             {data.truncated ? " Bei hohem Traffic werden maximal 50.000 Ereignisse je Plattform ausgewertet." : ""}
           </p>
         </>

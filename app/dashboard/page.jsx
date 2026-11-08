@@ -91,6 +91,11 @@ async function loadAllMovies() {
 
 const CHANGELOG = [
   {
+    version: "2.8.3",
+    date: "2026-11-08",
+    items: ["Herkunftsländer zählen eindeutige Besucher pro Land und Zeitraum statt einzelner Ereignisse; wiederholte App- und Filmaufrufe erhöhen die Besucherzahl nicht"],
+  },
+  {
     version: "2.8.2",
     date: "2026-11-08",
     items: [

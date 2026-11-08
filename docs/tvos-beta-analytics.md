@@ -47,7 +47,7 @@ Ein Hash einer zufälligen Sitzungskennung dient der Request-Begrenzung; daraus 
 
 Der frühere tvOS-Aufruf von `increment_movie_view` wird beim Beta-Abspielen nicht mehr ausgeführt, da dieser gemeinsame Produktivzähler verändern würde. Der globale Filmzähler in den bestehenden Filmkarten bleibt deshalb bei Beta-Testwiedergaben unverändert. Tatsächliche Beta-Filmstarts stehen im Admin unter Nutzungsstatistik.
 
-Web-Auswertungen bleiben separat. Admin zeigt TV-Besucher (Installationen), Sitzungen, Starts, Filmseiten, Filmstarts und Abschlüsse. Plattformfilter wirkt auf Verlauf und Länder; Länder erscheinen deutsch mit Flaggen. Tage sind UTC. Maximal 50.000 Ereignisse je Plattform und Zeitraum; Begrenzung wird angezeigt. Besucher verschiedener Plattformen werden nicht als identische Personen behandelt.
+Web-Auswertungen bleiben separat. Admin zeigt TV-Besucher (Installationen), Sitzungen, Starts, Filmseiten, Filmstarts und Abschlüsse. Plattformfilter wirkt auf Verlauf und Länder; Länder erscheinen deutsch mit Flaggen und zählen eindeutige Besucher je Land im gewählten Zeitraum (pro Plattform getrennte Besucher-IDs). Wiederholte Ereignisse oder Sitzungen desselben Besuchers erhöhen die Länderzahl nicht. Der Verlauf zählt weiterhin Ereignisse. Tage sind UTC. Maximal 50.000 Ereignisse je Plattform und Zeitraum; Begrenzung wird angezeigt. Besucher verschiedener Plattformen werden nicht als identische Personen behandelt.
 
 ## Verifikation
 

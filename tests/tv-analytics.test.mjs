@@ -44,5 +44,17 @@ test('TV events do not alter Web counts; platform filtering and sessions work', 
   assert.deepEqual(summary.platforms[0], summarizeAnalytics(web).platforms[0]);
   assert.deepEqual(summary.platforms[1], { platform: 'tvos', visitors: 1, pageViews: 1, filmStarts: 1, sessions: 1, appOpens: 1, movieViews: 1, completions: 1 });
   assert.equal(summarizeAnalytics([...web, ...tv], 'web').daily[0].count, 2);
-  assert.equal(summarizeAnalytics([...web, ...tv], 'tvos').countries[0].count, 5);
+  assert.equal(summarizeAnalytics([...web, ...tv], 'tvos').countries[0].count, 1);
+});
+
+test('countries deduplicate visits across events, sessions and days within each platform', () => {
+  const event = { platform: 'tvos', visitor_id: 'same', country: 'DE', event_type: 'app_open', created_at: '2026-11-08T10:00:00Z' };
+  const events = [event, { ...event, event_type: 'movie_play' },
+    { ...event, session_id: 'new', created_at: '2026-11-09T10:00:00Z' },
+    { ...event, visitor_id: 'second' }, { ...event, platform: 'web' },
+    { ...event, country: 'AT' }, { ...event, country: null }];
+  assert.deepEqual(summarizeAnalytics(events, 'tvos').countries, [{ country: 'DE', count: 2 }, { country: 'AT', count: 1 }]);
+  assert.deepEqual(summarizeAnalytics(events, 'web').countries, [{ country: 'DE', count: 1 }]);
+  assert.deepEqual(summarizeAnalytics(events).countries, [{ country: 'DE', count: 3 }, { country: 'AT', count: 1 }]);
+  assert.equal(summarizeAnalytics(events).daily.reduce((sum, day) => sum + day.count, 0), events.length);
 });
