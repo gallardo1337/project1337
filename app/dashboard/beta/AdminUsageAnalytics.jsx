@@ -15,6 +15,7 @@ function countryLabel(code) {
 
 export default function AdminUsageAnalytics() {
   const [days, setDays] = useState(7);
+  const [platform, setPlatform] = useState("all");
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -23,7 +24,7 @@ export default function AdminUsageAnalytics() {
     let mounted = true;
     setLoading(true);
     setError("");
-    fetch(`/api/beta-analytics?days=${days}`, { cache: "no-store", credentials: "same-origin" })
+    fetch(`/api/beta-analytics?days=${days}&platform=${platform}`, { cache: "no-store", credentials: "same-origin" })
       .then(async (response) => {
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || "Statistik nicht verfügbar");
@@ -33,15 +34,18 @@ export default function AdminUsageAnalytics() {
       .catch((cause) => mounted && setError(cause.message))
       .finally(() => mounted && setLoading(false));
     return () => { mounted = false; };
-  }, [days]);
+  }, [days, platform]);
 
   const web = data?.platforms.find((item) => item.platform === "web");
   const tv = data?.platforms.find((item) => item.platform === "tvos");
   const cards = [
-    ["Web-Besucher", web?.visitors],
-    ["Web-Seitenaufrufe", web?.pageViews],
-    ["Apple-TV-Besucher", tv?.visitors],
-    ["Filmstarts", (web?.filmStarts || 0) + (tv?.filmStarts || 0)],
+    ...(platform !== "tvos" ? [["Web-Besucher", web?.visitors], ["Web-Seitenaufrufe", web?.pageViews], ["Web-Filmstarts", web?.filmStarts]] : []),
+    ...(platform !== "web" ? [
+      ["Apple-TV-Besucher", tv?.visitors], ["Apple-TV-Sitzungen", tv?.sessions],
+      ["App-Starts", tv?.appOpens], ["Filmseitenaufrufe (TV)", tv?.movieViews],
+      ["Filmstarts (TV)", tv?.filmStarts], ["Abgeschlossen (TV)", tv?.completions],
+    ] : []),
+    ...(platform === "all" ? [["Filmstarts gesamt", (web?.filmStarts || 0) + (tv?.filmStarts || 0)]] : []),
   ];
   const maxDaily = Math.max(1, ...(data?.daily || []).map((day) => day.count));
 
@@ -49,6 +53,12 @@ export default function AdminUsageAnalytics() {
     <div className="usageAnalytics">
       <div className="usageAnalytics__toolbar">
         <span>Erfassung seit Aktivierung · ausschließlich Beta</span>
+        <div className="usageAnalytics__filters" aria-label="Plattform">
+          {[["all", "Alle"], ["web", "Web"], ["tvos", "Apple TV"]].map(([value, label]) => (
+            <button key={value} type="button" onClick={() => setPlatform(value)}
+              aria-pressed={platform === value} className={platform === value ? "is-active" : ""}>{label}</button>
+          ))}
+        </div>
         <div className="usageAnalytics__filters" aria-label="Zeitraum">
           {[[1, "24 Stunden"], [7, "7 Tage"], [30, "30 Tage"]].map(([value, label]) => (
             <button key={value} type="button" onClick={() => setDays(value)}
@@ -95,8 +105,9 @@ export default function AdminUsageAnalytics() {
           </div>
           <p className="usageAnalytics__note">
             Web-Besucher werden anonym über eine lokale Besucher-ID gezählt. Länder sind Schätzungen aus Vercel-Headern.
-            Apple-TV-Werte erscheinen erst, sobald die tvOS-App Ereignisse an die Beta sendet.
-            {data.truncated ? " Bei hohem Traffic werden maximal 50.000 Ereignisse ausgewertet." : ""}
+            Apple-TV-Besucher entsprechen anonymen Installationen; Sitzungen enden nach 30 Minuten im Hintergrund.
+            Verlauf und Länder zählen Ereignisse; Tage werden in UTC gruppiert. Web und TV werden nicht personenübergreifend zusammengeführt.
+            {data.truncated ? " Bei hohem Traffic werden maximal 50.000 Ereignisse je Plattform ausgewertet." : ""}
           </p>
         </>
       ) : null}

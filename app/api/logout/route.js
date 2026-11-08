@@ -9,5 +9,6 @@ export async function POST() {
     path: "/",
     maxAge: 0,
   });
+  res.cookies.set("beta_analytics_session", "", { httpOnly: true, secure: true, sameSite: "strict", path: "/", maxAge: 0 });
   return res;
 }

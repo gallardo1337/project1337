@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 import {
   hasLibrarySession,
+  analyticsSessionID,
   setLibrarySessionCookie,
 } from "../../../lib/serverSupabase";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  const authenticated = await hasLibrarySession();
+export async function GET(request) {
+  const authenticated = await hasLibrarySession() &&
+    (request.headers.get("x-1337-client") !== "tvos" || !!(await analyticsSessionID()));
 
   return NextResponse.json(
     { ok: authenticated },

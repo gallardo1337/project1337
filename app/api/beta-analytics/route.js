@@ -1,5 +1,6 @@
+import { normalizeTVEvent, allowTVRequest, summarizeAnalytics } from "../../../lib/tvAnalytics.mjs";
 import { NextResponse } from "next/server";
-import { createServerSupabase, hasLibrarySession } from "../../../lib/serverSupabase";
+import { createServerSupabase, hasLibrarySession, analyticsSessionID } from "../../../lib/serverSupabase";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,38 @@ export async function POST(request) {
   }
 
   try {
-    const body = await request.json();
+    if (Number(request.headers.get("content-length")) > 4096) return response({ error: "Zu groß" }, 413);
+    // Stream limit also covers chunked requests without Content-Length.
+    const reader = request.body?.getReader();
+    if (!reader) return response({ error: "Leeres Ereignis" }, 400);
+    const chunks = []; let size = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > 4096) { await reader.cancel(); return response({ error: "Zu groß" }, 413); }
+      chunks.push(Buffer.from(value));
+    }
+    let body;
+    try { body = JSON.parse(Buffer.concat(chunks).toString("utf8")); }
+    catch { return response({ error: "Ungültiges JSON" }, 400); }
+    if (body?.platform === "tvos") {
+      const authSession = await analyticsSessionID();
+      if (!authSession) return response({ error: "Bitte erneut in Beta anmelden" }, 401);
+      if (!allowTVRequest(authSession)) return response({ error: "Zu viele Ereignisse" }, 429);
+      const event = normalizeTVEvent(body);
+      if (!event) return response({ error: "Ungültiges tvOS-Ereignis" }, 400);
+      const country = request.headers.get("x-vercel-ip-country") || "";
+      event.country = /^[A-Z]{2}$/.test(country) ? country : null;
+      // RPC serializes quota + insert, validates the movie and ignores repeated event IDs.
+      const { data, error } = await createServerSupabase().rpc("record_beta_tv_event", {
+        p_event: event, p_auth_session: authSession,
+      });
+      if (error) throw error;
+      if (data === "rate_limited") return response({ error: "Zu viele Ereignisse" }, 429);
+      if (data === "invalid_movie") return response({ error: "Film nicht gefunden" }, 400);
+      return response({ ok: true });
+    }
     if (!["web", "tvos"].includes(body?.platform) ||
         !["page_view", "movie_play"].includes(body?.event) ||
         !/^[0-9a-f-]{36}$/i.test(body.visitorId || "")) {
@@ -41,6 +73,9 @@ export async function POST(request) {
 }
 
 export async function GET(request) {
+  if (process.env.NODE_ENV === "production" && request.headers.get("host") !== "beta.my1337.de") {
+    return response({ error: "Beta only" }, 403);
+  }
   if (!(await hasLibrarySession())) return response({ error: "Unauthorized" }, 401);
   try {
     const days = [1, 7, 30].includes(Number(new URL(request.url).searchParams.get("days")))
@@ -48,38 +83,23 @@ export async function GET(request) {
     const cutoff = new Date(Date.now() - days * 86400000).toISOString();
     const supabase = createServerSupabase();
     const events = [];
-    for (let offset = 0; offset < 50000; offset += 1000) {
-      const { data, error } = await supabase.from("beta_analytics_events")
-        .select("created_at,platform,event_type,visitor_id,country,path")
-        .gte("created_at", cutoff)
-        .order("created_at", { ascending: false })
-        .range(offset, offset + 999);
-      if (error) throw error;
-      events.push(...(data || []));
-      if (!data || data.length < 1000) break;
+    let truncated = false;
+    for (const sourcePlatform of ["web", "tvos"]) {
+      for (let offset = 0; offset < 50000; offset += 1000) {
+        const { data, error } = await supabase.from("beta_analytics_events")
+          .select("created_at,occurred_at,platform,event_type,visitor_id,session_id,screen_type,country,path")
+          .eq("platform", sourcePlatform)
+          .gte("created_at", cutoff)
+          .order("created_at", { ascending: false })
+          .range(offset, offset + 999);
+        if (error) throw error;
+        events.push(...(data || []).filter(event => (event.occurred_at || event.created_at) >= cutoff));
+        if (offset === 49000 && data?.length === 1000) truncated = true;
+        if (!data || data.length < 1000) break;
+      }
     }
-
-    const platforms = ["web", "tvos"].map((platform) => {
-      const records = events.filter((event) => event.platform === platform);
-      return {
-        platform,
-        visitors: new Set(records.map((event) => event.visitor_id)).size,
-        pageViews: records.filter((event) => event.event_type === "page_view").length,
-        filmStarts: records.filter((event) => event.event_type === "movie_play").length,
-      };
-    });
-    const countries = Object.entries(events.reduce((counts, event) => {
-      if (event.country) counts[event.country] = (counts[event.country] || 0) + 1;
-      return counts;
-    }, {})).sort((a, b) => b[1] - a[1]).slice(0, 10)
-      .map(([country, count]) => ({ country, count }));
-    const daily = Object.entries(events.reduce((counts, event) => {
-      const date = event.created_at.slice(0, 10);
-      counts[date] = (counts[date] || 0) + 1;
-      return counts;
-    }, {})).sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, count]) => ({ date, count }));
-    return response({ days, platforms, countries, daily, truncated: events.length >= 50000 });
+    const platform = new URL(request.url).searchParams.get("platform") || "all";
+    return response({ days, ...summarizeAnalytics(events, platform), truncated });
   } catch (error) {
     console.error("Beta analytics report failed", error);
     return response({ error: "Statistik konnte nicht geladen werden" }, 500);

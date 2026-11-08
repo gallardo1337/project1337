@@ -91,6 +91,15 @@ async function loadAllMovies() {
 
 const CHANGELOG = [
   {
+    version: "2.8.2",
+    date: "2026-11-08",
+    items: [
+      "tvOS-Beta-Anbindung für App-Starts, Sitzungen, Bildschirmaufrufe, tatsächliche Filmstarts und abgeschlossene Wiedergaben implementiert",
+      "Apple-TV-Kennzahlen sowie Plattformfilter für Verlauf und Länder ergänzt; bestehende Web-Zählung bleibt getrennt",
+      "Signierte tvOS-Sitzungen, Eingabeprüfung, Wiederholschutz und Request-Limit lokal getestet; Freischaltung erfordert die Beta-Datenbankmigration und erneuten Login",
+    ],
+  },
+  {
     version: "2.8.1",
     date: "2026-11-06",
     items: ["Bilder und Uploads auf media.gallardo1337.io umgestellt; unabhängig von der KH7-Domain erreichbar"],
