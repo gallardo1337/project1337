@@ -1,5 +1,6 @@
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/next";
+import BetaAnalyticsTracker from "./beta/BetaAnalyticsTracker";
 
 export const metadata = {
   title: {
@@ -29,7 +30,7 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
         />
       </head>
-      <body>{children}<Analytics /></body>
+      <body>{children}<Analytics /><BetaAnalyticsTracker /></body>
     </html>
   );
 }

@@ -6,6 +6,7 @@ import { mediaUrl } from "../../lib/mediaUrl.mjs";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import AdminBetaOverview from "./beta/AdminBetaOverview.jsx";
+import AdminUsageAnalytics from "./beta/AdminUsageAnalytics.jsx";
 import AdminMediaHealth from "./beta/AdminMediaHealth.jsx";
 import AdminMovieFilePicker from "./AdminMovieFilePicker.jsx";
 import AdminMovieMetadataPicker from "./AdminMovieMetadataPicker.jsx";
@@ -90,9 +91,33 @@ async function loadAllMovies() {
 
 const CHANGELOG = [
   {
-    version: "2.7.10",
+    version: "2.8.3",
+    date: "2026-11-08",
+    items: ["Herkunftsländer zählen eindeutige Besucher pro Land und Zeitraum statt einzelner Ereignisse; wiederholte App- und Filmaufrufe erhöhen die Besucherzahl nicht"],
+  },
+  {
+    version: "2.8.2",
+    date: "2026-11-08",
+    items: [
+      "tvOS-Beta-Anbindung für App-Starts, Sitzungen, Bildschirmaufrufe, tatsächliche Filmstarts und abgeschlossene Wiedergaben implementiert",
+      "Apple-TV-Kennzahlen sowie Plattformfilter für Verlauf und Länder ergänzt; bestehende Web-Zählung bleibt getrennt",
+      "Signierte tvOS-Sitzungen, Eingabeprüfung, Wiederholschutz und Request-Limit lokal getestet; Freischaltung erfordert die Beta-Datenbankmigration und erneuten Login",
+    ],
+  },
+  {
+    version: "2.8.1",
     date: "2026-11-06",
     items: ["Bilder und Uploads auf media.gallardo1337.io umgestellt; unabhängig von der KH7-Domain erreichbar"],
+  },
+  {
+    version: "2.8.0",
+    date: "2026-11-06",
+    items: [
+      "Neue Nutzungsstatistik im Beta-Admin mit Web-Besuchern, Seitenaufrufen, Verlauf und Zeitraumfiltern",
+      "Herkunftsländer mit ausgeschriebenen deutschen Namen und dezenten Flaggen anzeigen",
+      "Apple-TV-Auswertung vorbereitet; Werte werden nach Anbindung der tvOS-App erfasst",
+      "Next.js und betroffene Paketabhängigkeiten mit Sicherheitsupdates aktualisiert",
+    ],
   },
   {
     version: "2.7.9",
@@ -591,6 +616,12 @@ const AdminNavIcon = ({ name }) => {
       <>
         <rect x="3" y="5" width="18" height="14" rx="1" />
         <path d="M3 9h18M8 5l3 4M14 5l3 4" />
+      </>
+    ),
+    analytics: (
+      <>
+        <path d="M4 20V12M10 20V5M16 20v-9M22 20V8" />
+        <path d="M2 21h21" />
       </>
     ),
     health: (
@@ -2095,6 +2126,7 @@ export function DashboardExperience() {
 
   const betaNavItems = [
     { key: "overview", label: "Übersicht", icon: "overview", section: "overview" },
+    { key: "analytics", label: "Nutzungsstatistik", icon: "analytics", section: "analytics" },
     { key: "director", label: "Startseiten-Regisseur", icon: "director", section: "director" },
     { key: "stats", label: "Filmarchiv", icon: "movies", section: "stats", count: filme.length },
     { key: "nas", label: "NAS-Analyse", icon: "nas", section: "nas" },
@@ -2164,7 +2196,13 @@ export function DashboardExperience() {
   const SidebarContent = BetaSidebarContent;
 
   const betaWorkspace =
-    activeFilmSection === "updates"
+    activeFilmSection === "analytics"
+      ? {
+          eyebrow: "Nutzungsübersicht",
+          title: "Nutzungsstatistik",
+          description: "Webseite und Apple TV getrennt auswerten – anonym und ab Aktivierung.",
+        }
+      : activeFilmSection === "updates"
       ? {
           eyebrow: "PlanetSuzy Thread Monitor",
           title: "Update",
@@ -2961,6 +2999,8 @@ export function DashboardExperience() {
                       onEditMovie={handleEditFilm}
                     />
                   ) : null}
+
+                  {activeFilmSection === "analytics" ? <AdminUsageAnalytics /> : null}
 
                   {activeFilmSection === "updates" ? (
                     <PlanetSuzyUpdates

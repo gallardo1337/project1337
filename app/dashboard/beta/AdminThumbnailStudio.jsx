@@ -1001,6 +1001,9 @@ export default function AdminThumbnailStudio({
     setError(null);
     setNotice("Bild wird lokal an ComfyUI übergeben …");
     try {
+      // Feed low-resolution originals to the upscaler at their native size.
+      // Pre-expanding them to 1920x1080 makes a 4x model process up to 16x
+      // more pixels before the result is shrunk back to the thumbnail size.
       const normalizedSource = enhancementMode === "upscale"
         ? await prepareImageForUpscale(sourceBlob)
         : await fitImageToThumbnail(sourceBlob);

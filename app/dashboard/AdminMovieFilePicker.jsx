@@ -8,6 +8,7 @@ import {
 import styles from "./AdminMovieFilePicker.module.css";
 
 const MAX_FOLDER_FILES = 15000;
+const VIDEO_FILE_PATTERN = /\.(mp4|m4v|mkv|avi|mov|wmv|webm|mpg|mpeg|mpe|m2v|mts|m2ts|ts|vob|ogv|ogg|flv|f4v|3gp|3g2|asf|divx|rm|rmvb)$/i;
 
 function normalizeSearchText(value) {
   return String(value || "")
@@ -26,7 +27,7 @@ async function collectDirectoryVideos(directoryHandle, prefix = "", output = [])
 
     if (handle.kind === "directory") {
       await collectDirectoryVideos(handle, path, output);
-    } else if (/\.mp4$/i.test(name)) {
+    } else if (VIDEO_FILE_PATTERN.test(name)) {
       output.push({ name, path, fileHandle: handle });
     }
   }
@@ -54,6 +55,7 @@ export default function AdminMovieFilePicker({
   const [folderLoading, setFolderLoading] = useState(false);
   const [selectingPath, setSelectingPath] = useState("");
   const [query, setQuery] = useState("");
+  const [hideExisting, setHideExisting] = useState(false);
   const [error, setError] = useState("");
   const deferredQuery = useDeferredValue(query);
 
@@ -94,11 +96,11 @@ export default function AdminMovieFilePicker({
 
   const visibleFiles = useMemo(() => {
     const normalizedQuery = normalizeSearchText(deferredQuery);
-    if (!normalizedQuery) return resolvedFiles;
     return resolvedFiles.filter((entry) =>
-      normalizeSearchText(entry.path).includes(normalizedQuery)
+      (!hideExisting || !entry.movie) &&
+      (!normalizedQuery || normalizeSearchText(entry.path).includes(normalizedQuery))
     );
-  }, [deferredQuery, resolvedFiles]);
+  }, [deferredQuery, hideExisting, resolvedFiles]);
 
   const existingCount = useMemo(
     () => resolvedFiles.filter((entry) => entry.movie).length,
@@ -110,7 +112,7 @@ export default function AdminMovieFilePicker({
     setFolderFiles(sortEntries(entries));
     setQuery("");
     setError(
-      entries.length ? "" : "In diesem Ordner wurden keine MP4-Dateien gefunden."
+      entries.length ? "" : "In diesem Ordner wurden keine Videodateien gefunden."
     );
   };
 
@@ -137,7 +139,7 @@ export default function AdminMovieFilePicker({
 
   const handleFallbackFolder = (event) => {
     const files = Array.from(event.target.files || []).filter((file) =>
-      /\.mp4$/i.test(file.name)
+      VIDEO_FILE_PATTERN.test(file.name)
     );
     const firstPath = files[0]?.webkitRelativePath || "";
     const root = firstPath.split("/")[0] || "NAS";
@@ -178,7 +180,8 @@ export default function AdminMovieFilePicker({
           <h3 id="movie-file-picker-title">MP4 aus dem NAS-Ordner auswählen</h3>
           <p>
             Bereits verwendete Dateien sind grün markiert und können nicht erneut
-            ausgewählt werden. Die Videos bleiben vollständig auf deinem Gerät.
+            ausgewählt werden. Andere Videoformate sind gelb markiert und müssen
+            vor dem Hinzufügen in MP4 umgewandelt werden. Die Videos bleiben vollständig auf deinem Gerät.
           </p>
         </div>
         <button
@@ -194,7 +197,6 @@ export default function AdminMovieFilePicker({
           ref={fallbackInputRef}
           className={styles.fallbackInput}
           type="file"
-          accept="video/mp4,.mp4"
           multiple
           webkitdirectory=""
           directory=""
@@ -209,7 +211,7 @@ export default function AdminMovieFilePicker({
             <strong>{folderName || "Noch kein NAS-Ordner geöffnet"}</strong>
             <small>
               {folderFiles.length
-                ? `${folderFiles.length.toLocaleString("de-DE")} MP4-Dateien · ${existingCount.toLocaleString("de-DE")} bereits vorhanden`
+                ? `${visibleFiles.length.toLocaleString("de-DE")} von ${folderFiles.length.toLocaleString("de-DE")} Videodateien · ${existingCount.toLocaleString("de-DE")} bereits vorhanden`
                 : "Ordner auswählen, um die Videodateien anzuzeigen"}
             </small>
           </div>
@@ -224,15 +226,30 @@ export default function AdminMovieFilePicker({
           ) : null}
         </header>
 
+        {folderFiles.length ? (
+          <label className={styles.filter}>
+            <input
+              type="checkbox"
+              role="switch"
+              checked={hideExisting}
+              onChange={(event) => setHideExisting(event.target.checked)}
+            />
+            <span className={styles.filterSwitch} aria-hidden="true" />
+            <span className={styles.filterText}>Bereits hinzugefügte ausblenden</span>
+          </label>
+        ) : null}
+
         <div className={styles.fileList}>
           {visibleFiles.length ? (
             visibleFiles.map((entry) => {
               const isCurrentMovie = entry.movie?.id === editingMovieId;
+              const isNonMp4 = !/\.mp4$/i.test(entry.name);
               const isBlocked = Boolean(entry.movie && !isCurrentMovie);
               const isActive = entry.key === selectedKey;
               const classNames = [
                 isActive ? styles.active : "",
                 entry.movie ? styles.existing : "",
+                isNonMp4 ? styles.nonMp4 : "",
               ]
                 .filter(Boolean)
                 .join(" ");
@@ -243,15 +260,15 @@ export default function AdminMovieFilePicker({
                   type="button"
                   className={classNames}
                   onClick={() => handleFileSelect(entry)}
-                  disabled={isBlocked || selectingPath === entry.path}
+                  disabled={isBlocked || isNonMp4 || selectingPath === entry.path}
                   aria-pressed={isActive}
                   title={
                     isBlocked
                       ? `Bereits als „${entry.movie.title}“ hinzugefügt`
-                      : entry.path
+                      : isNonMp4 ? `${entry.path} – vor dem Hinzufügen in MP4 umwandeln` : entry.path
                   }
                 >
-                  <i>{entry.movie ? "✓" : isActive ? "●" : "MP4"}</i>
+                  <i>{isNonMp4 ? entry.name.split(".").pop().toUpperCase() : entry.movie ? "✓" : isActive ? "●" : "MP4"}</i>
                   <span>
                     <strong>{entry.name}</strong>
                     <small>
@@ -261,7 +278,9 @@ export default function AdminMovieFilePicker({
                     </small>
                   </span>
                   <b>
-                    {isCurrentMovie
+                    {isNonMp4
+                      ? entry.movie ? "Bereits vorhanden · Kein MP4" : "Kein MP4"
+                      : isCurrentMovie
                       ? "Aktueller Film"
                       : entry.movie
                       ? "Bereits vorhanden"

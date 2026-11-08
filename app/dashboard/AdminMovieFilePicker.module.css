@@ -261,6 +261,93 @@
   color: rgba(255, 255, 255, 0.25);
 }
 
+.picker .browser > label.filter {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: #dedee2;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.filter input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.filterSwitch {
+  display: block;
+  box-sizing: border-box;
+  position: relative;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 12px;
+  border: 1px solid #3a3a40;
+  background: #09090a;
+}
+
+.filterText {
+  display: block;
+  min-width: 0;
+  line-height: 1.5;
+}
+
+.filterSwitch::after {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 6px;
+  height: 6px;
+  content: "";
+  background: #65656d;
+  transition: transform 160ms ease, background 160ms ease;
+}
+
+.filter input:checked + .filterSwitch {
+  border-color: rgba(229, 9, 20, 0.54);
+}
+
+.filter input:checked + .filterSwitch::after {
+  background: var(--admin-orange, #e50914);
+  transform: translateX(12px);
+}
+
+.filter input:focus-visible + .filterSwitch {
+  outline: 2px solid var(--admin-orange, #e50914);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .filterSwitch::after {
+    transition: none;
+  }
+}
+
+.fileList > button.nonMp4 {
+  background: linear-gradient(90deg, rgba(234, 179, 8, 0.18), transparent 78%);
+  color: #fef08a;
+}
+
+.fileList > button.nonMp4 > i {
+  border-color: #eab308;
+  color: #fde047;
+}
+
+.fileList > button.nonMp4 > b {
+  color: #fde047;
+}
+
+.fileList > button.nonMp4 small {
+  color: #e7d7a0;
+}
+
 .empty i {
   display: grid;
   width: 54px;
