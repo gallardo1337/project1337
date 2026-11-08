@@ -1119,6 +1119,9 @@ function AppHeader({
             aria-label="Library durchsuchen"
           />
         </label>
+        <button type="button" className={styles.toolButton} onClick={onOpenFilters} aria-label="Filter öffnen">
+          <Icon name="filter" />
+        </button>
         <button
           type="button"
           className={`${styles.toolButton} ${styles.rouletteHeaderButton}`}
@@ -1138,9 +1141,6 @@ function AppHeader({
         >
           <Icon name="heart" />
           {favoriteCount ? <span>{favoriteCount > 99 ? "99+" : favoriteCount}</span> : null}
-        </button>
-        <button type="button" className={styles.toolButton} onClick={onOpenFilters} aria-label="Filter öffnen">
-          <Icon name="filter" />
         </button>
         <div className={styles.account}>
           <button
