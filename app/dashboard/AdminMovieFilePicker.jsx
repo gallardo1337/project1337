@@ -235,7 +235,7 @@ export default function AdminMovieFilePicker({
               onChange={(event) => setHideExisting(event.target.checked)}
             />
             <span className={styles.filterSwitch} aria-hidden="true" />
-            Bereits hinzugefügte ausblenden
+            <span className={styles.filterText}>Bereits hinzugefügte ausblenden</span>
           </label>
         ) : null}
 

@@ -261,11 +261,13 @@
   color: rgba(255, 255, 255, 0.25);
 }
 
-.filter {
+.picker .browser > label.filter {
   position: relative;
   display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 9px;
+  margin: 0;
   padding: 12px 14px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   color: #dedee2;
@@ -281,12 +283,20 @@
 }
 
 .filterSwitch {
+  display: block;
+  box-sizing: border-box;
   position: relative;
   flex: 0 0 24px;
   width: 24px;
   height: 12px;
   border: 1px solid #3a3a40;
   background: #09090a;
+}
+
+.filterText {
+  display: block;
+  min-width: 0;
+  line-height: 1.5;
 }
 
 .filterSwitch::after {
