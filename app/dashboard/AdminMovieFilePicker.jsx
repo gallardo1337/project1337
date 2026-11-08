@@ -230,9 +230,11 @@ export default function AdminMovieFilePicker({
           <label className={styles.filter}>
             <input
               type="checkbox"
+              role="switch"
               checked={hideExisting}
               onChange={(event) => setHideExisting(event.target.checked)}
             />
+            <span className={styles.filterSwitch} aria-hidden="true" />
             Bereits hinzugefügte ausblenden
           </label>
         ) : null}
