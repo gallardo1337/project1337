@@ -261,6 +261,41 @@
   color: rgba(255, 255, 255, 0.25);
 }
 
+.filter {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: #dedee2;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.filter input {
+  width: 16px;
+  height: 16px;
+  accent-color: #f97316;
+}
+
+.fileList > button.nonMp4 {
+  background: linear-gradient(90deg, rgba(234, 179, 8, 0.18), transparent 78%);
+  color: #fef08a;
+}
+
+.fileList > button.nonMp4 > i {
+  border-color: #eab308;
+  color: #fde047;
+}
+
+.fileList > button.nonMp4 > b {
+  color: #fde047;
+}
+
+.fileList > button.nonMp4 small {
+  color: #e7d7a0;
+}
+
 .empty i {
   display: grid;
   width: 54px;
