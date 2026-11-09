@@ -540,14 +540,14 @@ export default function AdminThumbnailStudio({
   const [saving, setSaving] = useState(false);
   const [comfyEndpoint, setComfyEndpoint] = useState(DEFAULT_COMFY_ENDPOINT);
   const [comfyModels, setComfyModels] = useState([]);
-  const [comfyModel, setComfyModel] = useState("");
+  const [comfyModel, setComfyModel] = useState(embeddedMovie ? "4x-UltraSharp.pth" : "");
   const [comfyDeblurModels, setComfyDeblurModels] = useState([]);
-  const [comfyDeblurModel, setComfyDeblurModel] = useState("");
+  const [comfyDeblurModel, setComfyDeblurModel] = useState(embeddedMovie ? "NAFNet-REDS-width64.pth" : "");
   const [comfySupirModels, setComfySupirModels] = useState([]);
   const [comfySupirModel, setComfySupirModel] = useState("");
   const [comfySdxlModels, setComfySdxlModels] = useState([]);
   const [comfySdxlModel, setComfySdxlModel] = useState("");
-  const [enhancementMode, setEnhancementMode] = useState("upscale");
+  const [enhancementMode, setEnhancementMode] = useState(embeddedMovie ? "deblur-upscale" : "upscale");
   const [comfyStatus, setComfyStatus] = useState("idle");
   const [enhancing, setEnhancing] = useState(false);
   const [loadingExistingThumbnail, setLoadingExistingThumbnail] = useState(false);
@@ -913,11 +913,17 @@ export default function AdminThumbnailStudio({
         // Keep normal upscaling available when the optional NAFNet nodes are not installed.
       }
       setComfyModels(models);
-      setComfyModel((current) => (models.includes(current) ? current : models[0] || ""));
+      setComfyModel((current) => (
+        models.includes(current)
+          ? current
+          : (embeddedMovie && models.find((model) => /4x[-_ ]?ultrasharp/i.test(model))) || models[0] || ""
+      ));
       setComfyDeblurModels(deblurModels);
       setComfyDeblurModel((current) =>
         deblurModels.includes(current)
           ? current
+          : embeddedMovie && deblurModels.some((model) => model.startsWith("NAFNet-REDS-"))
+            ? deblurModels.find((model) => model === "NAFNet-REDS-width64.pth") || deblurModels.find((model) => model === "NAFNet-REDS-width32.pth")
           : deblurModels.includes("NAFNet-GoPro-width64.pth")
             ? "NAFNet-GoPro-width64.pth"
             : deblurModels.includes("NAFNet-GoPro-width32.pth")
