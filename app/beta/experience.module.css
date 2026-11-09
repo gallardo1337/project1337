@@ -2254,7 +2254,7 @@
 
 .statsPanel {
   position: relative;
-  width: min(1180px, 100%);
+  width: min(1560px, 100%);
   max-height: calc(100svh - clamp(32px, 6vw, 96px));
   overflow: auto;
   overscroll-behavior: contain;
@@ -2374,8 +2374,8 @@
 
 .statsCard {
   min-width: 0;
-  min-height: 300px;
-  padding: 30px;
+  min-height: 0;
+  padding: 24px;
   background: #0b0b0c;
 }
 
@@ -2383,7 +2383,7 @@
   display: flex;
   align-items: baseline;
   gap: 14px;
-  margin-bottom: 28px;
+  margin-bottom: 18px;
 }
 
 .statsCardHeader span {

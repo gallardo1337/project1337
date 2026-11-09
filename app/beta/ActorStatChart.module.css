@@ -5,11 +5,11 @@
 .legendItem[data-active="true"] { background: #ffffff12; }
 .swatch { width: 8px; height: 8px; border-radius: 50%; }
 .label { overflow-wrap: anywhere; }
-.value { text-align: right; font-variant-numeric: tabular-nums; }
-.value small { display: block; color: #bcb5c5; font-size: 10px; }
+.value { white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
+.value small { display: inline; color: #bcb5c5; font-size: 10px; }
 .detailsButton { grid-column: 1 / -1; justify-self: end; border: 1px solid #ffffff30; border-radius: 7px; padding: 8px 12px; background: #ffffff08; color: #eeeaf1; cursor: pointer; font: inherit; font-size: 12px; }
 .legendItem:focus-visible, .detailsButton:focus-visible, .dialogHeader button:focus-visible { outline: 2px solid #d7c1ed; outline-offset: 3px; }
-.dialog { width: min(980px, calc(100vw - 32px)); max-width: none; max-height: calc(100svh - 32px); padding: 0; border: 1px solid #47414c; border-radius: 18px; background: #0e0d10; color: #eeeaf1; overflow: auto; overscroll-behavior: contain; }
+.dialog { width: min(1240px, calc(100vw - 32px)); max-width: none; max-height: calc(100svh - 32px); padding: 0; border: 1px solid #47414c; border-radius: 18px; background: #0e0d10; color: #eeeaf1; overflow: auto; overscroll-behavior: contain; }
 .dialog::backdrop { background: #000b; backdrop-filter: blur(5px); }
 .dialogContent { padding: clamp(18px, 4vw, 40px); }
 .dialogHeader { display: flex; justify-content: space-between; align-items: start; gap: 20px; margin-bottom: 28px; }
@@ -17,11 +17,11 @@
 .dialogHeader p { margin: 8px 0 0; color: #bcb5c5; font-size: 12px; }
 .dialogHeader button { flex-shrink: 0; border: 1px solid #ffffff30; border-radius: 7px; padding: 9px 12px; color: inherit; background: #ffffff08; cursor: pointer; }
 .chart[data-expanded="true"] { grid-template-columns: minmax(100px, 1fr) minmax(0, 1fr); align-items: start; gap: clamp(12px, 3vw, 32px); }
-.chart[data-expanded="true"] .visual { width: 100%; position: sticky; top: 20px; }
+.chart[data-expanded="true"] .visual { width: min(100%, 420px); position: sticky; top: 20px; }
 .legendHeading, .total { display: flex; justify-content: space-between; gap: 10px; font-size: 11px; color: #bcb5c5; padding: 10px 4px; border-bottom: 1px solid #ffffff20; }
 .total { border-bottom: 0; border-top: 1px solid #ffffff20; margin-top: 10px; flex-wrap: wrap; }
 .total b { color: #eeeaf1; font-weight: 500; }
-.visual { width: min(100%, 228px); aspect-ratio: 1; margin: 0 auto; }
+.visual { width: min(100%, 180px); aspect-ratio: 1; margin: 0 auto; }
 .visual svg { display: block; width: 100%; height: 100%; overflow: visible; }
 .segment { stroke: #0b0b0c; stroke-width: 2; stroke-linejoin: round; cursor: pointer; transition: opacity 160ms ease; }
 .chart[data-expanded="true"] .segment { stroke-width: .4; }
@@ -34,7 +34,7 @@
 .tooltip ul { display: grid; gap: 10px; margin: 13px 0 0; padding: 13px 0 0; border-top: 1px solid #ffffff1a; list-style: none; }
 .tooltip li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 14px; }
 .tooltip li > span { overflow-wrap: anywhere; }
-.tooltip b { display: grid; text-align: right; font-weight: 500; font-variant-numeric: tabular-nums; }
+.tooltip b { white-space: nowrap; text-align: right; font-weight: 500; font-variant-numeric: tabular-nums; }
 .tooltip small { color: #bcb5c5; font-size: 10px; }
 .tooltip:focus-visible { outline: 2px solid #d7c1ed; outline-offset: 2px; }
 .empty { min-height: 220px; display: grid; place-items: center; margin: 0; color: #a7a3ac; font-size: 12px; }

@@ -127,7 +127,7 @@ export default function ActorStatChart({ items, title, expanded = false }) {
                 onPointerLeave={scheduleClose} onFocus={() => show(slice)} onBlur={scheduleClose} onClick={() => show(slice)}>
                 <span className={styles.swatch} style={{ background: color(index) }} />
                 <span className={styles.label}>{slice.value}</span>
-                <span className={styles.value}>{number.format(slice.count)}<small>{percent.format(slice.percent)} %</small></span>
+                <span className={styles.value}>{number.format(slice.count)} <small>({percent.format(slice.percent)} %)</small></span>
               </button>
             </li>
           ))}
@@ -156,7 +156,7 @@ export default function ActorStatChart({ items, title, expanded = false }) {
               {active.entries.map((item, index) => (
                 <li key={`${item.value}-${index}`}>
                   <span>{item.value}</span>
-                  <b>{number.format(item.count)}<small>{percent.format(item.percent)} %</small></b>
+                  <b>{number.format(item.count)} <small>({percent.format(item.percent)} %)</small></b>
                 </li>
               ))}
             </ul>
