@@ -543,6 +543,7 @@ export default function AdminThumbnailStudio({
   const [comfyModel, setComfyModel] = useState(embeddedMovie ? "4x-UltraSharp.pth" : "");
   const [comfyDeblurModels, setComfyDeblurModels] = useState([]);
   const [comfyDeblurModel, setComfyDeblurModel] = useState(embeddedMovie ? "NAFNet-REDS-width64.pth" : "");
+  const [deblurStrength, setDeblurStrength] = useState(70);
   const [comfySupirModels, setComfySupirModels] = useState([]);
   const [comfySupirModel, setComfySupirModel] = useState("");
   const [comfySdxlModels, setComfySdxlModels] = useState([]);
@@ -1067,6 +1068,7 @@ export default function AdminThumbnailStudio({
         imageNode = supirId;
       }
       if (requiresDeblur) {
+        const originalImageNode = imageNode;
         const loaderId = String(nextNodeId++);
         const restoreId = String(nextNodeId++);
         prompt[loaderId] = {
@@ -1083,6 +1085,19 @@ export default function AdminThumbnailStudio({
           },
         };
         imageNode = restoreId;
+        if (deblurStrength < 100) {
+          const blendId = String(nextNodeId++);
+          prompt[blendId] = {
+            class_type: "ImageBlend",
+            inputs: {
+              image1: [originalImageNode, 0],
+              image2: [restoreId, 0],
+              blend_factor: deblurStrength / 100,
+              blend_mode: "normal",
+            },
+          };
+          imageNode = blendId;
+        }
       }
       if (requiresUpscale) {
         const loaderId = String(nextNodeId++);
@@ -1108,7 +1123,8 @@ export default function AdminThumbnailStudio({
         };
         imageNode = scaleId;
       }
-      prompt["8"] = {
+      const saveNodeId = String(nextNodeId++);
+      prompt[saveNodeId] = {
         class_type: "SaveImage",
         inputs: {
           filename_prefix: requiresSupir
@@ -1150,8 +1166,8 @@ export default function AdminThumbnailStudio({
         if (!historyResponse.ok) throw new Error(`ComfyUI-Status konnte nicht gelesen werden (HTTP ${historyResponse.status}).`);
         const history = await historyResponse.json();
         const job = history?.[promptPayload.prompt_id];
-        if (job?.outputs?.["8"]?.images?.length) {
-          images = job.outputs["8"].images;
+        if (job?.outputs?.[saveNodeId]?.images?.length) {
+          images = job.outputs[saveNodeId].images;
           break;
         }
         if (job?.status?.status_str === "error") {
@@ -2074,7 +2090,7 @@ export default function AdminThumbnailStudio({
                     </>
                   ) : null}
                   {requiresDeblur ? (
-                    <select
+                    <><select
                       aria-label="NAFNet-Entwackler-Modell"
                       value={comfyDeblurModel}
                       onChange={(event) => setComfyDeblurModel(event.target.value)}
@@ -2086,6 +2102,20 @@ export default function AdminThumbnailStudio({
                         <option value="">NAFNet-GoPro installieren</option>
                       )}
                     </select>
+                    <label className="thumbnailStudio__deblurStrength">
+                      <span>NAFNet-Stärke <strong>{deblurStrength} %</strong></span>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        step="5"
+                        value={deblurStrength}
+                        onChange={(event) => setDeblurStrength(Number(event.target.value))}
+                        disabled={enhancing}
+                        aria-label="NAFNet-Stärke"
+                      />
+                      <small>0 % Original · 100 % volle Entwacklung</small>
+                    </label></>
                   ) : null}
                   {requiresUpscale ? (
                     <select
@@ -2139,9 +2169,9 @@ export default function AdminThumbnailStudio({
                   {requiresSupir ? (
                     <>SUPIR rekonstruiert das Bild generativ in mehreren Schritten und kann mehrere Minuten benötigen. Das Modell kann Details neu erzeugen; prüfe das Ergebnis sorgfältig. Benötigt ComfyUI-SUPIR, ein SUPIR-Checkpoint und ein SDXL-Modell in <code>models/checkpoints</code>. Im ComfyUI Manager nach <code>ComfyUI-SUPIR</code> suchen, installieren und danach ComfyUI neu starten. Für den ersten Versuch eignet sich <code>SUPIR-v0F</code> bei leichteren Schäden; <code>SUPIR-v0Q</code> restauriert stärker. Es wird lokal verarbeitet.</>
                   ) : enhancementMode === "deblur-upscale" ? (
-                    <>NAFNet-GoPro entfernt zuerst Bewegungsunschärfe; anschließend verfeinert das gewählte Upscale-Modell Details. Ergebnis bleibt 1920×1080. GoPro-width64 wird standardmäßig gewählt.</>
+                    <>NAFNet entfernt zuerst Bewegungsunschärfe mit der gewählten Stärke; anschließend verfeinert das Upscale-Modell Details. Ergebnis bleibt 1920×1080.</>
                   ) : enhancementMode === "deblur" ? (
-                    <>NAFNet-GoPro ist als Standard für Bewegungsunschärfe ausgewählt. Dafür ComfyUI-NAFNet installieren und <code>NAFNet-GoPro-width64.pth</code> in den Plugin-Ordner <code>custom_nodes/ComfyUI-NAFNet/models</code> legen; danach ComfyUI neu starten und erneut verbinden.</>
+                    <>Die NAFNet-Stärke mischt das Original mit dem entwackelten Bild. 0 % lässt es unverändert, 100 % nutzt die volle Rekonstruktion. Dafür müssen die NAFNet-Nodes in ComfyUI installiert sein.</>
                   ) : (
                     <>ComfyUI mit <code>--enable-cors-header {typeof window !== "undefined" ? window.location.origin : "https://beta.my1337.de"}</code> starten. Ein Modell wie 4x-UltraSharp muss in <code>models/upscale_models</code> liegen. Es schärft und vergrößert, entfernt aber keine starke Bewegungsunschärfe.</>
                   )}

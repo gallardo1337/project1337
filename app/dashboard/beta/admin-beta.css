@@ -3952,6 +3952,35 @@
   flex: 1 1 220px;
 }
 
+.adminBeta .thumbnailStudio__deblurStrength {
+  display: grid;
+  flex: 1 1 220px;
+  gap: 5px;
+  color: #c9c9ce;
+  font-size: 9px;
+}
+
+.adminBeta .thumbnailStudio__deblurStrength span {
+  display: flex;
+  justify-content: space-between;
+}
+
+.adminBeta .thumbnailStudio__deblurStrength strong {
+  color: #f0a36f;
+}
+
+.adminBeta .thumbnailStudio__deblurStrength input[type="range"] {
+  width: 100%;
+  min-height: 18px;
+  padding: 0;
+  accent-color: #f97316;
+}
+
+.adminBeta .thumbnailStudio__deblurStrength small {
+  color: #777780;
+  font-size: 8px;
+}
+
 .adminBeta .thumbnailStudio__aiControls button,
 .adminBeta .thumbnailStudio__aiActions button,
 .adminBeta .thumbnailStudio__aiActions label {
