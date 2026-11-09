@@ -89,8 +89,7 @@ export default function ActorStatChart({ items, title, expanded = false }) {
   return (
     <div className={styles.chart} data-expanded={expanded}>
       <div className={styles.visual} ref={visualRef}>
-        <svg viewBox="0 0 200 200" role="group" aria-labelledby={`${id}-title`}>
-          <title id={`${id}-title`}>{title} – Segmente für Details auswählen</title>
+        <svg viewBox="0 0 200 200" role="group" aria-label={`${title} – Segmente für Details auswählen`}>
           {slices.map((slice, index) => {
             const radians = slice.middle * Math.PI / 180;
             return (
