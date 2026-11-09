@@ -3888,20 +3888,7 @@ export function DashboardExperience() {
                                           }
                                         />
                                         <div className="space-y-2">
-                                          {actorEditForm.profile_image ? (
-                                            <div className="flex items-center gap-3 rounded-lg border border-neutral-800 bg-neutral-950/80 p-2">
-                                              <img
-                                                src={actorEditForm.profile_image}
-                                                alt="Bisheriges Darstellerbild"
-                                                className="h-14 w-14 rounded-lg border border-neutral-800 object-cover bg-neutral-900"
-                                                loading="lazy"
-                                              />
-                                              <div>
-                                                <div className="text-xs font-medium text-neutral-200">Bisheriges Darstellerbild</div>
-                                                <p className="mt-1 text-xs text-neutral-500">Bleibt als Rückfall erhalten, solange kein Cast-Bild hinterlegt ist.</p>
-                                              </div>
-                                            </div>
-                                          ) : null}
+
 
                                           <TransparentActorUploader
                                             value={actorEditForm.cast_image}
@@ -3961,11 +3948,11 @@ export function DashboardExperience() {
                                   ) : (
                                     <div className="flex flex-wrap items-center justify-between gap-3">
                                       <div className="flex min-w-0 items-center gap-3">
-                                        {a.profile_image ? (
+                                        {a.cast_image ? (
                                           <img
-                                            src={a.profile_image}
+                                            src={a.cast_image}
                                             alt={a.name}
-                                            className="h-10 w-10 rounded-lg border border-neutral-800 object-cover"
+                                            className="h-10 w-10 rounded-lg border border-neutral-800 object-contain"
                                             loading="lazy"
                                           />
                                         ) : (
@@ -4095,20 +4082,7 @@ export function DashboardExperience() {
                                           }
                                         />
                                         <div className="space-y-2">
-                                          {supportEditForm.profile_image ? (
-                                            <div className="flex items-center gap-3 rounded-lg border border-neutral-800 bg-neutral-950/80 p-2">
-                                              <img
-                                                src={supportEditForm.profile_image}
-                                                alt="Bisheriges Darstellerbild"
-                                                className="h-14 w-14 rounded-lg border border-neutral-800 object-cover bg-neutral-900"
-                                                loading="lazy"
-                                              />
-                                              <div>
-                                                <div className="text-xs font-medium text-neutral-200">Bisheriges Darstellerbild</div>
-                                                <p className="mt-1 text-xs text-neutral-500">Bleibt als Rückfall erhalten, solange kein Cast-Bild hinterlegt ist.</p>
-                                              </div>
-                                            </div>
-                                          ) : null}
+
 
                                           <TransparentActorUploader
                                             value={supportEditForm.cast_image}
@@ -4142,11 +4116,11 @@ export function DashboardExperience() {
                                   ) : (
                                     <div className="flex items-center justify-between gap-3">
                                       <div className="flex min-w-0 items-center gap-3">
-                                        {a.profile_image ? (
+                                        {a.cast_image ? (
                                           <img
-                                            src={a.profile_image}
+                                            src={a.cast_image}
                                             alt={a.name}
-                                            className="h-10 w-10 rounded-lg border border-neutral-800 object-cover"
+                                            className="h-10 w-10 rounded-lg border border-neutral-800 object-contain"
                                             loading="lazy"
                                           />
                                         ) : (
