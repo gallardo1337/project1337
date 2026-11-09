@@ -627,6 +627,45 @@ function spotlightTitleClass(title) {
   return "";
 }
 
+function SpotlightHeading({ title }) {
+  const headingRef = useRef(null);
+
+  useEffect(() => {
+    const heading = headingRef.current;
+    if (!heading) return undefined;
+    let frame;
+    const fit = () => {
+      heading.style.fontSize = "";
+      const maximum = parseFloat(getComputedStyle(heading).fontSize);
+      const fits = (size) => {
+        heading.style.fontSize = `${size}px`;
+        const lineHeight = parseFloat(getComputedStyle(heading).lineHeight);
+        return heading.scrollHeight <= lineHeight * 3 + 2 && heading.scrollWidth <= heading.clientWidth + 2;
+      };
+      if (fits(maximum)) return;
+      let low = 8;
+      let high = maximum;
+      for (let step = 0; step < 12; step += 1) {
+        const middle = (low + high) / 2;
+        if (fits(middle)) low = middle;
+        else high = middle;
+      }
+      heading.style.fontSize = `${low}px`;
+    };
+    const schedule = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(fit);
+    };
+    const observer = new ResizeObserver(schedule);
+    observer.observe(heading.parentElement);
+    schedule();
+    document.fonts?.ready.then(schedule);
+    return () => { observer.disconnect(); cancelAnimationFrame(frame); };
+  }, [title]);
+
+  return <h1 ref={headingRef} className={spotlightTitleClass(title)}>{title || "Your private cinema"}</h1>;
+}
+
 function countStatValues(values) {
   const counts = new Map();
 
@@ -1767,9 +1806,7 @@ function Discovery({
           {String(activeFeature + 1).padStart(2, "0")} / {String(Math.max(featuredMovies.length, 1)).padStart(2, "0")}
         </div>
         <div className={styles.spotlightCopy} key={featured?.id || "empty-feature"}>
-          <h1 className={spotlightTitleClass(featured?.title)}>
-            {featured?.title || "Your private cinema"}
-          </h1>
+          <SpotlightHeading title={featured?.title} />
           <div className={styles.spotlightMeta}>
             <span>{featured?.year || "2026"}</span><i />
             <span>{featured?.studio || "Project1337"}</span><i />
