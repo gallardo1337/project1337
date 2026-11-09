@@ -8,10 +8,37 @@ import styles from "./ActorStatChart.module.css";
 const COLORS = ["#f08080", "#9b9ef0", "#6dc9c3", "#e8bf78", "#b798d3", "#737986"];
 const number = new Intl.NumberFormat("de-DE");
 const percent = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 1 });
+const color = (index) => COLORS[index] || `hsl(${(index * 137.508) % 360} 58% 65%)`;
 
-export default function ActorStatChart({ items, title }) {
+function DetailDialog({ items, title, onClose }) {
+  const ref = useRef(null);
+  const heading = useId();
+  useEffect(() => {
+    const dialog = ref.current;
+    const previous = document.activeElement;
+    dialog.showModal();
+    return () => { dialog.close(); previous?.focus(); };
+  }, []);
+  return createPortal(
+    <dialog ref={ref} className={styles.dialog} aria-labelledby={heading}
+      onCancel={(event) => { event.preventDefault(); event.stopPropagation(); onClose(); }}
+      onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); onClose(); } }}
+      onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <div className={styles.dialogContent}>
+        <header className={styles.dialogHeader}>
+          <div><h2 id={heading}>{title}</h2><p>Alle Einträge · Anzahl und Anteil</p></div>
+          <button type="button" autoFocus onClick={onClose} aria-label="Detailansicht schließen">Schließen ×</button>
+        </header>
+        <ActorStatChart items={items} title={title} expanded />
+      </div>
+    </dialog>, document.body
+  );
+}
+
+export default function ActorStatChart({ items, title, expanded = false }) {
   const id = useId();
-  const { total, slices } = useMemo(() => buildStatSlices(items), [items]);
+  const { total, slices } = useMemo(() => buildStatSlices(items, expanded ? Infinity : 5), [items, expanded]);
+  const [details, setDetails] = useState(false);
   const [open, setOpen] = useState(null);
   const [hovered, setHovered] = useState(null);
   const visualRef = useRef(null);
@@ -60,7 +87,7 @@ export default function ActorStatChart({ items, title }) {
   if (!total) return <p className={styles.empty}>Keine Daten hinterlegt</p>;
 
   return (
-    <div className={styles.chart}>
+    <div className={styles.chart} data-expanded={expanded}>
       <div className={styles.visual} ref={visualRef}>
         <svg viewBox="0 0 200 200" role="group" aria-labelledby={`${id}-title`}>
           <title id={`${id}-title`}>{title} – Segmente für Details auswählen</title>
@@ -71,7 +98,7 @@ export default function ActorStatChart({ items, title }) {
                 key={slice.key}
                 className={styles.segment}
                 d={donutSegment(slice.start, slice.end)}
-                fill={COLORS[index]}
+                fill={color(index)}
                 role="button"
                 tabIndex={0}
                 aria-label={`${slice.value}: ${number.format(slice.count)} · ${percent.format(slice.percent)} %`}
@@ -90,6 +117,25 @@ export default function ActorStatChart({ items, title }) {
           })}
         </svg>
       </div>
+      <div className={styles.legend}>
+        {expanded && <div className={styles.legendHeading}><span>Eintrag</span><span>Anzahl / Anteil</span></div>}
+        <ul>
+          {slices.map((slice, index) => (
+            <li key={slice.key}>
+              <button type="button" className={styles.legendItem} data-active={active?.key === slice.key}
+                onPointerEnter={(event) => { if (event.pointerType === "mouse") show(slice, true); }}
+                onPointerLeave={scheduleClose} onFocus={() => show(slice)} onBlur={scheduleClose} onClick={() => show(slice)}>
+                <span className={styles.swatch} style={{ background: color(index) }} />
+                <span className={styles.label}>{slice.value}</span>
+                <span className={styles.value}>{number.format(slice.count)}<small>{percent.format(slice.percent)} %</small></span>
+              </button>
+            </li>
+          ))}
+        </ul>
+        {expanded && <div className={styles.total}><span>Gesamt</span><b>{number.format(total)} Zuordnungen</b></div>}
+      </div>
+      {!expanded && <button type="button" className={styles.detailsButton} onClick={() => { close(); setDetails(true); }}>Details anzeigen ↗</button>}
+      {details && <DetailDialog items={items} title={title} onClose={() => setDetails(false)} />}
       {active && createPortal(
         <div
           ref={tooltipRef}
@@ -115,7 +161,7 @@ export default function ActorStatChart({ items, title }) {
               ))}
             </ul>
           )}
-        </div>, visualRef.current?.closest('[role="dialog"]') || document.body
+        </div>, visualRef.current?.closest('dialog, [role="dialog"]') || document.body
       )}
     </div>
   );

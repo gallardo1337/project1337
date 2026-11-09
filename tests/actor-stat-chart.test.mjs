@@ -2,6 +2,18 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildStatSlices, donutSegment } from '../lib/actorStatChart.mjs';
 
+test('detail view includes every entry without grouping and keeps the same denominator', () => {
+  const items = Array.from({length: 35}, (_, index) => ({value: `Entry ${index}`, count: index + 1}));
+  const compact = buildStatSlices(items);
+  const detail = buildStatSlices(items, Infinity);
+  assert.equal(detail.total, compact.total);
+  assert.equal(detail.slices.length, items.length);
+  assert.deepEqual(detail.slices.map(({value, count}) => ({value, count})), items);
+  assert.ok(detail.slices.every((slice) => !slice.entries));
+  assert.ok(Math.abs(detail.slices.reduce((sum, slice) => sum + slice.percent, 0) - 100) < 1e-9);
+  assert.ok(Math.abs(detail.slices.at(-1).end - 270) < 1e-9);
+});
+
 test('top-five chart retains the full denominator through a remaining segment', () => {
   const items=[40,20,10,8,7,5,4,3,2,1].map((count,index)=>({value:`Value ${index}`,count}));
   const {total,slices}=buildStatSlices(items);
