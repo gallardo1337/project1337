@@ -697,7 +697,9 @@
   line-height: .82;
   letter-spacing: -0.02em;
   text-wrap: balance;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
 }
 
 .spotlightCopy h1.spotlightTitleLong {
