@@ -1,20 +1,19 @@
-.chart { display: grid; gap: 20px; min-width: 0; }
-.visual { position: relative; width: min(100%, 228px); aspect-ratio: 1; margin: 0 auto; }
+.chart { min-width: 0; }
+.visual { width: min(100%, 228px); aspect-ratio: 1; margin: 0 auto; }
 .visual svg { display: block; width: 100%; height: 100%; overflow: visible; }
 .segment { stroke: #0b0b0c; stroke-width: 2; stroke-linejoin: round; cursor: pointer; transition: opacity 160ms ease; }
 .segment[data-muted="true"] { opacity: .42; }
-.center { position: absolute; inset: 28%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; pointer-events: none; text-align: center; }
-.center strong { color: #f4f2f0; font-size: clamp(22px, 2.4vw, 32px); font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.1; white-space: nowrap; }
-.center span { max-width: 100%; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; color: #c6c2c9; font-size: 11px; line-height: 1.4; }
-.legend { display: grid; gap: 3px; margin: 0; padding: 0; list-style: none; }
-.legendItem { display: grid; width: 100%; grid-template-columns: 8px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 9px 8px; border: 1px solid transparent; border-radius: 7px; background: transparent; color: #dcd9df; font: inherit; text-align: left; cursor: pointer; }
-.legendItem[data-active="true"] { background: rgba(255,255,255,.055); border-color: rgba(255,255,255,.12); color: #fff; }
-.legendItem:focus-visible { outline: 2px solid var(--red, #f08080); outline-offset: 2px; }
-.legendItem i { width: 8px; height: 8px; border-radius: 50%; }
-.name { min-width: 0; overflow-wrap: anywhere; font-size: 12px; line-height: 1.4; }
-.value { display: grid; gap: 2px; text-align: right; font-size: 13px; font-variant-numeric: tabular-nums; }
-.value small { color: #a7a3ac; font-size: 10px; }
-.note { margin: 0; color: #a7a3ac; font-size: 10px; line-height: 1.5; }
+.segment:focus-visible { outline: none; stroke: #fff; stroke-width: 3; }
+.tooltip { position: fixed; z-index: 10000; box-sizing: border-box; overflow-y: auto; overscroll-behavior: contain; padding: 16px; border: 1px solid #47414c; border-radius: 12px; background: #17151b; box-shadow: 0 12px 32px #0008; color: #eeeaf1; font-family: inherit; font-size: 12px; line-height: 1.5; }
+.tooltip > strong { display: block; overflow-wrap: anywhere; font-size: 14px; }
+.tooltip > p { display: flex; justify-content: space-between; gap: 12px; margin: 5px 0 0; color: #c5becd; font-variant-numeric: tabular-nums; }
+.tooltip > p span { color: #fff; white-space: nowrap; }
+.tooltip ul { display: grid; gap: 10px; margin: 13px 0 0; padding: 13px 0 0; border-top: 1px solid #ffffff1a; list-style: none; }
+.tooltip li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 14px; }
+.tooltip li > span { overflow-wrap: anywhere; }
+.tooltip b { display: grid; text-align: right; font-weight: 500; font-variant-numeric: tabular-nums; }
+.tooltip small { color: #bcb5c5; font-size: 10px; }
+.tooltip:focus-visible { outline: 2px solid #d7c1ed; outline-offset: 2px; }
 .empty { min-height: 220px; display: grid; place-items: center; margin: 0; color: #a7a3ac; font-size: 12px; }
 @media (hover: hover) and (pointer: fine) {
   .segment { transition: transform 160ms ease, opacity 160ms ease; }

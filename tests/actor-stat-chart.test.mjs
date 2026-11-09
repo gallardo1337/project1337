@@ -8,6 +8,8 @@ test('top-five chart retains the full denominator through a remaining segment', 
   assert.equal(total,100);
   assert.equal(slices.length,6);
   assert.equal(slices.at(-1).count,15);
+  assert.deepEqual(slices.at(-1).entries.map((item)=>item.count),[5,4,3,2,1]);
+  assert.equal(slices.at(-1).entries.reduce((sum,item)=>sum+item.percent,0),15);
   assert.equal(slices[0].percent,40);
   assert.equal(slices.reduce((sum,slice)=>sum+slice.percent,0),100);
   assert.ok(Math.abs(slices.at(-1).end-270)<1e-9);
