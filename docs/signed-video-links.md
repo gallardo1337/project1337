@@ -1,6 +1,7 @@
 # Signed video links: staged deployment
 
-Status: Beta backend prepared. **Not enabled on Nginx, Production or tvOS.**
+Status: Beta backend and Beta website player use signed links.
+**Not enforced on public Nginx, Production or tvOS.**
 
 ## Existing infrastructure
 
@@ -30,9 +31,9 @@ Signatures follow Nginx's `secure_link_md5`: URL-safe Base64 MD5 of
 2. Test signatures in an isolated Nginx instance using representative paths:
    ordinary names, spaces, Unicode, and HTTP `Range` requests. Verify valid
    signatures return `200/206`, missing/wrong signatures `403`, expired `410`.
-3. Update the Beta website player to request the protected endpoint and
-   **fail closed** when it cannot obtain a signature. Make sure refresh and
-   seeking work. Update and test the **regular** tvOS client, too: its existing
+3. The Beta website player now requests the protected endpoint and
+   **fails closed** when it cannot obtain a signature. Verify browser playback,
+   refresh and seeking manually. Update and test the **regular** tvOS client, too: its existing
    implementation currently uses direct media URLs, and app releases may lag.
 4. Back up the NAS Compose and Nginx configuration. Mount the custom Nginx
    config read-only in Compose. Validate with `nginx -t` and test the new

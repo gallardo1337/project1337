@@ -2306,7 +2306,41 @@ function MovieDetail({
   const [hoverRating, setHoverRating] = useState(0);
   const [ratingSaving, setRatingSaving] = useState(false);
   const [metricError, setMetricError] = useState("");
+  const [videoLink, setVideoLink] = useState({ movieId: null, url: "", loading: true, error: "" });
+  const [videoLinkRetry, setVideoLinkRetry] = useState(0);
   const viewRecordedRef = useRef(false);
+
+  useEffect(() => {
+    if (!movie.fileUrl) {
+      setVideoLink({ movieId: movie.id, url: "", loading: false, error: "" });
+      return;
+    }
+
+    const controller = new AbortController();
+    setVideoLink({ movieId: movie.id, url: "", loading: true, error: "" });
+
+    const loadSignedLink = async () => {
+      try {
+        const response = await fetch(`/api/video-link/${encodeURIComponent(movie.id)}`, {
+          credentials: "same-origin",
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || typeof payload.url !== "string" || !payload.url) {
+          throw new Error(payload.error || "Videolink konnte nicht geladen werden.");
+        }
+        if (!controller.signal.aborted) setVideoLink({ movieId: movie.id, url: payload.url, loading: false, error: "" });
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          setVideoLink({ movieId: movie.id, url: "", loading: false, error: error.message || "Videolink konnte nicht geladen werden." });
+        }
+      }
+    };
+
+    void loadSignedLink();
+    return () => controller.abort();
+  }, [movie.id, movie.fileUrl, videoLinkRetry]);
 
   useEffect(() => {
     setDraftRating(Number(movie.rating) || 0);
@@ -2352,10 +2386,10 @@ function MovieDetail({
     <main className={styles.detailPage}>
       <section className={styles.theater}>
         <button type="button" className={styles.theaterBack} onClick={onBack}><Icon name="back" /> Zurück</button>
-        {movie.fileUrl ? (
+        {movie.fileUrl && videoLink.movieId === movie.id && videoLink.url ? (
           <ModernVideoPlayer
             key={movie.id}
-            src={movie.fileUrl}
+            src={videoLink.url}
             poster={movie.thumbnailUrl}
             title={movie.title}
             quality={movie.resolution}
@@ -2363,7 +2397,15 @@ function MovieDetail({
           />
         ) : (
           <div className={styles.videoFrame}>
-            <div className={styles.noVideo}><Icon name="play" /><span>Keine Videodatei hinterlegt</span></div>
+            <div className={styles.noVideo}>
+              <Icon name="play" />
+              <span>{!movie.fileUrl ? "Keine Videodatei hinterlegt" : videoLink.movieId !== movie.id || videoLink.loading ? "Sicherer Videolink wird geladen …" : videoLink.error}</span>
+              {movie.fileUrl && videoLink.movieId === movie.id && videoLink.error ? (
+                <button type="button" onClick={() => setVideoLinkRetry((value) => value + 1)}>
+                  Erneut versuchen
+                </button>
+              ) : null}
+            </div>
           </div>
         )}
         <div className={styles.theaterLabel}>PRIVATE SCREENING / 1337</div>
