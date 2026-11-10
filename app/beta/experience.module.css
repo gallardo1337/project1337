@@ -2811,6 +2811,16 @@
   color: var(--muted);
 }
 
+.videoLoadingPoster {
+  position: absolute;
+  inset: 0;
+  background: #000;
+}
+
+.videoLoadingPoster img {
+  object-fit: contain;
+}
+
 .noVideo svg {
   width: 50px;
 }
