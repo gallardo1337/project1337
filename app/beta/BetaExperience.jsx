@@ -2397,15 +2397,21 @@ function MovieDetail({
           />
         ) : (
           <div className={styles.videoFrame}>
-            <div className={styles.noVideo}>
-              <Icon name="play" />
-              <span>{!movie.fileUrl ? "Keine Videodatei hinterlegt" : videoLink.movieId !== movie.id || videoLink.loading ? "Sicherer Videolink wird geladen …" : videoLink.error}</span>
-              {movie.fileUrl && videoLink.movieId === movie.id && videoLink.error ? (
-                <button type="button" onClick={() => setVideoLinkRetry((value) => value + 1)}>
-                  Erneut versuchen
-                </button>
-              ) : null}
-            </div>
+            {movie.fileUrl && (videoLink.movieId !== movie.id || videoLink.loading) ? (
+              <div className={styles.videoLoadingPoster}>
+                {movie.thumbnailUrl ? <MediaImage src={movie.thumbnailUrl} alt="" /> : null}
+              </div>
+            ) : (
+              <div className={styles.noVideo}>
+                <Icon name="play" />
+                <span>{!movie.fileUrl ? "Keine Videodatei hinterlegt" : videoLink.error}</span>
+                {movie.fileUrl && videoLink.error ? (
+                  <button type="button" onClick={() => setVideoLinkRetry((value) => value + 1)}>
+                    Erneut versuchen
+                  </button>
+                ) : null}
+              </div>
+            )}
           </div>
         )}
         <div className={styles.theaterLabel}>PRIVATE SCREENING / 1337</div>
