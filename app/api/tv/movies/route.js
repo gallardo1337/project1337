@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { hasLibrarySession } from "../../../../lib/serverSupabase";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,9 @@ function getResolutionName(movie, resolutionMap) {
 }
 
 export async function GET() {
+  if (!(await hasLibrarySession())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: { "Cache-Control": "no-store" } });
+  }
   try {
     if (!supabaseUrl || !supabaseKey) {
       return NextResponse.json(
