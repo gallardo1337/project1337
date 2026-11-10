@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { hasLibrarySession } from "../../../../lib/serverSupabase";
 import { sortTagsByCategory } from "../../../../lib/tagCategories.mjs";
 
 export const dynamic = "force-dynamic";
@@ -34,6 +35,9 @@ function sortByName(a, b) {
 }
 
 export async function GET() {
+  if (!(await hasLibrarySession())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: { "Cache-Control": "no-store" } });
+  }
   try {
     if (!supabaseUrl || !supabaseKey) {
       return NextResponse.json(
